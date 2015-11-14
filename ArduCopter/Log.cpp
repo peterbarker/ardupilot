@@ -13,6 +13,7 @@
 // User enters the string in the console to call the functions on the right.
 // See class Menu in AP_Coommon for implementation details
 static const struct Menu::command log_menu_commands[] = {
+    {"sdtest",      MENU_FUNC(sdtest)},
     {"dump",        MENU_FUNC(dump_log)},
     {"erase",       MENU_FUNC(erase_logs)},
     {"enable",      MENU_FUNC(select_logs)},
@@ -60,6 +61,12 @@ bool Copter::print_log_menu(void)
 }
 
 #if CLI_ENABLED == ENABLED
+int8_t Copter::sdtest(uint8_t argc, const Menu::arg *argv)
+{
+    DataFlash.test_performance();
+    return 0;
+}
+
 int8_t Copter::dump_log(uint8_t argc, const Menu::arg *argv)
 {
     int16_t dump_log_num;

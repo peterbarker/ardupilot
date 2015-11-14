@@ -1028,6 +1028,16 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
 
         switch(packet.command) {
 
+        case MAV_CMD_DO_LOG_TEST:
+            if (!copter.in_mavlink_delay && !copter.motors->armed()) {
+                if (copter.DataFlash.test_performance()) {
+                    result = MAV_RESULT_ACCEPTED;
+                } else {
+                    result = MAV_RESULT_FAILED;
+                }
+            }
+            break;
+
         case MAV_CMD_START_RX_PAIR:
             result = handle_rc_bind(packet);
             break;

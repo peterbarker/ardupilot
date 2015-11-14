@@ -1128,6 +1128,7 @@ public:
     void mavlink_delay_cb();
     void failsafe_check();
     int8_t dump_log(uint8_t argc, const Menu::arg *argv);
+    int8_t sdtest(uint8_t argc, const Menu::arg *argv);
     int8_t erase_logs(uint8_t argc, const Menu::arg *argv);
     int8_t select_logs(uint8_t argc, const Menu::arg *argv);
     bool print_log_menu(void);
