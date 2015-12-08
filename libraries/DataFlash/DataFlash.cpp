@@ -313,6 +313,15 @@ bool DataFlash_Class::should_log(const uint32_t mask) const
     return true;
 }
 
+const struct UnitStructure *DataFlash_Class::unit(uint16_t num) const
+{
+    return &_units[num];
+}
+
+const struct MultiplierStructure *DataFlash_Class::multiplier(uint16_t num) const
+{
+    return &log_Multipliers[num];
+}
 
 #define FOR_EACH_BACKEND(methodcall)              \
     do {                                          \
