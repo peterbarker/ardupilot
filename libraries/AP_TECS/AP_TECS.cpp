@@ -1061,7 +1061,7 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
     _update_pitch();
 
     // log to DataFlash
-    DataFlash_Class::instance()->Log_Write("TECS", "TimeUS,h,dh,hdem,dhdem,spdem,sp,dsp,ith,iph,th,ph,dspdem,w,f", "QfffffffffffffB",
+    DataFlash_Class::instance()->Log_Write("TECS", "TimeUS,h,dh,hdem,dhdem,spdem,sp,dsp,ith,iph,th,ph,dspdem,w,f", "QfffffffffffffB", "smnmnnnN----o", "F0000000----0",
                                            now,
                                            (double)_height,
                                            (double)_climb_rate,
