@@ -12,16 +12,25 @@ void DFMessageWriter::reset()
     _finished = false;
 }
 
+bool DFMessageWriter::fmt_done() const
+{
+    // This should never be called.  We don't want all our subclasses
+    // to have to implement it for no reason, however.
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    abort();
+#endif
+    return false;
+}
+
 void DFMessageWriter_DFLogStart::reset()
 {
     DFMessageWriter::reset();
 
-    _fmt_done = false;
+    _writeformats.reset();
     _writesysinfo.reset();
     _writeentiremission.reset();
 
     stage = ls_blockwriter_stage_init;
-    next_format_to_send = 0;
     ap = AP_Param::first(&token, &type);
 }
 
@@ -33,14 +42,10 @@ void DFMessageWriter_DFLogStart::process()
         // no break
 
     case ls_blockwriter_stage_formats:
-        // write log formats so the log is self-describing
-        while (next_format_to_send < _dataflash_backend->num_types()) {
-            if (!_dataflash_backend->Log_Write_Format(_dataflash_backend->structure(next_format_to_send))) {
-                return; // call me again!
-            }
-            next_format_to_send++;
+        _writeformats.process();
+        if (!_writeformats.finished()) {
+            return;
         }
-        _fmt_done = true;
         stage = ls_blockwriter_stage_parms;
         // no break
 
@@ -90,6 +95,40 @@ void DFMessageWriter_DFLogStart::process()
 
     _finished = true;
 }
+
+
+void DFMessageWriter_WriteFormats::reset()
+{
+    DFMessageWriter::reset();
+
+    next_format_to_send = 0;
+    stage = stage_init;
+}
+
+void DFMessageWriter_WriteFormats::process()
+{
+    switch(stage) {
+
+    case stage_init:
+        // fall through
+
+    case stage_formats:
+        // write log formats so the log is self-describing
+        while (next_format_to_send < _dataflash_backend->num_types()) {
+            if (!_dataflash_backend->Log_Write_Format(_dataflash_backend->structure(next_format_to_send))) {
+                return; // call me again!
+            }
+            next_format_to_send++;
+        }
+        stage = stage_done;
+        // fall through
+    case stage_done:
+        break;
+    }
+
+    _finished = true;
+}
+
 
 void DFMessageWriter_WriteSysInfo::reset()
 {

@@ -9,15 +9,44 @@ public:
 
     virtual void reset() = 0;
     virtual void process() = 0;
-    virtual bool finished() { return _finished; }
+    virtual bool finished() const { return _finished; };
 
     virtual void set_dataflash_backend(class DataFlash_Backend *backend) {
         _dataflash_backend = backend;
     }
 
+    virtual bool fmt_done() const;
+    virtual void set_mission(const AP_Mission *mission) { }
+
 protected:
     bool _finished = false;
     DataFlash_Backend *_dataflash_backend = nullptr;
+
+private:
+};
+
+
+class DFMessageWriter_WriteFormats : public DFMessageWriter {
+public:
+    DFMessageWriter_WriteFormats() :
+        DFMessageWriter()
+        { }
+
+    void reset();
+    void process();
+
+    bool fmt_done() const override { return stage == stage_done; };
+
+private:
+    enum stage_t {
+        stage_init,
+        stage_formats,
+        stage_done
+    };
+    stage_t stage = stage_init;
+
+    uint16_t next_format_to_send;
+
 };
 
 
@@ -74,15 +103,16 @@ public:
 
     virtual void set_dataflash_backend(class DataFlash_Backend *backend) {
         DFMessageWriter::set_dataflash_backend(backend);
+        _writeformats.set_dataflash_backend(backend);
         _writesysinfo.set_dataflash_backend(backend);
         _writeentiremission.set_dataflash_backend(backend);
     }
 
     void reset();
     void process();
-    bool fmt_done() { return _fmt_done; }
 
     void set_mission(const AP_Mission *mission);
+    bool fmt_done() const override { return _writeformats.finished(); };
 
 private:
 
@@ -96,16 +126,14 @@ private:
         ls_blockwriter_stage_done,
     };
 
-    bool _fmt_done = false;
-
     log_start_blockwriter_stage stage = ls_blockwriter_stage_init;
 
-    uint16_t next_format_to_send;
     AP_Param::ParamToken token;
     AP_Param *ap;
     enum ap_var_type type;
 
 
+    DFMessageWriter_WriteFormats _writeformats;
     DFMessageWriter_WriteSysInfo _writesysinfo;
     DFMessageWriter_WriteEntireMission _writeentiremission;
 };
