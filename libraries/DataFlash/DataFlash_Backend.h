@@ -2,23 +2,28 @@
 
 #include "DataFlash.h"
 
-class DFMessageWriter_DFLogStart;
+#define DATAFLASH_TEST_PERFORMANCE 1
+
+class DFMessageWriter;
 
 class DataFlash_Backend
 {
+    friend class DataFlash_File_PerfTester;
 
 public:
     FUNCTOR_TYPEDEF(print_mode_fn, void, AP_HAL::BetterStream*, uint8_t);
     FUNCTOR_TYPEDEF(vehicle_startup_message_Log_Writer, void);
 
     DataFlash_Backend(DataFlash_Class &front,
-                      class DFMessageWriter_DFLogStart *writer);
+                      class DFMessageWriter *writer);
 
     vehicle_startup_message_Log_Writer vehicle_message_writer();
 
     void internal_error();
 
     virtual bool CardInserted(void) = 0;
+
+    virtual bool test_performance() = 0;
 
     // erase handling
     virtual void EraseAll() = 0;
@@ -151,7 +156,7 @@ protected:
     virtual void WriteMoreStartupMessages();
     virtual void push_log_blocks();
 
-    DFMessageWriter_DFLogStart *_startup_messagewriter;
+    DFMessageWriter *_startup_messagewriter;
     bool _writing_startup_messages;
 
     uint32_t _internal_errors;

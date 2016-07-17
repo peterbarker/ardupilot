@@ -16,6 +16,8 @@
 #include "DataFlash_File.h"
 
 #include <AP_Common/AP_Common.h>
+#include "DataFlash_File_PerfTester.h"
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -45,18 +47,13 @@ extern const AP_HAL::HAL& hal;
   constructor
  */
 DataFlash_File::DataFlash_File(DataFlash_Class &front,
-                               DFMessageWriter_DFLogStart *writer,
-                               const char *log_directory) :
+                               DFMessageWriter *writer,
+                               const char *log_directory,
+                               int32_t requested_buffer_size) :
     DataFlash_Backend(front, writer),
     _write_fd(-1),
     _read_fd(-1),
-    _read_fd_log_num(0),
-    _read_offset(0),
-    _write_offset(0),
-    _initialised(false),
-    _open_error(false),
     _log_directory(log_directory),
-    _cached_oldest_log(0),
     _writebuf(0),
 #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
     // V1 gets IO errors with larger than 512 byte writes
@@ -76,13 +73,31 @@ DataFlash_File::DataFlash_File(DataFlash_Class &front,
 #else
     _writebuf_chunk(4096),
 #endif
-    _last_write_time(0),
+    _requested_bufsize(requested_buffer_size),
     _perf_write(hal.util->perf_alloc(AP_HAL::Util::PC_ELAPSED, "DF_write")),
     _perf_fsync(hal.util->perf_alloc(AP_HAL::Util::PC_ELAPSED, "DF_fsync")),
     _perf_errors(hal.util->perf_alloc(AP_HAL::Util::PC_COUNT, "DF_errors")),
     _perf_overruns(hal.util->perf_alloc(AP_HAL::Util::PC_COUNT, "DF_overruns"))
 {}
 
+DataFlash_File::~DataFlash_File()
+{
+    hal.console->printf("Destructor called\n");
+    _writebuf.set_size(0);
+}
+
+uint32_t DataFlash_File::desired_bufsize() const
+{
+    // determine and limit file backend buffersize
+    if (_requested_bufsize != -1) {
+        return _requested_bufsize;
+    }
+    uint32_t bufsize = _front._params.file_bufsize;
+    if (bufsize > 64) {
+        bufsize = 64; // PixHawk has DMA limitations.
+    }
+    return bufsize * 1024;
+}
 
 void DataFlash_File::Init()
 {
@@ -128,12 +143,7 @@ void DataFlash_File::Init()
     }
 #endif
 
-    // determine and limit file backend buffersize
-    uint32_t bufsize = _front._params.file_bufsize;
-    if (bufsize > 64) {
-        bufsize = 64; // PixHawk has DMA limitations.
-    }
-    bufsize *= 1024;
+    uint32_t bufsize = desired_bufsize();
 
     // If we can't allocate the full size, try to reduce it until we can allocate it
     while (!_writebuf.set_size(bufsize) && bufsize >= _writebuf_chunk) {
@@ -151,6 +161,7 @@ void DataFlash_File::Init()
     _initialised = true;
     hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&DataFlash_File::_io_timer, void));
 }
+
 
 bool DataFlash_File::file_exists(const char *filename) const
 {
@@ -1008,7 +1019,13 @@ void DataFlash_File::ListAvailableLogs(AP_HAL::BetterStream *port)
     port->println();    
 }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
+// think hard before calling flush().  It does not return until all
+// data has left the ring buffer - and in the case of sync() is put to
+// stable storage.  It also disables all timer processes.  If you call
+// this in the flight thread these might be Very Bad Things.  Current
+// uses include getting more debug out of SITL (e.g. the data which
+// just caused it to crash), and in the SD PerfTesting code which uses
+// it to ensure tighter timings.
 void DataFlash_File::flush(void)
 {
     uint32_t tnow = AP_HAL::millis();
@@ -1022,11 +1039,12 @@ void DataFlash_File::flush(void)
         _io_timer();
     }
     hal.scheduler->resume_timer_procs();
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
     if (_write_fd != -1) {
         ::fsync(_write_fd);
     }
-}
 #endif
+}
 
 void DataFlash_File::_io_timer(void)
 {
@@ -1134,6 +1152,30 @@ bool DataFlash_File::logging_failed() const
     return false;
 }
 
+bool DataFlash_File::test_performance()
+{
+#if DATAFLASH_FILE_PERFTESTER
+    if (hal.util->get_soft_armed()) {
+        // whinge mightily here?
+        return false;
+    }
+
+    stop_logging(); // should we restart it if it was running?
+
+    DataFlash_File_PerfTester *tester =
+        new DataFlash_File_PerfTester(*this, _log_directory);
+    if (tester == nullptr) {
+        // whinge mightily here
+        return false;
+    }
+    bool ret = tester->run();
+
+    delete tester;
+    tester = nullptr;
+
+    return ret;
+#endif
+}
 
 void DataFlash_File::vehicle_was_disarmed()
 {

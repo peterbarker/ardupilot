@@ -5,7 +5,7 @@
 extern const AP_HAL::HAL& hal;
 
 DataFlash_Backend::DataFlash_Backend(DataFlash_Class &front,
-                                     class DFMessageWriter_DFLogStart *writer) :
+                                     class DFMessageWriter *writer) :
     _front(front),
     _startup_messagewriter(writer)
 {

@@ -20,16 +20,21 @@
 
 extern const AP_HAL::HAL& hal;
 
+void DataFlash_Class::set_LogStructures(const struct LogStructure *structures, uint8_t num_types)
+{
+    _num_types = num_types;
+    _structures = structures;
+}
+
 void DataFlash_Class::Init(const struct LogStructure *structures, uint8_t num_types)
 {
     if (_next_backend == DATAFLASH_MAX_BACKENDS) {
         AP_HAL::panic("Too many backends");
         return;
     }
-    _num_types = num_types;
-    _structures = structures;
 
-    ;
+    set_LogStructures(structures, num_types);
+
 #if defined(HAL_BOARD_LOG_DIRECTORY)
     if (_params.backend_types == DATAFLASH_BACKEND_FILE ||
         _params.backend_types == DATAFLASH_BACKEND_BOTH) {

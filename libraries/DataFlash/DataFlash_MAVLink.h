@@ -64,6 +64,10 @@ public:
     void ShowDeviceInfo(AP_HAL::BetterStream *port) override {}
     void ListAvailableLogs(AP_HAL::BetterStream *port) override {}
 
+#if DATAFLASH_TEST_PERFORMANCE
+    bool test_performance() { return false; }
+#endif
+
     // enum dm_block_state {
     //     BLOCK_STATE_FREE = 17,
     //     BLOCK_STATE_FILLING,

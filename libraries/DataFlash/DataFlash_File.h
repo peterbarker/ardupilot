@@ -25,11 +25,14 @@
 
 class DataFlash_File : public DataFlash_Backend
 {
+    friend class DataFlash_File_PerfTester;
 public:
     // constructor
     DataFlash_File(DataFlash_Class &front,
-                   DFMessageWriter_DFLogStart *,
-                   const char *log_directory);
+                   DFMessageWriter *,
+                   const char *log_directory,
+                   int32_t requested_buffer_size = -1); // in bytes
+    virtual ~DataFlash_File();
 
     // initialisation
     void Init() override;
@@ -61,9 +64,8 @@ public:
     void ShowDeviceInfo(AP_HAL::BetterStream *port);
     void ListAvailableLogs(AP_HAL::BetterStream *port);
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
     void flush(void);
-#endif
+
     void periodic_1Hz(const uint32_t now) override;
     void periodic_fullrate(const uint32_t now);
 
@@ -72,6 +74,14 @@ public:
     bool logging_failed() const;
 
     void vehicle_was_disarmed() override;
+
+#define DATAFLASH_TEST_PERFORMANCE 1
+
+#if DATAFLASH_TEST_PERFORMANCE
+    bool test_performance();
+#endif
+
+    bool initialised() const { return _initialised; }
 
 private:
     int _write_fd;
@@ -115,6 +125,8 @@ private:
     ByteBuffer _writebuf;
     const uint16_t _writebuf_chunk;
     uint32_t _last_write_time;
+    int32_t _requested_bufsize = -1;
+    uint32_t desired_bufsize() const;
 
     /* construct a file name given a log number. Caller must free. */
     char *_log_file_name(const uint16_t log_num) const;

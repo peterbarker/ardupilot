@@ -48,14 +48,19 @@ class DataFlash_Class
 public:
     FUNCTOR_TYPEDEF(print_mode_fn, void, AP_HAL::BetterStream*, uint8_t);
     FUNCTOR_TYPEDEF(vehicle_startup_message_Log_Writer, void);
-    DataFlash_Class(const char *firmware_string) :
+    DataFlash_Class(const char *firmware_string, bool is_singleton=true) :
         _firmware_string(firmware_string)
         {
-            AP_Param::setup_object_defaults(this, var_info);
-            if (_instance != nullptr) {
-                AP_HAL::panic("DataFlash must be singleton");
+            if (is_singleton) {
+                // bad things are going to happen if you create a
+                // non-singleton instance before creating the
+                // singleton instance.
+                AP_Param::setup_object_defaults(this, var_info);
+                if (_instance != nullptr) {
+                    AP_HAL::panic("DataFlash must be singleton");
+                }
+                _instance = this;
             }
-            _instance = this;
         }
 
     // get singleton instance
@@ -67,6 +72,8 @@ public:
 
     // initialisation
     void Init(const struct LogStructure *structure, uint8_t num_types);
+    void set_LogStructures(const struct LogStructure *structures, uint8_t num_types);
+
     bool CardInserted(void);
 
     // erase handling
@@ -197,6 +204,7 @@ public:
     } _params;
 
     const struct LogStructure *structure(uint16_t num) const;
+    bool test_performance();
 
     // methods for mavlink SYS_STATUS message (send_extended_status1)
     // these methods cover only the first logging backend used -
