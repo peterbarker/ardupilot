@@ -997,6 +997,12 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: ../libraries/RC_Channel/RC_Channels.cpp
     AP_SUBGROUPINFO(rc_channels, "RC", 17, ParametersG2, RC_Channels),
     
+#if RANGEFINDER_ENABLED == ENABLED
+    // @Group: THERM
+    // @Path: ../libraries/AP_Thermometer/AP_Thermometer.cpp
+    AP_SUBGROUPINFO(gripper, "THERM", 18, ParametersG2, AP_Thermometer),
+#endif
+
     AP_GROUPEND
 };
 

@@ -279,6 +279,9 @@ void Copter::init_ardupilot()
     // init beacons used for non-gps position estimation
     init_beacon();
 
+    // initialise rangefinder
+    init_thermometer();
+
     // initialise AP_RPM library
     rpm_sensor.init();
 

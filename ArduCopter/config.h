@@ -127,6 +127,10 @@
  # define PROXIMITY_ENABLED ENABLED
 #endif
 
+#ifndef THERMOMETER_ENABLED
+ # define THERMOMETER_ENABLED ENABLED
+#endif
+
 #ifndef MAV_SYSTEM_ID
  # define MAV_SYSTEM_ID          1
 #endif

@@ -62,6 +62,7 @@
 #include <AP_Proximity/AP_Proximity.h>
 #include <AP_Stats/AP_Stats.h>     // statistics library
 #include <AP_Beacon/AP_Beacon.h>
+#include <AP_Thermometer/AP_Thermometer.h>     // Range finder library
 #include <AP_OpticalFlow/AP_OpticalFlow.h>     // Optical Flow library
 #include <AP_RSSI/AP_RSSI.h>                   // RSSI Library
 #include <Filter/Filter.h>             // Filter library
@@ -1013,6 +1014,8 @@ private:
     void init_rangefinder(void);
     void read_rangefinder(void);
     bool rangefinder_alt_ok();
+    void init_thermometer();
+    void read_thermometer();
     void init_compass();
     void init_optflow();
     void update_optical_flow(void);

@@ -564,6 +564,8 @@ public:
     
     // control over servo output ranges
     SRV_Channels servo_channels;
+
+    AP_Thermometer thermometer;
 };
 
 extern const AP_Param::Info        var_info[];

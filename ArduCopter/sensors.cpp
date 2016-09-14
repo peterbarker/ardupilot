@@ -33,6 +33,13 @@ void Copter::init_rangefinder(void)
 #endif
 }
 
+void Copter::init_thermometer()
+{
+#if THERMOMETER_ENABLED == ENABLED
+   g2.thermometer.init();
+#endif
+}
+
 // return rangefinder altitude in centimeters
 void Copter::read_rangefinder(void)
 {
@@ -75,6 +82,13 @@ void Copter::read_rangefinder(void)
     rangefinder_state.enabled = false;
     rangefinder_state.alt_healthy = false;
     rangefinder_state.alt_cm = 0;
+#endif
+}
+
+void Copter::read_thermometer()
+{
+#if RANGEFINDER_ENABLED == ENABLED
+    g2.thermometer.update();
 #endif
 }
 
