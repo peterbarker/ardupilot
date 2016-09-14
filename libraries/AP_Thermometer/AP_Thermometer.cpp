@@ -147,9 +147,12 @@ void AP_Thermometer::detect_instance(const uint8_t instance)
     if (type == Thermometer_TYPE_OLIMEX_TC_MK2) {
         if (parameters[instance].address) {
             const uint8_t bus = HAL_THERMOMETER_OLIMEX_TC_MK2_BUS;
+            // const uint8_t address = parameters[instance].address.get();
+            const uint8_t address = 0xA3;
+            ::fprintf(stderr, "address is %u\n", address);
             _add_backend(AP_Thermometer_Olimex_TC_MK2::detect(
                              *this, instance, state[instance],
-                             hal.i2c_mgr->get_device(bus, parameters[instance].address)));
+                             hal.i2c_mgr->get_device(bus, address)));
         }
     }
 }

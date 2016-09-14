@@ -42,12 +42,17 @@ AP_Thermometer_Backend *AP_Thermometer_Olimex_TC_MK2::detect(AP_Thermometer &_th
         = new AP_Thermometer_Olimex_TC_MK2(_thermometer, instance, _state, std::move(dev));
 
     if (!sensor->start_reading()) {
+        ::fprintf(stderr, "send start_reading failed\n");
         return nullptr;
     }
+
+    // give time for the sensor to process the request
+    hal.scheduler->delay(50);
 
     float temperature;
 
     if (!sensor || !sensor->get_reading(temperature)) {
+        ::fprintf(stderr, "get_reading failed\n");
         delete sensor;
         return nullptr;
     }
@@ -67,7 +72,8 @@ bool AP_Thermometer_Olimex_TC_MK2::start_reading()
 
     ::fprintf(stderr, "sending start_reading\n");
     // send command to take reading
-    bool ret = _dev->transfer(&cmd, sizeof(cmd), nullptr, 0);
+    uint8_t data[4];
+    bool ret = _dev->transfer(&cmd, sizeof(cmd), data, 4);
 
     _dev->get_semaphore()->give();
 
@@ -97,6 +103,8 @@ bool AP_Thermometer_Olimex_TC_MK2::get_reading(float &temperature)
         ::fprintf(stderr, "temperature: %f\n", temperature);
         // trigger a new reading
         start_reading();
+    } else {
+        ::fprintf(stderr, "read failed\n");
     }
 
     _dev->get_semaphore()->give();
