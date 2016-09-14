@@ -44,6 +44,7 @@ COMMON_VEHICLE_DEPENDENT_LIBRARIES = [
     'AP_Scheduler',
     'AP_SerialManager',
     'AP_Terrain',
+    'AP_Thermometer',
     'AP_Vehicle',
     'DataFlash',
     'Filter',
