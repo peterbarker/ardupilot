@@ -94,6 +94,8 @@ StorageAccess AP_Param::_storage(StorageManager::StorageParam);
 uint16_t AP_Param::_frame_type_flags;
 struct AP_Param::AP_Param_LookupCacheEntry AP_Param::lookup_cache[lookup_cache_size];
 
+struct AP_Param::param_lookupcache_stats_struct AP_Param::param_lookupcache_stats;
+
 // write to EEPROM
 void AP_Param::eeprom_write_check(const void *ptr, uint16_t ofs, uint8_t size)
 {
@@ -994,21 +996,28 @@ void AP_Param::notify() const {
 
 bool AP_Param::find_in_cache(uint8_t &offset)
 {
+    if (!((param_lookupcache_stats.hit+param_lookupcache_stats.miss) % 10)) {
+        ::fprintf(stderr, "ParamLookupCache: hits=%u misses=%u\n", param_lookupcache_stats.hit, param_lookupcache_stats.miss);
+    }
     uint8_t oldest_offset = 0;
     uint32_t oldest_access_time = (uint32_t)-1;
     const uint32_t now = AP_HAL::millis();
     for(uint8_t i=0; i<lookup_cache_size; i++) {
         if (lookup_cache[i].me == this) {
+            // HIT!
+            param_lookupcache_stats.hit++;
             lookup_cache[i].accessed = now;
             offset = i;
             return true;
         }
+        // Miss :-(
         if (lookup_cache[i].accessed < oldest_access_time) {
             oldest_access_time = lookup_cache[i].accessed;
             oldest_offset = i;
         }
     }
     offset = oldest_offset;
+    param_lookupcache_stats.miss++;
     return false;
 }
 

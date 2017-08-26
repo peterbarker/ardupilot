@@ -661,6 +661,11 @@ private:
                       const uint8_t idx,
                       const AP_Param *ap,
                       const uint16_t ofs);
+    struct param_lookupcache_stats_struct {
+        uint32_t hit;
+        uint32_t miss;
+    };
+    static struct param_lookupcache_stats_struct param_lookupcache_stats;
 };
 
 /// Template class for scalar variables.
