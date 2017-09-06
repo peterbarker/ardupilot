@@ -146,6 +146,8 @@ bool DataFlash_Backend::Log_Write_Emit_FMT(uint8_t msg_type)
         0,
         "IGNO",
         "",
+        "",
+        "",
         ""
     };
     if (!_front.fill_log_write_logstructure(logstruct, msg_type)) {
