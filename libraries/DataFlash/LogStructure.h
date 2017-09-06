@@ -75,7 +75,6 @@ const struct UnitStructure log_Units[] = {
     { '?', "UNKNOWN" },    // Units which haven't been worked out yet....
     { 'A', "amp" },
     { 'd', "degrees" }, // of the angular variety, -180 to 180
-    { 'D', "deglatitude" },
     { 'b', "bytes" },
     { 'k', "degrees/second" },
     { 'e', "degrees/second/second" },
@@ -95,7 +94,6 @@ const struct UnitStructure log_Units[] = {
     { 'q', "rpm" },
     { 'r', "radians" },
     { 'u', "pulses/minute" }, // i.e. ppm
-    { 'U', "deglongitude" },
     { 'v', "volt" },
     { 'P', "pascal" },
     { 'w', "ohm" },
@@ -1019,7 +1017,7 @@ struct PACKED log_SRTL {
 // see "struct GPS_State" and "Log_Write_GPS":
 #define GPS_LABELS "TimeUS,Status,GMS,GWk,NSats,HDop,Lat,Lng,Alt,Spd,GCrs,VZ,U"
 #define GPS_FMT   "QBIHBcLLefffB"
-#define GPS_UNITS "s---SmDUmnhn-"
+#define GPS_UNITS "s---Smddmnhn-"
 #define GPS_MULTS "F---0BGGBBB0-"
 
 #define GYR_LABELS "TimeUS,SampleUS,GyrX,GyrY,GyrZ"
@@ -1124,13 +1122,13 @@ Format characters in the format string for binary log messages
     { LOG_POWR_MSG, sizeof(log_POWR), \
       "POWR","QffH","TimeUS,Vcc,VServo,Flags", "svv-", "FBB-" },  \
     { LOG_CMD_MSG, sizeof(log_Cmd), \
-      "CMD", "QHHHfffffff","TimeUS,CTot,CNum,CId,Prm1,Prm2,Prm3,Prm4,Lat,Lng,Alt", "s-------DUm", "F-------GG0" }, \
+      "CMD", "QHHHfffffff","TimeUS,CTot,CNum,CId,Prm1,Prm2,Prm3,Prm4,Lat,Lng,Alt", "s-------ddm", "F-------GG0" }, \
     { LOG_RADIO_MSG, sizeof(log_Radio), \
       "RAD", "QBBBBBHH", "TimeUS,RSSI,RemRSSI,TxBuf,Noise,RemNoise,RxErrors,Fixed", "s-------", "F-------" }, \
     { LOG_CAMERA_MSG, sizeof(log_Camera), \
-      "CAM", "QIHLLeeeccC","TimeUS,GPSTime,GPSWeek,Lat,Lng,Alt,RelAlt,GPSAlt,Roll,Pitch,Yaw", "s--DUmmmddd", "F--GGBBBBBB" }, \
+      "CAM", "QIHLLeeeccC","TimeUS,GPSTime,GPSWeek,Lat,Lng,Alt,RelAlt,GPSAlt,Roll,Pitch,Yaw", "s--ddmmmddd", "F--GGBBBBBB" }, \
     { LOG_TRIGGER_MSG, sizeof(log_Camera), \
-            "TRIG", "QIHLLeeeccC","TimeUS,GPSTime,GPSWeek,Lat,Lng,Alt,RelAlt,GPSAlt,Roll,Pitch,Yaw", "s--DUmmmddd", "F--GGBBBBBB" }, \
+            "TRIG", "QIHLLeeeccC","TimeUS,GPSTime,GPSWeek,Lat,Lng,Alt,RelAlt,GPSAlt,Roll,Pitch,Yaw", "s--ddmmmddd", "F--GGBBBBBB" }, \
     { LOG_ARSP_MSG, sizeof(log_AIRSPEED), \
       "ARSP",  "QffcffB",  "TimeUS,Airspeed,DiffPress,Temp,RawPress,Offset,U", "snPOPP-", "F00B00-" }, \
     { LOG_CURRENT_MSG, sizeof(log_Current), \
@@ -1165,11 +1163,11 @@ Format characters in the format string for binary log messages
     { LOG_IMU3_MSG, sizeof(log_IMU), \
       "IMU3",  IMU_FMT,     IMU_LABELS, IMU_UNITS, IMU_MULTS }, \
     { LOG_AHR2_MSG, sizeof(log_AHRS), \
-      "AHR2","QccCfLLffff","TimeUS,Roll,Pitch,Yaw,Alt,Lat,Lng,Q1,Q2,Q3,Q4","sddhmDU????", "FBBBBGG????" }, \
+      "AHR2","QccCfLLffff","TimeUS,Roll,Pitch,Yaw,Alt,Lat,Lng,Q1,Q2,Q3,Q4","sddhmdd????", "FBBBBGG????" }, \
     { LOG_POS_MSG, sizeof(log_POS), \
-      "POS","QLLfff","TimeUS,Lat,Lng,Alt,RelHomeAlt,RelOriginAlt", "sDUmmm", "FGGBBB" }, \
+      "POS","QLLfff","TimeUS,Lat,Lng,Alt,RelHomeAlt,RelOriginAlt", "sddmmm", "FGGBBB" }, \
     { LOG_SIMSTATE_MSG, sizeof(log_AHRS), \
-"SIM","QccCfLLffff","TimeUS,Roll,Pitch,Yaw,Alt,Lat,Lng,Q1,Q2,Q3,Q4", "sddhmDU????", "FBBB0GG????" }, \
+"SIM","QccCfLLffff","TimeUS,Roll,Pitch,Yaw,Alt,Lat,Lng,Q1,Q2,Q3,Q4", "sddhmdd????", "FBBB0GG????" }, \
     { LOG_NKF1_MSG, sizeof(log_EKF1), \
       "NKF1","QccCfffffffccce","TimeUS,Roll,Pitch,Yaw,VN,VE,VD,dPD,PN,PE,PD,GX,GY,GZ,OH", "sddhnnnnmmmkkkm", "FBBB0000000BBBB" }, \
     { LOG_NKF2_MSG, sizeof(log_NKF2), \
@@ -1221,7 +1219,7 @@ Format characters in the format string for binary log messages
     { LOG_XKV2_MSG, sizeof(log_ekfStateVar), \
       "XKV2","Qffffffffffff","TimeUS,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23", "s------------", "F------------" }, \
     { LOG_TERRAIN_MSG, sizeof(log_TERRAIN), \
-      "TERR","QBLLHffHH","TimeUS,Status,Lat,Lng,Spacing,TerrH,CHeight,Pending,Loaded", "s-DU-mm--", "F-GG-00--" }, \
+      "TERR","QBLLHffHH","TimeUS,Status,Lat,Lng,Spacing,TerrH,CHeight,Pending,Loaded", "s-dd-mm--", "F-GG-00--" }, \
     { LOG_GPS_UBX1_MSG, sizeof(log_Ubx1), \
       "UBX1", "QBHBBH",  "TimeUS,Instance,noisePerMS,jamInd,aPower,agcCnt", "s-----", "F-----" }, \
     { LOG_GPS_UBX2_MSG, sizeof(log_Ubx2), \
@@ -1237,7 +1235,7 @@ Format characters in the format string for binary log messages
     { LOG_GPS_RAWS_MSG, sizeof(log_GPS_RAWS), \
       "GRXS", "QddfBBBHBBBBB", "TimeUS,prMes,cpMes,doMes,gnss,sv,freq,lock,cno,prD,cpD,doD,trk", "s------------", "F------------" }, \
     { LOG_GPS_SBF_EVENT_MSG, sizeof(log_GPS_SBF_EVENT), \
-      "SBFE", "QIHBBdddfffff", "TimeUS,TOW,WN,Mode,Err,Lat,Lng,Height,Undul,Vn,Ve,Vu,COG", "s----DUm-nnnh", "F----000-0000" }, \
+      "SBFE", "QIHBBdddfffff", "TimeUS,TOW,WN,Mode,Err,Lat,Lng,Height,Undul,Vn,Ve,Vu,COG", "s----ddm-nnnh", "F----000-0000" }, \
     { LOG_ESC1_MSG, sizeof(log_Esc), \
       "ESC1",  ESC_FMT, ESC_LABELS, ESC_UNITS, ESC_MULTS }, \
     { LOG_ESC2_MSG, sizeof(log_Esc), \
@@ -1295,7 +1293,7 @@ Format characters in the format string for binary log messages
     { LOG_IMUDT3_MSG, sizeof(log_IMUDT), \
       "IMT3",IMT_FMT,IMT_LABELS, IMT_UNITS, IMT_MULTS }, \
     { LOG_ORGN_MSG, sizeof(log_ORGN), \
-      "ORGN","QBLLe","TimeUS,Type,Lat,Lng,Alt", "s-DUm", "F-GGB" },   \
+      "ORGN","QBLLe","TimeUS,Type,Lat,Lng,Alt", "s-ddm", "F-GGB" },   \
     { LOG_DF_FILE_STATS, sizeof(log_DSF), \
       "DSF", "QIBHIIII", "TimeUS,Dp,IErr,Blk,Bytes,FMn,FMx,FAv", "s---b---", "F---0---" }, \
     { LOG_RPM_MSG, sizeof(log_RPM), \
@@ -1309,7 +1307,7 @@ Format characters in the format string for binary log messages
     { LOG_RATE_MSG, sizeof(log_Rate), \
       "RATE", "Qffffffffffff",  "TimeUS,RDes,R,ROut,PDes,P,POut,YDes,Y,YOut,ADes,A,AOut", "skk-kk-kk-oo-", "F?????????BB-" }, \
     { LOG_RALLY_MSG, sizeof(log_Rally), \
-            "RALY", "QBBLLh", "TimeUS,Tot,Seq,Lat,Lng,Alt", "s--DUm", "F--GGB" },  \
+            "RALY", "QBBLLh", "TimeUS,Tot,Seq,Lat,Lng,Alt", "s--ddm", "F--GGB" },  \
     { LOG_VISUALODOM_MSG, sizeof(log_VisualOdom), \
             "VISO", "Qffffffff", "TimeUS,dt,AngDX,AngDY,AngDZ,PosDX,PosDY,PosDZ,conf", "ssrrrmmm-", "FF000000-" }
 
