@@ -69,11 +69,11 @@ struct MultiplierStructure {
 };
 
 // all units here should be base units
-// This does mean battery capacity is here as "amps*seconds"
+// This does mean battery capacity is here as "amp*second"
 const struct UnitStructure log_Units[] = {
     { '-', "" },    // no units e.g. Pi, or a string
     { '?', "UNKNOWN" },    // Units which haven't been worked out yet....
-    { 'A', "amps" },
+    { 'A', "amp" },
     { 'd', "degrees" }, // of the angular variety, -180 to 180
     { 'D', "deglatitude" },
     { 'b', "bytes" },
@@ -82,12 +82,12 @@ const struct UnitStructure log_Units[] = {
     { 'E', "radians/second" },
     { 'G', "gauss" },
     { 'h', "degheading" }, // 0.? to 359.?
-    { 'i', "amps*seconds" },
-    // { 'l', "litre" },
+    { 'i', "amp*seconds" },
+    // { 'l', "litres" },
     { 'L', "radians/second/second" },
     { 'm', "metres" },
     { 'n', "metres/second" },
-    // { 'N', "Newtons" },
+    // { 'N', "Newton" },
     { 'o', "metres/second/second" },
     { 'O', "degcelsius" },
     { 'S', "satellites" },
