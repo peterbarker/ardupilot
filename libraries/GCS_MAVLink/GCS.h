@@ -921,6 +921,16 @@ public:
     void setup_console();
     void setup_uarts();
 
+    virtual void setup_uarts();
+
+    void send_custom_message(...);
+
+    bool out_of_time() const {
+        return _out_of_time;
+    }
+    void set_out_of_time(bool val) {
+        _out_of_time = val;
+    }
     bool out_of_time() const;
 
     // frsky backend

@@ -480,6 +480,22 @@ void Copter::three_hz_loop()
 // one_hz_loop - runs at 1Hz
 void Copter::one_hz_loop()
 {
+    gcs().send_custom_message(0,
+                              "BOB",
+                              "My funky message",
+                              "Best. Mesage. Ever.",
+                              3,
+
+                              "Field1",
+                              MAVLINK_MESSAGE_FIELD_TYPE_UINT8_T,
+                              "Best.  First Field.  Ever.",
+
+                              "Field2",
+                              MAVLINK_MESSAGE_FIELD_TYPE_FLOAT,
+                              "What evs.",
+        )
+        )
+
     if (should_log(MASK_LOG_ANY)) {
         Log_Write_Data(LogDataID::AP_STATE, ap.value);
     }

@@ -5114,6 +5114,60 @@ uint64_t GCS_MAVLINK::capabilities() const
     return ret;
 }
 
+void GCS_MAVLINK::send_custom_message(uint32_t message_id,
+                                      const char *name,
+                                      const char *description,
+                                      uint8_t field_count,
+                                      ...)
+{
+    va_list arg_list;
+    va_start(arg_list, fmt);
+    char msgbuf[260];
+    uint16_t offset;
+
+#if MAVLINK_NEED_BYTE_SWAP || !MAVLINK_ALIGNED_FIELDS
+    char buf[required_buf_len];
+    _mav_put_uint32_t(buf, 0, seqno);
+    _mav_put_uint8_t(buf, 4, target_system);
+    _mav_put_uint8_t(buf, 5, target_component);
+    _mav_put_uint8_t_array(buf, 6, data, 200);
+        memcpy(_MAV_PAYLOAD_NON_CONST(msg), buf, MAVLINK_MSG_ID_REMOTE_LOG_DATA_BLOCK_LEN);
+#else
+    mavlink_remote_log_data_block_t packet;
+    packet.seqno = seqno;
+    packet.target_system = target_system;
+    packet.target_component = target_component;
+    mav_array_memcpy(packet.data, data, sizeof(uint8_t)*200);
+        memcpy(_MAV_PAYLOAD_NON_CONST(msg), &packet, MAVLINK_MSG_ID_REMOTE_LOG_DATA_BLOCK_LEN);
+#endif
+
+    msg->msgid = MAVLINK_MSG_ID_REMOTE_LOG_DATA_BLOCK;
+    return mavlink_finalize_message(msg, system_id, component_id, MAVLINK_MSG_ID_REMOTE_LOG_DATA_BLOCK_MIN_LEN, MAVLINK_MSG_ID_REMOTE_LOG_DATA_BLOCK_LEN, MAVLINK_MSG_ID_REMOTE_LOG_DATA_BLOCK_CRC);
+
+
+    msgbuf[offset++] = stx[0];
+    msgbuf[offset++] = stx[1];
+    msgbuf[offset++] = message_id;
+    for(uint8_t i=0; i<field_count; i++) {
+        const char *field_name = va_arg(args, char*);
+        const uint8_t *type = va_arg(args, uint8_t);
+        const char *description = va_arg(args, char*);
+        // copy name in
+        memcpy(&msgbuf[offset],
+               field_name,
+               MAVLINK_MSG_MAVLINK_MESSAGE_FIELD_DEFINITION_FIELD_NAME_LEN);
+        offset += MAVLINK_MSG_MAVLINK_MESSAGE_FIELD_DEFINITION_FIELD_NAME_LEN;
+        // copy type in
+        msgbuf[offset++] = type;
+        // copy description in:
+        memcpy(&msgbuf[offset],
+               field_description,
+               MAVLINK_MSG_MAVLINK_MESSAGE_FIELD_DEFINITION_FIELD_DESCRIPTION_LEN);
+        offset += MAVLINK_MSG_MAVLINK_MESSAGE_FIELD_DEFINITION_FIELD_DESCRIPTION_LEN;
+    }
+    va_end(arg_list);
+}
+
 
 void GCS_MAVLINK::manual_override(RC_Channel *c, int16_t value_in, const uint16_t offset, const float scaler, const uint32_t tnow, const bool reversed)
 {
