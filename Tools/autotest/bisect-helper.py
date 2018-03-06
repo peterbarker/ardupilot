@@ -21,6 +21,12 @@ git bisect good a7647e77d9 &&
   git bisect run /tmp/bisect-helper.py --build \
     --waf-configure-arg="--board bebop"
 
+Work out who caused us not to be able to navigate:
+cp -a Tools/autotest/bisect-helper.py /tmp
+git bisect good a7647e77d9 &&
+  git bisect bad 153ad9539866f8d93a99e9998118bb090d2f747f &&
+  git bisect run /tmp/bisect-helper.py --dronekit-script dronekit:ArduCopter:Tools/autotest/dronekit_scripts/test-nagivation.py
+
 '''
 
 import optparse
@@ -108,7 +114,15 @@ class Bisect(object):
                 self.exit_skip()
             else:
                 self.exit_fail()
+        self.build_output = self.program_output
 
+    def binary(self):
+        '''search build output to find binary'''
+        match = re.match("^(bin/[^ ]+ )")
+        if match is None:
+            raise ValueError("Unable to find binary in build output (%s)" %
+                             self.build_output)
+        return match.group(1)
 
 class BisectBuild(Bisect):
 
@@ -125,6 +139,45 @@ class BisectCITest(Bisect):
     def __init__(self, opts):
         super(BisectCITest, self).__init__(opts)
 
+class BisectDronekitScript(Bisect):
+
+    def __init__(self, opts):
+        super(BisectDronekitScript, self).__init__(opts)
+
+    def run_script(self, script, binary):
+        vinfo = pysim.vehicleinfo.VehicleInfo()
+        if defaults_file is None:
+            defaults_file = vinfo.options["ArduCopter"]["frames"][model]["default_params_filename"]
+
+        sitl = pysim.util.start_SITL(binary,
+                                     model=model,
+                                     speedup=speedup,
+                                     valgrind=valgrind,
+                                     gdb=gdb,
+                                     gdbserver=gdbserver,
+                                     defaults_file=defaults_file
+        )
+        try:
+            # FIXME: should be able to do better than this static string:
+            cmd = ["python", script, '--connect', 'tcp:127.0.0.1:5760']
+            retcode = subprocess.call(cmd)
+        except subprocess.CalledProcessError as e:
+            progress("Failed with timeout")
+            failed = True
+            fail_list.append("timeout")
+            util.pexpect_close(sitl)
+            return False
+
+        pysim.util.pexpect_close(sitl)
+
+        return retcode == 0
+
+    def run(self):
+        self.build()
+        binary = self.binary()
+        if not self.run_script(self.opts.dronekit_script):
+            sys.exit(1)
+        sys.exit(0)
 
 if __name__ == '__main__':
 
@@ -138,6 +191,10 @@ if __name__ == '__main__':
                       default=None,
                       help="If supplied, must be present in"
                       "build output to count as a failure")
+    parser.add_option("--dronekit-script",
+                      type='string',
+                      default=None,
+                      help="use a dronekit script to bisect a failure")
 
     group_build = optparse.OptionGroup(parser, "Build options")
     group_build.add_option("", "--waf-configure-arg",
@@ -161,6 +218,8 @@ if __name__ == '__main__':
 
     if opts.build:
         bisecter = BisectBuild(opts)
+    elif opts.dronekit_script:
+        bisecter = BisectDronekitScript(opts)
     else:
         bisecter = BisectCITest(opts)
 
