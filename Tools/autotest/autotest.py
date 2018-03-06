@@ -9,6 +9,7 @@ import fnmatch
 import glob
 import optparse
 import os
+import re
 import shutil
 import signal
 import sys
@@ -20,6 +21,7 @@ from arducopter import *
 from quadplane import *
 from arduplane import *
 from ardusub import *
+import dronekit_script
 
 from pysim import util
 from pymavlink import mavutil
@@ -192,10 +194,14 @@ __bin_names = {
 }
 
 def binary_path(step, debug=False):
-    try:
-        vehicle = step.split(".")[1]
-    except Exception:
-        return None
+    dronekit_match = re.match("dronekit:([^:]*):(.*)", step)
+    if dronekit_match is not None:
+        vehicle = dronekit_match.group(1)
+    else:
+        try:
+            vehicle = step.split(".")[1]
+        except Exception:
+            return None
 
     if vehicle in __bin_names:
         binary_name = __bin_names[vehicle]
@@ -310,6 +316,9 @@ def run_step(step):
 
     if step == 'convertgpx':
         return convert_gpx()
+
+    if step.startswith("dronekit:"):
+        return dronekit_script.run_dronekit_script(binary, step)
 
     raise RuntimeError("Unknown step %s" % step)
 
@@ -592,8 +601,11 @@ if __name__ == "__main__":
         for a in args:
             matches = [step for step in steps if fnmatch.fnmatch(step.lower(), a.lower())]
             if not len(matches):
-                print("No steps matched {}".format(a))
-                sys.exit(1)
+                if a.startswith("dronekit:"):
+                    matched.append(a)
+                else:
+                    print("No steps matched {}".format(a))
+                    sys.exit(1)
             matched.extend(matches)
         steps = matched
 
