@@ -95,5 +95,17 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end
   end
 
+  config.vm.define "ros", autostart: false do |ros|
+    config.vm.box = "ubuntu/xenial64"
+    config.vm.provision :shell, path: "Tools/vagrant/initvagrant-ros.sh"
+    config.vm.provider "virtualbox" do |vb|
+      # at least 4GB to build Gazebo:
+      vb.customize ["modifyvm", :id, "--memory", "6144"]
+      config.disksize.size = '14GB'
+      vb.gui = true
+      vb.cpus = 4
+    end
+  end
+
 end
 
