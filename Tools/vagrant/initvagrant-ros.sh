@@ -152,3 +152,5 @@ echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib" >>$VAGRANT_HOME/.b
 
 cd $GAZEBO_HOME/gazebo/build
 make install
+
+apt-get install -u ubuntu-desktop
