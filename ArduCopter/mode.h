@@ -628,8 +628,6 @@ private:
 
     LowPassFilterVector2f flow_filter;
 
-    bool flowhold_init(bool ignore_checks);
-    void flowhold_run();
     void flowhold_flow_to_angle(Vector2f &angle, bool stick_input);
     void update_height_estimate(void);
 
