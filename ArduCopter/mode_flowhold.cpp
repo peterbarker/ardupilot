@@ -203,6 +203,33 @@ void Copter::ModeFlowHold::flowhold_flow_to_angle(Vector2f &bf_angles, bool stic
     }
 }
 
+void Copter::ModeFlowHold::flowhold_adjust_roll_pitch(float &roll, float &pitch, float angle_max)
+{
+    if (copter.optflow.healthy()) {
+        const float filter_constant = 0.95;
+        quality_filtered = filter_constant * quality_filtered + (1-filter_constant) * copter.optflow.quality();
+    } else {
+        quality_filtered = 0;
+    }
+
+    if (quality_filtered >= flow_min_quality) {
+        Vector2f flow_angles;
+
+        const bool stick_input =
+            channel_roll->get_control_in() ||
+            channel_pitch->get_control_in();
+        flowhold_flow_to_angle(flow_angles, stick_input);
+        flow_angles.x = constrain_float(flow_angles.x, -angle_max/2, angle_max/2);
+        flow_angles.y = constrain_float(flow_angles.y, -angle_max/2, angle_max/2);
+        roll += flow_angles.x;
+        pitch += flow_angles.y;
+
+        // FIXME: apply circular limit
+        roll = constrain_float(roll, -angle_max, angle_max);
+        pitch = constrain_float(pitch, -angle_max, angle_max);
+    }
+}
+
 // flowhold_run - runs the flowhold controller
 // should be called at 100hz or more
 void Copter::ModeFlowHold::run()
@@ -243,32 +270,6 @@ void Copter::ModeFlowHold::run()
         flowhold_state = FlowHold_Landed;
     } else {
         flowhold_state = FlowHold_Flying;
-    }
-
-    if (copter.optflow.healthy()) {
-        const float filter_constant = 0.95;
-        quality_filtered = filter_constant * quality_filtered + (1-filter_constant) * copter.optflow.quality();
-    } else {
-        quality_filtered = 0;
-    }
-
-    if (quality_filtered >= flow_min_quality &&
-        AP_HAL::millis() - copter.arm_time_ms > 3000) {
-        // don't use for first 3s when we are just taking off
-        Vector2f flow_angles;
-        float angle_max = attitude_control->get_althold_lean_angle_max();
-        int16_t roll_in = channel_roll->get_control_in();
-        int16_t pitch_in = channel_pitch->get_control_in();
-
-        flowhold_flow_to_angle(flow_angles, (roll_in != 0) || (pitch_in != 0));
-        flow_angles.x = constrain_float(flow_angles.x, -angle_max/2, angle_max/2);
-        flow_angles.y = constrain_float(flow_angles.y, -angle_max/2, angle_max/2);
-        target_roll += flow_angles.x;
-        target_pitch += flow_angles.y;
-
-        // FIXME: apply circular limit
-        target_roll = constrain_float(target_roll, -angle_max, angle_max);
-        target_pitch = constrain_float(target_pitch, -angle_max, angle_max);
     }
 
     // Flow Hold State Machine
@@ -352,6 +353,9 @@ void Copter::ModeFlowHold::run()
     case FlowHold_Flying:
         motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
+        flowhold_adjust_roll_pitch(target_roll,
+                                   target_pitch,
+                                   copter.aparm.angle_max);
 #if AC_AVOID_ENABLED == ENABLED
         // apply avoidance
         copter.avoid.adjust_roll_pitch(target_roll, target_pitch, copter.aparm.angle_max);
