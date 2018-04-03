@@ -232,6 +232,10 @@ void Copter::ModeFlowHold::run()
     // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();
 
+    // get pilot desired lean angles
+    float target_roll, target_pitch;
+    get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, attitude_control->get_althold_lean_angle_max());
+
     // get pilot's desired yaw rate
     float target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
 
@@ -260,37 +264,33 @@ void Copter::ModeFlowHold::run()
     } else {
         quality_filtered = 0;
     }
-    
-    Vector2f bf_angles;
 
-    // calculate alt-hold angles
-    int16_t roll_in = channel_roll->get_control_in();
-    int16_t pitch_in = channel_pitch->get_control_in();
-    float angle_max = attitude_control->get_althold_lean_angle_max();
-    get_pilot_desired_lean_angles(roll_in, pitch_in,
-                                         bf_angles.x, bf_angles.y,
-                                         angle_max);
-    
     if (quality_filtered >= flow_min_quality &&
         AP_HAL::millis() - copter.arm_time_ms > 3000) {
         // don't use for first 3s when we are just taking off
         Vector2f flow_angles;
+        float angle_max = attitude_control->get_althold_lean_angle_max();
+        int16_t roll_in = channel_roll->get_control_in();
+        int16_t pitch_in = channel_pitch->get_control_in();
 
         flowhold_flow_to_angle(flow_angles, (roll_in != 0) || (pitch_in != 0));
         flow_angles.x = constrain_float(flow_angles.x, -angle_max/2, angle_max/2);
         flow_angles.y = constrain_float(flow_angles.y, -angle_max/2, angle_max/2);
-        bf_angles += flow_angles;
+        target_roll += flow_angles.x;
+        target_pitch += flow_angles.y;
+
+        // FIXME: apply circular limit
+        target_roll = constrain_float(target_roll, -angle_max, angle_max);
+        target_pitch = constrain_float(target_pitch, -angle_max, angle_max);
     }
-    bf_angles.x = constrain_float(bf_angles.x, -angle_max, angle_max);
-    bf_angles.y = constrain_float(bf_angles.y, -angle_max, angle_max);
-            
+
     // Flow Hold State Machine
     switch (flowhold_state) {
 
     case FlowHold_MotorStopped:
 
         motors->set_desired_spool_state(AP_Motors::DESIRED_SHUT_DOWN);
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(bf_angles.x, bf_angles.y, target_yaw_rate, get_smoothing_gain());
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
         attitude_control->reset_rate_controller_I_terms();
         attitude_control->set_yaw_target_to_current_heading();
 #if FRAME_CONFIG == HELI_FRAME    
@@ -329,7 +329,7 @@ void Copter::ModeFlowHold::run()
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
         // call attitude controller
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(bf_angles.x, bf_angles.y, target_yaw_rate, get_smoothing_gain());
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
         // call position controller
         pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
@@ -357,7 +357,7 @@ void Copter::ModeFlowHold::run()
         attitude_control->reset_rate_controller_I_terms();
         attitude_control->set_yaw_target_to_current_heading();
 #endif
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(bf_angles.x, bf_angles.y, target_yaw_rate, get_smoothing_gain());
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
         pos_control->relax_alt_hold_controllers(0.0f);   // forces throttle output to go to zero
         pos_control->update_z_controller();
         break;
@@ -367,11 +367,11 @@ void Copter::ModeFlowHold::run()
 
 #if AC_AVOID_ENABLED == ENABLED
         // apply avoidance
-        copter.avoid.adjust_roll_pitch(bf_angles.x, bf_angles.y, copter.aparm.angle_max);
+        copter.avoid.adjust_roll_pitch(target_roll, target_pitch, copter.aparm.angle_max);
 #endif
 
         // call attitude controller
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(bf_angles.x, bf_angles.y, target_yaw_rate, get_smoothing_gain());
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
         // adjust climb rate using rangefinder
         if (copter.rangefinder_alt_ok()) {
