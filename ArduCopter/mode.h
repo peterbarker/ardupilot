@@ -594,18 +594,13 @@ private:
   optical flow directly, avoiding the need for a rangefinder
  */
 
-class ModeFlowHold : public Mode {
+class ModeFlowHold : public ModeAltHold {
 public:
     // need a constructor for parameters
     ModeFlowHold(void);
 
     bool init(bool ignore_checks) override;
     void run(void) override;
-
-    bool requires_GPS() const override { return false; }
-    bool has_manual_throttle() const override { return false; }
-    bool allows_arming(bool from_gcs) const override { return true; };
-    bool is_autopilot() const override { return false; }
 
     static const struct AP_Param::GroupInfo var_info[];
 

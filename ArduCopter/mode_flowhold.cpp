@@ -66,7 +66,7 @@ const AP_Param::GroupInfo Copter::ModeFlowHold::var_info[] = {
     AP_GROUPEND
 };
 
-Copter::ModeFlowHold::ModeFlowHold(void) : Mode()
+Copter::ModeFlowHold::ModeFlowHold(void) : ModeAltHold()
 {
     AP_Param::setup_object_defaults(this, var_info);            
 }
@@ -87,20 +87,11 @@ bool Copter::ModeFlowHold::init(bool ignore_checks)
         return false;
     }
 
-    // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->set_alt_target_to_current_alt();
-        pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
-    }
-
     flow_filter.set_cutoff_frequency(copter.scheduler.get_loop_rate_hz(), flow_filter_hz.get());
 
     quality_filtered = 0;
     flow_pi_xy.reset_I();
     limited = false;
-    
-    // stop takeoff if running
-    takeoff_stop();
 
     flow_pi_xy.set_dt(1.0/copter.scheduler.get_loop_rate_hz());
 
@@ -108,7 +99,7 @@ bool Copter::ModeFlowHold::init(bool ignore_checks)
     last_ins_height = inertial_nav.get_altitude() * 0.01;
     height_offset = 0;
     
-    return true;
+    return Copter::ModeAltHold::init(ignore_checks);;
 }
 
 /*
