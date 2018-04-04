@@ -106,6 +106,10 @@ void Copter::ModeLand::nogps_run()
         target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
     }
 
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+    copter.flowhold.adjust_roll_pitch(target_roll, target_pitch, copter.aparm.angle_max);
+#endif
+
     // if not auto armed or landed or motor interlock not enabled set throttle to zero and exit immediately
     if (!motors->armed() || !ap.auto_armed || ap.land_complete || !motors->get_interlock()) {
 #if FRAME_CONFIG == HELI_FRAME  // Helicopters always stabilize roll/pitch/yaw
@@ -154,6 +158,13 @@ int32_t Copter::ModeLand::get_alt_above_ground(void)
         }
     }
     return alt_above_ground;
+}
+
+void Copter::land_controllers_init()
+{
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+    copter.flowhold.init();
+#endif
 }
 
 void Copter::land_run_vertical_control(bool pause_descent)
@@ -255,15 +266,15 @@ void Copter::land_run_horizontal_control()
         pos_control->override_vehicle_velocity_xy(-target_vel_rel);
     }
 #endif
-    
+
     // process roll, pitch inputs
     wp_nav->set_pilot_desired_acceleration(roll_control, pitch_control);
 
     // run loiter controller
     wp_nav->update_loiter(ekfGndSpdLimit, ekfNavVelGainScaler);
 
-    int32_t nav_roll  = wp_nav->get_roll();
-    int32_t nav_pitch = wp_nav->get_pitch();
+    float nav_roll  = wp_nav->get_roll();
+    float nav_pitch = wp_nav->get_pitch();
 
     if (g2.wp_navalt_min > 0) {
         // user has requested an altitude below which navigation
@@ -284,6 +295,12 @@ void Copter::land_run_horizontal_control()
             // tell position controller we are applying an external limit
             pos_control->set_limit_accel_xy();
         }
+
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+        if (!doing_precision_landing) {
+            copter.flowhold.adjust_roll_pitch(nav_roll, nav_pitch, aparm.angle_max);
+        }
+#endif
     }
 
     

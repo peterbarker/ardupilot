@@ -407,6 +407,11 @@ void Copter::ModeRTL::land_start()
 
     // initialise yaw
     set_auto_yaw_mode(AUTO_YAW_HOLD);
+
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+    copter.land_controllers_init();
+#endif
+
 }
 
 bool Copter::ModeRTL::landing_gear_should_be_deployed() const

@@ -114,6 +114,9 @@
  # include <AC_PrecLand/AC_PrecLand.h>
  # include <AP_IRLock/AP_IRLock.h>
 #endif
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+ # include "flowhold.h"
+#endif
 #if FRSKY_TELEM_ENABLED == ENABLED
  # include <AP_Frsky_Telem/AP_Frsky_Telem.h>
 #endif
@@ -181,6 +184,7 @@ public:
     friend class AP_AdvancedFailsafe_Copter;
 #endif
     friend class AP_Arming_Copter;
+    friend class AC_FlowHold;
     friend class ToyMode;
 
     Copter(void);
@@ -565,6 +569,10 @@ private:
     AC_PrecLand precland{ahrs, inertial_nav};
 #endif
 
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
+    AC_FlowHold flowhold;
+#endif
+
     // Pilot Input Management Library
     // Only used for Helicopter for now
 #if FRAME_CONFIG == HELI_FRAME
@@ -825,6 +833,7 @@ private:
     float get_auto_yaw_rate_cds();
 
     // mode_land.cpp
+    void land_controllers_init();
     void land_run_vertical_control(bool pause_descent = false);
     void land_run_horizontal_control();
     void set_mode_land_with_pause(mode_reason_t reason);

@@ -379,6 +379,7 @@ void Copter::ModeAuto::land_start(const Vector3f& destination)
 
     // initialise yaw
     set_auto_yaw_mode(AUTO_YAW_HOLD);
+    copter.land_controllers_init();
 }
 
 // auto_land_run - lands in auto mode
