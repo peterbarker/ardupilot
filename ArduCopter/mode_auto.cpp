@@ -989,7 +989,6 @@ void ModeAuto::loiter_to_alt_run()
 // auto_payload_place_start - initialises controller to implement placement of a load
 void ModeAuto::payload_place_start(const Vector3f& destination)
 {
-    _mode = Auto_NavPayloadPlace;
     nav_payload_place.state = PayloadPlaceStateType_Calibrating_Hover_Start;
 
     // initialise loiter target destination
@@ -1161,6 +1160,7 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     loiter_time_max = cmd.p1;
 
     // set next destination if necessary
+    _mode = Auto_WP;
     if (!set_next_wp(cmd, dest_loc)) {
         // failure to set next destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
@@ -1234,6 +1234,7 @@ void ModeAuto::do_land(const AP_Mission::Mission_Command& cmd)
 
         const Location target_loc = terrain_adjusted_location(cmd);
 
+        _mode = Auto_WP;
         wp_start(target_loc);
     } else {
         // set landing state
@@ -1276,6 +1277,7 @@ void ModeAuto::do_loiter_unlimited(const AP_Mission::Mission_Command& cmd)
     }
 
     // start way point navigator and provide it the desired location
+    _mode = Auto_WP;
     wp_start(target_loc);
 }
 
@@ -1536,6 +1538,8 @@ void ModeAuto::do_winch(const AP_Mission::Mission_Command& cmd)
 // do_payload_place - initiate placing procedure
 void ModeAuto::do_payload_place(const AP_Mission::Mission_Command& cmd)
 {
+    _mode = Auto_NavPayloadPlace;
+
     // if location provided we fly to that location at current altitude
     if (cmd.content.location.lat != 0 || cmd.content.location.lng != 0) {
         // set state to fly to location
