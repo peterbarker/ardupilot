@@ -1008,6 +1008,8 @@ void ModeAuto::payload_place_start(const Vector3f& destination)
 //      called by auto_run at 100hz or more
 void ModeAuto::payload_place_run()
 {
+    payload_place_update_state();
+
     if (!payload_place_run_should_run()) {
         zero_throttle_and_relax_ac();
         // set target to current position
@@ -1550,9 +1552,6 @@ void ModeAuto::do_payload_place(const AP_Mission::Mission_Command& cmd)
         wp_start(target_loc);
     } else {
         nav_payload_place.state = PayloadPlaceStateType_Calibrating_Hover_Start;
-
-        // initialise placing controller
-        payload_place_start();
     }
     nav_payload_place.descend_max = cmd.p1;
 }
@@ -1643,6 +1642,24 @@ bool ModeAuto::verify_land()
 // verify_payload_place - returns true if placing has been completed
 bool ModeAuto::verify_payload_place()
 {
+    return nav_payload_place.state == PayloadPlaceStateType_Done;
+}
+
+void Copter::ModeAuto::payload_place_update_state()
+{
+    for (uint8_t i=0; i<10; i++) {
+        const PayloadPlaceStateType orig_state = nav_payload_place.state;
+        payload_place_move_to_next_state();
+        if (orig_state == nav_payload_place.state) {
+            return;
+        }
+    }
+    // unable to determine what our state should be.  This is not good.
+    nav_payload_place.state = PayloadPlaceStateType_Done;
+}
+
+void Copter::ModeAuto::payload_place_move_to_next_state()
+{
     const uint16_t hover_throttle_calibrate_time = 2000; // milliseconds
     const uint16_t descend_throttle_calibrate_time = 2000; // milliseconds
     const float hover_throttle_placed_fraction = 0.7; // i.e. if throttle is less than 70% of hover we have placed
@@ -1676,22 +1693,42 @@ bool ModeAuto::verify_payload_place()
     switch (nav_payload_place.state) {
     case PayloadPlaceStateType_FlyToLocation:
         if (!copter.wp_nav->reached_wp_destination()) {
-            return false;
+            return;
         }
-        payload_place_start();
-        return false;
-    case PayloadPlaceStateType_Calibrating_Hover_Start:
+        // we're there; set loiter target
+        nav_payload_place.state = PayloadPlaceStateType_Calibrating_Hover_Start;
+        return;
+
+    case PayloadPlaceStateType_Calibrating_Hover_Start: {
+        // set target to stopping point
+        Vector3f stopping_point;
+        loiter_nav->get_stopping_point_xy(stopping_point);
+
+        // initialise loiter target destination
+        loiter_nav->init_target(stopping_point);
+
+        // initialise position and desired velocity
+        if (!pos_control->is_active_z()) {
+            pos_control->set_alt_target(inertial_nav.get_altitude());
+            pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
+        }
+
+        // initialise yaw
+        auto_yaw.set_mode(AUTO_YAW_HOLD);
+
         // hover for 1 second to get an idea of what our hover
         // throttle looks like
         debug("Calibrate start");
         nav_payload_place.hover_start_timestamp = now;
         nav_payload_place.state = PayloadPlaceStateType_Calibrating_Hover;
-        FALLTHROUGH;
+        return;
+    }
+
     case PayloadPlaceStateType_Calibrating_Hover: {
         if (now - nav_payload_place.hover_start_timestamp < hover_throttle_calibrate_time) {
             // still calibrating...
             debug("Calibrate Timer: %d", now - nav_payload_place.hover_start_timestamp);
-            return false;
+            return;
         }
         // we have a valid calibration.  Hopefully.
         nav_payload_place.hover_throttle_level = current_throttle_level;
@@ -1699,13 +1736,15 @@ bool ModeAuto::verify_payload_place()
         gcs().send_text(MAV_SEVERITY_INFO, "hover throttle delta: %f", static_cast<double>(hover_throttle_delta));
         nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
         }
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Descending_Start:
         nav_payload_place.descend_start_timestamp = now;
         nav_payload_place.descend_start_altitude = inertial_nav.get_altitude();
         nav_payload_place.descend_throttle_level = 0;
         nav_payload_place.state = PayloadPlaceStateType_Descending;
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Descending:
         // make sure we don't descend too far:
         debug("descended: %f cm (%f cm max)", (nav_payload_place.descend_start_altitude - inertial_nav.get_altitude()), nav_payload_place.descend_max);
@@ -1713,7 +1752,7 @@ bool ModeAuto::verify_payload_place()
             nav_payload_place.descend_start_altitude - inertial_nav.get_altitude()  > nav_payload_place.descend_max) {
             nav_payload_place.state = PayloadPlaceStateType_Ascending;
             gcs().send_text(MAV_SEVERITY_WARNING, "Reached maximum descent");
-            return false; // we'll do any cleanups required next time through the loop
+            return; // we'll do any cleanups required next time through the loop
         }
         // see if we've been descending long enough to calibrate a descend-throttle-level:
         if (is_zero(nav_payload_place.descend_throttle_level) &&
@@ -1727,19 +1766,20 @@ bool ModeAuto::verify_payload_place()
              current_throttle_level/nav_payload_place.descend_throttle_level > descent_throttle_placed_fraction)) {
             // throttle is above both threshold ratios (or above hover threshold ration and descent threshold ratio not yet valid)
             nav_payload_place.place_start_timestamp = 0;
-            return false;
+            return;
         }
         if (nav_payload_place.place_start_timestamp == 0) {
             // we've only just now hit the correct throttle level
             nav_payload_place.place_start_timestamp = now;
-            return false;
+            return;
         } else if (now - nav_payload_place.place_start_timestamp < placed_time) {
             // keep going down....
             debug("Place Timer: %d", now - nav_payload_place.place_start_timestamp);
-            return false;
+            return;
         }
         nav_payload_place.state = PayloadPlaceStateType_Releasing_Start;
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Releasing_Start:
 #if GRIPPER_ENABLED == ENABLED
         if (g2.gripper.valid()) {
@@ -1754,42 +1794,47 @@ bool ModeAuto::verify_payload_place()
         gcs().send_text(MAV_SEVERITY_INFO, "Gripper code disabled");
 #endif
         nav_payload_place.state = PayloadPlaceStateType_Releasing;
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Releasing:
 #if GRIPPER_ENABLED == ENABLED
         if (g2.gripper.valid() && !g2.gripper.released()) {
-            return false;
+            return;
         }
 #endif
         nav_payload_place.state = PayloadPlaceStateType_Released;
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Released: {
         nav_payload_place.state = PayloadPlaceStateType_Ascending_Start;
         }
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Ascending_Start: {
         Location target_loc(inertial_nav.get_position(), Location::AltFrame::ABOVE_ORIGIN);
         target_loc.alt = nav_payload_place.descend_start_altitude;
         wp_start(target_loc);
         nav_payload_place.state = PayloadPlaceStateType_Ascending;
         }
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Ascending:
         if (!copter.wp_nav->reached_wp_destination()) {
-            return false;
+            return;
         }
         nav_payload_place.state = PayloadPlaceStateType_Done;
-        FALLTHROUGH;
+        return;
+
     case PayloadPlaceStateType_Done:
-        return true;
+        return;
     default:
         // this should never happen
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
-        return true;
+        return;
     }
     // should never get here
-    return true;
 }
+
 #undef debug
 
 bool ModeAuto::verify_loiter_unlimited()

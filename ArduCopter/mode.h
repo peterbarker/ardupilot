@@ -474,7 +474,7 @@ private:
 
     bool verify_takeoff();
     bool verify_land();
-    bool verify_payload_place();
+    bool verify_payload_place() const;
     bool verify_loiter_unlimited();
     bool verify_loiter_time(const AP_Mission::Mission_Command& cmd);
     bool verify_loiter_to_alt() const;
@@ -537,6 +537,9 @@ private:
         uint8_t cmd_count;                  // number of commands in the cmd array
         AP_Mission::Mission_Command cmd[mis_change_detect_cmd_max]; // local copy of the next few mission commands
     } mis_change_detect = {};
+
+    void payload_place_update_state();
+    void payload_place_move_to_next_state();
 };
 
 #if AUTOTUNE_ENABLED == ENABLED
