@@ -117,6 +117,8 @@ enum PayloadPlaceStateType {
     PayloadPlaceStateType_FlyToLocation,
     PayloadPlaceStateType_Calibrating_Hover_Start,
     PayloadPlaceStateType_Calibrating_Hover,
+    PayloadPlaceStateType_Winching_Down_Start,
+    PayloadPlaceStateType_Winching_Down,
     PayloadPlaceStateType_Descending_Start,
     PayloadPlaceStateType_Descending,
     PayloadPlaceStateType_Releasing_Start,
@@ -124,6 +126,8 @@ enum PayloadPlaceStateType {
     PayloadPlaceStateType_Released,
     PayloadPlaceStateType_Ascending_Start,
     PayloadPlaceStateType_Ascending,
+    PayloadPlaceStateType_Winching_Up_Start,
+    PayloadPlaceStateType_Winching_Up,
     PayloadPlaceStateType_Done,
 };
 

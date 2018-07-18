@@ -525,6 +525,13 @@ private:
         float descend_throttle_level;
         float descend_start_altitude;
         float descend_max; // centimetres
+#if WINCH_ENABLED == ENABLED
+        float winch_length; // metres
+        float winch_orig_length; // metres/second
+        uint32_t winch_down_start_ms;
+#endif
+        const float hover_throttle_placed_fraction = 0.7; // i.e. if throttle is less than 70% of hover we have placed
+        const uint16_t placed_time = 500; // how long we have to be below a throttle threshold before considering placed
     } nav_payload_place;
 
     bool waiting_to_start;  // true if waiting for vehicle to be armed or EKF origin before starting mission
@@ -540,6 +547,8 @@ private:
 
     void payload_place_update_state();
     void payload_place_move_to_next_state();
+    void payload_place_update_state_winching_down();
+    void payload_place_update_state_winching_up();
 };
 
 #if AUTOTUNE_ENABLED == ENABLED

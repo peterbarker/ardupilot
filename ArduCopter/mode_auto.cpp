@@ -1026,6 +1026,8 @@ void ModeAuto::payload_place_run()
         return wp_run();
     case PayloadPlaceStateType_Calibrating_Hover_Start:
     case PayloadPlaceStateType_Calibrating_Hover:
+    case PayloadPlaceStateType_Winching_Down_Start:
+    case PayloadPlaceStateType_Winching_Down:
         return payload_place_run_loiter();
     case PayloadPlaceStateType_Descending_Start:
     case PayloadPlaceStateType_Descending:
@@ -1036,6 +1038,8 @@ void ModeAuto::payload_place_run()
     case PayloadPlaceStateType_Ascending_Start:
         return payload_place_run_loiter();
     case PayloadPlaceStateType_Ascending:
+    case PayloadPlaceStateType_Winching_Up_Start:
+    case PayloadPlaceStateType_Winching_Up:
     case PayloadPlaceStateType_Done:
         return wp_run();
     }
@@ -1554,6 +1558,9 @@ void ModeAuto::do_payload_place(const AP_Mission::Mission_Command& cmd)
         nav_payload_place.state = PayloadPlaceStateType_Calibrating_Hover_Start;
     }
     nav_payload_place.descend_max = cmd.p1;
+#if WINCH_ENABLED == ENABLED
+    nav_payload_place.winch_length = cmd.content.payload_place.winch_release_length*0.25f;
+#endif
 }
 
 // do_RTL - start Return-to-Launch
@@ -1640,12 +1647,12 @@ bool ModeAuto::verify_land()
 #endif
 
 // verify_payload_place - returns true if placing has been completed
-bool ModeAuto::verify_payload_place()
+bool ModeAuto::verify_payload_place() const
 {
     return nav_payload_place.state == PayloadPlaceStateType_Done;
 }
 
-void Copter::ModeAuto::payload_place_update_state()
+void ModeAuto::payload_place_update_state()
 {
     for (uint8_t i=0; i<10; i++) {
         const PayloadPlaceStateType orig_state = nav_payload_place.state;
@@ -1658,13 +1665,100 @@ void Copter::ModeAuto::payload_place_update_state()
     nav_payload_place.state = PayloadPlaceStateType_Done;
 }
 
-void Copter::ModeAuto::payload_place_move_to_next_state()
+void ModeAuto::payload_place_update_state_winching_down()
+{
+#if WINCH_ENABLED == ENABLED
+
+    debug("winched: %f cm (%f cm max)",
+          g2.winch.get_line_length(),
+          nav_payload_place.winch_length);
+
+    const float max_winch_rate = g2.winch.get_rate_max();
+    if (is_zero(max_winch_rate)) {
+        gcs().send_text(MAV_SEVERITY_INFO, "PP: bad max-winch-rate");
+        nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+        return;
+    }
+
+    if (g2.winch.get_line_length() >= nav_payload_place.winch_length) {
+        // sufficient line out, and load is not on ground
+        gcs().send_text(MAV_SEVERITY_INFO, "PP: Winched out");
+        nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+        return;
+    }
+
+    // we're still winching out....
+
+    const uint32_t now = AP_HAL::millis();
+
+    // be generous in amount of time we can stay in this state:
+    const uint32_t winch_down_max_ms = 2*(nav_payload_place.winch_length*1000/max_winch_rate);
+    if (now - nav_payload_place.winch_down_start_ms >  winch_down_max_ms) {
+        gcs().send_text(MAV_SEVERITY_INFO, "PP: len=%f rate=%f",
+                        nav_payload_place.winch_length,
+                        max_winch_rate);
+        gcs().send_text(MAV_SEVERITY_INFO, "PP: Winch down timed out after %ums",
+            winch_down_max_ms);
+        nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+        return;
+    }
+
+    // watch the throttle to determine whether the load has been placed
+    const float current_throttle_level = motors->get_throttle();
+
+    const float hover_ratio = current_throttle_level/nav_payload_place.hover_throttle_level;
+    // debug("hover ratio: %f\n", current_throttle_level/nav_payload_place.hover_throttle_level);
+    if (hover_ratio > nav_payload_place.hover_throttle_placed_fraction) {
+        // throttle is above threshold ratio
+        nav_payload_place.place_start_timestamp = 0;
+        return;
+    }
+
+    // our throttle is below the threshold - maybe the load is on the ground?
+    if (nav_payload_place.place_start_timestamp == 0) {
+        // we've only just now hit the correct throttle level
+        nav_payload_place.place_start_timestamp = now;
+        return;
+    }
+
+    if (now - nav_payload_place.place_start_timestamp < nav_payload_place.placed_time) {
+        // keep going down....
+        debug("Place Timer: %d", now - nav_payload_place.place_start_timestamp);
+        return;
+    }
+
+    // load is placed!
+
+    // stop winch moving
+    g2.winch.release_length(0, 0);
+
+    // move to start releasing the load:
+    nav_payload_place.state = PayloadPlaceStateType_Releasing_Start;
+    return;
+#else
+    nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+#endif
+}
+
+void ModeAuto::payload_place_update_state_winching_up()
+{
+#if WINCH_ENABLED == ENABLED
+    const float out = g2.winch.get_line_length();
+    if (is_zero(out)) {
+        // winch-up is complete
+        nav_payload_place.state = PayloadPlaceStateType_Done;
+        return;
+    }
+#else
+    nav_payload_place.state = PayloadPlaceStateType_Done;
+#endif
+}
+
+void ModeAuto::payload_place_move_to_next_state()
 {
     const uint16_t hover_throttle_calibrate_time = 2000; // milliseconds
     const uint16_t descend_throttle_calibrate_time = 2000; // milliseconds
-    const float hover_throttle_placed_fraction = 0.7; // i.e. if throttle is less than 70% of hover we have placed
     const float descent_throttle_placed_fraction = 0.9; // i.e. if throttle is less than 90% of descent throttle we have placed
-    const uint16_t placed_time = 500; // how long we have to be below a throttle threshold before considering placed
 
     const float current_throttle_level = motors->get_throttle();
     const uint32_t now = AP_HAL::millis();
@@ -1675,6 +1769,8 @@ void Copter::ModeAuto::payload_place_move_to_next_state()
         case PayloadPlaceStateType_FlyToLocation:
         case PayloadPlaceStateType_Calibrating_Hover_Start:
         case PayloadPlaceStateType_Calibrating_Hover:
+        case PayloadPlaceStateType_Winching_Down_Start:
+        case PayloadPlaceStateType_Winching_Down:
         case PayloadPlaceStateType_Descending_Start:
         case PayloadPlaceStateType_Descending:
             gcs().send_text(MAV_SEVERITY_INFO, "PayloadPlace: landed");
@@ -1685,6 +1781,8 @@ void Copter::ModeAuto::payload_place_move_to_next_state()
         case PayloadPlaceStateType_Released:
         case PayloadPlaceStateType_Ascending_Start:
         case PayloadPlaceStateType_Ascending:
+        case PayloadPlaceStateType_Winching_Up_Start:
+        case PayloadPlaceStateType_Winching_Up:
         case PayloadPlaceStateType_Done:
             break;
         }
@@ -1721,21 +1819,51 @@ void Copter::ModeAuto::payload_place_move_to_next_state()
         debug("Calibrate start");
         nav_payload_place.hover_start_timestamp = now;
         nav_payload_place.state = PayloadPlaceStateType_Calibrating_Hover;
+
+        nav_payload_place.descend_start_timestamp = 0; // FIXME! Move this
+
         return;
     }
 
     case PayloadPlaceStateType_Calibrating_Hover: {
         if (now - nav_payload_place.hover_start_timestamp < hover_throttle_calibrate_time) {
             // still calibrating...
-            debug("Calibrate Timer: %d", now - nav_payload_place.hover_start_timestamp);
+            // debug("Calibrate Timer: %d", now - nav_payload_place.hover_start_timestamp);
             return;
         }
         // we have a valid calibration.  Hopefully.
         nav_payload_place.hover_throttle_level = current_throttle_level;
         const float hover_throttle_delta = fabsf(nav_payload_place.hover_throttle_level - motors->get_throttle_hover());
         gcs().send_text(MAV_SEVERITY_INFO, "hover throttle delta: %f", static_cast<double>(hover_throttle_delta));
-        nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+        nav_payload_place.state = PayloadPlaceStateType_Winching_Down_Start;
         }
+        return;
+
+    case PayloadPlaceStateType_Winching_Down_Start:
+#if WINCH_ENABLED == ENABLED
+        if (!g2.winch.enabled()) {
+            // what an awesome time to discover the winch isn't enabled....
+            gcs().send_text(MAV_SEVERITY_WARNING, "PP: winch not enabled");
+            nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+            return;
+        }
+        if (!is_zero(nav_payload_place.winch_length) &&
+            g2.winch.get_line_length() < nav_payload_place.winch_length) {
+            nav_payload_place.winch_orig_length = g2.winch.get_line_length();
+            g2.winch.release_length(nav_payload_place.winch_length);
+            AP::logger().Write_Event(LogEvent::WINCH_LENGTH_CONTROL);
+            nav_payload_place.state = PayloadPlaceStateType_Winching_Down;
+            return;
+        }
+        nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+        nav_payload_place.winch_down_start_ms = AP_HAL::millis();
+#else
+        nav_payload_place.state = PayloadPlaceStateType_Descending_Start;
+#endif
+        return;
+
+    case PayloadPlaceStateType_Winching_Down:
+        payload_place_update_state_winching_down();
         return;
 
     case PayloadPlaceStateType_Descending_Start:
@@ -1761,7 +1889,7 @@ void Copter::ModeAuto::payload_place_move_to_next_state()
         }
         // watch the throttle to determine whether the load has been placed
         // debug("hover ratio: %f   descend ratio: %f\n", current_throttle_level/nav_payload_place.hover_throttle_level, ((nav_payload_place.descend_throttle_level == 0) ? -1.0f : current_throttle_level/nav_payload_place.descend_throttle_level));
-        if (current_throttle_level/nav_payload_place.hover_throttle_level > hover_throttle_placed_fraction &&
+        if (current_throttle_level/nav_payload_place.hover_throttle_level > nav_payload_place.hover_throttle_placed_fraction &&
             (is_zero(nav_payload_place.descend_throttle_level) ||
              current_throttle_level/nav_payload_place.descend_throttle_level > descent_throttle_placed_fraction)) {
             // throttle is above both threshold ratios (or above hover threshold ration and descent threshold ratio not yet valid)
@@ -1772,7 +1900,7 @@ void Copter::ModeAuto::payload_place_move_to_next_state()
             // we've only just now hit the correct throttle level
             nav_payload_place.place_start_timestamp = now;
             return;
-        } else if (now - nav_payload_place.place_start_timestamp < placed_time) {
+        } else if (now - nav_payload_place.place_start_timestamp < nav_payload_place.placed_time) {
             // keep going down....
             debug("Place Timer: %d", now - nav_payload_place.place_start_timestamp);
             return;
@@ -1805,13 +1933,17 @@ void Copter::ModeAuto::payload_place_move_to_next_state()
         nav_payload_place.state = PayloadPlaceStateType_Released;
         return;
 
-    case PayloadPlaceStateType_Released: {
+    case PayloadPlaceStateType_Released:
         nav_payload_place.state = PayloadPlaceStateType_Ascending_Start;
-        }
         return;
 
     case PayloadPlaceStateType_Ascending_Start: {
-        Location target_loc(inertial_nav.get_position(), Location::AltFrame::ABOVE_ORIGIN);
+        if (nav_payload_place.descend_start_timestamp == 0) {
+            // we never descended (winched load onto ground?)
+            nav_payload_place.state = PayloadPlaceStateType_Winching_Up_Start;
+            return;
+        }
+        Location target_loc{inertial_nav.get_position(), Location::AltFrame::ABOVE_ORIGIN};
         target_loc.alt = nav_payload_place.descend_start_altitude;
         wp_start(target_loc);
         nav_payload_place.state = PayloadPlaceStateType_Ascending;
@@ -1822,7 +1954,20 @@ void Copter::ModeAuto::payload_place_move_to_next_state()
         if (!copter.wp_nav->reached_wp_destination()) {
             return;
         }
+        nav_payload_place.state = PayloadPlaceStateType_Winching_Up_Start;
+        return;
+
+    case PayloadPlaceStateType_Winching_Up_Start:
+#if WINCH_ENABLED == ENABLED
+        g2.winch.release_length(-g2.winch.get_line_length());
+        nav_payload_place.state = PayloadPlaceStateType_Winching_Up;
+#else
         nav_payload_place.state = PayloadPlaceStateType_Done;
+#endif
+        return;
+
+    case PayloadPlaceStateType_Winching_Up:
+        payload_place_update_state_winching_up();
         return;
 
     case PayloadPlaceStateType_Done:
