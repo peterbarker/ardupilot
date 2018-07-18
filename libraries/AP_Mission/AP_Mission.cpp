@@ -6,6 +6,8 @@
 #include <GCS_MAVLink/GCS.h>
 #include <AP_AHRS/AP_AHRS.h>
 
+#include <stdio.h>
+
 const AP_Param::GroupInfo AP_Mission::var_info[] = {
 
     // @Param: TOTAL
@@ -1108,6 +1110,9 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
 
     case MAV_CMD_NAV_PAYLOAD_PLACE:
         cmd.p1 = packet.param1*100; // copy max-descend parameter (m->cm)
+        ::fprintf(stderr, "In %f\n", packet.param2);
+        cmd.content.payload_place.winch_release_length = packet.param2 * 4; // metres -> 25cm intervals
+        ::fprintf(stderr, "Stashing %u\n", cmd.content.payload_place.winch_release_length);
         break;
 
     case MAV_CMD_NAV_SET_YAW_SPEED:
@@ -1568,6 +1573,8 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
 
     case MAV_CMD_NAV_PAYLOAD_PLACE:
         packet.param1 = cmd.p1/100.0f; // copy max-descend parameter (cm->m)
+        ::fprintf(stderr, "retrieved: %u\n", cmd.content.payload_place.winch_release_length);
+        packet.param2 = cmd.content.payload_place.winch_release_length*0.25f;
         break;
 
     case MAV_CMD_NAV_SET_YAW_SPEED:

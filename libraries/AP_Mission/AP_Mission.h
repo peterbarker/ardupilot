@@ -211,6 +211,11 @@ public:
         float p3;
     };
 
+     // navigation delay command structure
+    struct PACKED Payload_Place_Command {
+        uint8_t winch_release_length; // 25cm precision, 64m max
+    };
+
     union Content {
         // jump structure
         Jump_Command jump;
@@ -274,6 +279,9 @@ public:
 
         // NAV_SET_YAW_SPEED support
         Set_Yaw_Speed set_yaw_speed;
+
+        // payload place
+        Payload_Place_Command payload_place;
 
         // do-winch
         Winch_Command winch;
