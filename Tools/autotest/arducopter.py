@@ -2736,6 +2736,93 @@ class AutoTestCopter(AutoTest):
         self.wait_waypoint(4, 4)
         self.wait_disarmed()
 
+    def fly_precision_place_mission(self):
+        '''use Companion PrecLand backend precision messages in auto'''
+        self.context_push()
+
+        ex = None
+        try:
+            self.set_parameter("PLND_ENABLED", 1)
+            self.fetch_parameters()
+            # enable companion backend:
+            self.set_parameter("PLND_TYPE", 1)
+
+            self.set_analog_rangefinder_parameters()
+
+            self.set_parameter("WINCH_ENABLE", 1)
+            self.set_parameter("SERVO8_FUNCTION", 88) # k_winch
+
+            self.reboot_sitl()
+
+            # load the mission:
+            self.load_mission("copter_precision_place.txt")
+
+            self.change_mode('LOITER')
+            self.wait_ready_to_arm()
+
+            # we should be doing precision loiter at this point
+            start = self.mav.recv_match(type='LOCAL_POSITION_NED',
+                                        blocking=True)
+
+            self.arm_vehicle()
+
+            self.change_mode('AUTO')
+
+            self.set_rc(3, 1500)
+
+            m = self.mav.recv_match(type='SERVO_OUTPUT', blocking=True)
+            if m.servo8_raw != self.get_parameter("SERVO8_MIN"):
+                self.progress("Servo8 not at minimum value")
+                raise NotAchievedException()
+
+            # wait until we get to a specific waypoint
+            desired_waypoint = 3
+            while True:
+                m = self.mav.recv_match(type='MISSION_CURRENT', blocking=True)
+                self.progress("Waypoint current=%u want=%u" %
+                              (m.seq, desired_waypoint))
+                if m.seq == desired_waypoint:
+                    break
+
+            # start feeding in precision messages which should move
+            # the vehicle
+            m_lpn_at_wp = self.mav.recv_match(type='LOCAL_POSITION_NED',
+                                              blocking=True)
+            precision_placement_loc = rotmat.Vector3(m_lpn_at_wp.x + 1,
+                                                     m_lpn_at_wp.y,
+                                                     0)
+            seen_winch_move = False
+            while True:
+                m = self.mav.recv_match(type='LOCAL_POSITION_NED',
+                                            blocking=True)
+                m = self.mav.messages["SERVO_OUTPUT"]
+                if (m is not None and
+                    m.servo8_raw == self.get_parameter("SERVO8_MAX")):
+                    seen_winch_move = True
+
+                m = self.mav.recv_match(type='STATUSTEXT', blocking=True)
+                if "Gripper" in m.text:
+                    self.progress("Received gripper text")
+                    break
+
+            if not seen_winch_move:
+                self.progress("Did not see winch move")
+                raise NotAchievedException()
+
+            # TODO: check for gripper release here
+            self.mav.motors_disarmed_wait()
+
+        except Exception as e:
+            self.progress("Exception caught")
+            ex = e
+
+        self.context_pop()
+        self.reboot_sitl()
+        self.progress("All done")
+
+        if ex is not None:
+            raise ex
+
     def test_surface_tracking(self):
         ex = None
         self.context_push()
@@ -7024,6 +7111,10 @@ class AutoTestCopter(AutoTest):
             Test("Replay",
                  "Test Replay",
                  self.test_replay),
+
+            Test("PrecisionPlaceMission",
+                 "Test winching down a load while a CC is providing guidance",
+                 self.fly_precision_place_mission),
 
             Test("LogUpload",
                  "Log upload",
