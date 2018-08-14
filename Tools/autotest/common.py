@@ -16,6 +16,7 @@ from MAVProxy.modules.lib import mp_util
 
 from pymavlink import mavwp, mavutil, DFReader
 from pymavlink import mavextra
+from pymavlink.rotmat import Vector3
 
 from pysim import util, vehicleinfo
 
@@ -104,6 +105,16 @@ class MsgRcvTimeoutException(AutoTestTimeoutException):
 
 class NotAchievedException(ErrorException):
     """Thrown when fails to achieve a goal"""
+    pass
+
+
+class YawSpeedNotAchievedException(NotAchievedException):
+    """Thrown when fails to achieve given yaw speed."""
+    pass
+
+
+class SpeedVectorNotAchievedException(NotAchievedException):
+    """Thrown when fails to achieve given speed vector."""
     pass
 
 
@@ -1811,6 +1822,39 @@ class AutoTest(ABC):
                 self.progress("Attained heading %d" % heading)
                 return True
         raise WaitHeadingTimeout("Failed to attain heading %d" % heading)
+
+    def wait_yaw_speed(self, yaw_speed, accuracy=0.1, timeout=30, **kwargs):
+        """Wait for a given yaw speed in radians per second."""
+        def get_yawspeed(timeout2):
+            msg = self.mav.recv_match(type='ATTITUDE', blocking=True, timeout=timeout2)
+            if msg:
+                return msg.yawspeed
+            raise MsgRcvTimeoutException("Failed to get yaw speed")
+
+        def validator(value2, target2):
+            return math.fabs(value2 - target2) <= accuracy
+
+        self.wait_and_maintain(value_name="YawSpeed", target=yaw_speed, current_value_getter=lambda: get_yawspeed(timeout), validator=lambda value2, target2: validator(value2, target2), accuracy=accuracy, timeout=timeout, **kwargs)
+
+    def wait_speed_vector(self, speed_vector, accuracy=0.2, timeout=30, **kwargs):
+        """Wait for a given speed vector."""
+        tstart = self.get_sim_time()
+        if speed_vector.x or speed_vector.y:
+            raise ValueError("Only does descent")
+        while True:
+            if self.get_sim_time_cached() - tstart > timeout:
+                raise NotAchievedException("Never achieved speed")
+            msg = self.mav.recv_match(type='LOCAL_POSITION_NED', blocking=True, timeout=1)
+            if msg is None:
+                continue
+
+            self.progress("Got msg (%s)" % str(msg))
+
+            got = msg.vz
+            want = speed_vector.z
+            if abs(got - want) < 1:
+                return True
+            self.progress("want=%f got=%f" % (want, got))
 
     def wait_distance(self, distance, accuracy=5, timeout=30):
         """Wait for flight of a given distance."""

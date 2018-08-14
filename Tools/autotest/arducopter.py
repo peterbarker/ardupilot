@@ -10,6 +10,7 @@ import time
 
 from pymavlink import mavutil
 from pymavlink import mavextra
+from pymavlink.rotmat import Vector3
 
 from pysim import util, rotmat
 
@@ -4000,6 +4001,13 @@ class AutoTestCopter(AutoTest):
         self.wait_current_waypoint(0, timeout=10)
         self.set_rc(7, 1000)
 
+    def GPSFailVerticalVelocity(self):
+        self.takeoff(10)
+        self.change_mode('LAND')
+        self.wait_speed_vector(Vector3(0, 0, 0.5))
+        self.set_parameter('SIM_GPS_DISABLE', 1)
+        self.mav.motors_disarmed_wait()
+
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestCopter, self).tests()
@@ -4016,6 +4024,10 @@ class AutoTestCopter(AutoTest):
             ("NavDelay",
              "Fly Nav Delay",
              self.fly_nav_delay),
+
+            ("GPSFailVerticalVelocity",
+             "Check sane vertical velocity on GPS failure",
+             self.GPSFailVerticalVelocity),
 
             ("GuidedSubModeChange",
              "Test submode change",
