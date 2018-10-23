@@ -1,4 +1,4 @@
-/// @file    AP_Mission.cpp
+// @file    AP_Mission.cpp
 /// @brief   Handles the MAVLINK command mission stack.  Reads and writes mission to storage.
 
 #include "AP_Mission_config.h"
@@ -335,7 +335,7 @@ void AP_Mission::update()
         }
     } else {
         // run the active nav command
-        if (verify_command(_nav_cmd)) {
+        if (nav_cmd_is_complete()) {
             // market _nav_cmd as complete (it will be started on the next iteration)
             _flags.nav_cmd_loaded = false;
             // immediately advance to the next mission command
@@ -350,10 +350,10 @@ void AP_Mission::update()
     // check if we have an active do command
     if (!_flags.do_cmd_loaded) {
         advance_current_do_cmd();
-    } else {
+    }else{
         // check the active do command
-        if (verify_command(_do_cmd)) {
-            // mark _do_cmd as complete
+        if (do_cmd_is_complete()) {
+            // mark _nav_cmd as complete
             _flags.do_cmd_loaded = false;
         }
     }
@@ -1996,9 +1996,6 @@ void AP_Mission::complete()
     _flags.state = MISSION_COMPLETE;
     _flags.in_landing_sequence = false;
     _flags.in_return_path = false;
-
-    // callback to main program's mission complete function
-    _mission_complete_fn();
 }
 
 /// advance_current_nav_cmd - moves current nav command forward
@@ -2054,7 +2051,7 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
             }
             // set current navigation command and start it
             _nav_cmd = cmd;
-            if (start_command(_nav_cmd)) {
+            if (start_nav_cmd()) {
                 _flags.nav_cmd_loaded = true;
                 if (_jump_tag.age > 0 && _jump_tag.age < UINT16_MAX) {
                     // we're tracking a tag so increase it's age on every new NAV item
@@ -2082,7 +2079,7 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
             if (!_flags.do_cmd_loaded) {
                 _do_cmd = cmd;
                 _flags.do_cmd_loaded = true;
-                start_command(_do_cmd);
+                start_do_cmd();
             }
         }
         // move onto next command
@@ -2133,7 +2130,7 @@ void AP_Mission::advance_current_do_cmd()
     // set current do command and start it
     _do_cmd = cmd;
     _flags.do_cmd_loaded = true;
-    start_command(_do_cmd);
+    start_do_cmd();
 }
 
 /// get_next_cmd - gets next command found at or after start_index

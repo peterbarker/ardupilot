@@ -437,16 +437,8 @@ public:
         }
     };
 
-
-    // main program function pointers
-    FUNCTOR_TYPEDEF(mission_cmd_fn_t, bool, const Mission_Command&);
-    FUNCTOR_TYPEDEF(mission_complete_fn_t, void);
-
     // constructor
-    AP_Mission(mission_cmd_fn_t cmd_start_fn, mission_cmd_fn_t cmd_verify_fn, mission_complete_fn_t mission_complete_fn) :
-        _cmd_start_fn(cmd_start_fn),
-        _cmd_verify_fn(cmd_verify_fn),
-        _mission_complete_fn(mission_complete_fn),
+    AP_Mission() :
         _prev_nav_cmd_id(AP_MISSION_CMD_ID_NONE),
         _prev_nav_cmd_index(AP_MISSION_CMD_INDEX_NONE),
         _prev_nav_cmd_wp_index(AP_MISSION_CMD_INDEX_NONE)
@@ -782,6 +774,17 @@ public:
     void set_log_start_mission_item_bit(uint32_t bit) { log_start_mission_item_bit = bit; }
 #endif
 
+protected:
+
+    /// complete - mission is marked complete and clean-up performed including calling the mission_complete_fn
+    virtual void complete();
+
+    virtual bool start_nav_cmd();
+    virtual bool nav_cmd_is_complete() const;
+
+    virtual void start_do_cmd();
+    virtual bool do_cmd_is_complete() const;
+
 private:
     static AP_Mission *_singleton;
 
@@ -810,12 +813,6 @@ private:
     ///
     /// private methods
     ///
-
-    /// complete - mission is marked complete and clean-up performed including calling the mission_complete_fn
-    void complete();
-
-    bool verify_command(const Mission_Command& cmd);
-    bool start_command(const Mission_Command& cmd);
 
     /// advance_current_nav_cmd - moves current nav command forward
     //      starting_index is used to set the index from which searching will begin, leave as 0 to search from the current navigation target
@@ -884,11 +881,6 @@ private:
 
     /// check if the next nav command is a takeoff, skipping delays
     bool is_takeoff_next(uint16_t start_index);
-
-    // pointer to main program functions
-    mission_cmd_fn_t        _cmd_start_fn;  // pointer to function which will be called when a new command is started
-    mission_cmd_fn_t        _cmd_verify_fn; // pointer to function which will be called repeatedly to ensure a command is progressing
-    mission_complete_fn_t   _mission_complete_fn;   // pointer to function which will be called when mission completes
 
     // parameters
     AP_Int16                _cmd_total;  // total number of commands in the mission
