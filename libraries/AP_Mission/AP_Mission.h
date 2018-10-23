@@ -467,16 +467,8 @@ public:
         }
     };
 
-
-    // main program function pointers
-    FUNCTOR_TYPEDEF(mission_cmd_fn_t, bool, const Mission_Command&);
-    FUNCTOR_TYPEDEF(mission_complete_fn_t, void);
-
     // constructor
-    AP_Mission(mission_cmd_fn_t cmd_start_fn, mission_cmd_fn_t cmd_verify_fn, mission_complete_fn_t mission_complete_fn) :
-        _cmd_start_fn(cmd_start_fn),
-        _cmd_verify_fn(cmd_verify_fn),
-        _mission_complete_fn(mission_complete_fn),
+    AP_Mission() :
         _prev_nav_cmd_id(AP_MISSION_CMD_ID_NONE),
         _prev_nav_cmd_index(AP_MISSION_CMD_INDEX_NONE),
         _prev_nav_cmd_wp_index(AP_MISSION_CMD_INDEX_NONE)
@@ -820,6 +812,20 @@ public:
     void set_log_start_mission_item_bit(uint32_t bit) { log_start_mission_item_bit = bit; }
 #endif
 
+protected:
+
+    /// complete - mark mission as complete and perform cleanups:
+    virtual void complete();
+
+    virtual bool start_nav_cmd();
+    virtual bool nav_cmd_is_complete() const;
+
+    virtual bool start_do_cmd();
+    virtual bool do_cmd_is_complete() const;
+
+    struct Mission_Command  _nav_cmd;   // current "navigation" command.  It's position in the command list is held in _nav_cmd.index
+    struct Mission_Command  _do_cmd;    // current "do" command.  It's position in the command list is held in _do_cmd.index
+
 private:
     static AP_Mission *_singleton;
 
@@ -857,17 +863,6 @@ private:
     ///
     /// private methods
     ///
-
-    /// write_cmd_to_storage - write a command to storage
-    ///     cmd.index is used to calculate the storage location
-    ///     true is returned if successful
-    bool write_cmd_to_storage(uint16_t index, const Mission_Command& cmd);
-
-    /// complete - mission is marked complete and clean-up performed including calling the mission_complete_fn
-    void complete();
-
-    bool verify_command(const Mission_Command& cmd);
-    bool start_command(const Mission_Command& cmd);
 
     /// advance_current_nav_cmd - moves current nav command forward
     //      starting_index is used to set the index from which searching will begin, leave as 0 to search from the current navigation target
@@ -948,11 +943,6 @@ private:
     /// check if the next nav command is a takeoff, skipping delays
     bool is_takeoff_next(uint16_t start_index);
 
-    // pointer to main program functions
-    mission_cmd_fn_t        _cmd_start_fn;  // pointer to function which will be called when a new command is started
-    mission_cmd_fn_t        _cmd_verify_fn; // pointer to function which will be called repeatedly to ensure a command is progressing
-    mission_complete_fn_t   _mission_complete_fn;   // pointer to function which will be called when mission completes
-
     // parameters
     AP_Int16                _cmd_total;  // total number of commands in the mission
     AP_UInt16               _options;    // bitmask options for missions, currently for mission clearing on reboot but can be expanded as required
@@ -961,9 +951,6 @@ private:
     // internal variables
     bool                    _force_resume;  // when set true it forces mission to resume irrespective of MIS_RESTART param.
     uint16_t                _repeat_dist; // Distance to repeat on mission resume (m), can be set with MAV_CMD_DO_SET_RESUME_REPEAT_DIST
-    struct Mission_Command  _nav_cmd;   // current "navigation" command.  It's position in the command list is held in _nav_cmd.index
-    struct Mission_Command  _do_cmd;    // current "do" command.  It's position in the command list is held in _do_cmd.index
-    struct Mission_Command  _resume_cmd;  // virtual wp command that is used to resume mission if the mission needs to be rewound on resume.
     uint16_t                _prev_nav_cmd_id;       // id of the previous "navigation" command. (WAYPOINT, LOITER_TO_ALT, ect etc)
     uint16_t                _prev_nav_cmd_index;    // index of the previous "navigation" command.  Rarely used which is why we don't store the whole command
     uint16_t                _prev_nav_cmd_wp_index; // index of the previous "navigation" command that contains a waypoint.  Rarely used which is why we don't store the whole command
@@ -993,12 +980,12 @@ private:
     static HAL_Semaphore _rsem;
 
     // mission items common to all vehicles:
-    bool start_command_do_aux_function(const AP_Mission::Mission_Command& cmd);
-    bool start_command_do_gripper(const AP_Mission::Mission_Command& cmd);
-    bool start_command_do_servorelayevents(const AP_Mission::Mission_Command& cmd);
-    bool start_command_camera(const AP_Mission::Mission_Command& cmd);
-    bool start_command_parachute(const AP_Mission::Mission_Command& cmd);
-    bool command_do_set_repeat_dist(const AP_Mission::Mission_Command& cmd);
+    bool start_command_do_aux_function();
+    bool start_command_do_gripper();
+    bool start_command_do_servorelayevents();
+    bool start_command_camera();
+    bool start_command_parachute();
+    bool command_do_set_repeat_dist();
 
     bool start_command_do_sprayer(const AP_Mission::Mission_Command& cmd);
     bool start_command_do_scripting(const AP_Mission::Mission_Command& cmd);
@@ -1008,6 +995,9 @@ private:
 #if AP_MISSION_MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET_ENABLED
     bool start_command_do_set_roi_wpnext_offset(const AP_Mission::Mission_Command& cmd);
 #endif  // AP_MISSION_MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET_ENABLED
+
+    bool start_command_do_sprayer();
+    bool start_command_do_scripting();
 
     /*
       handle format conversion of storage format to allow us to update

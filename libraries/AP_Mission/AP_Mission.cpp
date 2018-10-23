@@ -342,7 +342,7 @@ void AP_Mission::update()
         }
     } else {
         // run the active nav command
-        if (verify_command(_nav_cmd)) {
+        if (nav_cmd_is_complete()) {
             // market _nav_cmd as complete (it will be started on the next iteration)
             _flags.nav_cmd_loaded = false;
             // immediately advance to the next mission command
@@ -359,7 +359,7 @@ void AP_Mission::update()
         advance_current_do_cmd();
     } else {
         // check the active do command
-        if (verify_command(_do_cmd)) {
+        if (do_cmd_is_complete()) {
             // mark _do_cmd as complete
             _flags.do_cmd_loaded = false;
         }
@@ -374,8 +374,8 @@ void AP_Mission::on_mission_timestamp_change()
 
 bool AP_Mission::verify_command(const Mission_Command& cmd)
 {
-    switch (cmd.id) {
-    // do-commands always return true for verify:
+    switch (_do_cmd.id) {
+        // do-commands always return true for verify:
 #if AP_GRIPPER_ENABLED
     case MAV_CMD_DO_GRIPPER:
 #endif
@@ -405,11 +405,14 @@ bool AP_Mission::verify_command(const Mission_Command& cmd)
     case MAV_CMD_VIDEO_STOP_CAPTURE:
         return true;
     default:
-        return _cmd_verify_fn(cmd);
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+        AP_HAL::panic("Unhandled DO command");
+#endif
+        return true;
     }
 }
 
-bool AP_Mission::start_command(const Mission_Command& cmd)
+bool AP_Mission::start_do_cmd()
 {
 #if HAL_LOGGING_ENABLED
     if (log_start_mission_item_bit != (uint32_t)-1) {
@@ -434,34 +437,34 @@ bool AP_Mission::start_command(const Mission_Command& cmd)
 
     }
 
-    switch (cmd.id) {
+    switch (_do_cmd.id) {
     case MAV_CMD_DO_JUMP:
     case MAV_CMD_JUMP_TAG:
     case MAV_CMD_DO_JUMP_TAG:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Mission: %u %s %u", cmd.index, cmd.type(), (unsigned)cmd.p1);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Mission: %u %s %u", _do_cmd.index, _do_cmd.type(), (unsigned)cmd.p1);
         break;
 
     default:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Mission: %u %s", cmd.index, cmd.type());
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Mission: %u %s", _do_cmd.index, _do_cmd.type());
         break;
 
     }
 
-    switch (cmd.id) {
+    switch (_do_cmd.id) {
 #if AP_RC_CHANNEL_ENABLED
     case MAV_CMD_DO_AUX_FUNCTION:
         return start_command_do_aux_function(cmd);
 #endif
 #if AP_GRIPPER_ENABLED
     case MAV_CMD_DO_GRIPPER:
-        return start_command_do_gripper(cmd);
+        return start_command_do_gripper();
 #endif
 #if AP_SERVORELAYEVENTS_ENABLED
     case MAV_CMD_DO_SET_SERVO:
     case MAV_CMD_DO_SET_RELAY:
     case MAV_CMD_DO_REPEAT_SERVO:
     case MAV_CMD_DO_REPEAT_RELAY:
-        return start_command_do_servorelayevents(cmd);
+        return start_command_do_servorelayevents(_do_cmd);
 #endif
 #if AP_CAMERA_ENABLED
     case MAV_CMD_DO_DIGICAM_CONFIGURE:
@@ -474,20 +477,20 @@ bool AP_Mission::start_command(const Mission_Command& cmd)
     case MAV_CMD_SET_CAMERA_SOURCE:
     case MAV_CMD_VIDEO_START_CAPTURE:
     case MAV_CMD_VIDEO_STOP_CAPTURE:
-        return start_command_camera(cmd);
+        return start_command_camera(_do_cmd);
 #endif
 #if AP_FENCE_ENABLED
     case MAV_CMD_DO_FENCE_ENABLE:
         return start_command_fence(cmd);
 #endif
     case MAV_CMD_DO_PARACHUTE:
-        return start_command_parachute(cmd);
+        return start_command_parachute();
     case MAV_CMD_DO_SEND_SCRIPT_MESSAGE:
-        return start_command_do_scripting(cmd);
+        return start_command_do_scripting();
     case MAV_CMD_DO_SPRAYER:
-        return start_command_do_sprayer(cmd);
+        return start_command_do_sprayer();
     case MAV_CMD_DO_SET_RESUME_REPEAT_DIST:
-        return command_do_set_repeat_dist(cmd);
+        return start_command_do_set_repeat_dist();
     case MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW:
         return start_command_do_gimbal_manager_pitchyaw(cmd);
     case MAV_CMD_DO_SET_ROI_LOCATION:
@@ -503,7 +506,10 @@ bool AP_Mission::start_command(const Mission_Command& cmd)
         _jump_tag.age = 1;
         FALLTHROUGH; // fall through in case the vehicle handles tag events
     default:
-        return _cmd_start_fn(cmd);
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+        AP_HAL::panic("Unhandled DO command");
+#endif
+        return false;
     }
 }
 
@@ -2196,9 +2202,6 @@ void AP_Mission::complete()
     _flags.state = MISSION_COMPLETE;
     _flags.in_landing_sequence = false;
     _flags.in_return_path = false;
-
-    // callback to main program's mission complete function
-    _mission_complete_fn();
 }
 
 /// advance_current_nav_cmd - moves current nav command forward
@@ -2261,7 +2264,7 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
             }
             // set current navigation command and start it
             _nav_cmd = cmd;
-            if (start_command(_nav_cmd)) {
+            if (start_nav_cmd()) {
                 _flags.nav_cmd_loaded = true;
                 if (_jump_tag.age > 0 && _jump_tag.age < UINT16_MAX) {
                     // we're tracking a tag so increase it's age on every new NAV item
@@ -2289,7 +2292,7 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
             if (!_flags.do_cmd_loaded) {
                 _do_cmd = cmd;
                 _flags.do_cmd_loaded = true;
-                start_command(_do_cmd);
+                start_do_cmd();
             }
         }
     }
@@ -2332,7 +2335,7 @@ void AP_Mission::advance_current_do_cmd()
     // set current do command and start it
     _do_cmd = cmd;
     _flags.do_cmd_loaded = true;
-    start_command(_do_cmd);
+    start_do_cmd();
 }
 
 /// get_next_cmd - gets next command found at or after scan_index
