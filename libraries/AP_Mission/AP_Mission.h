@@ -782,8 +782,11 @@ protected:
     virtual bool start_nav_cmd();
     virtual bool nav_cmd_is_complete() const;
 
-    virtual void start_do_cmd();
+    virtual bool start_do_cmd();
     virtual bool do_cmd_is_complete() const;
+
+    struct Mission_Command  _nav_cmd;   // current "navigation" command.  It's position in the command list is held in _nav_cmd.index
+    struct Mission_Command  _do_cmd;    // current "do" command.  It's position in the command list is held in _do_cmd.index
 
 private:
     static AP_Mission *_singleton;
@@ -890,9 +893,6 @@ private:
     // internal variables
     bool                    _force_resume;  // when set true it forces mission to resume irrespective of MIS_RESTART param.
     uint16_t                _repeat_dist; // Distance to repeat on mission resume (m), can be set with MAV_CMD_DO_SET_RESUME_REPEAT_DIST
-    struct Mission_Command  _nav_cmd;   // current "navigation" command.  It's position in the command list is held in _nav_cmd.index
-    struct Mission_Command  _do_cmd;    // current "do" command.  It's position in the command list is held in _do_cmd.index
-    struct Mission_Command  _resume_cmd;  // virtual wp command that is used to resume mission if the mission needs to be rewound on resume.
     uint16_t                _prev_nav_cmd_id;       // id of the previous "navigation" command. (WAYPOINT, LOITER_TO_ALT, ect etc)
     uint16_t                _prev_nav_cmd_index;    // index of the previous "navigation" command.  Rarely used which is why we don't store the whole command
     uint16_t                _prev_nav_cmd_wp_index; // index of the previous "navigation" command that contains a waypoint.  Rarely used which is why we don't store the whole command
@@ -928,17 +928,20 @@ private:
     static HAL_Semaphore _rsem;
 
     // mission items common to all vehicles:
-    bool start_command_do_aux_function(const AP_Mission::Mission_Command& cmd);
-    bool start_command_do_gripper(const AP_Mission::Mission_Command& cmd);
-    bool start_command_do_servorelayevents(const AP_Mission::Mission_Command& cmd);
-    bool start_command_camera(const AP_Mission::Mission_Command& cmd);
-    bool start_command_parachute(const AP_Mission::Mission_Command& cmd);
-    bool command_do_set_repeat_dist(const AP_Mission::Mission_Command& cmd);
+    bool start_command_do_aux_function();
+    bool start_command_do_gripper();
+    bool start_command_do_servorelayevents();
+    bool start_command_camera();
+    bool start_command_parachute();
+    bool command_do_set_repeat_dist();
 
     bool start_command_do_sprayer(const AP_Mission::Mission_Command& cmd);
     bool start_command_do_scripting(const AP_Mission::Mission_Command& cmd);
     bool start_command_do_gimbal_manager_pitchyaw(const AP_Mission::Mission_Command& cmd);
     bool start_command_fence(const AP_Mission::Mission_Command& cmd);
+
+    bool start_command_do_sprayer();
+    bool start_command_do_scripting();
 
     /*
       handle format conversion of storage format to allow us to update

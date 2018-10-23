@@ -37,13 +37,13 @@ bool AP_Mission::start_command_do_aux_function(const AP_Mission::Mission_Command
 #endif  // AP_RC_CHANNEL_ENABLED
 
 #if AP_GRIPPER_ENABLED
-bool AP_Mission::start_command_do_gripper(const AP_Mission::Mission_Command& cmd)
+bool AP_Mission::start_command_do_gripper()
 {
     AP_Gripper &gripper = AP::gripper();
 
     // Note: we ignore the gripper num parameter because we only
     // support one gripper
-    switch (cmd.content.gripper.action) {
+    switch (_do_cmd.content.gripper.action) {
     case GRIPPER_ACTION_RELEASE:
         gripper.release();
         // Log_Write_Event(DATA_GRIPPER_RELEASE);
@@ -64,13 +64,14 @@ bool AP_Mission::start_command_do_gripper(const AP_Mission::Mission_Command& cmd
 #endif  // AP_GRIPPER_ENABLED
 
 #if AP_SERVORELAYEVENTS_ENABLED
-bool AP_Mission::start_command_do_servorelayevents(const AP_Mission::Mission_Command& cmd)
+bool AP_Mission::start_command_do_servorelayevents()
 {
     AP_ServoRelayEvents *sre = AP::servorelayevents();
     if (sre == nullptr) {
         return false;
     }
 
+    const struct Mission_Command  &cmd = _do_cmd;
     switch (cmd.id) {
     case MAV_CMD_DO_SET_SERVO:
         return sre->do_set_servo(cmd.content.servo.channel, cmd.content.servo.pwm);
@@ -103,13 +104,14 @@ bool AP_Mission::start_command_do_servorelayevents(const AP_Mission::Mission_Com
 #endif  // AP_SERVORELAYEVENTS_ENABLED
 
 #if AP_CAMERA_ENABLED
-bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
+bool AP_Mission::start_command_camera()
 {
     AP_Camera *camera = AP::camera();
     if (camera == nullptr) {
         return false;
     }
 
+    const struct Mission_Command  &cmd = _do_cmd;
     switch (cmd.id) {
 
     case MAV_CMD_DO_DIGICAM_CONFIGURE:                  // Mission command to configure an on-board camera controller system. |Modes: P, TV, AV, M, Etc| Shutter speed: Divisor number for one second| Aperture: F stop number| ISO number e.g. 80, 100, 200, Etc| Exposure type enumerator| Command Identity| Main engine cut-off time before camera trigger in seconds/10 (0 means no cut-off)|
@@ -232,7 +234,7 @@ bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
 }
 #endif
 
-bool AP_Mission::start_command_parachute(const AP_Mission::Mission_Command& cmd)
+bool AP_Mission::start_command_parachute()
 {
 #if HAL_PARACHUTE_ENABLED
     AP_Parachute *parachute = AP::parachute();
@@ -240,7 +242,7 @@ bool AP_Mission::start_command_parachute(const AP_Mission::Mission_Command& cmd)
         return false;
     }
 
-    switch (cmd.p1) {
+    switch (_do_cmd.p1) {
     case PARACHUTE_DISABLE:
         parachute->enabled(false);
         break;

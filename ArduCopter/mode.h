@@ -496,6 +496,7 @@ private:
 };
 
 class ModeAuto : public Mode {
+    friend class AP_Mission_Copter;
 
 public:
     friend class PayloadPlace;  // in case wp_run is accidentally required
@@ -596,6 +597,7 @@ public:
 
     // Mission change detector
     AP_Mission_ChangeDetector mis_change_detector;
+    AP_Mission_Copter mission;
 
     // true if weathervaning is allowed in auto
 #if WEATHERVANE_ENABLED
