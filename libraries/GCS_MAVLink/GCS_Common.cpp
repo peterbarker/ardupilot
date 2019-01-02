@@ -670,6 +670,11 @@ void GCS_MAVLINK::handle_radio_status(const mavlink_message_t &msg, bool log_rad
     if (stream_slowdown_ms > max_slowdown_ms) {
         max_slowdown_ms = stream_slowdown_ms;
     }
+    gcs().send_text(MAV_SEVERITY_INFO,
+                    "GCS.chan(%u): X max slowdown=%u (tx=%u)",
+                    chan,
+                    max_slowdown_ms,
+                    packet.txbuf);
 #endif
 
     //log rssi, noise, etc if logging Performance monitoring data

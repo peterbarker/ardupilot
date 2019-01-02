@@ -25,7 +25,7 @@
 #include "MissionItemProtocol_Fence.h"
 #include "ap_message.h"
 
-#define GCS_DEBUG_SEND_MESSAGE_TIMINGS 0
+#define GCS_DEBUG_SEND_MESSAGE_TIMINGS 1
 
 #ifndef HAL_NO_GCS
 
