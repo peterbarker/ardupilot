@@ -32,8 +32,7 @@ bool GCS_MAVLINK::param_timer_registered;
  * @brief Send the next pending parameter, called from deferred message
  * handling code
  */
-void
-GCS_MAVLINK::queued_param_send()
+bool GCS_MAVLINK::queued_param_send()
 {
     // send parameter async replies
     uint8_t async_replies_sent_count = send_parameter_async_replies();
@@ -56,6 +55,11 @@ GCS_MAVLINK::queued_param_send()
     if (bytes_allowed < size_for_one_param_value_msg) {
         bytes_allowed = size_for_one_param_value_msg;
     }
+    // when we don't have flow control, be extra-careful not to push
+    // too hard:
+    if (!have_flow_control()) {
+        bytes_allowed /= 2;
+    }
     if (bytes_allowed > txspace()) {
         bytes_allowed = txspace();
     }
@@ -67,7 +71,7 @@ GCS_MAVLINK::queued_param_send()
         count = 5;
     }
     if (async_replies_sent_count >= count) {
-        return;
+        return true;
     }
     count -= async_replies_sent_count;
 
@@ -88,11 +92,12 @@ GCS_MAVLINK::queued_param_send()
 
         if (AP_HAL::micros() - tstart > 1000) {
             // don't use more than 1ms sending blocks of parameters
-            break;
+            return true;
         }
         count--;
     }
     _queued_parameter_send_time_ms = tnow;
+    return _queued_parameter == nullptr;
 }
 
 /*
