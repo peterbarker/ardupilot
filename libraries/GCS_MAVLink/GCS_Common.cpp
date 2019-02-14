@@ -56,6 +56,7 @@
 #if HAL_WITH_UAVCAN
   #include <AP_BoardConfig/AP_BoardConfig_CAN.h>
   #include <AP_Common/AP_Common.h>
+  #include <AP_UAVCAN/AP_UAVCAN.h>
 
   // To be replaced with macro saying if KDECAN library is included
   #if APM_BUILD_TYPE(APM_BUILD_ArduCopter) || APM_BUILD_TYPE(APM_BUILD_ArduPlane) || APM_BUILD_TYPE(APM_BUILD_ArduSub)
@@ -1273,6 +1274,29 @@ void GCS_MAVLINK::send_message(enum ap_message id)
     pushed_ap_message_ids.set(id);
 }
 
+#if HAL_WITH_UAVCAN
+void GCS_MAVLINK::uavcan_msg_hook(const mavlink_message_t &msg)
+{
+    // start by filtering which messages we pass:
+    switch (msg.msgid) {
+    case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
+    case MAVLINK_MSG_ID_PARAM_SET:
+        break;
+    default:
+        return;
+    }
+
+    const AP_BoardConfig_CAN &can = AP::can();
+    for (uint8_t i = 0; i < can.get_num_drivers(); i++) {
+        AP_UAVCAN *uavcan = AP_UAVCAN::get_uavcan(i);
+        if (uavcan == nullptr) {
+            continue;
+        }
+        uavcan->handle_mavlink_message(msg);
+    }
+}
+#endif
+
 void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
                                  const mavlink_message_t &msg)
 {
@@ -1295,6 +1319,9 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
             cstatus->flags &= ~MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
         }
     }
+#if HAL_WITH_UAVCAN
+    uavcan_msg_hook(msg);
+#endif
     if (!routing.check_and_forward(chan, msg)) {
         // the routing code has indicated we should not handle this packet locally
         return;

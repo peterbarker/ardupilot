@@ -124,6 +124,8 @@ public:
                                         entry->crc_extra);
     }
 
+    void uavcan_msg_hook(const mavlink_message_t &msg);
+
     // accessor for uart
     AP_HAL::UARTDriver *get_uart() { return _port; }
 
@@ -876,6 +878,8 @@ public:
 
     // frsky backend
     AP_Frsky_Telem *frsky;
+
+    void send_to_streaming_channels(const mavlink_message_t &msg);
 
 #if !HAL_MINIMIZE_FEATURES
     // LTM backend
