@@ -228,6 +228,7 @@ void AP_UAVCAN::init(uint8_t driver_index, bool enable_filters)
         debug_uavcan(1, "UAVCAN: Failed to start DNA Server\n\r");
         return;
     }
+    _mavlinkbridge.init(this);
 
     // Roundup all subscribers from supported drivers
     AP_UAVCAN_DNA_Server::subscribe_msgs(this);
