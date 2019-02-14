@@ -26,6 +26,8 @@
 
 #include <uavcan/helpers/heap_based_pool_allocator.hpp>
 
+#include <AP_UAVCAN/AP_UAVCAN_MAVLinkBridge.h>
+
 #ifndef UAVCAN_NODE_POOL_SIZE
 #define UAVCAN_NODE_POOL_SIZE 8192
 #endif
@@ -87,6 +89,10 @@ public:
 
     // buzzer
     void set_buzzer_tone(float frequency, float duration_s);
+
+    void handle_mavlink_message(const mavlink_message_t &msg) {
+        _mavlinkbridge.handle_message(msg);
+    }
 
     template <typename DataType_>
     class RegistryBinder {
@@ -172,6 +178,9 @@ private:
     uint8_t _driver_index;
     char _thread_name[9];
     bool _initialized;
+
+    AP_UAVCAN_MAVLinkBridge _mavlinkbridge;
+
     ///// SRV output /////
     struct {
         uint16_t pulse;
