@@ -102,7 +102,39 @@ void AP_UAVCAN_MAVLinkBridge::handle_nodestatus(class AP_UAVCAN* ap_uavcan,
         node_id);
 }
 
+void AP_UAVCAN_MAVLinkBridge::handle_message_param_request_list(const mavlink_message_t &msg)
+{
+    mavlink_param_request_list_t packet;
+    mavlink_msg_param_request_list_decode(&msg, &packet);
+
+    gcs().send_text(MAV_SEVERITY_WARNING, "request_list from %u.%u to %u.%u",
+                    msg.sysid,
+                    msg.compid,
+                    packet.target_system,
+                    packet.target_component);
+
+    if (!_driver->seeing_node(packet.target_component)) {
+        return;
+    }
+
+    gcs().send_text(MAV_SEVERITY_WARNING, "Sending request");
+    // uavcan::protocol::param::GetSet::Request req;
+}
+
 void AP_UAVCAN_MAVLinkBridge::handle_message(const mavlink_message_t &msg)
 {
-    gcs().send_text(MAV_SEVERITY_WARNING, "handle message %u", msg.msgid);
+    gcs().send_text(MAV_SEVERITY_WARNING, "%p handle message %u", this, msg.msgid);
+    switch (msg.msgid) {
+    case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
+        handle_message_param_request_list(msg);
+        break;
+    // case MAVLINK_MSG_ID_PARAM_SET:
+    //     handle_message_param_set(msg);
+    //     break;
+    default:
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+        AP_HAL::panic("Unhandled message case");
+#endif
+        break;
+    }
 }
