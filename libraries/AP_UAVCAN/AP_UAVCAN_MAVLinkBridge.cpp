@@ -7,6 +7,8 @@
 
 UC_REGISTRY_BINDER(NodeStatusCb, uavcan::protocol::NodeStatus);
 
+HAL_Semaphore AP_UAVCAN_MAVLinkBridge::_sem_registry;
+
 bool AP_UAVCAN_MAVLinkBridge::init(AP_UAVCAN* ap_uavcan)
 {
     auto* node = ap_uavcan->get_node();
@@ -17,6 +19,9 @@ bool AP_UAVCAN_MAVLinkBridge::init(AP_UAVCAN* ap_uavcan)
         AP_HAL::panic("subscriber start problem");
         return false;
     }
+
+    _driver = ap_uavcan;
+
     return true;
 }
 
@@ -24,7 +29,9 @@ void AP_UAVCAN_MAVLinkBridge::handle_nodestatus(class AP_UAVCAN* ap_uavcan,
                                                 uint8_t node_id,
                                                 const NodeStatusCb &cb)
 {
-    gcs().send_text(MAV_SEVERITY_WARNING, "handle_notestatus (%u)", node_id);
+    gcs().send_text(MAV_SEVERITY_WARNING, "handle_nodestatus (%u)", node_id);
+
+    ap_uavcan->see_node(node_id);
     // translate into a mavlink heartbeat; in the future we may want
     // to send this when we receive more information from the node.
     // translate NodeStatus health into a mavlink health:

@@ -97,6 +97,32 @@ public:
         _mavlinkbridge.handle_message(msg);
     }
 
+    class NodeHistories {
+    public:
+        // returns true if we are currently seeing a node by id:
+        bool seeing_node(const uint8_t node_id);
+        // mark a node as having sent a heartbeat-equivalent
+        void see_node(const uint8_t node_id);
+
+    private:
+
+        class NodeHistory {
+        public:
+            uint8_t node_id;
+            uint32_t last_seen_ms;
+        };
+
+        static const uint8_t MAX_CAN_NODE_HISTORIES = 10;
+        NodeHistory history[MAX_CAN_NODE_HISTORIES];
+    };
+
+    NodeHistories node_history;
+    bool seeing_node(const uint8_t node_id) { return node_history.seeing_node(node_id); }
+    void see_node(const uint8_t node_id) {
+        // gcs().send_text(MAV_SEVERITY_WARNING, "%p (%u): see_node %u", this, get_driver_index(), node_id);
+        node_history.see_node(node_id);
+    }
+
     template <typename DataType_>
     class RegistryBinder {
     protected:
