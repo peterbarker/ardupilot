@@ -15,4 +15,9 @@ public:
                                   const NodeStatusCb &cb);
     void handle_message(const mavlink_message_t &msg);
 
+private:
+
+    AP_UAVCAN *_driver;
+
+    static HAL_Semaphore _sem_registry;
 };

@@ -659,4 +659,40 @@ void AP_UAVCAN::handle_traffic_report(AP_UAVCAN* ap_uavcan, uint8_t node_id, con
     adsb->handle_adsb_vehicle(vehicle);
 }
 
+bool AP_UAVCAN::NodeHistories::seeing_node(const uint8_t node_id)
+{
+    for (uint8_t i=0; i<ARRAY_SIZE(history); i++) {
+        if (history[i].node_id == node_id) {
+            return AP_HAL::millis() - history[i].last_seen_ms < uavcan::protocol::NodeStatus::OFFLINE_TIMEOUT_MS;
+        }
+    }
+    return false;
+}
+
+void AP_UAVCAN::NodeHistories::see_node(const uint8_t node_id)
+{
+    const uint32_t now = AP_HAL::millis();
+    int16_t spare_slot = -1;
+    for (uint8_t i=0; i<ARRAY_SIZE(history); i++) {
+        if (history[i].node_id == node_id) {
+            history[i].last_seen_ms = now;
+            return;
+        }
+        if (spare_slot == -1 &&
+            (history[i].node_id == 0 ||
+             now - history[i].last_seen_ms > uavcan::protocol::NodeStatus::OFFLINE_TIMEOUT_MS)) {
+            spare_slot = i;
+        }
+    }
+    if (spare_slot != -1) {
+        history[spare_slot].node_id = node_id;
+        history[spare_slot].last_seen_ms = now;
+        return;
+    }
+    // not good - we're not going to see this node
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    AP_HAL::panic("Out of CAN slots?!");
+#endif
+}
+
 #endif // HAL_WITH_UAVCAN
