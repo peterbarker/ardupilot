@@ -17,6 +17,8 @@ public:
 
 private:
 
+    void handle_message_param_request_list(const mavlink_message_t &msg);
+
     AP_UAVCAN *_driver;
 
     static HAL_Semaphore _sem_registry;
