@@ -79,6 +79,20 @@ void AP_UAVCAN_MAVLinkBridge::handle_nodestatus(class AP_UAVCAN* ap_uavcan,
                                                  (const char*)heartbeat_packet,
                                                  mavlink_system.sysid,
                                                  node_id);
+
+    // gate onto mavlink:
+    const mavlink_uavcan_node_status_t node_status_packet {
+        cb.msg->time_usec,
+        cb.msg->uptime_sec,
+        cb.msg->health,
+        cb.msg->mode,
+        cb.msg->sub_mode,
+        cb.msg->vendor_specific_status_code);
+    gcs().send_to_streaming_channels_from_system(
+        MAVLINK_MSG_ID_UAVCAN_NODE_STATUS,
+        (const char*)node_status_packet,
+        mavlink_system.sysid,
+        node_id);
 }
 
 void AP_UAVCAN_MAVLinkBridge::handle_message(const mavlink_message_t &msg)
