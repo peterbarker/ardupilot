@@ -79,8 +79,21 @@ void AP_UAVCAN_MAVLinkBridge::handle_nodestatus(class AP_UAVCAN* ap_uavcan,
         0, // custom_mode(),
         system_status
         );
-
     gcs().send_to_streaming_channels(msg);
+
+    // gate onto mavlink:
+    mavlink_message_t msg_node_status{};
+    mavlink_msg_uavcan_node_status_pack(
+        mavlink_system.sysid,
+        node_id,
+        &msg_node_status,
+        AP_HAL::micros64(),
+        cb.msg->uptime_sec,
+        cb.msg->health,
+        cb.msg->mode,
+        cb.msg->sub_mode,
+        cb.msg->vendor_specific_status_code);
+    gcs().send_to_streaming_channels(msg_node_status);
 }
 
 void AP_UAVCAN_MAVLinkBridge::handle_message(const mavlink_message_t &msg)
