@@ -285,7 +285,7 @@ void Copter::parachute_check()
     }
 
     // ensure the first control_loss event is from above the min altitude
-    if (control_loss_count == 0 && parachute.alt_min() != 0 && (current_loc.alt < (int32_t)parachute.alt_min() * 100)) {
+    if (control_loss_count == 0 && !copter.parachute_above_minalt()) {
         return;
     }
 
@@ -339,6 +339,33 @@ void Copter::parachute_release()
 #endif
 }
 
+bool Copter::parachute_above_minalt()
+{
+    if (parachute.alt_min() == 0) {
+        // minalt disabled
+        return false;
+    }
+
+    int32_t relative_alt;
+    if (!current_loc.get_alt_cm(Location::AltFrame::ABOVE_HOME, relative_alt) &&
+        !current_loc.get_alt_cm(Location::AltFrame::ABOVE_ORIGIN, relative_alt)) {
+        // given alt_min is relative to *something*, if we can't get
+        // our height we probably shouldn' trigger - we might be
+        // inside on a bench or something...
+        return false;
+    }
+
+    if (relative_alt >= (int32_t)parachute.alt_min() * 100) {
+        return true;
+    }
+
+    // warn user of reason for failure
+    gcs().send_text(MAV_SEVERITY_ALERT,"Parachute: Too low");
+    AP::logger().Write_Error(LogErrorSubsystem::PARACHUTES, LogErrorCode::PARACHUTE_TOO_LOW);
+
+    return false;
+}
+
 // parachute_manual_release - trigger the release of the parachute, after performing some checks for pilot error
 //   checks if the vehicle is landed 
 void Copter::parachute_manual_release()
@@ -358,7 +385,7 @@ void Copter::parachute_manual_release()
     }
 
     // do not release if we are landed or below the minimum altitude above home
-    if ((parachute.alt_min() != 0 && (current_loc.alt < (int32_t)parachute.alt_min() * 100))) {
+    if (!parachute_above_minalt()) {
         // warn user of reason for failure
         gcs().send_text(MAV_SEVERITY_ALERT,"Parachute: Too low");
         LOGGER_WRITE_ERROR(LogErrorSubsystem::PARACHUTES, LogErrorCode::PARACHUTE_TOO_LOW);

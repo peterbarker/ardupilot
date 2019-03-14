@@ -610,7 +610,7 @@ int32_t Mode::get_alt_above_ground_cm(void)
         return alt_above_ground_cm;
     }
     if (!pos_control->is_active_xy()) {
-        return copter.current_loc.alt;
+        return copter.current_loc.get_alt_cm(Location::AltFrame::ABOVE_HOME, alt_above_ground;
     }
     if (copter.current_loc.get_alt_cm(Location::AltFrame::ABOVE_TERRAIN, alt_above_ground_cm)) {
         return alt_above_ground_cm;

@@ -242,7 +242,7 @@ bool RC_Channel_Copter::do_aux_function(const AuxFuncTrigger &trigger)
                 if (!copter.mode_auto.mission.present()) {
                     // set our location ID to 16, MAV_CMD_NAV_WAYPOINT
                     cmd.id = MAV_CMD_NAV_TAKEOFF;
-                    cmd.content.location.alt = MAX(copter.current_loc.alt,100);
+                    cmd.content.location.alt = MAX(copter.current_loc.safe_home_relative_alt(),100);
 
                     // use the current altitude for the target alt for takeoff.
                     // only altitude will matter to the AP mission script for takeoff.

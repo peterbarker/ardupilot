@@ -1171,7 +1171,7 @@ void ModeAuto::loiter_to_alt_run()
 
         loiter_to_alt.loiter_start_done = true;
     }
-    const float alt_error_cm = copter.current_loc.alt - loiter_to_alt.alt;
+    const float alt_error_cm = copter.current_loc.safe_home_relative_alt() - loiter_to_alt.alt;
     if (fabsf(alt_error_cm) < 5.0) { // random numbers R US
         loiter_to_alt.reached_alt = true;
     } else if (alt_error_cm * loiter_to_alt.alt_error_cm < 0) {
@@ -1538,6 +1538,10 @@ Location ModeAuto::loc_from_cmd(const AP_Mission::Mission_Command& cmd, const Lo
         } else {
             // default to default_loc's altitude and frame
             ret.set_alt_cm(default_loc.alt, default_loc.get_alt_frame());
+            OR
+            // default to current altitude as alt-above-home
+            ret.set_alt_cm(copter.current_loc.safe_home_relative_alt(),
+                           copter.current_loc.get_alt_frame());
         }
     }
     return ret;

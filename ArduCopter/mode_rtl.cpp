@@ -412,7 +412,7 @@ void ModeRTL::compute_return_target()
     int32_t pos_offset_z = pos_control->get_pos_offset_z_cm();
 
     // curr_alt is current altitude above home or above terrain depending upon use_terrain
-    int32_t curr_alt = copter.current_loc.alt - pos_offset_z;
+    int32_t curr_alt = copter.current_loc.safe_home_relative_alt() - pos_offset_z;
 
     // determine altitude type of return journey (alt-above-home, alt-above-terrain using range finder or alt-above-terrain using terrain database)
     ReturnTargetAltType alt_type = ReturnTargetAltType::RELATIVE;
