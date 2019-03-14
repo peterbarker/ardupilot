@@ -453,7 +453,11 @@ int32_t Copter::Mode::get_alt_above_ground_cm(void)
     } else {
         bool navigating = pos_control->is_active_xy();
         if (!navigating || !copter.current_loc.get_alt_cm(Location::AltFrame::ABOVE_TERRAIN, alt_above_ground)) {
-            alt_above_ground = copter.current_loc.alt;
+            if (!copter.current_loc.get_alt_cm(Location::AltFrame::ABOVE_HOME, alt_above_ground) &&
+                !copter.current_loc.get_alt_cm(Location::AltFrame::ABOVE_ORIGIN, alt_above_ground)) {
+                // we have no idea of a relative height...
+                alt_above_ground = 0;
+            }
         }
     }
     return alt_above_ground;

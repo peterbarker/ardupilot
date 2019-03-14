@@ -180,7 +180,7 @@ bool AP_Avoidance_Copter::handle_avoidance_vertical(const AP_Avoidance::Obstacle
     } else {
         velocity_neu.z = -copter.wp_nav->get_default_speed_down();
         // do not descend if below RTL alt
-        if (copter.current_loc.alt < copter.g.rtl_altitude) {
+        if (copter.current_loc.safe_home_relative_alt() < copter.g.rtl_altitude) {
             velocity_neu.z = 0.0f;
         }
     }
@@ -239,7 +239,7 @@ bool AP_Avoidance_Copter::handle_avoidance_perpendicular(const AP_Avoidance::Obs
         } else {
             velocity_neu.z *= copter.wp_nav->get_default_speed_down();
             // do not descend if below RTL alt
-            if (copter.current_loc.alt < copter.g.rtl_altitude) {
+            if (copter.current_loc.safe_home_relative_alt() < copter.g.rtl_altitude) {
                 velocity_neu.z = 0.0f;
             }
         }

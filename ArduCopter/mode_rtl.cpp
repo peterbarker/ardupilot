@@ -309,7 +309,7 @@ void Copter::ModeRTL::descent_run()
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(loiter_nav->get_roll(), loiter_nav->get_pitch(), target_yaw_rate);
 
     // check if we've reached within 20cm of final altitude
-    _state_complete = labs(rtl_path.descent_target.alt - copter.current_loc.alt) < 20;
+    _state_complete = labs(rtl_path.descent_target.alt - copter.current_loc.safe_home_relative_alt()) < 20;
 }
 
 // rtl_loiterathome_start - initialise controllers to loiter over home
@@ -410,7 +410,7 @@ void Copter::ModeRTL::compute_return_target(bool terrain_following_allowed)
 #endif
 
     // curr_alt is current altitude above home or above terrain depending upon use_terrain
-    int32_t curr_alt = copter.current_loc.alt;
+    int32_t curr_alt = copter.current_loc.safe_home_relative_alt();
 
     // decide if we should use terrain altitudes
     rtl_path.terrain_used = copter.terrain_use() && terrain_following_allowed;

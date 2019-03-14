@@ -27,7 +27,11 @@ bool Copter::Mode::do_user_takeoff(float takeoff_alt_cm, bool must_navigate)
         // this mode doesn't support user takeoff
         return false;
     }
-    if (takeoff_alt_cm <= copter.current_loc.alt) {
+    int32_t alt_above_home;
+    if (!copter.current_loc.get_alt_cm(Location::AltFrame::ABOVE_HOME, alt_above_home)) {
+        return false;
+    }
+    if (takeoff_alt_cm <= alt_above_home) {
         // can't takeoff downwards...
         return false;
     }

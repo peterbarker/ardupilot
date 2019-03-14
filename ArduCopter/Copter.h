@@ -414,9 +414,19 @@ private:
     // filtered pilot's throttle input used to cancel landing if throttle held high
     LowPassFilterFloat rc_throttle_control_in_filter;
 
+    class CurrentLocation : public Location {
+    public:
+        // return a relative altitude; relative to home if available,
+        // then relative to origin, then 0.  It is an error to call
+        // this routine if home is not available.
+        int32_t safe_home_relative_alt() const;
+    private:
+        using Location::alt;
+    };
+
     // 3D Location vectors
     // Current location of the vehicle (altitude is relative to home)
-    Location current_loc;
+    CurrentLocation current_loc;
 
     // IMU variables
     // Integration time (in seconds) for the gyros (DCM algorithm)
@@ -653,6 +663,7 @@ private:
     void parachute_check();
     void parachute_release();
     void parachute_manual_release();
+    bool parachute_above_minalt();
 
     // ekf_check.cpp
     void ekf_check();
