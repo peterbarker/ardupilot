@@ -123,3 +123,24 @@ void comm_send_unlock(mavlink_channel_t chan)
 {
     chan_locks[(uint8_t)chan].give();
 }
+
+void GCS_MAVLINK::send_message(const mavlink_message_t &msg) const;
+ {
+    const mavlink_msg_entry_t *msg_entry = mavlink_get_msg_entry(msg->msgid);
+    if (msg_entry == nullptr) {
+        // can't finalize if we don't know things about it.
+        return;
+    }
+    mavlink_status_t *chan_status = mavlink_get_channel_status(chan);
+    if (chan_status == nullptr) {
+        return;
+    }
+    mavlink_finalize_message_chan(&msg,
+                                  msg.sysid,
+                                  msg.compid,
+                                  chan,
+                                  msg_entry->min_length,
+                                  msg_entry->max_length,
+                                  msg_entry->crc_extra);
+     _mavlink_resend_uart(chan, &msg);
+}
