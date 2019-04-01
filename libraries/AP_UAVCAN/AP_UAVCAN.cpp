@@ -144,6 +144,11 @@ AP_UAVCAN *AP_UAVCAN::get_uavcan(uint8_t driver_index)
     return static_cast<AP_UAVCAN*>(AP::can().get_driver(driver_index));
 }
 
+void AP_UAVCAN::get_nodename(char *name, uint8_t name_len) const
+{
+    snprintf(name, name_len, "org.ardupilot:%u", _driver_index);
+}
+
 void AP_UAVCAN::init(uint8_t driver_index, bool enable_filters)
 {
     if (_initialized) {
@@ -186,7 +191,7 @@ void AP_UAVCAN::init(uint8_t driver_index, bool enable_filters)
     _node->setNodeID(self_node_id);
 
     char ndname[20];
-    snprintf(ndname, sizeof(ndname), "org.ardupilot:%u", driver_index);
+    get_nodename(ndname, ARRAY_SIZE(ndname));
 
     uavcan::NodeStatusProvider::NodeName name(ndname);
     _node->setName(name);

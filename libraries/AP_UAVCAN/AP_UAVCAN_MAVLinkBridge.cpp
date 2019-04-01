@@ -3,7 +3,10 @@
 #include <AP_UAVCAN/AP_UAVCAN.h>
 #include <uavcan/protocol/NodeStatus.hpp>
 
+#include <AP_Common/AP_FWVersion.h>
 #include <GCS_MAVLink/GCS.h>
+
+extern const AP_HAL::HAL& hal;
 
 UC_REGISTRY_BINDER(NodeStatusCb, uavcan::protocol::NodeStatus);
 
@@ -121,10 +124,59 @@ void AP_UAVCAN_MAVLinkBridge::handle_message_param_request_list(const mavlink_me
     // uavcan::protocol::param::GetSet::Request req;
 }
 
+uint32_t AP_UAVCAN::sw_vcs_commit() const
+{
+    const AP_FWVersion fwversion = AP::fwversion();
+    unsigned int scan_result;
+    if (sscanf(fwversion.os_hash_str, "%x", &scan_result)) {
+        return (uint32_t)scan_result;
+    }
+    return 0;
+}
+
+void AP_UAVCAN_MAVLinkBridge::handle_message_uavcan_get_node_info(const mavlink_message_t &msg)
+{
+    // we need a periodic callback to run a state machine for this.
+
+    char ndname[20];
+    _driver->get_nodename(ndname, ARRAY_SIZE(ndname));
+
+    uint8_t unique_id[MAVLINK_MSG_UAVCAN_NODE_INFO_FIELD_NAME_LEN]{};
+    uint8_t unique_id_len;
+    hal.util->get_system_id_unformatted(unique_id, unique_id_len);
+
+    uint64_t now;
+    if (!AP::rtc().get_utc_usec(now)) {
+        now = AP_HAL::micros64();
+    }
+
+    // spit out our own NodeInfo:
+    mavlink_message_t node_info_msg{};
+    mavlink_msg_uavcan_node_info_pack(
+        mavlink_system.sysid,
+        _driver->get_node()->getNodeID().get(),
+        &node_info_msg,
+        now,
+        AP_HAL::millis()/1000,
+        ndname,
+        AP_UAVCAN_HW_VERS_MAJOR,
+        AP_UAVCAN_HW_VERS_MINOR,
+        unique_id,
+        AP_UAVCAN_SW_VERS_MAJOR,
+        AP_UAVCAN_SW_VERS_MINOR,
+        _driver->sw_vcs_commit());
+
+    gcs().send_to_streaming_channels(node_info_msg);
+
+    // now spit out NodeInfo for each of the Nodes we currently know about:
+}
+
 void AP_UAVCAN_MAVLinkBridge::handle_message(const mavlink_message_t &msg)
 {
     gcs().send_text(MAV_SEVERITY_WARNING, "%p handle message %u", this, msg.msgid);
     switch (msg.msgid) {
+    case MAV_CMD_UAVCAN_GET_NODE_INFO:
+        handle_message_uavcan_get_node_info(msg);
     case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
         handle_message_param_request_list(msg);
         break;

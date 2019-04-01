@@ -80,6 +80,8 @@ public:
     uavcan::Node<0>* get_node() { return _node; }
     uint8_t get_driver_index() { return _driver_index; }
 
+    void get_nodename(char *name, uint8_t name_len) const;
+    uint32_t sw_vcs_commit() const;
 
     ///// SRV output /////
     void SRV_push_servos(void);
