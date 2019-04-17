@@ -44,6 +44,7 @@ public:
         logger_blockcount_mismatch  = (1U <<  8),
         logger_dequeue_failure      = (1U <<  9),
         constraining_nan            = (1U << 10),
+        home_relalt_no_home         = (1U << 11),
     };
 
     void error(const AP_InternalError::error_t error);
