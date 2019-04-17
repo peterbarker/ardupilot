@@ -71,7 +71,8 @@ public:
         dma_fail                    = (1U << 27),  //0x8000000 134217728
         params_restored             = (1U << 28),  //0x10000000 268435456
         invalid_arg_or_result       = (1U << 29),  //0x20000000 536870912
-        __LAST__                    = (1U << 30),  // used only for sanity check
+        home_relalt_no_home         = (1U << 30),  //0x4000000 67108864
+        __LAST__                    = (1U << 31),  // used only for sanity check
     };
 
     // if you've changed __LAST__ to be 32, then you will want to
