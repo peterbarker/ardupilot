@@ -109,16 +109,11 @@ public:
 
     void set_compass(Compass *compass) {
         _compass = compass;
-        update_orientation();
     }
 
     const Compass* get_compass() const {
         return _compass;
     }
-
-    // allow for runtime change of orientation
-    // this makes initial config easier
-    void update_orientation();
 
     // return the index of the primary core or -1 if no primary core selected
     virtual int8_t get_primary_core_index() const { return -1; }
@@ -152,7 +147,10 @@ public:
     }
 
     // Methods
-    virtual void update(bool skip_ins_update=false) = 0;
+    void update(bool skip_ins_update=false) {
+        update_orientation();
+        update_subclass(skip_ins_update);
+    }
 
     // returns false if we fail arming checks, in which case the buffer will be populated with a failure message
     // requires_position should be true if horizontal position configuration should be checked
@@ -704,6 +702,16 @@ protected:
     uint32_t _last_AOA_update_ms;
 
 private:
+
+    // periodically checks to see if we should update the AHRS
+    // orientation (e.g. based on the AHRS_ORIENT parameter)
+    // allow for runtime change of orientation
+    // this makes initial config easier
+    void update_orientation();
+    enum Rotation last_orientation = ROTATION_INVALID;
+
+    virtual void update_subclass(bool skip_ins_update) = 0;
+
     static AP_AHRS *_singleton;
 
     AP_NMEA_Output* _nmea_out;

@@ -119,7 +119,7 @@ void AP_AHRS_NavEKF::reset_gyro_drift(void)
 #endif
 }
 
-void AP_AHRS_NavEKF::update(bool skip_ins_update)
+void AP_AHRS_NavEKF::update_subclass(bool skip_ins_update)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
@@ -221,7 +221,7 @@ void AP_AHRS_NavEKF::update_DCM(bool skip_ins_update)
     yaw = _dcm_attitude.z;
     update_cd_values();
 
-    AP_AHRS_DCM::update(skip_ins_update);
+    AP_AHRS_DCM::update_subclass(skip_ins_update);
 
     // keep DCM attitude available for get_secondary_attitude()
     _dcm_attitude = {roll, pitch, yaw};

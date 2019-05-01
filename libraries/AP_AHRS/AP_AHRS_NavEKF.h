@@ -75,7 +75,7 @@ public:
     //  should be called if gyro offsets are recalculated
     void reset_gyro_drift() override;
 
-    void            update(bool skip_ins_update=false) override;
+    void            update_subclass(bool skip_ins_update) override;
     void            reset(bool recover_eulers = false) override;
 
     // reset the current attitude, used on new IMU calibration

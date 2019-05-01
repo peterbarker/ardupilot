@@ -65,7 +65,7 @@ void AP_AHRS_DCM::load_watchdog_home()
 
 // run a full DCM update round
 void
-AP_AHRS_DCM::update(bool skip_ins_update)
+AP_AHRS_DCM::update_subclass(bool skip_ins_update)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
