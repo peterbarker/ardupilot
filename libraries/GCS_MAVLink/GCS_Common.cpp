@@ -787,6 +787,7 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_EXTENDED_SYS_STATE,    MSG_EXTENDED_SYS_STATE},
         { MAVLINK_MSG_ID_AUTOPILOT_VERSION,     MSG_AUTOPILOT_VERSION},
         { MAVLINK_MSG_ID_EFI_STATUS,            MSG_EFI_STATUS},
+        { MAVLINK_MSG_ID_ATTITUDE_QUATERNION,   MSG_ATTITUDE_QUATERNION},
             };
 
     for (uint8_t i=0; i<ARRAY_SIZE(map); i++) {
@@ -4165,6 +4166,26 @@ void GCS_MAVLINK::send_attitude() const
         omega.z);
 }
 
+void GCS_MAVLINK::send_attitude_quaternion() const
+{
+    const AP_AHRS &ahrs = AP::ahrs();
+
+    Quaternion q;
+    q.from_euler(ahrs.roll, ahrs.pitch, ahrs.yaw);
+
+    const Vector3f omega = ahrs.get_gyro();
+    mavlink_msg_attitude_quaternion_send(
+        chan,
+        AP_HAL::millis(),
+        q.q1,
+        q.q2,
+        q.q3,
+        q.q4,
+        omega.x,
+        omega.y,
+        omega.z);
+}
+
 int32_t GCS_MAVLINK::global_position_int_alt() const {
     return global_position_current_loc.alt * 10UL;
 }
@@ -4253,6 +4274,11 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
     case MSG_ATTITUDE:
         CHECK_PAYLOAD_SIZE(ATTITUDE);
         send_attitude();
+        break;
+
+    case MSG_ATTITUDE_QUATERNION:
+        CHECK_PAYLOAD_SIZE(ATTITUDE_QUATERNION);
+        send_attitude_quaternion();
         break;
 
     case MSG_NEXT_PARAM:
