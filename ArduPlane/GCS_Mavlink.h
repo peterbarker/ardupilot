@@ -29,6 +29,7 @@ protected:
     virtual bool in_hil_mode() const override;
 
     void send_attitude() const override;
+    void send_attitude_quaternion() const override;
     void send_simstate() const override;
 
     bool persist_streamrates() const override { return true; }

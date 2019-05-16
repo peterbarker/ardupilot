@@ -138,6 +138,36 @@ void GCS_MAVLINK_Plane::send_attitude() const
         omega.z);
 }
 
+void GCS_MAVLINK_Plane::send_attitude_quaternion() const
+{
+    const AP_AHRS &ahrs = AP::ahrs();
+
+    float r = ahrs.roll;
+    float p = ahrs.pitch - radians(plane.g.pitch_trim_cd*0.01f);
+    float y = ahrs.yaw;
+
+    if (plane.quadplane.tailsitter_active()) {
+        r = plane.quadplane.ahrs_view->roll;
+        p = plane.quadplane.ahrs_view->pitch;
+        y = plane.quadplane.ahrs_view->yaw;
+    }
+
+    Quaternion q;
+    q.from_euler(ahrs.roll, ahrs.pitch, ahrs.yaw);
+
+    const Vector3f &omega = ahrs.get_gyro();
+    mavlink_msg_attitude_quaternion_send(
+        chan,
+        millis(),
+        q.q1,
+        q.q2,
+        q.q3,
+        q.q4,
+        omega.x,
+        omega.y,
+        omega.z);
+}
+
 void Plane::send_aoa_ssa(mavlink_channel_t chan)
 {
     mavlink_msg_aoa_ssa_send(
