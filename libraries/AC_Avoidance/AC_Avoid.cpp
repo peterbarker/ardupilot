@@ -102,6 +102,11 @@ void AC_Avoid::adjust_velocity(float kP, float accel_cmss, Vector2f &desired_vel
     // maximum component of desired  backup velocity in each quadrant 
     Vector2f quad_1_back_vel, quad_2_back_vel, quad_3_back_vel, quad_4_back_vel;
 
+    // clear the reported obstacle distances by saying there is no obstacle
+    for (uint8_t i=0; i<ARRAY_SIZE(reporting_obstacle_distances); i++) {
+        reporting_obstacle_distances[i] = float(no_obstacle_value)*float(no_obstacle_value); // we're assuming floating point * and / symmetry here
+    }
+
     if ((_enabled & AC_AVOID_STOP_AT_FENCE) > 0) {
         // Store velocity needed to back away from fence
         Vector2f backup_vel_fence;
@@ -483,6 +488,19 @@ void AC_Avoid::adjust_velocity_circle_fence(float kP, float accel_cmss, Vector2f
     }
     // desired backup velocity is sum of maximum velocity component in each quadrant 
     backup_vel = quad_1_back_vel + quad_2_back_vel + quad_3_back_vel + quad_4_back_vel;
+
+    for (uint8_t k=0; k<ARRAY_SIZE(reporting_obstacle_distances); k++) {
+        const float angle_deg = reporting_obstacle_angular_width*k;
+        float angle = radians(angle_deg);
+        const Vector2f ray = position_xy + Vector2f{reporting_obstacle_max_distance*cosf(angle),reporting_obstacle_max_distance*sinf(angle)};
+        Vector2f intersection;
+        if (Vector2f::circle_segment_intersection(position_xy, ray, Vector2f{0.0f,0.0f}, fence_radius, intersection)) {
+            const float length_squared = intersection.length_squared();
+            if (length_squared < reporting_obstacle_distances[k]) {
+                reporting_obstacle_distances[k] = length_squared;
+            }
+        }
+    }
 
     // vehicle is inside the circular fence
     if ((AC_Avoid::BehaviourType)_behavior.get() == BEHAVIOR_SLIDE) {
@@ -889,11 +907,31 @@ void AC_Avoid::adjust_velocity_proximity(float kP, float accel_cmss, Vector2f &d
     adjust_velocity_polygon(kP, accel_cmss, desired_vel_cms, backup_vel, boundary, num_points, false, _margin, dt, true);
 }
 
+void AC_Avoid::send_obstacle_distance_message(const mavlink_channel_t chan)
+{
+    uint16_t distances[ARRAY_SIZE(reporting_obstacle_distances)];
+    for (uint8_t i=0; i<ARRAY_SIZE(distances); i++) {
+        distances[i] = sqrtf(reporting_obstacle_distances[i]);
+    }
+
+    mavlink_msg_obstacle_distance_send(
+        chan,
+        AP_HAL::micros(),
+        17, // sensor type
+        distances,
+        reporting_obstacle_angular_width,
+        reporting_obstacle_min_distance,
+        reporting_obstacle_max_distance
+        );
+}
+
 /*
  * Adjusts the desired velocity for the polygon fence.
  */
 void AC_Avoid::adjust_velocity_polygon(float kP, float accel_cmss, Vector2f &desired_vel_cms, Vector2f &backup_vel, const Vector2f* boundary, uint16_t num_points, bool earth_frame, float margin, float dt, bool stay_inside)
 {
+    gcs().send_text(MAV_SEVERITY_WARNING, "Using %u points for avp", num_points);
+
     // exit if there are no points
     if (boundary == nullptr || num_points == 0) {
         return;
@@ -916,6 +954,32 @@ void AC_Avoid::adjust_velocity_polygon(float kP, float accel_cmss, Vector2f &des
     const bool inside_polygon = !Polygon_outside(position_xy, boundary, num_points);
     if (inside_polygon != stay_inside) {
         return;
+    }
+
+    // gcs().send_text(MAV_SEVERITY_WARNING, "pos.x=%f pos.y=%f", position_xy.x, position_xy.y);
+    for (uint8_t k=0; k<ARRAY_SIZE(reporting_obstacle_distances); k++) {
+        const float angle_deg = reporting_obstacle_angular_width*k;
+        // gcs().send_text(MAV_SEVERITY_WARNING, "angle=%f deg", angle_deg);
+        float angle = radians(angle_deg);
+        if (!earth_frame) {
+            angle += _ahrs.yaw;
+        }
+        const Vector2f ray = position_xy + Vector2f{reporting_obstacle_max_distance*cosf(angle),reporting_obstacle_max_distance*sinf(angle)};
+        // gcs().send_text(MAV_SEVERITY_WARNING, "%u ray.x=%f ray.y=%f", k, ray.x, ray.y);
+        for (uint8_t i=1, j=0; j < num_points; j++, (i<num_points-1)?i++:i=0) {
+            const Vector2f &start = boundary[j];
+            const Vector2f &end = boundary[i];
+            Vector2f intersection;
+            if (Vector2f::segment_intersection(position_xy, ray, start, end, intersection)) {
+                // gcs().send_text(MAV_SEVERITY_WARNING, "intersected (%f,%f %f,%f)", start.x, start.y, end.x, end.y);
+                // gcs().send_text(MAV_SEVERITY_WARNING, "at (%f,%f)",  intersection.x, intersection.y);
+                const float distance_squared = (intersection-position_xy).length_squared();
+                // gcs().send_text(MAV_SEVERITY_WARNING, "Distance=%fm", sqrtf(distance_squared)/100.0f);
+                if (distance_squared < reporting_obstacle_distances[k]) {
+                    reporting_obstacle_distances[k] = distance_squared;
+                }
+            }
+        }
     }
 
     // Safe_vel will be adjusted to remain within fence.

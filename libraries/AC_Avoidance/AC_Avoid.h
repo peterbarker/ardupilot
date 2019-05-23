@@ -94,6 +94,8 @@ public:
 
     static const struct AP_Param::GroupInfo var_info[];
 
+    void send_obstacle_distance_message(const mavlink_channel_t chan);
+
 private:
     // behaviour types (see BEHAVE parameter)
     enum BehaviourType {
@@ -179,6 +181,12 @@ private:
     uint32_t _last_log_ms;          // the last time simple avoidance was logged
 
     static AC_Avoid *_singleton;
+
+    float reporting_obstacle_distances[72]; // actually the squares of the distances
+    static constexpr uint16_t reporting_obstacle_angular_width = 360/ARRAY_SIZE(reporting_obstacle_distances); // in degrees
+    static constexpr uint16_t reporting_obstacle_min_distance = 0; // in cm
+    static constexpr uint16_t reporting_obstacle_max_distance = 65534; // in cm
+    static constexpr uint16_t no_obstacle_value = reporting_obstacle_max_distance+1;
 };
 
 namespace AP {
