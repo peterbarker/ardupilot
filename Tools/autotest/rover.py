@@ -508,6 +508,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             self.set_parameter("FENCE_ENABLE", 0)
             self.set_parameter("PRX_TYPE", 10)
             self.set_parameter("RC10_OPTION", 40) # proximity-enable
+            self.set_parameter("RTL_SPEED", 1) # so we don't overshoot on RTL
             self.reboot_sitl()
             # start = self.mav.location()
             self.wait_ready_to_arm()
