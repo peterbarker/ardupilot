@@ -389,6 +389,16 @@ void GCS_MAVLINK::send_proximity() const
                         0, 0, nullptr);
             }
         }
+
+        // mavlink_msg_obstacle_distance_send(
+        //     mavlink_channel_t(chan),
+        //     AP_HAL::micros(),
+        //     18, // sensor type
+        //     dists,
+        //     360/ARRAY_SIZE(dists),
+        //     0,
+        //     65535
+        //     );
     }
 
     // send upward distance
@@ -2378,8 +2388,8 @@ void GCS_MAVLINK::send_heartbeat() const
         gcs().custom_mode(),
         system_status());
 
+    // AP::proximity()->send_obstacle_distance_message(chan);
     AP::ac_avoid()->send_obstacle_distance_message(chan);
-
 }
 
 MAV_RESULT GCS_MAVLINK::handle_command_set_message_interval(const mavlink_command_long_t &packet)
