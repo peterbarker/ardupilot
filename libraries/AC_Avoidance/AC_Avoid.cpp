@@ -923,6 +923,21 @@ void AC_Avoid::send_obstacle_distance_message(const mavlink_channel_t chan)
         reporting_obstacle_min_distance,
         reporting_obstacle_max_distance
         );
+
+    uint16_t xdistances[ARRAY_SIZE(boundary_point_reporting_obstacle_distances)];
+    for (uint8_t i=0; i<ARRAY_SIZE(xdistances); i++) {
+        xdistances[i] = sqrtf(boundary_point_reporting_obstacle_distances[i]);
+    }
+
+    mavlink_msg_obstacle_distance_send(
+        chan,
+        AP_HAL::micros(),
+        18, // sensor type
+        xdistances,
+        boundary_point_reporting_obstacle_angular_width,
+        boundary_point_reporting_obstacle_min_distance,
+        boundary_point_reporting_obstacle_max_distance
+        );
 }
 
 /*
@@ -954,6 +969,19 @@ void AC_Avoid::adjust_velocity_polygon(float kP, float accel_cmss, Vector2f &des
     const bool inside_polygon = !Polygon_outside(position_xy, boundary, num_points);
     if (inside_polygon != stay_inside) {
         return;
+    }
+
+    // send the boundary points themselves through:
+    for (uint8_t i=0; i<num_points; i++) {
+        // gcs().send_text(MAV_SEVERITY_WARNING, "%u %f %f", i, boundary[i].x, boundary[i].y);
+        float angle = atan2f(boundary[i].y, boundary[i].x);
+        if (angle < 0) {
+            angle = M_2PI+angle;
+        }
+
+        uint8_t index = (uint8_t)((angle/M_2PI)*ARRAY_SIZE(boundary_point_reporting_obstacle_distances));
+        boundary_point_reporting_obstacle_distances[index] = boundary[i].length_squared();
+        // gcs().send_text(MAV_SEVERITY_WARNING, "%i %f %u %f", i, degrees(angle), index, sqrtf(boundary_point_reporting_obstacle_distances[index]));
     }
 
     // gcs().send_text(MAV_SEVERITY_WARNING, "pos.x=%f pos.y=%f", position_xy.x, position_xy.y);

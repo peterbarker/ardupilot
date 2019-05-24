@@ -187,6 +187,12 @@ private:
     static constexpr uint16_t reporting_obstacle_min_distance = 0; // in cm
     static constexpr uint16_t reporting_obstacle_max_distance = 65534; // in cm
     static constexpr uint16_t no_obstacle_value = reporting_obstacle_max_distance+1;
+
+    float boundary_point_reporting_obstacle_distances[72]; // actually the squares of the distances
+    static constexpr uint16_t boundary_point_reporting_obstacle_angular_width = 360/ARRAY_SIZE(boundary_point_reporting_obstacle_distances); // in degrees
+    static constexpr uint16_t boundary_point_reporting_obstacle_min_distance = 0; // in cm
+    static constexpr uint16_t boundary_point_reporting_obstacle_max_distance = 65534; // in cm
+    static constexpr uint16_t boundary_point_no_obstacle_value = boundary_point_reporting_obstacle_max_distance+1;
 };
 
 namespace AP {
