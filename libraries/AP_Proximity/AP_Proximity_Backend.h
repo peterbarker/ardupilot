@@ -62,6 +62,14 @@ public:
     // get distances in 8 directions. used for sending distances to ground station
     bool get_horizontal_distances(AP_Proximity::Proximity_Distance_Array &prx_dist_array) const;
 
+    // copy location points around vehicle into a buffer owned by the caller
+    // caller should provide the buff_size which is the maximum number of locations the buffer can hold (normally PROXIMITY_MAX_DIRECTION)
+    // num_copied is updated with the number of locations copied into the buffer
+    // returns true on success, false on failure which should only happen if buff is nullptr
+    bool copy_locations(AP_Proximity::Proximity_Location* buff, uint16_t buff_size, uint16_t& num_copied);
+
+    virtual void send_obstacle_distance_message(mavlink_channel_t chan) {};
+
 protected:
 
     // set status and update valid_count

@@ -135,6 +135,8 @@ public:
     bool sensor_enabled() const;
     bool sensor_failed() const;
 
+    void send_obstacle_distance_message(mavlink_channel_t);
+
 private:
     static AP_Proximity *_singleton;
     Proximity_State state[PROXIMITY_MAX_INSTANCES];

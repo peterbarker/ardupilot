@@ -356,6 +356,11 @@ bool AP_Proximity::get_horizontal_distances(Proximity_Distance_Array &prx_dist_a
     return drivers[primary_instance]->get_horizontal_distances(prx_dist_array);
 }
 
+void AP_Proximity::send_obstacle_distance_message(mavlink_channel_t chan)
+{
+    drivers[primary_instance]->send_obstacle_distance_message(chan);
+}
+
 // get boundary points around vehicle for use by avoidance
 //   returns nullptr and sets num_points to zero if no boundary can be returned
 const Vector2f* AP_Proximity::get_boundary_points(uint8_t instance, uint16_t& num_points) const
