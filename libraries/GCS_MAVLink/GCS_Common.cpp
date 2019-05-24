@@ -44,6 +44,7 @@
 #include <AP_Proximity/AP_Proximity.h>
 #include <AP_Scripting/AP_Scripting.h>
 #include <AP_Winch/AP_Winch.h>
+#include <AC_Avoidance/AC_Avoid.h>
 
 #include <stdio.h>
 
@@ -2376,6 +2377,9 @@ void GCS_MAVLINK::send_heartbeat() const
         base_mode(),
         gcs().custom_mode(),
         system_status());
+
+    AP::ac_avoid()->send_obstacle_distance_message(chan);
+
 }
 
 MAV_RESULT GCS_MAVLINK::handle_command_set_message_interval(const mavlink_command_long_t &packet)
