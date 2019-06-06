@@ -80,6 +80,28 @@ void GCS::send_named_float(const char *name, float value) const
                                   (const char *)&packet);
 }
 
+void GCS::send_to_streaming_channels(const uint32_t msgid, const char *pkt)
+{
+    const mavlink_msg_entry_t *entry = mavlink_get_msg_entry(msgid);
+    if (entry == nullptr) {
+        return;
+    }
+    for (uint8_t i=0; i<num_gcs(); i++) {
+        GCS_MAVLINK &c = chan(i);
+        if (!c.initialised) {
+            continue;
+        }
+        if (!c.is_streaming()) {
+            continue;
+        }
+        if (entry->max_msg_len + c.packet_overhead() > c.get_uart()->txspace()) {
+            // no room on this channel
+            continue;
+        }
+        c.send_message(pkt, entry);
+    }
+}
+
 /*
   install an alternative protocol handler. This allows another
   protocol to take over the link if MAVLink goes idle. It is used to

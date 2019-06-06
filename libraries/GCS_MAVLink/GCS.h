@@ -765,6 +765,8 @@ public:
     // frsky backend
     AP_Frsky_Telem *frsky;
 
+    void send_to_streaming_channels(const uint32_t msgid, const char *pkt);
+
 #if !HAL_MINIMIZE_FEATURES
     // Devo backend
     AP_DEVO_Telem devo_telemetry;
