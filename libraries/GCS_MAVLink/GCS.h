@@ -110,6 +110,8 @@ public:
                                         entry->crc_extra);
     }
 
+    void uavcan_msg_hook(const mavlink_message_t &msg);
+
     // accessor for uart
     AP_HAL::UARTDriver *get_uart() { return _port; }
 
