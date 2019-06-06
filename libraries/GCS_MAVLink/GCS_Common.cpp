@@ -4744,6 +4744,62 @@ void GCS_MAVLINK::manual_override(RC_Channel *c, int16_t value_in, const uint16_
     c->set_override(override_value, tnow);
 }
 
+
+bool GCS_MAVLINK::find_tx_seq_for_sysid_compid(uint8_t &seq, uint8_t sysid, uint8_t compid)
+{
+    const uint16_t key = sysid<<8 | compid;
+    uint8_t i;
+    for (i=0; i<ARRAY_SIZE(tx_seq_by_sysid_compid); i++) {
+        if (tx_seq_by_sysid_compid[i].key == 0) {
+            break;
+        }
+        if (tx_seq_by_sysid_compid[i].key == key) {
+            seq = tx_seq_by_sysid_compid[i].value;
+            return true;
+        }
+    }
+    if (i == ARRAY_SIZE(tx_seq_by_sysid_compid)) {
+        return false;
+    }
+    // new key - store a new tx seq
+    tx_seq_by_sysid_compid[i].key = key;
+    tx_seq_by_sysid_compid[i].value = 0;
+
+    seq = tx_seq_by_sysid_compid[i].value;
+    return true;
+}
+
+void GCS_MAVLINK::send_message_from_system(const char *pkt, const mavlink_msg_entry_t *entry, const uint8_t from_sysid, const uint8_t from_compid)
+{
+    // semaphore must be taken before we fiddle with global state
+    WITH_SEMAPHORE(write_semaphore());
+    uint8_t seq;
+    if (!find_tx_seq_for_sysid_compid(seq, from_sysid, from_compid)) {
+        // raise an internal error here?
+        return;
+    }
+    if (entry->max_msg_len + packet_overhead() > get_uart()->txspace()) {
+        // no room on this channel
+        return;
+    }
+    mavlink_status_t *status = mavlink_get_channel_status(chan);
+    if (status == nullptr) {
+        return;
+    }
+    // temporarily swap out mavlink global state so we can send
+    // from a different sysid/compid
+    const uint8_t old_sysid = mavlink_system.sysid;
+    const uint8_t old_compid = mavlink_system.compid;
+    const uint8_t old_seq = status->current_tx_seq;
+    mavlink_system.sysid = from_sysid;
+    mavlink_system.compid = from_compid;
+    status->current_tx_seq = seq;
+    send_message(pkt, entry);
+    mavlink_system.sysid = old_sysid;
+    mavlink_system.compid = old_compid;
+    status->current_tx_seq = old_seq;
+}
+
 GCS &gcs()
 {
     return *GCS::get_singleton();

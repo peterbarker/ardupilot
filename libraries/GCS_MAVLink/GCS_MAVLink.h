@@ -44,6 +44,8 @@
 extern AP_HAL::UARTDriver	*mavlink_comm_port[MAVLINK_COMM_NUM_BUFFERS];
 extern bool gcs_alternative_active[MAVLINK_COMM_NUM_BUFFERS];
 
+extern HAL_Semaphore_Recursive chan_locks[MAVLINK_COMM_NUM_BUFFERS];
+
 /// MAVLink system definition
 extern mavlink_system_t mavlink_system;
 

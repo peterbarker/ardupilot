@@ -110,7 +110,18 @@ public:
                                         entry->crc_extra);
     }
 
+    void send_message_from_system(const char *pkt,
+                                  const mavlink_msg_entry_t *entry,
+                                  const uint8_t from_system_id,
+                                  const uint8_t from_component_id);
+
     void uavcan_msg_hook(const mavlink_message_t &msg);
+
+    struct {
+        uint16_t key; // sysid<<8|compid
+        uint8_t value;
+    } tx_seq_by_sysid_compid[20];
+    bool find_tx_seq_for_sysid_compid(uint8_t &seq, uint8_t sysid, uint8_t compid);
 
     // accessor for uart
     AP_HAL::UARTDriver *get_uart() { return _port; }
@@ -695,6 +706,11 @@ private:
 #endif
 
     uint32_t last_mavlink_stats_logged;
+
+    HAL_Semaphore_Recursive &write_semaphore() const {
+        return chan_locks[(uint8_t)chan];
+    }
+
 };
 
 /// @class GCS
@@ -768,6 +784,11 @@ public:
     AP_Frsky_Telem *frsky;
 
     void send_to_streaming_channels(const uint32_t msgid, const char *pkt);
+
+    void send_to_streaming_channels_from_system(const uint32_t msgid,
+                                                const char *pkt,
+                                                const uint8_t from_sysid,
+                                                const uint8_t from_componentid);
 
 #if !HAL_MINIMIZE_FEATURES
     // Devo backend
@@ -854,6 +875,8 @@ private:
 
     // timer called to implement pass-thru
     void passthru_timer();
+
+    static HAL_Semaphore_Recursive chan_locks[MAVLINK_COMM_NUM_BUFFERS];
 };
 
 GCS &gcs();

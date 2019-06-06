@@ -40,7 +40,7 @@ AP_HAL::UARTDriver	*mavlink_comm_port[MAVLINK_COMM_NUM_BUFFERS];
 bool gcs_alternative_active[MAVLINK_COMM_NUM_BUFFERS];
 
 // per-channel lock
-static HAL_Semaphore chan_locks[MAVLINK_COMM_NUM_BUFFERS];
+HAL_Semaphore_Recursive chan_locks[MAVLINK_COMM_NUM_BUFFERS];
 
 mavlink_system_t mavlink_system = {7,1};
 
