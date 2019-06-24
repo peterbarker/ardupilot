@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "AP_HAL_SITL.h"
 #include "AP_HAL_SITL_Namespace.h"
@@ -173,8 +174,32 @@ void HAL_SITL::run(int argc, char * const argv[], Callbacks* callbacks) const
         }
     }
 
-    // form a new argv, removing problem parameters. This is used for reboot
+    // form a new argv
     uint8_t new_argv_offset = 0;
+    if (getenv("SITL_VALGRIND")) {
+        // check sim_vehicle.py for valgrind arguments
+        new_argv[new_argv_offset++] = "valgrind";
+        new_argv[new_argv_offset++] = "--soname-synonyms=somalloc=nouserintercepts";
+    }
+    if (getenv("SITL_VALGRIND_LOG_FILEPATH")) {
+        // check pysim/util.py
+        new_argv[new_argv_offset++] = "-q";
+        char parameter[200];
+        snprintf(parameter,
+                 ARRAY_SIZE(parameter),
+                 "--log-file=%s-%u", getenv("SITL_VALGRIND_LOG_FILEPATH"), time(nullptr));
+        new_argv[new_argv_offset++] = parameter; // stack param pointer into static char*[].  Fantastic.
+    }
+    if (getenv("SITL_VALGRIND_VGDB_PREFIX")) {
+        // check pysim/util.py
+        char parameter[200];
+        snprintf(parameter,
+                 ARRAY_SIZE(parameter),
+                 "--vgdb-prefix=%s", getenv("SITL_VALGRIND_VGDB_PREFIX"));
+        new_argv[new_argv_offset++] = parameter;
+    }
+
+    // removing problem parameters.
     for (uint8_t i=0; i<ARRAY_SIZE(new_argv) && i<argc; i++) {
         if (!strcmp(argv[i], "-w")) {
             // don't wipe params on reboot
