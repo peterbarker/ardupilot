@@ -249,6 +249,7 @@ def start_SITL(binary,
 
     """Launch a SITL instance."""
     cmd = []
+    pexpect_env = dict()
     if valgrind and os.path.exists('/usr/bin/valgrind'):
         # we specify a prefix for vgdb-pipe because on Vagrant virtual
         # machines the pipes are created on the mountpoint for the
@@ -264,6 +265,8 @@ def start_SITL(binary,
             '--vgdb-prefix=%s' % vgdb_prefix,
             '-q',
             '--log-file=%s' % log_file])
+        pexpect_env["SITL_VALGRIND_VGDB_PREFIX"] = vgdb_prefix
+        pexpect_env["SITL_VALGRIND_LOG_FILEPATH"] = log_file
     if gdbserver:
         cmd.extend(['gdbserver', 'localhost:3333'])
         if gdb:
@@ -344,7 +347,7 @@ def start_SITL(binary,
 
     first = cmd[0]
     rest = cmd[1:]
-    child = pexpect.spawn(first, rest, logfile=sys.stdout, encoding=ENCODING, timeout=5)
+    child = pexpect.spawn(first, rest, logfile=sys.stdout, encoding=ENCODING, timeout=5, env=pexpect_env)
     pexpect_autoclose(child)
     # give time for parameters to properly setup
     time.sleep(3)

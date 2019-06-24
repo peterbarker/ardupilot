@@ -545,7 +545,8 @@ def start_vehicle(binary, opts, stuff, loc=None):
         cmd_name += " (valgrind)"
         cmd.append("valgrind")
         # adding this option allows valgrind to cope with the overload
-        # of operator new
+        # of operator new.  Please note this is also present within
+        # HAL_SITL_CLASS.
         cmd.append("--soname-synonyms=somalloc=nouserintercepts")
         cmd.append("--track-origins=yes")
     if opts.callgrind:
