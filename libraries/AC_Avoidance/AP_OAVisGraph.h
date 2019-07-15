@@ -19,7 +19,7 @@ public:
     enum OAType : uint8_t {
         OATYPE_SOURCE = 0,
         OATYPE_DESTINATION,
-        OATYPE_FENCE_POINT
+        OATYPE_INTERMEDIATE_POINT,
     };
 
     // support up to 255 items of each type

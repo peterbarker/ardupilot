@@ -35,8 +35,12 @@ public:
 
 private:
 
-    // returns true if polygon fence is enabled
-    bool polygon_fence_enabled() const;
+    // returns true if at least one inclusion or exclusion zone is enabled
+    bool some_fences_enabled() const;
+
+    //
+    // polygon fence related methods
+    //
 
     // check if polygon fence has been updated since we created the inner fence. returns true if changed
     bool check_polygon_fence_updated() const;
@@ -45,10 +49,47 @@ private:
     // returns true on success
     bool create_polygon_fence_with_margin(float margin_cm);
 
-    // create a visibility graph of the polygon fence
+    //
+    // exclusion polygon methods
+    //
+
+    // check if exclusion polygons have been updated since create_exclusion_polygon_with_margin was run
+    // returns true if changed
+    bool check_exclusion_polygon_updated() const;
+
+    // create polygons around existing exclusion polygons
     // returns true on success
-    // requires create_polygon_fence_with_margin to have been run
-    bool create_polygon_fence_visgraph();
+    bool create_exclusion_polygon_with_margin(float margin_cm);
+
+    //
+    // exclusion circle methods
+    //
+
+    // check if exclusion circles have been updated since create_exclusion_circle_with_margin was run
+    // returns true if changed
+    bool check_exclusion_circle_updated() const;
+
+    // create polygons around existing exclusion circles
+    // returns true on success
+    bool create_exclusion_circle_with_margin(float margin_cm);
+
+    //
+    // other methods
+    //
+
+    // returns total number of points across all fence types
+    uint16_t total_numpoints() const;
+
+    // get a single point across the total list of points from all fence types
+    // also returns the type of point
+    bool get_point(uint16_t index, Vector2f& point) const;
+
+    // returns true if line segment intersects polygon or circular fence
+    bool intersects_fence(const Vector2f &seg_start, const Vector2f &seg_end) const;
+
+    // create visibility graph for all fence (with margin) points
+    // returns true on success
+    bool create_fence_visgraph();
 
     // calculate shortest path from origin to destination
     // returns true on success
@@ -58,6 +99,8 @@ private:
 
     // shortest path state variables
     bool _polyfence_with_margin_ok;
+    bool _exclusion_polygon_with_margin_ok;
+    bool _exclusion_circle_with_margin_ok;
     bool _polyfence_visgraph_ok;
     bool _shortest_path_ok;
 
@@ -70,10 +113,20 @@ private:
     uint8_t _polyfence_numpoints;
     uint32_t _polyfence_update_ms;  // system time of boundary update from AC_Fence (used to detect changes to polygon fence)
 
+    // exclusion polygon related variables
+    AP_ExpandingArray<Vector2f> _exclusion_polygon_pts; // array of nodes corresponding to exclusion polygon points plus a margin
+    uint8_t _exclusion_polygon_numpoints;   // number of points held in above array
+    uint32_t _exclusion_polygon_update_ms;  // system time exclusion polygon was updated (used to detect changes)
+
+    // exclusion circle related variables
+    AP_ExpandingArray<Vector2f> _exclusion_circle_pts; // array of nodes surrounding exclusion circles plus a margin
+    uint8_t _exclusion_circle_numpoints;    // number of points held in above array
+    uint32_t _exclusion_circle_update_ms;   // system time exclusion circles were updated (used to detect changes)
+
     // visibility graphs
-    AP_OAVisGraph _polyfence_visgraph;
-    AP_OAVisGraph _source_visgraph;
-    AP_OAVisGraph _destination_visgraph;
+    AP_OAVisGraph _fence_visgraph;          // holds distances between all inclusion/exclusion fence points (with margin)
+    AP_OAVisGraph _source_visgraph;         // holds distances from source point to all other nodes
+    AP_OAVisGraph _destination_visgraph;    // holds distances from the destination to all other nodes
 
     // updates visibility graph for a given position which is an offset (in cm) from the ekf origin
     // to add an additional position (i.e. the destination) set add_extra_position = true and provide the position in the extra_position argument
