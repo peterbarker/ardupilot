@@ -1054,7 +1054,11 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
         break;
 
     case MAV_CMD_NAV_TAKEOFF:                           // MAV ID: 22
+#if APM_BUILD_TYPE(APM_BUILD_ArduPlane)
         cmd.p1 = packet.param1;                         // minimum pitch (plane only)
+#elif APM_BUILD_TYPE(APM_BUILD_ArduCopter)
+        cmd.p1 = (uint16_t(packet.param1*0.1f) & 0xff) | ((uint16_t(packet.param2) & 0xff) << 8);
+#endif
         break;
 
     case MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT:           // MAV ID: 30
@@ -1556,7 +1560,14 @@ bool AP_Mission::mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& c
         break;
 
     case MAV_CMD_NAV_TAKEOFF:                           // MAV ID: 22
+#if APM_BUILD_TYPE(APM_BUILD_ArduPlane)
         packet.param1 = cmd.p1;                         // minimum pitch (plane only)
+#elif APM_BUILD_TYPE(APM_BUILD_ArduCopter)
+        // p1 is punch throttle time in milliseconds * 10
+        packet.param1 = (cmd.p1 & 0xff) * 10.0f;
+        // p2 is punch throttle percentage
+        packet.param2 = (cmd.p1 >> 8);
+#endif
         break;
 
     case MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT:           // MAV ID: 30

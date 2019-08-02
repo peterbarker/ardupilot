@@ -19,7 +19,7 @@
  *  Code in this file implements the navigation commands
  */
 
-// auto_init - initialise auto controller
+// init - initialise auto controller
 bool ModeAuto::init(bool ignore_checks)
 {
     auto_RTL = false;
@@ -266,7 +266,7 @@ void ModeAuto::nav_script_time_done(uint16_t id)
 #endif
 }
 
-// auto_loiter_start - initialises loitering in auto mode
+// loiter_start - initialises loitering in auto mode
 //  returns success/failure because this can be called by exit_mission
 bool ModeAuto::loiter_start()
 {
@@ -289,7 +289,7 @@ bool ModeAuto::loiter_start()
     return true;
 }
 
-// auto_rtl_start - initialises RTL in AUTO flight mode
+// rtl_start - initialises RTL in AUTO flight mode
 void ModeAuto::rtl_start()
 {
     // call regular rtl flight mode initialisation and ask it to ignore checks
@@ -301,7 +301,7 @@ void ModeAuto::rtl_start()
     }
 }
 
-// initialise waypoint controller to implement take-off
+// takeoff_start - initialise waypoint controller to implement take-off
 void ModeAuto::takeoff_start(const Location& dest_loc)
 {
     if (!copter.current_loc.initialised()) {
