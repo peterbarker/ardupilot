@@ -678,6 +678,16 @@ private:
         float climb_rate;   // climb rate in m/s. provided by mission command
         uint32_t start_ms;  // system time that nav attitude time command was received (used for timeout)
     } nav_attitude_time;
+
+    struct {
+        uint16_t time_ms;
+        uint8_t throttle_pct;
+
+        uint32_t start_ms;
+    } punch;
+    void punch_takeoff_start(const Location& dest_loc, uint16_t time_ms, uint8_t throttle_pct);
+    void punch_takeoff_run();
+    bool punch_verify_takeoff();
 };
 
 #if AUTOTUNE_ENABLED == ENABLED

@@ -302,6 +302,24 @@ void ModeAuto::rtl_start()
 }
 
 // takeoff_start - initialise waypoint controller to implement take-off
+void ModeAuto::punch_takeoff_start(const Location& dest_loc, uint16_t time_ms, uint8_t throttle_pct)
+{
+    _mode = Auto_TakeOff;
+
+    // initialise yaw
+    auto_yaw.set_mode(AUTO_YAW_HOLD);
+
+    // clear i term when we're taking off
+    set_throttle_takeoff();
+
+    punch.time_ms = time_ms;
+    punch.throttle_pct = throttle_pct;
+    punch.start_ms = 0; // this is set in run once we're actually doing something
+
+    gcs().send_text(MAV_SEVERITY_WARNING, "punch start %ums thr=%u", punch.time_ms, punch.throttle_pct);
+}
+
+// takeoff_start - initialise waypoint controller to implement take-off
 void ModeAuto::takeoff_start(const Location& dest_loc)
 {
     if (!copter.current_loc.initialised()) {
@@ -956,6 +974,54 @@ bool ModeAuto::verify_command(const AP_Mission::Mission_Command& cmd)
     return cmd_complete;
 }
 
+void ModeAuto::punch_takeoff_run()
+{
+    float throttle_pct = 0.0;
+
+    // this has pretty much been flogged from mode_stabilize.cpp:
+    if (!motors->armed() || !copter.ap.auto_armed) {
+        // Motors should be Stopped
+        motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::SHUT_DOWN);
+    } else {
+        motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
+    }
+
+    switch (motors->get_spool_state()) {
+    case AP_Motors::SpoolState::SHUT_DOWN:
+        // Motors Stopped
+        attitude_control->set_yaw_target_to_current_heading();
+        attitude_control->reset_rate_controller_I_terms();
+        break;
+    case AP_Motors::SpoolState::GROUND_IDLE:
+        // Landed
+        attitude_control->set_yaw_target_to_current_heading();
+        attitude_control->reset_rate_controller_I_terms();
+        break;
+    case AP_Motors::SpoolState::THROTTLE_UNLIMITED:
+        // clear landing flag above zero throttle
+        if (!motors->limit.throttle_lower) {
+            set_land_complete(false);
+        }
+        if (punch.start_ms == 0) {
+            punch.start_ms = AP_HAL::millis();
+        }
+        throttle_pct = punch.throttle_pct;
+        break;
+    case AP_Motors::SpoolState::SPOOLING_UP:
+    case AP_Motors::SpoolState::SPOOLING_DOWN:
+        // do nothing
+        break;
+    }
+
+    // call attitude controller
+    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(0.0f, 0.0f, 0.0f);
+
+    // output pilot's throttle
+    attitude_control->set_throttle_out(throttle_pct,
+                                       true,
+                                       g.throttle_filt);
+}
+
 // takeoff_run - takeoff in auto mode
 //      called by auto_run at 100hz or more
 void ModeAuto::takeoff_run()
@@ -965,6 +1031,11 @@ void ModeAuto::takeoff_run()
     if ((copter.g2.auto_options & (int32_t)Options::AllowTakeOffWithoutRaisingThrottle) != 0) {
         copter.set_auto_armed(true);
     }
+
+    if (punch.time_ms != 0) {
+        return punch_takeoff_run();
+    }
+
     auto_takeoff_run();
 }
 
@@ -1437,6 +1508,15 @@ bool ModeAuto::shift_alt_to_current_alt(Location& target_loc) const
 // do_takeoff - initiate takeoff navigation command
 void ModeAuto::do_takeoff(const AP_Mission::Mission_Command& cmd)
 {
+    if (cmd.p1 != 0) {
+        const uint16_t punch_ms = (cmd.p1 & 0xff) * 10;
+        const uint8_t punch_throttle_pct = (cmd.p1 >>8);
+        punch_takeoff_start(cmd.content.location, punch_ms, punch_throttle_pct);
+        return;
+    }
+    punch.start_ms = 0; // not a punch takeoff
+    punch.time_ms = 0; // not a punch takeoff
+
     // Set wp navigation target to safe altitude above current position
     takeoff_start(cmd.content.location);
 }
@@ -1969,9 +2049,22 @@ void ModeAuto::do_RTL(void)
 // Verify Nav (Must) commands
 /********************************************************************************/
 
+bool ModeAuto::punch_verify_takeoff()
+{
+    if (AP_HAL::millis() - punch.start_ms > punch.time_ms) {
+        gcs().send_text(MAV_SEVERITY_INFO, "Punch complete");
+        return true;
+    }
+    return false;
+}
+
 // verify_takeoff - check if we have completed the takeoff
 bool ModeAuto::verify_takeoff()
 {
+    if (punch.start_ms) {
+        return punch_verify_takeoff();
+    }
+
 #if AP_LANDINGGEAR_ENABLED
     // if we have reached our destination
     if (auto_takeoff_complete) {
