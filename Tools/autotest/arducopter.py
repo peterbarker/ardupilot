@@ -696,10 +696,7 @@ class AutoTestCopter(AutoTest):
 
         self.progress("Failed to arm outside fence (good!)")
         self.drain_mav()
-        self.mavproxy.send('fence clear\n')
-        self.delay_sim_time(2)
-        self.mavproxy.send('fence list\n')
-        self.mavproxy.expect("No geo-fence points")
+        self.clear_fence()
 
         self.start_subtest("Check breach-fence behaviour")
         self.set_parameter("FENCE_TYPE", 2)
