@@ -1004,6 +1004,8 @@ void ModeAuto::punch_takeoff_run()
         }
         if (punch.start_ms == 0) {
             punch.start_ms = AP_HAL::millis();
+            punch.hold_roll_cd = constrain_float(degrees(AP::ahrs().get_roll()), -45, 45) * 100.0f;
+            punch.hold_pitch_cd = constrain_float(degrees(AP::ahrs().get_pitch()), -45, 45) * 100.0f;
         }
         throttle_pct = punch.throttle_pct;
         break;
@@ -1014,7 +1016,7 @@ void ModeAuto::punch_takeoff_run()
     }
 
     // call attitude controller
-    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(0.0f, 0.0f, 0.0f);
+    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(punch.hold_roll_cd, punch.hold_pitch_cd, 0.0f);
 
     // output pilot's throttle
     attitude_control->set_throttle_out(throttle_pct,
