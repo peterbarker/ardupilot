@@ -37,9 +37,16 @@ class AC_Fence
 public:
     AC_Fence();
 
+    void init() {
+        _poly_loader.init();
+    }
+
     /* Do not allow copies */
     AC_Fence(const AC_Fence &other) = delete;
     AC_Fence &operator=(const AC_Fence&) = delete;
+
+    // get singleton instance
+    static AC_Fence *get_singleton() { return _singleton; }
 
     /// enable - allows fence to be enabled/disabled.  Note: this does not update the eeprom saved value
     void enable(bool value);
@@ -51,7 +58,7 @@ public:
     uint8_t get_enabled_fences() const;
 
     /// pre_arm_check - returns true if all pre-takeoff checks have completed successfully
-    bool pre_arm_check(const char* &fail_msg) const;
+    bool pre_arm_check(const char* &fail_msg);
 
     ///
     /// methods to check we are within the boundaries and recover
@@ -96,18 +103,15 @@ public:
     ///     has no effect if no breaches have occurred
     void manual_recovery_start();
 
-    static const struct AP_Param::GroupInfo var_info[];
-
     // methods for mavlink SYS_STATUS message (send_sys_status)
     bool sys_status_present() const;
     bool sys_status_enabled() const;
     bool sys_status_failed() const;
 
-    // get singleton instance
-    static AC_Fence *get_singleton() { return _singleton; }
+    class AC_PolyFence_loader &polyfence();
+    const class AC_PolyFence_loader &polyfence() const;
 
-    AC_PolyFence_loader &polyfence() { return _poly_loader; }
-    const AC_PolyFence_loader &polyfence_const() const { return _poly_loader; }
+    static const struct AP_Param::GroupInfo var_info[];
 
 private:
     static AC_Fence *_singleton;
@@ -128,12 +132,9 @@ private:
     void clear_breach(uint8_t fence_type);
 
     // additional checks for the different fence types:
-    bool pre_arm_check_polygon(const char* &fail_msg) const;
+    bool pre_arm_check_polygon(const char* &fail_msg);
     bool pre_arm_check_circle(const char* &fail_msg) const;
     bool pre_arm_check_alt(const char* &fail_msg) const;
-
-    // returns true if we have breached the fence:
-    bool polygon_fence_is_breached();
 
     // parameters
     AP_Int8         _enabled;               // top level enable/disable control
@@ -167,6 +168,9 @@ private:
 
     AC_PolyFence_loader _poly_loader{_total}; // polygon fence
 
+    // exclusion polygons
+    uint16_t        _exclusion_polygon_count;       // number of exclusion polygons
+    uint32_t        _exclusion_polygon_update_ms;   // system time of last update to the exclusion polygons
 };
 
 namespace AP {
