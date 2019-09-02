@@ -42,7 +42,9 @@ bool Semaphore::take(uint32_t timeout_ms)
     }
     uint64_t start = AP_HAL::micros64();
     do {
+        hal.scheduler->set_in_semaphore_take_wait(true);
         hal.scheduler->delay_microseconds(200);
+        hal.scheduler->set_in_semaphore_take_wait(false);
         if (take_nonblocking()) {
             return true;
         }

@@ -56,7 +56,9 @@ public:
      */
     bool thread_create(AP_HAL::MemberProc, const char *name,
                        uint32_t stack_size, priority_base base, int8_t priority) override;
-    
+
+    void set_in_semaphore_take_wait(bool value) override { _in_semaphore_take_wait = value; }
+
 private:
     SITL_State *_sitlState;
     uint8_t _nested_atomic_ctr;
@@ -71,6 +73,10 @@ private:
     static uint8_t _num_io_procs;
     static bool _in_timer_proc;
     static bool _in_io_proc;
+
+    // boolean set by the Semaphore code to indicate it's currently
+    // waiting for a take-timeout to occur.
+    static bool _in_semaphore_take_wait;
 
     void stop_clock(uint64_t time_usec) override;
 
@@ -94,5 +100,12 @@ private:
     };
     static struct thread_attr *threads;
     static const uint8_t stackfill = 0xEB;
+
+    /*
+     * semaphore_wait_hack_required - possibly move time input step
+     * forward even if we are currently pretending to be the IO or timer
+     * threads.
+     */
+    bool semaphore_wait_hack_required() override;
 };
 #endif  // CONFIG_HAL_BOARD
