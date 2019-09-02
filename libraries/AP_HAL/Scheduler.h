@@ -115,6 +115,12 @@ public:
         return false;
     }
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    // a couple of helper functions to copy with SITL's time stepping
+    virtual bool semaphore_wait_hack_required() = 0;
+    virtual void set_in_semaphore_take_wait(bool value) = 0;
+#endif
+
 private:
 
     AP_HAL::Proc _delay_cb;
