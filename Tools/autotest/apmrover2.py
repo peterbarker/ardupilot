@@ -3606,6 +3606,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         try:
             self.set_parameter("AVOID_ENABLE", 3)
             self.set_parameter("OA_TYPE", 1)
+            self.set_parameter("OA_MARGIN_MAX", 15)
             self.set_parameter("OA_LOOKAHEAD", 50)
             self.reboot_sitl()
             self.change_mode('GUIDED')
@@ -3632,19 +3633,20 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             raise ex
 
     def test_poly_fence_object_avoidance(self, target_system=1, target_component=1):
-        self.test_poly_fence_object_avoidance_auto(
-            target_system=target_system,
-            target_component=target_component)
-        self.test_poly_fence_object_avoidance_guided(
-            target_system=target_system,
-            target_component=target_component)
-
         # bendy Ruler isn't as flexible as Dijkstra for planning, so
         # it gets a simpler test:
         self.test_poly_fence_object_avoidance_bendy_ruler(
             target_system=target_system,
             target_component=target_component,
         )
+        return
+
+        self.test_poly_fence_object_avoidance_auto(
+            target_system=target_system,
+            target_component=target_component)
+        self.test_poly_fence_object_avoidance_guided(
+            target_system=target_system,
+            target_component=target_component)
 
     def tests(self):
         '''return list of all tests'''
