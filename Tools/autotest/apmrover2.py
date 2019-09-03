@@ -1771,6 +1771,12 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
     # FIXME: ensure truncation does the right thing by fence_total
     # FIXME: create_compatible_fence works
 
+    # FIXME: test vehicle escape from outside inclusion zones to
+    # inside inclusion zones (and inside exclusion zones to outside
+    # exclusion zones)
+    # FIXME: add test that a fence with edges that cross can't be uploaded
+    # FIXME: add a test that fences enclose an area (e.g. all the points aren't the same value!
+
     def test_offboard(self, timeout=90):
         self.load_mission("rover-guided-mission.txt")
         self.wait_ready_to_arm(require_absolute=True)
