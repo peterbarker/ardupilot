@@ -91,14 +91,9 @@ private:
     void adjust_velocity_circle_fence(float kP, float accel_cmss, Vector2f &desired_vel_cms, float dt);
 
     /*
-     * Adjusts the desired velocity for the polygon fence.
+     * Adjusts the desired velocity for inclusion and exclusion polygon fences
      */
-    void adjust_velocity_polygon_fence(float kP, float accel_cmss, Vector2f &desired_vel_cms, float dt);
-
-    /*
-     * Adjusts the desired velocity for the exclusion polygons
-     */
-    void adjust_velocity_exclusion_polygon(float kP, float accel_cmss, Vector2f &desired_vel_cms, float dt);
+    void adjust_velocity_inclusion_and_exclusion_polygons(float kP, float accel_cmss, Vector2f &desired_vel_cms, float dt);
 
     /*
      * Adjusts the desired velocity for the inclusion and exclusion circles

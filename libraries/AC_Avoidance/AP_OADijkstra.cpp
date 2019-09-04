@@ -24,7 +24,7 @@
 
 /// Constructor
 AP_OADijkstra::AP_OADijkstra() :
-        _polyfence_pts(OA_DIJKSTRA_EXPANDING_ARRAY_ELEMENTS_PER_CHUNK),
+        _inclusion_polygon_pts(OA_DIJKSTRA_EXPANDING_ARRAY_ELEMENTS_PER_CHUNK),
         _exclusion_polygon_pts(OA_DIJKSTRA_EXPANDING_ARRAY_ELEMENTS_PER_CHUNK),
         _exclusion_circle_pts(OA_DIJKSTRA_EXPANDING_ARRAY_ELEMENTS_PER_CHUNK),
         _short_path_data(OA_DIJKSTRA_EXPANDING_ARRAY_ELEMENTS_PER_CHUNK),
@@ -55,8 +55,8 @@ AP_OADijkstra::AP_OADijkstra_State AP_OADijkstra::update(const Location &current
     }
 
     // check for inclusion polygon updates
-    if (check_polygon_fence_updated()) {
-        _polyfence_with_margin_ok = false;
+    if (check_inclusion_polygon_updated()) {
+        _inclusion_polygon_with_margin_ok = false;
         _polyfence_visgraph_ok = false;
         _shortest_path_ok = false;
     }
@@ -76,9 +76,9 @@ AP_OADijkstra::AP_OADijkstra_State AP_OADijkstra::update(const Location &current
     }
 
     // create inner polygon fence
-    if (!_polyfence_with_margin_ok) {
-        _polyfence_with_margin_ok = create_polygon_fence_with_margin(_polyfence_margin * 100.0f);
-        if (!_polyfence_with_margin_ok) {
+    if (!_inclusion_polygon_with_margin_ok) {
+        _inclusion_polygon_with_margin_ok = create_inclusion_polygon_with_margin(_polyfence_margin * 100.0f);
+        if (!_inclusion_polygon_with_margin_ok) {
             AP::logger().Write_OADijkstra(DIJKSTRA_STATE_ERROR, 0, 0, destination, destination);
             return DIJKSTRA_STATE_ERROR;
         }
@@ -180,87 +180,88 @@ bool AP_OADijkstra::some_fences_enabled() const
 }
 
 // check if polygon fence has been updated since we created the inner fence. returns true if changed
-bool AP_OADijkstra::check_polygon_fence_updated() const
+bool AP_OADijkstra::check_inclusion_polygon_updated() const
 {
     // exit immediately if polygon fence is not enabled
     const AC_Fence *fence = AC_Fence::get_singleton();
     if (fence == nullptr) {
         return false;
     }
-    return (_polyfence_update_ms != fence->polyfence().update_ms());
+    return (_inclusion_polygon_update_ms != fence->polyfence().update_ms());
 }
 
-// create a smaller polygon fence within the existing polygon fence
+// create polygons inside the existing inclusion polygons
 // returns true on success
-bool AP_OADijkstra::create_polygon_fence_with_margin(float margin_cm)
+bool AP_OADijkstra::create_inclusion_polygon_with_margin(float margin_cm)
 {
-    // exit immediately if polygon fence is not enabled
     const AC_Fence *fence = AC_Fence::get_singleton();
     if (fence == nullptr) {
         return false;
     }
 
-    // get polygon boundary
-    uint16_t num_points = 0;
-    const Vector2f* boundary = fence->polyfence().get_boundary_points(num_points);
-    if ((boundary == nullptr) || (num_points == 0)) {
-        // no fence
-        _polyfence_numpoints = 0;
-        _polyfence_update_ms = fence->polyfence().update_ms();
-        return true;
-    }
+    // clear all points
+    _inclusion_polygon_numpoints = 0;
 
-    // fail if too few points defined
-    if (num_points < 3) {
-        return false;
-    }
+    // return immediately if no polygons
+    const uint16_t num_inclusion_polygons = fence->polyfence().get_inclusion_polygon_count();
 
-    // expand fence point array if required
-    if (!_polyfence_pts.expand_to_hold(num_points)) {
-        return false;
-    }
+    // iterate through polygons and create inner points
+    for (uint16_t i = 0; i < num_inclusion_polygons; i++) {
+        uint16_t num_points;
+        const Vector2f* boundary = fence->polyfence().get_inclusion_polygon(i, num_points);
+        if (num_points < 3) {
+            // ignore exclusion polygons with less than 3 points
+            continue;
+        }
 
-    // for each point on polygon fence
-    // Note: boundary is "unclosed" meaning the last point is *not* the same as the first
-    for (uint8_t i=0; i<num_points; i++) {
-
-        // find points before and after current point (relative to current point)
-        const uint8_t before_idx = (i == 0) ? num_points-1 : i-1;
-        const uint8_t after_idx = (i == num_points-1) ? 0 : i+1;
-        Vector2f before_pt = boundary[before_idx] - boundary[i];
-        Vector2f after_pt = boundary[after_idx] - boundary[i];
-
-        // if points are overlapping fail
-        if (before_pt.is_zero() || after_pt.is_zero() || (before_pt == after_pt)) {
+        // expand array if required
+        if (!_inclusion_polygon_pts.expand_to_hold(_inclusion_polygon_numpoints + num_points)) {
             return false;
         }
 
-        // scale points to be unit vectors
-        before_pt.normalize();
-        after_pt.normalize();
+        // for each point in inclusion polygon
+        // Note: boundary is "unclosed" meaning the last point is *not* the same as the first
+        for (uint8_t j = 0; j < num_points; j++) {
 
-        // calculate intermediate point and scale to margin
-        Vector2f intermediate_pt = (after_pt + before_pt) * 0.5f;
-        float intermediate_len = intermediate_pt.length();
-        intermediate_pt *= (margin_cm / intermediate_len);
+            // find points before and after current point (relative to current point)
+            const uint8_t before_idx = (j == 0) ? num_points-1 : j-1;
+            const uint8_t after_idx = (j == num_points-1) ? 0 : j+1;
+            Vector2f before_pt = boundary[before_idx] - boundary[j];
+            Vector2f after_pt = boundary[after_idx] - boundary[j];
 
-        // find final point which is inside the original polygon
-        _polyfence_pts[i] = boundary[i] + intermediate_pt;
-        if (Polygon_outside(_polyfence_pts[i], boundary, num_points)) {
-            _polyfence_pts[i] = boundary[i] - intermediate_pt;
-            if (Polygon_outside(_polyfence_pts[i], boundary, num_points)) {
-                // could not find a point on either side that was within the fence so fail
-                // this can happen if fence lines are closer than margin_cm
+            // if points are overlapping fail
+            if (before_pt.is_zero() || after_pt.is_zero() || (before_pt == after_pt)) {
                 return false;
             }
+
+            // scale points to be unit vectors
+            before_pt.normalize();
+            after_pt.normalize();
+
+            // calculate intermediate point and scale to margin
+            Vector2f intermediate_pt = (after_pt + before_pt) * 0.5f;
+            float intermediate_len = intermediate_pt.length();
+            intermediate_pt *= (margin_cm / intermediate_len);
+
+            // find final point which is outside the inside polygon
+            uint16_t next_index = _inclusion_polygon_numpoints + j;
+            _inclusion_polygon_pts[next_index] = boundary[j] + intermediate_pt;
+            if (Polygon_outside(_inclusion_polygon_pts[next_index], boundary, num_points)) {
+                _inclusion_polygon_pts[next_index] = boundary[j] - intermediate_pt;
+                if (Polygon_outside(_inclusion_polygon_pts[next_index], boundary, num_points)) {
+                    // could not find a point on either side that was outside the exclusion polygon so fail
+                    // this may happen if the exclusion polygon has overlapping lines
+                    return false;
+                }
+            }
         }
+
+        // update total number of points
+        _inclusion_polygon_numpoints += num_points;
     }
 
-    // update number of fence points
-    _polyfence_numpoints = num_points;
-
-    // record fence update time so we don't process this exact fence again
-    _polyfence_update_ms = fence->polyfence().update_ms();
+    // record fence update time so we don't process these inclusion polygons again
+    _inclusion_polygon_update_ms = fence->polyfence().get_exclusion_polygon_update_ms();
 
     return true;
 }
@@ -419,7 +420,7 @@ bool AP_OADijkstra::create_exclusion_circle_with_margin(float margin_cm)
 // returns total number of points across all fence types
 uint16_t AP_OADijkstra::total_numpoints() const
 {
-    return _polyfence_numpoints + _exclusion_polygon_numpoints + _exclusion_circle_numpoints;
+    return _inclusion_polygon_numpoints + _exclusion_polygon_numpoints + _exclusion_circle_numpoints;
 }
 
 // get a single point across the total list of points from all fence types
@@ -431,11 +432,11 @@ bool AP_OADijkstra::get_point(uint16_t index, Vector2f &point) const
     }
 
     // return an inclusion polygon point
-    if (index < _polyfence_numpoints) {
-        point = _polyfence_pts[index];
+    if (index < _inclusion_polygon_numpoints) {
+        point = _inclusion_polygon_pts[index];
         return true;
     }
-    index -= _polyfence_numpoints;
+    index -= _inclusion_polygon_numpoints;
 
     // return an exclusion polygon point
     if (index < _exclusion_polygon_numpoints) {
@@ -505,7 +506,7 @@ bool AP_OADijkstra::intersects_fence(const Vector2f &seg_start, const Vector2f &
 
 // create visibility graph for all fence (with margin) points
 // returns true on success
-// requires these functions to have been run create_polygon_fence_with_margin, create_exclusion_polygon_with_margin, create_exclusion_circle_with_margin
+// requires these functions to have been run create_inclusion_polygon_with_margin, create_exclusion_polygon_with_margin, create_exclusion_circle_with_margin
 bool AP_OADijkstra::create_fence_visgraph()
 {
     // exit immediately if fence is not enabled
@@ -545,7 +546,7 @@ bool AP_OADijkstra::create_fence_visgraph()
 
 // updates visibility graph for a given position which is an offset (in cm) from the ekf origin
 // to add an additional position (i.e. the destination) set add_extra_position = true and provide the position in the extra_position argument
-// requires create_polygon_fence_with_margin to have been run
+// requires create_inclusion_polygon_with_margin to have been run
 // returns true on success
 bool AP_OADijkstra::update_visgraph(AP_OAVisGraph& visgraph, const AP_OAVisGraph::OAItemID& oaid, const Vector2f &position, bool add_extra_position, Vector2f extra_position)
 {
@@ -679,7 +680,7 @@ bool AP_OADijkstra::find_closest_node_idx(node_index &node_idx) const
 
 // calculate shortest path from origin to destination
 // returns true on success
-// requires these functions to have been run: create_polygon_fence_with_margin, create_exclusion_polygon_with_margin, create_exclusion_circle_with_margin, create_polygon_fence_visgraph
+// requires these functions to have been run: create_inclusion_polygon_with_margin, create_exclusion_polygon_with_margin, create_exclusion_circle_with_margin, create_polygon_fence_visgraph
 // resulting path is stored in _shortest_path array as vector offsets from EKF origin
 bool AP_OADijkstra::calc_shortest_path(const Location &origin, const Location &destination)
 {

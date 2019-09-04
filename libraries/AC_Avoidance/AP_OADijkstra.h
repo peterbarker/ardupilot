@@ -39,15 +39,16 @@ private:
     bool some_fences_enabled() const;
 
     //
-    // polygon fence related methods
+    // inclusion polygon methods
     //
 
-    // check if polygon fence has been updated since we created the inner fence. returns true if changed
-    bool check_polygon_fence_updated() const;
+    // check if inclusion polygons have been updated since create_inclusion_polygon_with_margin was run
+    // returns true if changed
+    bool check_inclusion_polygon_updated() const;
 
-    // create a smaller polygon fence within the existing polygon fence
+    // create polygons inside the existing inclusion polygons
     // returns true on success
-    bool create_polygon_fence_with_margin(float margin_cm);
+    bool create_inclusion_polygon_with_margin(float margin_cm);
 
     //
     // exclusion polygon methods
@@ -98,7 +99,7 @@ private:
     bool calc_shortest_path(const Location &origin, const Location &destination);
 
     // shortest path state variables
-    bool _polyfence_with_margin_ok;
+    bool _inclusion_polygon_with_margin_ok;
     bool _exclusion_polygon_with_margin_ok;
     bool _exclusion_circle_with_margin_ok;
     bool _polyfence_visgraph_ok;
@@ -107,11 +108,11 @@ private:
     Location _destination_prev;     // destination of previous iterations (used to determine if path should be re-calculated)
     uint8_t _path_idx_returned;     // index into _path array which gives location vehicle should be currently moving towards
 
-    // polygon fence (with margin) related variables
-    float _polyfence_margin = 10;
-    AP_ExpandingArray<Vector2f> _polyfence_pts;
-    uint8_t _polyfence_numpoints;
-    uint32_t _polyfence_update_ms;  // system time of boundary update from AC_Fence (used to detect changes to polygon fence)
+    // inclusion polygon (with margin) related variables
+    float _polyfence_margin = 10;           // margin around polygon defaults to 10m but is overriden with set_fence_margin
+    AP_ExpandingArray<Vector2f> _inclusion_polygon_pts; // array of nodes corresponding to inclusion polygon points plus a margin
+    uint8_t _inclusion_polygon_numpoints;   // number of points held in above array
+    uint32_t _inclusion_polygon_update_ms;  // system time of boundary update from AC_Fence (used to detect changes to polygon fence)
 
     // exclusion polygon related variables
     AP_ExpandingArray<Vector2f> _exclusion_polygon_pts; // array of nodes corresponding to exclusion polygon points plus a margin
