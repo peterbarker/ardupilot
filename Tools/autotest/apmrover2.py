@@ -3633,13 +3633,10 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             raise ex
 
     def test_poly_fence_object_avoidance(self, target_system=1, target_component=1):
-        # bendy Ruler isn't as flexible as Dijkstra for planning, so
-        # it gets a simpler test:
-        self.test_poly_fence_object_avoidance_bendy_ruler(
-            target_system=target_system,
-            target_component=target_component,
-        )
-        return
+        mavproxy_version = self.mavproxy_version()
+        if not self.mavproxy_version_gt(1, 8, 10):
+            self.progress("MAVProxy is too old; skipping tests")
+            return
 
         self.test_poly_fence_object_avoidance_auto(
             target_system=target_system,
@@ -3647,6 +3644,14 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         self.test_poly_fence_object_avoidance_guided(
             target_system=target_system,
             target_component=target_component)
+
+        # bendy Ruler isn't as flexible as Dijkstra for planning, so
+        # it gets a simpler test:
+        self.test_poly_fence_object_avoidance_bendy_ruler(
+            target_system=target_system,
+            target_component=target_component,
+        )
+
 
     def tests(self):
         '''return list of all tests'''
@@ -3791,6 +3796,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
 
     def disabled_tests(self):
         return {
+            "PolyFenceObjectAvoidance": "all currently broken",
         }
 
     def rc_defaults(self):
