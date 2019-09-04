@@ -464,22 +464,40 @@ bool AP_OADijkstra::intersects_fence(const Vector2f &seg_start, const Vector2f &
         return false;
     }
 
-    // determine if segment crosses the polygon fence
+    // determine if segment crosses any of the inclusion polygons
     uint16_t num_points = 0;
-    const Vector2f* boundary = fence->polyfence().get_boundary_points(num_points);
-    if ((boundary != nullptr) && (num_points >= 3)) {
-        Vector2f intersection;
-        if (Polygon_intersects(boundary, num_points, seg_start, seg_end, intersection)) {
-            return true;
+    for (uint8_t i = 0; i < fence->polyfence().get_inclusion_polygon_count(); i++) {
+        const Vector2f* boundary = fence->polyfence().get_inclusion_polygon(i, num_points);
+        if ((boundary != nullptr) && (num_points >= 3)) {
+            Vector2f intersection;
+            if (Polygon_intersects(boundary, num_points, seg_start, seg_end, intersection)) {
+                return true;
+            }
         }
     }
 
     // determine if segment crosses any of the exclusion polygons
     for (uint8_t i=0; i<fence->polyfence().get_exclusion_polygon_count(); i++) {
-        boundary = fence->polyfence().get_exclusion_polygon(i, num_points);
+        const Vector2f* boundary = fence->polyfence().get_exclusion_polygon(i, num_points);
         if ((boundary != nullptr) && (num_points >= 3)) {
             Vector2f intersection;
             if (Polygon_intersects(boundary, num_points, seg_start, seg_end, intersection)) {
+                return true;
+            }
+        }
+    }
+
+    // determine if segment crosses any of the inclusion circles
+    for (uint8_t i = 0; i < fence->polyfence().get_inclusion_circle_count(); i++) {
+        Vector2f center_pos_cm;
+        float radius;
+        if (fence->polyfence().get_inclusion_circle(i, center_pos_cm, radius)) {
+            // intersects circle if either start or end is further from the center than the radius
+            const float radius_cm_sq = sq(radius * 100.0f) ;
+            if ((seg_start - center_pos_cm).length_squared() > radius_cm_sq) {
+                return true;
+            }
+            if ((seg_end - center_pos_cm).length_squared() > radius_cm_sq) {
                 return true;
             }
         }
