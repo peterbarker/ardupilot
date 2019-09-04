@@ -46,12 +46,6 @@ public:
     /// first inclusion polygon
     ///
 
-    /// returns pointer to array of polygon points and num_points is
-    /// filled in with the total number.  This does not include the
-    /// return point or the closing point.  These points come from the
-    /// *first* inclusion fence
-    Vector2f* get_boundary_points(uint16_t& num_points) const;
-
     // methods primarily for MissionItemProtocol_Fence to use:
     // return the total number of points stored
     uint16_t num_stored_items() const { return _eeprom_item_count; }
