@@ -193,11 +193,11 @@ bool AP_OABendyRuler::calc_margin_from_circular_fence(const Location &start, con
     const float start_dist_sq = ahrs_home.get_distance_NE(start).length_squared();
     const float end_dist_sq = ahrs_home.get_distance_NE(end).length_squared();
 
-    // get circular fence radius
-    const float fence_radius = fence->get_radius();
+    // get circular fence radius + margin
+    const float fence_radius_plus_margin = fence->get_radius() + fence->get_margin();
 
     // margin is fence radius minus the longer of start or end distance
-    margin = fence_radius - sqrtf(MAX(start_dist_sq, end_dist_sq));
+    margin = fence_radius_plus_margin - sqrtf(MAX(start_dist_sq, end_dist_sq));
     return true;
 }
 
@@ -228,6 +228,9 @@ bool AP_OABendyRuler::calc_margin_from_inclusion_and_exclusion_polygons(const Lo
         return false;
     }
 
+    // get fence margin
+    const float fence_margin = fence->get_margin();
+
     // iterate through inclusion polygons and calculate minimum margin
     bool margin_updated = false;
     for (uint16_t i = 0; i < num_inclusion_polygons; i++) {
@@ -242,7 +245,7 @@ bool AP_OABendyRuler::calc_margin_from_inclusion_and_exclusion_polygons(const Lo
         const float sign = Polygon_outside(start_NE, boundary, num_points) ? -1.0f : 1.0f;
 
         // calculate min distance (in meters) from line to polygon
-        float margin_new = sign * Polygon_closest_distance_line(boundary, num_points, start_NE, end_NE) * 0.01f;
+        float margin_new = (sign * Polygon_closest_distance_line(boundary, num_points, start_NE, end_NE) * 0.01f) - fence_margin;
         if (!margin_updated || (margin_new < margin)) {
             margin_updated = true;
             margin = margin_new;
@@ -262,7 +265,7 @@ bool AP_OABendyRuler::calc_margin_from_inclusion_and_exclusion_polygons(const Lo
         const float sign = Polygon_outside(start_NE, boundary, num_points) ? 1.0f : -1.0f;
 
         // calculate min distance (in meters) from line to polygon
-        float margin_new = sign * Polygon_closest_distance_line(boundary, num_points, start_NE, end_NE) * 0.01f;
+        float margin_new = (sign * Polygon_closest_distance_line(boundary, num_points, start_NE, end_NE) * 0.01f) - fence_margin;
         if (!margin_updated || (margin_new < margin)) {
             margin_updated = true;
             margin = margin_new;
@@ -300,6 +303,9 @@ bool AP_OABendyRuler::calc_margin_from_inclusion_and_exclusion_circles(const Loc
         return false;
     }
 
+    // get fence margin
+    const float fence_margin = fence->get_margin();
+
     // iterate through inclusion circles and calculate minimum margin
     bool margin_updated = false;
     for (uint8_t i = 0; i < num_inclusion_circles; i++) {
@@ -311,8 +317,8 @@ bool AP_OABendyRuler::calc_margin_from_inclusion_and_exclusion_circles(const Loc
             const float start_dist_sq = (start_NE - center_pos_cm).length_squared();
             const float end_dist_sq = (end_NE - center_pos_cm).length_squared();
 
-            // margin is fence radius (in cm) minus the longer of start or end distance
-            const float margin_new = (radius * 100.0f) - sqrtf(MAX(start_dist_sq, end_dist_sq));
+            // margin is fence radius minus the longer of start or end distance
+            const float margin_new = (radius + fence_margin) - (sqrtf(MAX(start_dist_sq, end_dist_sq)) * 0.01f);
 
             // update margin with lowest value so far
             if (!margin_updated || (margin_new < margin)) {
@@ -332,7 +338,7 @@ bool AP_OABendyRuler::calc_margin_from_inclusion_and_exclusion_circles(const Loc
             const float dist_cm = Vector2f::closest_distance_between_line_and_point(start_NE, end_NE, center_pos_cm);
 
             // margin is distance to the center minus the radius
-            const float margin_new = dist_cm - (radius * 100.0f);
+            const float margin_new = (dist_cm * 0.01f) - (radius + fence_margin);
 
             // update margin with lowest value so far
             if (!margin_updated || (margin_new < margin)) {
