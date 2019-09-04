@@ -2888,7 +2888,7 @@ class AutoTest(ABC):
             raise NotAchievedException("Expected MAV_MISSION_ACCEPTED got %s" %
                                        (mavutil.mavlink.enums["MAV_MISSION_RESULT"][m.type].name,))
 
-    def clear_fence_using_mavproxy(self):
+    def clear_fence_using_mavproxy(self, timeout=10):
         self.mavproxy.send("fence clear\n")
         tstart = self.get_sim_time_cached()
         while True:
