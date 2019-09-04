@@ -194,7 +194,7 @@ bool AP_OABendyRuler::calc_margin_from_circular_fence(const Location &start, con
     const float end_dist_sq = ahrs_home.get_distance_NE(end).length_squared();
 
     // get circular fence radius + margin
-    const float fence_radius_plus_margin = fence->get_radius() + fence->get_margin();
+    const float fence_radius_plus_margin = fence->get_radius() - fence->get_margin();
 
     // margin is fence radius minus the longer of start or end distance
     margin = fence_radius_plus_margin - sqrtf(MAX(start_dist_sq, end_dist_sq));
