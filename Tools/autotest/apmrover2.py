@@ -3608,7 +3608,6 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         try:
             self.set_parameter("AVOID_ENABLE", 3)
             self.set_parameter("OA_TYPE", 1)
-            self.set_parameter("OA_MARGIN_MAX", 15)
             self.set_parameter("OA_LOOKAHEAD", 50)
             self.reboot_sitl()
             self.change_mode('GUIDED')
@@ -3630,6 +3629,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
                           self.get_exception_stacktrace(e))
             ex = e
         self.context_pop()
+        self.disarm_vehicle()
         self.reboot_sitl()
         if ex is not None:
             raise ex
