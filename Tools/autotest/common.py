@@ -237,7 +237,6 @@ class AutoTest(ABC):
             return True
         elif got_minor < minor:
             return False
-        print("got_point=%u point=%u" % (got_point, point))
         return got_point > point
 
     def open_mavproxy_logfile(self):
@@ -2891,9 +2890,16 @@ class AutoTest(ABC):
 
     def clear_fence_using_mavproxy(self):
         self.mavproxy.send("fence clear\n")
+        tstart = self.get_sim_time_cached()
+        while True:
+            now = self.get_sim_time_cached()
+            if now - tstart > timeout:
+                raise AutoTestTimeoutException("FENCE_TOTAL did not go to zero")
+            if self.get_parameter("FENCE_TOTAL") == 0:
+                break
 
     def clear_fence(self):
-        self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_FENCE);
+        self.clear_fence_using_mavproxy()
 
     def clear_mission_using_mavproxy(self):
         self.mavproxy.send("wp clear\n")
