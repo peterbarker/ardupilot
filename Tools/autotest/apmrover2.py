@@ -3647,6 +3647,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             target_system=target_system,
             target_component=target_component)
 
+    def test_poly_fence_object_avoidance_bendy_ruler(self, target_system=1, target_component=1):
         # bendy Ruler isn't as flexible as Dijkstra for planning, so
         # it gets a simpler test:
         self.test_poly_fence_object_avoidance_bendy_ruler(
@@ -3789,6 +3790,10 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
              "PolyFence object avoidance tests",
              self.test_poly_fence_object_avoidance),
 
+            ("PolyFenceObjectAvoidanceBendyRuler",
+             "PolyFence object avoidance tests",
+             self.test_poly_fence_object_avoidance_bendy_ruler),
+
             ("DownLoadLogs", "Download logs", lambda:
              self.log_download(
                  self.buildlogs_path("APMrover2-log.bin"),
@@ -3798,7 +3803,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
 
     def disabled_tests(self):
         return {
-            "PolyFenceObjectAvoidance": "all currently broken",
+            "PolyFenceObjectAvoidanceBendyRuler": "currently broken",
         }
 
     def rc_defaults(self):
