@@ -167,10 +167,6 @@ private:
     uint32_t        _manual_recovery_start_ms;  // system time in milliseconds that pilot re-took manual control
 
     AC_PolyFence_loader _poly_loader{_total}; // polygon fence
-
-    // exclusion polygons
-    uint16_t        _exclusion_polygon_count;       // number of exclusion polygons
-    uint32_t        _exclusion_polygon_update_ms;   // system time of last update to the exclusion polygons
 };
 
 namespace AP {
