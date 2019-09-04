@@ -3433,6 +3433,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         try:
             self.set_parameter("AVOID_ENABLE", 3)
             self.set_parameter("OA_TYPE", 2)
+            self.set_parameter("FENCE_MARGIN", 0) # FIXME: https://github.com/ArduPilot/ardupilot/issues/11601
             self.reboot_sitl()
             self.change_mode('AUTO')
             self.wait_ready_to_arm()
@@ -3479,6 +3480,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         try:
             self.set_parameter("AVOID_ENABLE", 3)
             self.set_parameter("OA_TYPE", 2)
+            self.set_parameter("FENCE_MARGIN", 0) # FIXME: https://github.com/ArduPilot/ardupilot/issues/11601
             self.reboot_sitl()
             self.change_mode('GUIDED')
             self.wait_ready_to_arm()
