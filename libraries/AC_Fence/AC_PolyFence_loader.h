@@ -60,7 +60,7 @@ public:
     }
 
     /// returns pointer to array of exclusion polygon points and num_points is filled in with the number of points in the polygon
-    /// points are offsets from EKF origin in NE frame
+    /// points are offsets in cm from EKF origin in NE frame
     Vector2f* get_exclusion_polygon(uint16_t index, uint16_t &num_points) const;
 
     /// return system time of last update to the exclusion polygon points
@@ -77,7 +77,7 @@ public:
     }
 
     /// returns pointer to array of inclusion polygon points and num_points is filled in with the number of points in the polygon
-    /// points are offsets from EKF origin in NE frame
+    /// points are offsets in cm from EKF origin in NE frame
     Vector2f* get_inclusion_polygon(uint16_t index, uint16_t &num_points) const;
 
     /// return system time of last update to the inclusion polygon points
@@ -170,8 +170,8 @@ public:
 
 private:
 
-    // breached(Vector2f&) - returns true of location breaches any fence
-    bool breached(const Vector2f& location)  WARN_IF_UNUSED;
+    // breached(Vector2f&) - returns true of pos_cm (an offset in cm from the EKF origin) breaches any fence
+    bool breached(const Vector2f& pos_cm)  WARN_IF_UNUSED;
 
     /*
      * Fence storage Index related functions
@@ -280,7 +280,7 @@ private:
 
     class ExclusionCircle {
     public:
-        Vector2f loc;
+        Vector2f pos_cm;
         float radius;
     };
     ExclusionCircle *_loaded_circle_exclusion_boundary;
@@ -288,7 +288,7 @@ private:
 
     class InclusionCircle {
     public:
-        Vector2f loc;
+        Vector2f pos_cm;
         float radius;
     };
     InclusionCircle *_loaded_circle_inclusion_boundary;
@@ -305,15 +305,15 @@ private:
 
     // read_scaled_latlon_from_storage - reads a latitude/longitude
     // from offset in permanent storage, transforms them into an
-    // offset-from-origin and deposits the result into dest.
+    // offset-from-origin and deposits the result into pos_cm.
     // read_offset is increased by the storage space used by the
     // latitude/longitude
     bool read_scaled_latlon_from_storage(const Location &origin,
                                          uint16_t &read_offset,
-                                         Vector2f &dest) WARN_IF_UNUSED;
+                                         Vector2f &pos_cm) WARN_IF_UNUSED;
     // read_polygon_from_storage - reads vertex_count
     // latitude/longitude points from offset in permanent storage,
-    // transformst them into an offset-from-origin and deposits the
+    // transforms them into an offset-from-origin and deposits the
     // results into next_storage_point.
     bool read_polygon_from_storage(const Location &origin,
                                    uint16_t &read_offset,

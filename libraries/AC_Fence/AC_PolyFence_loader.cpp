@@ -271,9 +271,9 @@ bool AC_PolyFence_loader::calculate_centroid(T *points, uint16_t count, T &centr
 }
 
 
-// check if a location (expressed as either floats or long ints) is within the boundary
+// check if a position (expressed as offsets in cm from the EKF origin) is within the boundary
 //   returns true if location is outside the boundary
-bool AC_PolyFence_loader::breached(const Vector2f& location)
+bool AC_PolyFence_loader::breached(const Vector2f& pos_cm)
 {
     if (!load_from_eeprom()) { // FIXME: don't do this here
         return false;
@@ -282,7 +282,7 @@ bool AC_PolyFence_loader::breached(const Vector2f& location)
     // check we are inside each inclusion zone:
     for (uint8_t i=0; i<_num_loaded_inclusion_boundaries; i++) {
         const InclusionBoundary &boundary = _loaded_inclusion_boundary[i];
-        if (Polygon_outside(location, boundary.points, boundary.count)) {
+        if (Polygon_outside(pos_cm, boundary.points, boundary.count)) {
             return true;
         }
     }
@@ -290,7 +290,7 @@ bool AC_PolyFence_loader::breached(const Vector2f& location)
     // check we are outside each exclusion zone:
     for (uint8_t i=0; i<_num_loaded_exclusion_boundaries; i++) {
         const ExclusionBoundary &boundary = _loaded_exclusion_boundary[i];
-        if (!Polygon_outside(location, boundary.points, boundary.count)) {
+        if (!Polygon_outside(pos_cm, boundary.points, boundary.count)) {
             return true;
         }
     }
@@ -298,7 +298,7 @@ bool AC_PolyFence_loader::breached(const Vector2f& location)
     // check circular excludes
     for (uint8_t i=0; i<_num_loaded_circle_exclusion_boundaries; i++) {
         const ExclusionCircle &circle = _loaded_circle_exclusion_boundary[i];
-        const Vector2f diff_cm = location - circle.loc;
+        const Vector2f diff_cm = pos_cm - circle.pos_cm;
         const float diff_cm_squared = diff_cm.length_squared();
         if (diff_cm_squared < sq(circle.radius*100.0f)) {
             return true;
@@ -308,7 +308,7 @@ bool AC_PolyFence_loader::breached(const Vector2f& location)
     // check circular includes
     for (uint8_t i=0; i<_num_loaded_circle_inclusion_boundaries; i++) {
         const InclusionCircle &circle = _loaded_circle_inclusion_boundary[i];
-        const Vector2f diff_cm = location - circle.loc;
+        const Vector2f diff_cm = pos_cm - circle.pos_cm;
         const float diff_cm_squared = diff_cm.length_squared();
         if (diff_cm_squared > sq(circle.radius*100.0f)) {
             return true;
@@ -400,14 +400,14 @@ out:
     return ret;
 }
 
-bool AC_PolyFence_loader::read_scaled_latlon_from_storage(const Location &origin, uint16_t &read_offset, Vector2f &dest)
+bool AC_PolyFence_loader::read_scaled_latlon_from_storage(const Location &origin, uint16_t &read_offset, Vector2f &pos_cm)
 {
     Location tmp_loc;
     tmp_loc.lat = fence_storage.read_uint32(read_offset);
     read_offset += 4;
     tmp_loc.lng = fence_storage.read_uint32(read_offset);
     read_offset += 4;
-    dest = origin.get_distance_NE(tmp_loc) * 100.0f;
+    pos_cm = origin.get_distance_NE(tmp_loc) * 100.0f;
     return true;
 }
 
@@ -776,7 +776,7 @@ bool AC_PolyFence_loader::load_from_eeprom()
         }
         case AC_PolyFenceType::CIRCLE_EXCLUSION: {
             ExclusionCircle &circle = _loaded_circle_exclusion_boundary[_num_loaded_circle_exclusion_boundaries];
-            if (!read_scaled_latlon_from_storage(ekf_origin, storage_offset, circle.loc)) {
+            if (!read_scaled_latlon_from_storage(ekf_origin, storage_offset, circle.pos_cm)) {
                 gcs().send_text(MAV_SEVERITY_WARNING, "AC_Fence: latlon read failed");
                 storage_valid = false;
                 break;
@@ -793,7 +793,7 @@ bool AC_PolyFence_loader::load_from_eeprom()
         }
         case AC_PolyFenceType::CIRCLE_INCLUSION: {
             InclusionCircle &circle = _loaded_circle_inclusion_boundary[_num_loaded_circle_inclusion_boundaries];
-            if (!read_scaled_latlon_from_storage(ekf_origin, storage_offset, circle.loc)) {
+            if (!read_scaled_latlon_from_storage(ekf_origin, storage_offset, circle.pos_cm)) {
                 gcs().send_text(MAV_SEVERITY_WARNING, "AC_Fence: latlon read failed");
                 storage_valid = false;
                 break;
@@ -858,15 +858,15 @@ Vector2f* AC_PolyFence_loader::get_inclusion_polygon(uint16_t index, uint16_t &n
 /// points are offsets in cm from EKF origin in NE frame, radius is in meters
 bool AC_PolyFence_loader::get_exclusion_circle(uint8_t index, Vector2f &center_pos_cm, float &radius) const
 {
-    ::fprintf(stderr, "get_exclusion_circle A");
+    ::fprintf(stderr, "get_exclusion_circle A\n");
     if (index >= _num_loaded_circle_exclusion_boundaries) {
         return false;
     }
-    ::fprintf(stderr, "get_exclusion_circle B");
-    center_pos_cm = _loaded_circle_exclusion_boundary[index].loc;
-    ::fprintf(stderr, "get_exclusion_circle C");
+    ::fprintf(stderr, "get_exclusion_circle B\n");
+    center_pos_cm = _loaded_circle_exclusion_boundary[index].pos_cm;
+    ::fprintf(stderr, "get_exclusion_circle C\n");
     radius =  _loaded_circle_exclusion_boundary[index].radius;
-    ::fprintf(stderr, "get_exclusion_circle D");
+    ::fprintf(stderr, "get_exclusion_circle D\n");
     return true;
 }
 
@@ -877,7 +877,7 @@ bool AC_PolyFence_loader::get_inclusion_circle(uint8_t index, Vector2f &center_p
     if (index >= _num_loaded_circle_inclusion_boundaries) {
         return false;
     }
-    center_pos_cm = _loaded_circle_inclusion_boundary[index].loc;
+    center_pos_cm = _loaded_circle_inclusion_boundary[index].pos_cm;
     radius =  _loaded_circle_inclusion_boundary[index].radius;
     return true;
 }
