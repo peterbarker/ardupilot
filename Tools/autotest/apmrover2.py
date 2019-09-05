@@ -3288,7 +3288,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
 
     def test_poly_fence_inclusion(self, here, target_system=1, target_component=1):
         self.progress("Circle and Polygon inclusion")
-        self.test_poly_fence_inclusion_overlapping_inclusion_circles(her, target_system=target_system, target_component=target_component)
+        self.test_poly_fence_inclusion_overlapping_inclusion_circles(here, target_system=target_system, target_component=target_component)
 
         self.upload_fences_from_locations(
             mavutil.mavlink.MAV_CMD_NAV_FENCE_POLYGON_VERTEX_INCLUSION,
