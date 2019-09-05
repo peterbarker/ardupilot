@@ -582,6 +582,7 @@ void AC_Avoid::adjust_velocity_exclusion_circles(float kP, float accel_cmss, Vec
 
      // iterate through exclusion circles
      for (uint8_t i = 0; i < num_circles; i++) {
+         ::fprintf(stderr, "PB: i=%u\n", i);
          Vector2f center_pos_cm;
          float radius;
          if (fence->polyfence().get_exclusion_circle(i, center_pos_cm, radius)) {
@@ -655,6 +656,7 @@ void AC_Avoid::adjust_velocity_exclusion_circles(float kP, float accel_cmss, Vec
              }
          }
      }
+     ::fprintf(stderr, "PB: exitting get-circles\n");
 }
 
 /*
