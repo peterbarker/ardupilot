@@ -19,6 +19,8 @@
 #include <AP_Proximity/AP_Proximity.h>
 #include <AP_Beacon/AP_Beacon.h>
 
+#include <stdio.h>
+
 #if APM_BUILD_TYPE(APM_BUILD_APMrover2)
  # define AP_AVOID_BEHAVE_DEFAULT AC_Avoid::BehaviourType::BEHAVIOR_STOP
 #else
@@ -576,6 +578,7 @@ void AC_Avoid::adjust_velocity_exclusion_circles(float kP, float accel_cmss, Vec
 
      // get the margin to the fence in cm
      const float margin_cm = fence->get_margin() * 100.0f;
+     ::fprintf(stderr, "PB: margin_cm=%f\n", margin_cm);
 
      // iterate through exclusion circles
      for (uint8_t i = 0; i < num_circles; i++) {
@@ -614,22 +617,29 @@ void AC_Avoid::adjust_velocity_exclusion_circles(float kP, float accel_cmss, Vec
                  case BEHAVIOR_STOP: {
                      // implement stopping behaviour
                      // calculate stopping point plus a margin so we look forward far enough to intersect with circular fence
+                     ::fprintf(stderr, "PB: BEHAVIOUR_STOP\n");
                      const Vector2f stopping_point_plus_margin = position_NE_rel + desired_vel_cms*((2.0f + margin_cm + get_stopping_distance(kP, accel_cmss, desired_speed))/desired_speed);
+                     ::fprintf(stderr, "PB: sppm.x sppm.x=%f\n", stopping_point_plus_margin.x, stopping_point_plus_margin.y);
                      const float stopping_point_plus_margin_dist_cm = stopping_point_plus_margin.length();
                      const float dist_cm = safe_sqrt(dist_sq_cm);
                      if (dist_cm < radius_cm + margin_cm) {
                          // vehicle has already breached margin around fence
                          // if stopping point is closer to center (i.e. in wrong direction) then adjust speed to zero
                          // otherwise user is backing away from fence so do not apply limits
+                         ::fprintf(stderr, "PB: already breached\n");
                          if (stopping_point_plus_margin_dist_cm <= dist_cm) {
                              desired_vel_cms.zero();
                          }
                      } else {
                          // shorten vector without adjusting its direction
                          Vector2f intersection;
+                         ::fprintf(stderr, "PB: NOT breached\n");
                          if (Vector2f::circle_segment_intersection(position_NE_rel, stopping_point_plus_margin, Vector2f(0.0f,0.0f), radius_cm + margin_cm, intersection)) {
+                             ::fprintf(stderr, "PB: intersects\n");
                              const float distance_to_target = MAX((intersection - position_NE_rel).length() - margin_cm, 0.0f);
+                             ::fprintf(stderr, "PB: dtt=%f\n", distance_to_target);
                              const float max_speed = get_max_speed(kP, accel_cmss, distance_to_target, dt);
+                             ::fprintf(stderr, "PB: max_speed=%f desired_speed=%f\n", max_speed, desired_speed);
                              if (max_speed < desired_speed) {
                                  desired_vel_cms *= MAX(max_speed, 0.0f) / desired_speed;
                              }
