@@ -586,11 +586,16 @@ void AC_Avoid::adjust_velocity_exclusion_circles(float kP, float accel_cmss, Vec
          float radius;
          if (fence->polyfence().get_exclusion_circle(i, center_pos_cm, radius)) {
              // get position relative to circle's center
+             ::fprintf(stderr, "PB: got fence=%u\n", i);
              const Vector2f position_NE_rel = (position_NE - center_pos_cm);
+
+             ::fprintf(stderr, "PB: ne_rel.x=%f ne_rel.y=%f\n", position_NE_rel.x, position_NE_rel.y);
 
              // if we are inside this circle do not limit velocity for this circle
              const float dist_sq_cm = position_NE_rel.length_squared();
+             ::fprintf(stderr, "PB: dist_sq_cm=%f\n", dist_sq_cm);
              const float radius_cm = (radius * 100.0f);
+             ::fprintf(stderr, "PB: radius_cm=%f\n", radius_cm);
              if (dist_sq_cm < sq(radius_cm)) {
                  continue;
              }
@@ -619,7 +624,7 @@ void AC_Avoid::adjust_velocity_exclusion_circles(float kP, float accel_cmss, Vec
                      // calculate stopping point plus a margin so we look forward far enough to intersect with circular fence
                      ::fprintf(stderr, "PB: BEHAVIOUR_STOP\n");
                      const Vector2f stopping_point_plus_margin = position_NE_rel + desired_vel_cms*((2.0f + margin_cm + get_stopping_distance(kP, accel_cmss, desired_speed))/desired_speed);
-                     ::fprintf(stderr, "PB: sppm.x sppm.x=%f\n", stopping_point_plus_margin.x, stopping_point_plus_margin.y);
+                     ::fprintf(stderr, "PB: sppm.x=%f sppm.y=%f\n", stopping_point_plus_margin.x, stopping_point_plus_margin.y);
                      const float stopping_point_plus_margin_dist_cm = stopping_point_plus_margin.length();
                      const float dist_cm = safe_sqrt(dist_sq_cm);
                      if (dist_cm < radius_cm + margin_cm) {
