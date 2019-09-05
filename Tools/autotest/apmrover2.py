@@ -3253,9 +3253,43 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
 
         self.test_poly_fence_reboot_survivability()
 
-    def test_poly_fence_inclusion(self, here, target_system=1, target_component=1):
 
+    def test_poly_fence_inclusion_overlapping_inclusion_circles(self, here, target_system=1, target_component=1):
+        self.start_subtest("Overlapping circular inclusion")
+        self.upload_fences_from_locations(
+            mavutil.mavlink.MAV_CMD_NAV_FENCE_CIRCLE_INCLUSION,
+            [
+                {
+                    "radius": 30,
+                    "loc": self.offset_location_ne(here, -20, 0),
+                },
+                {
+                    "radius": 30,
+                    "loc": self.offset_location_ne(here, 20, 0),
+                },
+            ])
+        self.mavproxy.send("fence list\n")
+
+        self.delay_sim_time(5)
+        self.progress("Drive outside top circle")
+        fence_middle = self.offset_location_ne(here, -150, 0)
+        self.drive_somewhere_breach_boundary_and_rtl(
+            fence_middle,
+            target_system=target_system,
+            target_component=target_component)
+
+        self.delay_sim_time(5)
+        self.progress("Drive outside bottom circle")
+        fence_middle = self.offset_location_ne(here, 150, 0)
+        self.drive_somewhere_breach_boundary_and_rtl(
+            fence_middle,
+            target_system=target_system,
+            target_component=target_component)
+
+    def test_poly_fence_inclusion(self, here, target_system=1, target_component=1):
         self.progress("Circle and Polygon inclusion")
+        self.test_poly_fence_inclusion_overlapping_inclusion_circles(her, target_system=target_system, target_component=target_component)
+
         self.upload_fences_from_locations(
             mavutil.mavlink.MAV_CMD_NAV_FENCE_POLYGON_VERTEX_INCLUSION,
             [
