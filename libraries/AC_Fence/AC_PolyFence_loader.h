@@ -55,7 +55,7 @@ public:
     /// exclusion polygons
     ///
     /// returns number of polygon exclusion zones defined
-    uint16_t get_exclusion_polygon_count() const {
+    uint8_t get_exclusion_polygon_count() const {
         return _num_loaded_exclusion_boundaries;
     }
 
@@ -72,7 +72,7 @@ public:
     /// inclusion polygons
     ///
     /// returns number of polygon inclusion zones defined
-    uint16_t get_inclusion_polygon_count() const {
+    uint8_t get_inclusion_polygon_count() const {
         return _num_loaded_inclusion_boundaries;
     }
 
