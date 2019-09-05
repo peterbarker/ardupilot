@@ -3634,6 +3634,43 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         if ex is not None:
             raise ex
 
+    def test_poly_fence_object_avoidance_bendy_ruler_easier(self, target_system=1, target_component=1):
+        '''finish-line issue means we can't complete the harder one.  This
+        test can go away once we've nailed that one.  The only
+        difference here is the target point.
+        '''
+        self.load_fence("rover-path-bendyruler-fence.txt")
+        self.context_push()
+        ex = None
+        try:
+            self.set_parameter("AVOID_ENABLE", 3)
+            self.set_parameter("OA_TYPE", 1)
+            self.set_parameter("OA_LOOKAHEAD", 50)
+            self.reboot_sitl()
+            self.change_mode('GUIDED')
+            self.wait_ready_to_arm()
+            self.arm_vehicle()
+            self.set_parameter("FENCE_ENABLE", 1)
+            self.set_parameter("WP_RADIUS", 5)
+            self.mavproxy.send("fence list\n")
+            target_loc = mavutil.location(40.071260, -105.227000, 0, 0)
+            self.send_guided_mission_item(target_loc,
+                                          target_system=target_system,
+                                          target_component=target_component)
+            # FIXME: we don't get within WP_RADIUS of our target?!
+            self.wait_location(target_loc, timeout=300, accuracy=15)
+            self.do_RTL(timeout=300)
+            self.disarm_vehicle()
+        except Exception as e:
+            self.progress("Caught exception: %s" %
+                          self.get_exception_stacktrace(e))
+            ex = e
+        self.context_pop()
+        self.disarm_vehicle()
+        self.reboot_sitl()
+        if ex is not None:
+            raise ex
+
     def test_poly_fence_object_avoidance(self, target_system=1, target_component=1):
         mavproxy_version = self.mavproxy_version()
         if not self.mavproxy_version_gt(1, 8, 10):
@@ -3791,8 +3828,12 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
              self.test_poly_fence_object_avoidance),
 
             ("PolyFenceObjectAvoidanceBendyRuler",
-             "PolyFence object avoidance tests",
+             "PolyFence object avoidance tests - bendy ruler",
              self.test_poly_fence_object_avoidance_bendy_ruler),
+
+            ("PolyFenceObjectAvoidanceBendyRulerEasier",
+             "PolyFence object avoidance tests - easier bendy ruler test",
+             self.test_poly_fence_object_avoidance_bendy_ruler_easier),
 
             ("DownLoadLogs", "Download logs", lambda:
              self.log_download(
