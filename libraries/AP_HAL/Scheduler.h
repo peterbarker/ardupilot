@@ -114,6 +114,9 @@ public:
                                uint32_t stack_size, priority_base base, int8_t priority) {
         return false;
     }
+    virtual void check_thread_stacks(void) {}
+
+    virtual uint16_t stack_free() { return 0; }
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     // a couple of helper functions to copy with SITL's time stepping

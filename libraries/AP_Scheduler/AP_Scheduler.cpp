@@ -178,6 +178,7 @@ void AP_Scheduler::run(uint32_t time_available)
         // work out how long the event actually took
         now = AP_HAL::micros();
         uint32_t time_taken = now - _task_time_started;
+        // hal.scheduler->check_thread_stacks();
 
         if (time_taken > _task_time_allowed) {
             // the event overran!

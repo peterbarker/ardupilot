@@ -59,6 +59,9 @@ public:
 
     void set_in_semaphore_take_wait(bool value) override { _in_semaphore_take_wait = value; }
 
+    uint16_t stack_free() override;
+    void check_thread_stacks(void) override;
+
 private:
     SITL_State *_sitlState;
     uint8_t _nested_atomic_ctr;
@@ -81,8 +84,7 @@ private:
     void stop_clock(uint64_t time_usec) override;
 
     static void *thread_create_trampoline(void *ctx);
-    static void check_thread_stacks(void);
-    
+
     bool _initialized;
     uint64_t _stopped_clock_usec;
     uint64_t _last_io_run;

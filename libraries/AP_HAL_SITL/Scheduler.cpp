@@ -232,7 +232,7 @@ void Scheduler::_run_io_procs()
     hal.uartH->_timer_tick();
     hal.storage->_timer_tick();
 
-    check_thread_stacks();
+    hal.scheduler->check_thread_stacks();
 
     AP::RC().update();
 }
@@ -290,6 +290,7 @@ bool Scheduler::thread_create(AP_HAL::MemberProc proc, const char *name, uint32_
     stack_size += 2300;
     
     pthread_t thread {};
+    uint8_t *x;
     const uint32_t alloc_stack = MAX(size_t(PTHREAD_STACK_MIN),stack_size);
 
     struct thread_attr *a = new struct thread_attr;
@@ -309,6 +310,8 @@ bool Scheduler::thread_create(AP_HAL::MemberProc proc, const char *name, uint32_
     }
     memset(a->stack, stackfill, alloc_stack);
     a->stack_min = (const uint8_t *)((((uint8_t *)a->stack) + alloc_stack) - stack_size);
+    x = &(((uint8_t*)a->stack)[4096]);
+    (void*)x;
 
     a->stack_size = stack_size;
     a->f[0] = proc;
@@ -352,4 +355,43 @@ void Scheduler::check_thread_stacks(void)
             }
         }
     }
+}
+
+uint16_t Scheduler::stack_free(void)
+{
+    WITH_SEMAPHORE(_thread_sem);
+    pthread_t me = pthread_self();
+    pthread_attr_t attr;
+    if (pthread_getattr_np(me, &attr) == -1) {
+        ::fprintf(stderr, "Failed to get thread attributes");
+        return 0;
+    }
+
+    void *stackaddr;
+    size_t stacksize;
+    if (pthread_attr_getstack(&attr, &stackaddr, &stacksize) != 0) {
+        AP_HAL::panic("Failed to get thread stack");
+    }
+
+    struct thread_attr *p;
+    for (p=threads; p; p=p->next) {
+        if (p->stack == stackaddr) {
+            break;
+        }
+    }
+    if (p == nullptr) {
+        AP_HAL::panic("Failed to get current thread");
+    }
+
+    const uint32_t ncheck = p->stack_size;
+
+    for (uint32_t i=0; i<ncheck; i++) {
+        if (p->stack_min[i] != stackfill) {
+            // if (i < 10000) {
+            //     abort();
+            // }
+            return i;
+        }
+    }
+    AP_HAL::panic("stackfill not ofound");
 }
