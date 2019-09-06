@@ -860,15 +860,11 @@ Vector2f* AC_PolyFence_loader::get_inclusion_polygon(uint16_t index, uint16_t &n
 /// points are offsets in cm from EKF origin in NE frame, radius is in meters
 bool AC_PolyFence_loader::get_exclusion_circle(uint8_t index, Vector2f &center_pos_cm, float &radius) const
 {
-    ::fprintf(stderr, "get_exclusion_circle A\n");
     if (index >= _num_loaded_circle_exclusion_boundaries) {
         return false;
     }
-    ::fprintf(stderr, "get_exclusion_circle B\n");
     center_pos_cm = _loaded_circle_exclusion_boundary[index].pos_cm;
-    ::fprintf(stderr, "get_exclusion_circle C\n");
     radius =  _loaded_circle_exclusion_boundary[index].radius;
-    ::fprintf(stderr, "get_exclusion_circle D\n");
     return true;
 }
 
