@@ -38,10 +38,15 @@ AP_OADijkstra::AP_OADijkstra_State AP_OADijkstra::update(const Location &current
 {
     // require ekf origin to have been set
     struct Location ekf_origin {};
-    if (!AP::ahrs().get_origin(ekf_origin)) {
-        AP::logger().Write_OADijkstra(DIJKSTRA_STATE_NOT_REQUIRED, 0, 0, destination, destination);
-        return DIJKSTRA_STATE_NOT_REQUIRED;
+    {
+        WITH_SEMAPHORE(AP::ahrs().get_semaphore());
+        if (!AP::ahrs().get_origin(ekf_origin)) {
+            AP::logger().Write_OADijkstra(DIJKSTRA_STATE_NOT_REQUIRED, 0, 0, destination, destination);
+            return DIJKSTRA_STATE_NOT_REQUIRED;
+        }
     }
+
+    WITH_SEMAPHORE(AP::fence()->polyfence().get_loaded_fence_semaphore());
 
     // avoidance is not required if no fences
     if (!some_fences_enabled()) {
