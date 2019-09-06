@@ -168,7 +168,15 @@ public:
     // completed
     bool load_from_eeprom() WARN_IF_UNUSED;
 
+    // allow threads to lock against AHRS update
+    HAL_Semaphore &get_loaded_fence_semaphore(void) {
+        return _loaded_fence_sem;
+    }
+
 private:
+
+    // multi-thread access support
+    HAL_Semaphore _loaded_fence_sem;
 
     // breached(Vector2f&) - returns true of pos_cm (an offset in cm from the EKF origin) breaches any fence
     bool breached(const Vector2f& pos_cm)  WARN_IF_UNUSED;

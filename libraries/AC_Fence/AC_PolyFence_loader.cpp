@@ -664,6 +664,8 @@ bool AC_PolyFence_loader::load_from_eeprom()
         return false;
     }
 
+    WITH_SEMAPHORE(get_loaded_fence_semaphore());
+
     unload();
 
     if (_eeprom_item_count == 0) {
