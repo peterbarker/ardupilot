@@ -163,6 +163,7 @@ public:
     friend class ModeTakeoff;
     friend class ModeThermal;
     friend class ModeLoiterAltQLand;
+    friend class ModeFollow;
 
     Plane(void);
 
@@ -271,6 +272,7 @@ private:
 #if HAL_ADSB_ENABLED
     ModeAvoidADSB mode_avoidADSB;
 #endif
+    ModeFollow mode_follow;
     ModeGuided mode_guided;
     ModeInitializing mode_initializing;
     ModeManual mode_manual;

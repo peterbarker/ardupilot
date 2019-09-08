@@ -53,6 +53,7 @@ public:
 #if HAL_QUADPLANE_ENABLED
         LOITER_ALT_QLAND = 25,
 #endif
+        FOLLOW        = 26,
     };
 
     // Constructor
@@ -419,6 +420,25 @@ public:
 protected:
 
     bool _enter() override;
+};
+
+class ModeFollow : public Mode
+{
+public:
+
+    Mode::Number mode_number() const override { return Mode::Number::FOLLOW; }
+    const char *name() const override { return "FOLL"; }
+    const char *name4() const override { return "FOLL"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+protected:
+
+    bool _enter() override;
+
+private:
+    uint8_t follow_sysid;
 };
 
 class ModeCruise : public Mode

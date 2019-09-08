@@ -2,6 +2,10 @@
 
 #include <AP_Common/AP_Common.h>
 
+#if FOLLOW_ENABLED == ENABLED
+ # include <AP_Follow/AP_Follow.h>
+#endif
+
 // Global parameter class.
 //
 class Parameters {
@@ -559,6 +563,11 @@ public:
     AP_Int8         man_expo_rudder;
 
     AP_Int32        oneshot_mask;
+
+#if FOLLOW_ENABLED == ENABLED
+    AP_Follow follow;
+#endif
+
 };
 
 extern const AP_Param::Info var_info[];
