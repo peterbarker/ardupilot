@@ -114,10 +114,6 @@ public:
     bool                initialised_ok() const { return _initialised_ok; }
     void                set_initialised_ok(bool val) { _initialised_ok = val; }
 
-    // arm, disarm or check status status of motors
-    bool                armed() const { return _armed; }
-    void                armed(bool arm);
-
     // set motor interlock status
     void                set_interlock(bool set) { _interlock = set;}
 

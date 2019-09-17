@@ -73,17 +73,6 @@ void AP_Motors::get_frame_and_type_string(char *buffer, uint8_t buflen) const
     }
 }
 
-void AP_Motors::armed(bool arm)
-{
-    if (_armed != arm) {
-        _armed = arm;
-        AP_Notify::flags.armed = arm;
-        if (!arm) {
-            save_params_on_disarm();
-        }
-    }
-};
-
 void AP_Motors::set_desired_spool_state(DesiredSpoolState spool)
 {
     if (_armed || (spool == DesiredSpoolState::SHUT_DOWN)) {
