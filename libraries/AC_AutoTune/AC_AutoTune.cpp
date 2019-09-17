@@ -5,6 +5,7 @@
 #include <AP_Notify/AP_Notify.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
+#include <AP_Arming/AP_Arming.h>
 
 #define AUTOTUNE_PILOT_OVERRIDE_TIMEOUT_MS  500     // restart tuning if pilot has left sticks in middle for 2 seconds
 #if APM_BUILD_TYPE(APM_BUILD_ArduPlane)
@@ -36,7 +37,6 @@ bool AC_AutoTune::init_internals(bool _use_poshold,
     pos_control = _pos_control;
     ahrs_view = _ahrs_view;
     inertial_nav = _inertial_nav;
-    motors = AP_Motors::get_singleton();
 
     // exit immediately if motor are not armed
     if ((motors == nullptr) || !motors->armed()) {
@@ -188,7 +188,7 @@ void AC_AutoTune::run()
 
     // if not auto armed or motor interlock not enabled set throttle to zero and exit immediately
     // this should not actually be possible because of the init() checks
-    if (!motors->armed() || !motors->get_interlock()) {
+    if (!AP::arming().is_armed() || !motors->get_interlock()) {
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
         attitude_control->set_throttle_out(0.0f, true, 0.0f);
         pos_control->relax_z_controller(0.0f);
