@@ -1,5 +1,7 @@
 #include "Copter.h"
 
+#include <AP_Arming/AP_Arming.h>
+
 /*
   mavlink motor test - implements the MAV_CMD_DO_MOTOR_TEST mavlink command so that the GCS/pilot can test an individual motor or flaps
                        to ensure proper wiring, rotation.
@@ -37,8 +39,11 @@ void Copter::motor_test_output()
                 motor_test_seq++;
                 motor_test_count--;
                 motor_test_start_ms = now;
-                if (!motors->armed()) {
-                    motors->armed(true);
+                if (!AP::arming().is_armed()) {
+                    if (!AP::arming().arm(AP_Arming::Method::MAVLINK, false)) {
+                        // not good
+                        return;
+                    }
                     hal.util->set_soft_armed(true);
                 }
             }
@@ -152,9 +157,9 @@ MAV_RESULT Copter::mavlink_motor_test_start(const GCS_MAVLINK &gcs_chan, uint8_t
 
             EXPECT_DELAY_MS(3000);
             // enable and arm motors
-            if (!motors->armed()) {
+            if (!AP::arming().is_armed()) {
                 enable_motor_output();
-                motors->armed(true);
+                AP::arming().arm(AP_Arming::Method::MAVLINK, false);
                 hal.util->set_soft_armed(true);
             }
 
@@ -200,7 +205,7 @@ void Copter::motor_test_stop()
     ap.motor_test = false;
 
     // disarm motors
-    motors->armed(false);
+    AP::arming().disarm();
     hal.util->set_soft_armed(false);
 
     // reset timeout

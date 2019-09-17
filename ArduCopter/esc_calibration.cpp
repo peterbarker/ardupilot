@@ -177,7 +177,7 @@ void Copter::esc_calibration_setup()
     }
 
     // arm and enable motors
-    motors->armed(true);
+    AP::arming().arm(AP_Arming::Method::MAVLINK, false);
     SRV_Channels::enable_by_mask(motors->get_motor_mask());
     hal.util->set_soft_armed(true);
 }
