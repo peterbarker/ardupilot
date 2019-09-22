@@ -11678,6 +11678,19 @@ switch value'''
         if ex is not None:
             raise ex
 
+    def global_position_int_for_location(self, loc, time_boot, heading=0):
+        return self.mav.mav.global_position_int_encode(
+            int(time_boot * 1000), # time_boot_ms
+            int(loc.lat * 1e7),
+            int(loc.lng * 1e7),
+            int(loc.alt * 1000), # alt in mm
+            20, # relative alt - urp.
+            vx=0,
+            vy=0,
+            vz=0,
+            hdg=heading
+        )
+
     def tests(self):
         return [
             Test("PIDTuning",
