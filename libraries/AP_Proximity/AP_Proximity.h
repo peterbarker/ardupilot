@@ -69,6 +69,7 @@ public:
 #if AP_PROXIMITY_LIGHTWARE_SF45B_ENABLED
         SF45B = 8,
 #endif
+        EchoLogger_RS900 = 9,
 #if AP_PROXIMITY_SITL_ENABLED
         SITL    = 10,
 #endif

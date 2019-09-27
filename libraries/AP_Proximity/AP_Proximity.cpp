@@ -20,6 +20,7 @@
 #include "AP_Proximity_TeraRangerTower.h"
 #include "AP_Proximity_TeraRangerTowerEvo.h"
 #include "AP_Proximity_RangeFinder.h"
+#include "AP_Proximity_EchoLogger_RS900.h"
 #include "AP_Proximity_MAV.h"
 #include "AP_Proximity_LightWareSF40C.h"
 #include "AP_Proximity_LightWareSF45B.h"
