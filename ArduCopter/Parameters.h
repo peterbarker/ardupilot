@@ -620,6 +620,10 @@ public:
     // Autonmous autorotation
     AC_Autorotation arot;
 #endif
+
+#if ENABLE_FUELCELL == ENABLED
+    AP_FuelCell fuelcell;
+#endif
 };
 
 extern const AP_Param::Info        var_info[];

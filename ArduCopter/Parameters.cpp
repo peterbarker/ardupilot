@@ -961,7 +961,11 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_SUBGROUPINFO(arot, "AROT_", 37, ParametersG2, AC_Autorotation),
 #endif
 
-
+#if ENABLE_FUELCELL == ENABLED
+    // @Group: FUELCEL_
+    // @Path: ../libraries/AP_FuelCell/AP_FuelCell.cpp
+    AP_SUBGROUPINFO(fuelcell, "FUELCEL_", 38, ParametersG2, AP_FuelCell),
+#endif
 
     AP_GROUPEND
 };
