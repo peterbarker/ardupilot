@@ -25,7 +25,12 @@ public:
         BattMonitor_TYPE_Sum                        = 10,
         BattMonitor_TYPE_FuelFlow                   = 11,
         BattMonitor_TYPE_FuelLevel_PWM              = 12,
+        BattMonitor_TYPE_SUI3                       = 13,
+        BattMonitor_TYPE_SUI6                       = 14,
+        BattMonitor_TYPE_NeoDesign                  = 15,
         BattMonitor_TYPE_Generator                  = 17,
+        BattMonitor_TYPE_FuelCell_TANK              = 18,
+        BattMonitor_TYPE_FuelCell_BATTERY           = 19,
     };
 
     // low voltage sources (used for BATT_LOW_TYPE parameter)

@@ -7,6 +7,7 @@
 #include "AP_BattMonitor_FuelFlow.h"
 #include "AP_BattMonitor_FuelLevel_PWM.h"
 #include "AP_BattMonitor_Generator.h"
+#include "AP_BattMonitor_FuelCell.h"
 
 #include <AP_HAL/AP_HAL.h>
 
@@ -150,6 +151,12 @@ AP_BattMonitor::init()
             case AP_BattMonitor_Params::BattMonitor_TYPE_Generator:
                 drivers[instance] = new AP_BattMonitor_Generator(*this, state[instance], _params[instance]);
                 break;
+#if ENABLE_FUELCELL == ENABLED
+            case AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_TANK:
+            case AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_BATTERY:
+                drivers[instance] = new AP_BattMonitor_FuelCell(*this, state[instance], _params[instance]);
+                break;
+#endif
             case AP_BattMonitor_Params::BattMonitor_TYPE_NONE:
             default:
                 break;
