@@ -636,6 +636,10 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("FS_OPTIONS", 48, ParametersG2, fs_options, 0),
 
+    // @Group: ADCL_
+    // @Path: ../libraries/AP_ADC_Log/AP_ADC_Log.cpp
+    AP_SUBGROUPINFO(adc_log, "ADCL_", 63, ParametersG2, AP_ADC_Log),
+
     AP_GROUPEND
 };
 
@@ -685,7 +689,8 @@ ParametersG2::ParametersG2(void)
     windvane(),
     airspeed(),
     wp_nav(attitude_control, rover.L1_controller),
-    sailboat()
+    sailboat(),
+    adc_log()
 {
     AP_Param::setup_object_defaults(this, var_info);
 }
