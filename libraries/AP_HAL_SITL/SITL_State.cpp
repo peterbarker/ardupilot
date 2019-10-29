@@ -435,7 +435,12 @@ SITL::SerialDevice *SITL_State::create_serial_sim(const char *name, const char *
             AP_HAL::panic("Bad GPS number %u", x);
         }
         gps[x-1] = new SITL::GPS(x-1);
-        return gps[x-1];
+    } else if (streq(name, "echologger_rs900")) {
+        if (echologger_rs900 != nullptr) {
+            AP_HAL::panic("Only one echologger_rs900 at a time");
+        }
+        echologger_rs900 = new SITL::EchoLogger_RS900();
+        return echologger_rs900;
     }
 
     AP_HAL::panic("unknown simulated device: %s", name);
@@ -645,6 +650,12 @@ void SITL_State::_fdm_input_local(void)
     }
     if (efi_ms != nullptr) {
         efi_ms->update();
+    if (echologger_rs900 != nullptr) {
+        Quaternion attitude;
+        sitl_model->get_attitude(attitude);
+        echologger_rs900->update(sitl_model->get_location(),
+                                 sitl_model->get_position(),
+                                 attitude);
     }
 
     if (frsky_d != nullptr) {

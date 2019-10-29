@@ -59,6 +59,7 @@
 
 #include <SITL/SIM_RichenPower.h>
 #include <SITL/SIM_FETtecOneWireESC.h>
+#include <SITL/SIM_EchoLogger_RS900.h>
 #include <AP_HAL/utility/Socket.h>
 
 class HAL_SITL;
@@ -240,6 +241,8 @@ private:
     SITL::RF_MAVLink *rf_mavlink;
     // simulated GYUS42v2 rangefinder:
     SITL::RF_GYUS42v2 *gyus42v2;
+    // simulated echologger RS900
+    SITL::EchoLogger_RS900 *echologger_rs900;
 
     // simulated Frsky devices
     SITL::Frsky_D *frsky_d;
