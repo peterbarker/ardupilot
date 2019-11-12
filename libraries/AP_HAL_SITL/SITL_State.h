@@ -41,6 +41,7 @@
 // #include <SITL/SIM_Frsky_SPort.h>
 // #include <SITL/SIM_Frsky_SPortPassthrough.h>
 
+#include <SITL/SIM_ParticleSensor_SDS021.h>
 #include <AP_HAL/utility/Socket.h>
 
 class HAL_SITL;
@@ -265,6 +266,8 @@ private:
     SITL::RF_Wasp *wasp;
     // simulated NMEA rangefinder:
     SITL::RF_NMEA *nmea;
+    // simulated particle sensor:
+    SITL::ParticleSensor_SDS021 *sds021;
 
     // simulated Frsky devices
     SITL::Frsky_D *frsky_d;

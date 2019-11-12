@@ -315,6 +315,12 @@ int SITL_State::sim_fd(const char *name, const char *arg)
     //     }
     //     frsky_sport = new SITL::Frsky_SPortPassthrough();
     //     return frsky_sportpassthrough->fd();
+    } else if (streq(name, "sds021")) {
+        if (sds021 != nullptr) {
+            AP_HAL::panic("Only one particle sensor at a time");
+        }
+        sds021 = new SITL::ParticleSensor_SDS021();
+        return sds021->fd();
     }
 
     AP_HAL::panic("unknown simulated device: %s", name);
@@ -391,6 +397,11 @@ int SITL_State::sim_fd_write(const char *name)
             AP_HAL::panic("No frsky-d created");
         }
         return frsky_d->write_fd();
+    } else if (streq(name, "sds021")) {
+        if (sds021 == nullptr) {
+            AP_HAL::panic("No sds021 created");
+        }
+        return sds021->write_fd();
     }
     AP_HAL::panic("unknown simulated device: %s", name);
 }
@@ -563,6 +574,9 @@ void SITL_State::_fdm_input_local(void)
     }
     if (nmea != nullptr) {
         nmea->update(sitl_model->get_range());
+    }
+    if (sds021 != nullptr) {
+        sds021->update(sitl_model->get_location());
     }
 
     if (frsky_d != nullptr) {
