@@ -38,6 +38,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <GCS_MAVLink/GCS.h>
+
 #include "AP_GPS_NMEA.h"
 
 #if AP_GPS_NMEA_ENABLED
@@ -82,7 +84,7 @@ bool AP_GPS_NMEA::read(void)
 bool AP_GPS_NMEA::_decode(char c)
 {
     _sentence_length++;
-        
+
     switch (c) {
     case ';':
         // header separator for unicore
@@ -223,8 +225,8 @@ bool AP_GPS_NMEA::_have_new_message()
         return false;
     }
     uint32_t now = AP_HAL::millis();
-    if (now - _last_RMC_ms > 150 ||
-        now - _last_GGA_ms > 150) {
+    if (now - _last_RMC_ms > 1000 ||
+        now - _last_GGA_ms > 1000) {
         return false;
     }
     if (_last_VTG_ms != 0 && 
@@ -285,6 +287,7 @@ bool AP_GPS_NMEA::_have_new_message()
 
     _last_GGA_ms = 1;
     _last_RMC_ms = 1;
+    gcs().send_text(MAV_SEVERITY_INFO, "Got new message");
     return true;
 }
 

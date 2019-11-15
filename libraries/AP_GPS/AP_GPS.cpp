@@ -52,10 +52,10 @@
 
 #define GPS_RTK_INJECT_TO_ALL 127
 #ifndef GPS_MAX_RATE_MS
-#define GPS_MAX_RATE_MS 200 // maximum value of rate_ms (i.e. slowest update rate) is 5hz or 200ms
+#define GPS_MAX_RATE_MS 2000 // maximum value of rate_ms (i.e. slowest update rate) is 5hz or 200ms
 #endif
 #define GPS_BAUD_TIME_MS 1200
-#define GPS_TIMEOUT_MS 4000u
+#define GPS_TIMEOUT_MS 4000
 
 // defines used to specify the mask position for use of different accuracy metrics in the blending algorithm
 #define BLEND_MASK_USE_HPOS_ACC     1
@@ -947,6 +947,7 @@ void AP_GPS::update_instance(uint8_t instance)
     if (!result) {
         if (tnow - timing[instance].last_message_time_ms > GPS_TIMEOUT_MS) {
             memset((void *)&state[instance], 0, sizeof(state[instance]));
+            gcs().send_text(MAV_SEVERITY_INFO, "timeout");
             state[instance].instance = instance;
             state[instance].hdop = GPS_UNKNOWN_DOP;
             state[instance].vdop = GPS_UNKNOWN_DOP;
