@@ -125,6 +125,15 @@ private:
     // _fd.  This is to support simulated serial devices, which use a
     // pipe for read and a pipe for write
     int _fd_write = -1;
+
+    int _pcap_logfd;
+    void open_pcap_logfile();
+    void write_pcap_write(const uint8_t *buffer, uint16_t len);
+    void write_pcap_read(const uint8_t *buffer, uint16_t len);
+    void write_pcap_event(uint8_t event_type,
+                          uint8_t event_type_end,
+                          const uint8_t *buffer,
+                          uint16_t len);
 };
 
 #endif
