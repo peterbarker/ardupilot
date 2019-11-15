@@ -34,6 +34,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <GCS_MAVLink/GCS.h>
+
 #include "AP_GPS_NMEA.h"
 
 extern const AP_HAL::HAL& hal;
@@ -79,7 +81,7 @@ bool AP_GPS_NMEA::_decode(char c)
     bool valid_sentence = false;
 
     _sentence_length++;
-        
+
     switch (c) {
     case ',': // term terminators
         _parity ^= c;
@@ -112,6 +114,9 @@ bool AP_GPS_NMEA::_decode(char c)
     if (!_is_checksum_term)
         _parity ^= c;
 
+    if (valid_sentence) {
+        gcs().send_text(MAV_SEVERITY_INFO, "sentence_valid=%u\n", _sentence_length);
+    }
     return valid_sentence;
 }
 
@@ -198,8 +203,8 @@ bool AP_GPS_NMEA::_have_new_message()
         return false;
     }
     uint32_t now = AP_HAL::millis();
-    if (now - _last_RMC_ms > 150 ||
-        now - _last_GGA_ms > 150) {
+    if (now - _last_RMC_ms > 1000 ||
+        now - _last_GGA_ms > 1000) {
         return false;
     }
     if (_last_VTG_ms != 0 && 
@@ -218,6 +223,7 @@ bool AP_GPS_NMEA::_have_new_message()
 
     _last_GGA_ms = 1;
     _last_RMC_ms = 1;
+    gcs().send_text(MAV_SEVERITY_INFO, "Got new message");
     return true;
 }
 
