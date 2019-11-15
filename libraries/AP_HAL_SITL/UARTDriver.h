@@ -178,6 +178,14 @@ private:
     uint32_t _tx_stats_bytes;
     uint32_t _rx_stats_bytes;
 
+    int _pcap_logfd;
+    void open_pcap_logfile();
+    void write_pcap_write(const uint8_t *buffer, uint16_t len);
+    void write_pcap_read(const uint8_t *buffer, uint16_t len);
+    void write_pcap_event(uint8_t event_type,
+                          uint8_t event_type_end,
+                          const uint8_t *buffer,
+                          uint16_t len);
 };
 
 #endif
