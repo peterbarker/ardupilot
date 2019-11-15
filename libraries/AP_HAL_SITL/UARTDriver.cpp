@@ -193,6 +193,76 @@ void UARTDriver::begin(uint32_t baud, uint16_t rxSpace, uint16_t txSpace)
     }
 
     _set_nonblocking(_fd);
+
+    if (true) {
+        open_pcap_logfile();
+    }
+}
+
+void UARTDriver::open_pcap_logfile()
+{
+    char filename[32];
+    snprintf(filename, ARRAY_SIZE(filename), "/tmp/uart-%u.pcap", _portNumber);
+    _pcap_logfd = ::open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+    if (_pcap_logfd == -1) {
+        AP_HAL::panic("Failed to open pcap file: %m");
+    }
+
+
+    const struct PACKED {
+        uint32_t magic_number;   /* magic number */
+        uint16_t version_major;  /* major version number */
+        uint16_t version_minor;  /* minor version number */
+        int32_t  thiszone;       /* GMT to local correction */
+        uint32_t sigfigs;        /* accuracy of timestamps */
+        uint32_t snaplen;        /* max length of captured packets, in octets */
+        uint32_t network;        /* data link type */
+    } header {
+        0xa1b2c3d4,
+        2,
+        4,
+        0,
+        6, // to-the-microsecond
+        65535, // maximum buffer length of any serial?
+        147
+    };
+
+    if (::write(_pcap_logfd, &header, sizeof(header)) != sizeof(header)) {
+        AP_HAL::panic("Failed to write pcap header: %m");
+    }
+}
+
+void UARTDriver::write_pcap_write(const uint8_t *buffer, uint16_t buflen)
+{
+    write_pcap_event(0x01, 0x03, buffer, buflen); // DATA_TX_START
+}
+
+void UARTDriver::write_pcap_read(const uint8_t *buffer, uint16_t buflen)
+{
+    write_pcap_event(0x02, 0x04, buffer, buflen); // DATA_RX_START
+}
+
+void UARTDriver::write_pcap_event(uint8_t event_type_start, uint8_t event_type_end, const uint8_t *buffer, uint16_t buflen)
+{
+    // TODO: fill in control-line-state
+    struct PACKED {
+        uint32_t unix_epoch_seconds;
+        uint32_t micros_since_unix_epoch_seconds;
+        uint32_t len;
+        uint32_t actual_len;
+    } header {
+        0,
+        AP_HAL::millis(),
+        buflen,
+        buflen
+    };
+
+    if (::write(_pcap_logfd, &header, sizeof(header)) != sizeof(header)) {
+        AP_HAL::panic("Failed to write pcap TX_START header: %m");
+    }
+    if (::write(_pcap_logfd, buffer, buflen) != buflen) {
+        AP_HAL::panic("Failed to write pcap data: %m");
+    }
 }
 
 void UARTDriver::end()
@@ -850,6 +920,7 @@ void UARTDriver::_timer_tick(void)
             _writebuffer.peekbytes(tmpbuf, n);
             ssize_t ret = send(_fd, tmpbuf, n, MSG_DONTWAIT);
             if (ret > 0) {
+                write_pcap_write(tmpbuf, ret);
                 _writebuffer.advance(ret);
             }
         }
@@ -871,6 +942,7 @@ void UARTDriver::_timer_tick(void)
                 nwritten = send(_fd, readptr, navail, MSG_DONTWAIT);
             }
             if (nwritten > 0) {
+                write_pcap_write(readptr, nwritten);
                 _writebuffer.advance(nwritten);
             }
         }
@@ -944,6 +1016,7 @@ void UARTDriver::_timer_tick(void)
     }
     if (nread > 0) {
         _readbuffer.write((uint8_t *)buf, nread);
+        write_pcap_read((uint8_t*)buf, nread);
         _receive_timestamp = AP_HAL::micros64();
     }
 }

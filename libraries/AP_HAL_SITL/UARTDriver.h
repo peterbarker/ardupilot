@@ -147,6 +147,15 @@ private:
         uint32_t first_emit_micros_us;
     } logic_async_csv;
     uint16_t read_from_async_csv(uint8_t *buffer, uint16_t space);
+
+    int _pcap_logfd;
+    void open_pcap_logfile();
+    void write_pcap_write(const uint8_t *buffer, uint16_t len);
+    void write_pcap_read(const uint8_t *buffer, uint16_t len);
+    void write_pcap_event(uint8_t event_type,
+                          uint8_t event_type_end,
+                          const uint8_t *buffer,
+                          uint16_t len);
 };
 
 #endif
