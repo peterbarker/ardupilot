@@ -49,6 +49,12 @@ class SRV_Channel {
 public:
     friend class SRV_Channels;
 
+    enum class Type {
+        AUX = 16,
+        ANGLE = 17,
+        RANGE = 18,
+    };
+
     // constructor
     SRV_Channel(void);
 
@@ -290,11 +296,7 @@ private:
     // a pending output value as PWM
     uint16_t output_pwm;
 
-    // true for angle output type
-    bool type_angle:1;
-
-    // set_range() or set_angle() has been called
-    bool type_setup:1;
+    Type type = Type::RANGE;
 
     // the hal channel number
     uint8_t ch_num;

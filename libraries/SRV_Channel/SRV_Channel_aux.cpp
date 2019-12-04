@@ -99,13 +99,11 @@ SRV_Channel::Aux_servo_function_t SRV_Channels::channel_function(uint8_t channel
 }
 
 /*
-   setup a channels aux servo function
+   setup a channel's function.  Despite the name this is called for
+   non-aux functions (e.g. yaw out) too.
 */
 void SRV_Channel::aux_servo_function_setup(void)
 {
-    if (type_setup) {
-        return;
-    }
     switch (function.get()) {
     case k_flap:
     case k_flap_auto:
@@ -517,7 +515,7 @@ bool SRV_Channels::set_aux_channel_default(SRV_Channel::Aux_servo_function_t fun
                             (unsigned)channels[channel].function.get());
         return false;
     }
-    channels[channel].type_setup = false;
+    channels[channel].type = SRV_Channel::Type::AUX;
     channels[channel].function.set_and_default(function);
     channels[channel].aux_servo_function_setup();
     function_mask.set((uint16_t)function);
