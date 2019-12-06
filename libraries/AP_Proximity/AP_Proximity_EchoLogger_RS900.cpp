@@ -22,6 +22,8 @@
 
 #include <stdio.h>
 
+#define STRICT_PARSING 0
+
 /* 
    The constructor also initialises the proximity sensor. Note that this
    constructor is not called until detect() returns true, so we
@@ -209,9 +211,8 @@ void AP_Proximity_EchoLogger_RS900::handle_workstate_handle_data()
     const uint32_t now = AP_HAL::millis();
 
     if (now - last_keepalive_sent_ms > 1000) {
-        //FIXME: this is the bit which is broken
+        ::fprintf(stderr, "RS900: @@@@@@@@@ sending keepalive\n");
         set_work_state(WorkState::send_keepalive_start);
-        // set_work_state(WorkState::waiting_for_header);
     } else {
         set_work_state(WorkState::waiting_for_header);
    }
@@ -224,7 +225,7 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
 
     static uint32_t last_message_sent;
     if (now - last_message_sent > 10000) {
-        ::fprintf(stderr, "RS900: work mode (state=%u)\n", (unsigned)work_state);
+        ::fprintf(stderr, "RS900: work mode (state=%u lost=%u)\n", (unsigned)work_state, lost_bytes);
         last_message_sent = now;
     }
 
@@ -281,7 +282,9 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
             }
             if (c != (header_magic & 0xff)) {
                 lost_bytes += 1;
+#if STRICT_PARSING
                 AP_HAL::panic("RS900: invalid header1 (%02X) (want=%02X)", c, header_magic & 0xff);
+#endif
                 set_work_state(WorkState::waiting_for_header);
                 continue;
             }
@@ -294,7 +297,9 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
                 return;
             }
             if (c != ((header_magic >> 8) & 0xff)) {
+#if STRICT_PARSING
                 AP_HAL::panic("RS900: invalid header2");
+#endif
                 lost_bytes += 2;
                 set_work_state(WorkState::waiting_for_header);
                 continue;
@@ -308,7 +313,9 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
                 return;
             }
             if (c != ((header_magic >> 16) & 0xff)) {
+#if STRICT_PARSING
                 AP_HAL::panic("RS900: invalid header3");
+#endif
                 lost_bytes += 3;
                 set_work_state(WorkState::waiting_for_header);
                 continue;
@@ -322,7 +329,9 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
                 return;
             }
             if (c != (header_magic >>24)) {
+#if STRICT_PARSING
                 AP_HAL::panic("RS900: invalid header4");
+#endif
                 lost_bytes += 4;
                 set_work_state(WorkState::waiting_for_header);
                 continue;
@@ -350,36 +359,37 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
                 continue;
             }
             header.data_offset = uint32;
-            ::fprintf(stderr, "RS900: data offset: %u\n", header.data_offset);
+            // ::fprintf(stderr, "RS900: data offset: %u\n", header.data_offset);
             state_after_getting_uint32 = WorkState::got_data_size;
             set_work_state(WorkState::waiting_for_uint32_start);
             continue;
         case WorkState::got_data_size:
             if (uint32 != 1) {
-                ::fprintf(stderr, "invalid sample size (%u)\n", uint32);
+                // ::fprintf(stderr, "invalid sample size (%u)\n", uint32);
                 lost_bytes += 12; // header + data-offset + data-size
                 set_work_state(WorkState::waiting_for_header);
                 continue;
             }
             header.data_size = uint32;
-            ::fprintf(stderr, "RS900: data size: %u\n", header.data_size);
+            // ::fprintf(stderr, "RS900: data size: %u\n", header.data_size);
             state_after_getting_uint32 = WorkState::got_samplesnum;
             set_work_state(WorkState::waiting_for_uint32_start);
             continue;
         case WorkState::got_samplesnum:
             if (uint32 > ARRAY_SIZE(sample_data)) {
-                ::fprintf(stderr, "samplesnum too large (allocated=%u, got=%u)\n", (unsigned)ARRAY_SIZE(sample_data), uint32);
+                // ::fprintf(stderr, "samplesnum too large (allocated=%u, got=%u)\n", (unsigned)ARRAY_SIZE(sample_data), uint32);
+                set_work_state(WorkState::waiting_for_header);
                 lost_bytes += 16;
                 continue;
             }
             header.samplesnum = uint32;
-            ::fprintf(stderr, "RS900: samplesnum: %u\n", header.samplesnum);
+            // ::fprintf(stderr, "RS900: samplesnum: %u\n", header.samplesnum);
             state_after_getting_uint32 = WorkState::got_deviceid;
             set_work_state(WorkState::waiting_for_uint32_start);
             continue;
         case WorkState::got_deviceid:
             header.deviceid = uint32;
-            ::fprintf(stderr, "RS900: deviceid: %u (%0X)\n", header.deviceid, header.deviceid);
+            // ::fprintf(stderr, "RS900: deviceid: %u (%0X)\n", header.deviceid, header.deviceid);
             state_after_getting_uint32 = WorkState::got_angle;
             set_work_state(WorkState::waiting_for_uint32_start);
             continue;
@@ -392,7 +402,7 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
             //     continue;
             // }
             header.angle = uint32;
-            ::fprintf(stderr, "RS900: angle: %u\n", header.angle);
+            // ::fprintf(stderr, "RS900: angle: %u\n", header.angle);
             state_after_getting_uint32 = WorkState::got_commandid;
             set_work_state(WorkState::waiting_for_uint32_start);
             continue;
@@ -400,9 +410,9 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
             // data_offset indicates number of extra header bytes.
             // You can see here how many we actually understand...
             header.commandid = uint32;
-            ::fprintf(stderr, "RS900: commandid: %u (%0X)\n", header.commandid, header.commandid);
+            // ::fprintf(stderr, "RS900: commandid: %u (%0X)\n", header.commandid, header.commandid);
             extra_header_bytes_to_read = header.data_offset - 28;
-            ::fprintf(stderr, "RS900: %u extra header bytes to read\n", extra_header_bytes_to_read);
+            // ::fprintf(stderr, "RS900: %u extra header bytes to read\n", extra_header_bytes_to_read);
             if (extra_header_bytes_to_read == 0) {
                 set_work_state(WorkState::waiting_for_data_start);
                 continue;
@@ -417,7 +427,7 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
             if (uart->read(&c, 1) != 1) {
                 return;
             }
-            ::fprintf(stderr, "RS900: Slurped extra header byte (%02x)\n", c);
+            // ::fprintf(stderr, "RS900: Slurped extra header byte (%02x)\n", c);
             extra_header_bytes_to_read--;
             if (extra_header_bytes_to_read != 0) {
                 continue;
@@ -439,11 +449,11 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
             if (read_bytes == -1) {
                 return; // hope this was eagain...
             }
-            ::fprintf(stderr, "RS900: Slurped %u data bytes (wanted=%u)\n", (unsigned)read_bytes, sample_data_bytes_to_read);
-            for (uint16_t j=0; j<read_bytes; j++) {
-                ::fprintf(stderr, "%02X", sample_data[sample_data_offset+j]);
-            }
-            ::fprintf(stderr, "\n");
+            // ::fprintf(stderr, "RS900: Slurped %u data bytes (wanted=%u)\n", (unsigned)read_bytes, sample_data_bytes_to_read);
+            // for (uint16_t j=0; j<read_bytes; j++) {
+            //     ::fprintf(stderr, "%02X", sample_data[sample_data_offset+j]);
+            // }
+            // ::fprintf(stderr, "\n");
             sample_data_offset += read_bytes;
             sample_data_bytes_to_read -= read_bytes;
             if (sample_data_bytes_to_read != 0) {
@@ -463,18 +473,20 @@ void AP_Proximity_EchoLogger_RS900::handle_state_work()
         }
         case WorkState::got_footer_timestamp: {
             footer.timestamp = uint32;
-            ::fprintf(stderr, "RS900: footer.timestamp %u\n", footer.timestamp);
+            // ::fprintf(stderr, "RS900: footer.timestamp %u\n", footer.timestamp);
             state_after_getting_uint32 = WorkState::got_footer_magic;
             set_work_state(WorkState::waiting_for_uint32_start);
             continue;
         }
         case WorkState::got_footer_magic:
             footer.magic = uint32;
-            ::fprintf(stderr, "RS900: footer.magic 0x%X\n", footer.magic);
+            // ::fprintf(stderr, "RS900: footer.magic 0x%X\n", footer.magic);
             // 826560069 == 0x31444E45 == 1DNE
             // 809782853 == 0x30444E45 == 0DNE
             if (footer.magic != 809782853 && footer.magic != 826560069) {
+#if STRICT_PARSING
                 abort();
+#endif
                 lost_bytes += 28 + header.data_offset + 8; // header, data, footer
                 set_work_state(WorkState::waiting_for_header);
                 continue;
