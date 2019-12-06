@@ -199,7 +199,123 @@ void UARTDriver::begin(uint32_t baud, uint16_t rxSpace, uint16_t txSpace)
     }
 }
 
-void UARTDriver::open_pcap_logfile()
+void UARTDriver::write_pcapng_generalblock(uint32_t block_type,
+                                           const uint8_t buffer,
+                                           uint32_t length)
+{
+    if (::write(_pcap_logfd, &block_type, 4) != 4) {
+        AP_HAL::panic("Failed to write generalblock type: %m");
+    }
+    if (::write(_pcap_logfd, &length, 4) != 4) {
+        AP_HAL::panic("Failed to write generalblock length1: %m");
+    }
+    if (::write(_pcap_logfd, &buffer, length) != length) {
+        AP_HAL::panic("Failed to write generalblock data: %m");
+    }
+    if (::write(_pcap_logfd, &length, 4) != 4) {
+        AP_HAL::panic("Failed to write generalblock length2: %m");
+    }
+}
+
+void UARTDriver::write_pcapng_section_header_block()
+{
+    union {
+        struct {
+            uint32_t byte_order_magic;
+            uint16_t major_version;
+            uint16_t minor_version;
+            uint64_t section_length;
+            // options (non ATM)
+        } s;
+        uint8_t buffer[14];
+    } u;
+    static_assert(sizeof(u.s) == ARRAY_SIZE(u.buffer), "buffer is same size as sectionheader");
+
+    u.byte_order_magic = 0x1A2B3C4D;
+
+    write_pcapng_generalblock(PCAPng_BlockType::SectionHeader,
+                              buffer,
+                              ARRAY_SIZE(buffer));
+}
+
+void UARTDriver::write_pcapng_enhanced_packet_block(const char *data, uint8_t len, bool received)
+{
+    const uint32_t byte_order_magic = 0x1A2B3C4D;
+
+    {
+        const uint32_t block_type = PCAPng_BlockType::EnhancedPacket;
+        if (::write(_pcap_logfd, &block_type, 4) != 4) {
+            AP_HAL::panic("Failed to write generalblock type: %m");
+        }
+    }
+
+    const uint32_t length = 12 + len;
+    if (::write(_pcap_logfd, &length, 4) != 4) {
+        AP_HAL::panic("Failed to write length1: %m");
+    }
+    {
+        const uint32_t interface_id = 2; // could make this serial port number?
+        if (::write(_pcap_logfd, &interface_id, 4) != 4) {
+            AP_HAL::panic("Failed to write interface_id: %m");
+        }
+    }
+
+    {
+        const uint32_t timestamp_low = AP_HAL::millis();
+        if (::write(_pcap_logfd, &timestamp_low, 4) != 4) {
+            AP_HAL::panic("Failed to write timestamp low: %m");
+        }
+    }
+    {
+        const uint32_t timestamp_high = AP_HAL::millis();
+        if (::write(_pcap_logfd, &timestamp_high, 4) != 4) {
+            AP_HAL::panic("Failed to write timestamp high: %m");
+        }
+    }
+
+    if (::write(_pcap_logfd, &len, 4) != 4) {
+        AP_HAL::panic("Failed to write len: %m");
+    }
+    if (::write(_pcap_logfd, &len, 4) != 4) {
+        AP_HAL::panic("Failed to write len: %m");
+    }
+    if (::write(_pcap_logfd, data, len) != len) {
+        AP_HAL::panic("Failed to write len: %m");
+    }
+
+    // any options get written here
+    const uint16_t opt_epb_code = 2; // FIXME descriptoin
+    if (::write(_pcap_logfd, &opt_epb_code, 2) != 2) {
+        AP_HAL::panic("Failed to write: %m");
+    }
+    const uint16_t epb_option_length = 4; // FIXME
+    if (::write(_pcap_logfd, &epb_option_length, 2) != 2) {
+        AP_HAL::panic("Failed to write: %m");
+    }
+
+    const uint32_t epb_flags = received ? 0b10 : 0b01;
+    if (::write(_pcap_logfd, &epb_flags, 4) != 4) {
+        AP_HAL::panic("Failed to write: %m");
+    }
+
+    // write op_endofopt
+    const uint16_t opt_endofopt = 0; // FIXME descriptoin
+    if (::write(_pcap_logfd, &epb_flags, 2) != 2) {
+        AP_HAL::panic("Failed to write len: %m");
+    }
+    const uint16_t epb_option_length = 0; // FIXME
+    if (::write(_pcap_logfd, &epb_option_length, 2) != 2) {
+        AP_HAL::panic("Failed to write len: %m");
+    }
+
+
+    if (::write(_pcap_logfd, &length, 4) != 4) {
+        AP_HAL::panic("Failed to write generalblock length2: %m");
+    }
+}
+
+
+void UARTDriver::open_pcapng_logfile()
 {
     char filename[32];
     snprintf(filename, ARRAY_SIZE(filename), "/tmp/uart-%u.pcap", _portNumber);
@@ -232,38 +348,6 @@ void UARTDriver::open_pcap_logfile()
     }
 }
 
-void UARTDriver::write_pcap_write(const uint8_t *buffer, uint16_t buflen)
-{
-    write_pcap_event(0x01, 0x03, buffer, buflen); // DATA_TX_START
-}
-
-void UARTDriver::write_pcap_read(const uint8_t *buffer, uint16_t buflen)
-{
-    write_pcap_event(0x02, 0x04, buffer, buflen); // DATA_RX_START
-}
-
-void UARTDriver::write_pcap_event(uint8_t event_type_start, uint8_t event_type_end, const uint8_t *buffer, uint16_t buflen)
-{
-    // TODO: fill in control-line-state
-    struct PACKED {
-        uint32_t unix_epoch_seconds;
-        uint32_t micros_since_unix_epoch_seconds;
-        uint32_t len;
-        uint32_t actual_len;
-    } header {
-        0,
-        AP_HAL::millis(),
-        buflen,
-        buflen
-    };
-
-    if (::write(_pcap_logfd, &header, sizeof(header)) != sizeof(header)) {
-        AP_HAL::panic("Failed to write pcap TX_START header: %m");
-    }
-    if (::write(_pcap_logfd, buffer, buflen) != buflen) {
-        AP_HAL::panic("Failed to write pcap data: %m");
-    }
-}
 
 void UARTDriver::end()
 {

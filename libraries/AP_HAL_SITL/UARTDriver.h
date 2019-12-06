@@ -149,13 +149,17 @@ private:
     uint16_t read_from_async_csv(uint8_t *buffer, uint16_t space);
 
     int _pcap_logfd;
-    void open_pcap_logfile();
-    void write_pcap_write(const uint8_t *buffer, uint16_t len);
-    void write_pcap_read(const uint8_t *buffer, uint16_t len);
-    void write_pcap_event(uint8_t event_type,
-                          uint8_t event_type_end,
-                          const uint8_t *buffer,
-                          uint16_t len);
+    void open_pcapng_logfile();
+    void write_pcapng_generalblock(uint32_t block_type,
+                                   const uint8_t *buffer,
+                                   uint32_t length);
+    void write_pcapng_section_header_block();
+    void write_pcapng_enhanced_packet_block();
+
+    enum class PCAPng_BlockType {
+        EnhancedPacket = 0x00000006,
+        SectionHeader = 0x0A0D0D0A,
+    };
 };
 
 #endif
