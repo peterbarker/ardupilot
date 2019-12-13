@@ -67,7 +67,7 @@ def match_type(mtype, patterns):
     return False
 
 # Write out a header row as we're outputting in CSV format.
-fields = ['timestamp', 'lat', 'lng']
+fields = ['timestamp', 'lat', 'lng', "spd"]
 offsets = {}
 
 # Track the last timestamp value. Used for compressing data for the CSV output format.
@@ -76,6 +76,7 @@ last_timestamp = None
 # Track last GPS lat/lng
 last_lat = 0.0
 last_lng = 0.0
+last_spd = 0.0
 
 # for DF logs pre-calculate types list
 match_types=['FMT', 'FMTU', 'UNIT', 'MULT', 'GPS', 'ADCL']
@@ -89,6 +90,7 @@ while True:
             csv_out[0] = "{:.8f}".format(last_timestamp)
             csv_out[1] = "{:.8f}".format(last_lat)
             csv_out[2] = "{:.8f}".format(last_lng)
+            csv_out[3] = "{:.8f}".format(last_spd)
             print(args.csv_sep.join(csv_out))
         break
 
@@ -118,6 +120,7 @@ while True:
     if m.get_type() == 'GPS':
         last_lat = m.Lat
         last_lng = m.Lng
+        last_spd = m.Spd
         continue
 
     # Grab the timestamp.
@@ -137,7 +140,7 @@ while True:
     # If this message has a duplicate timestamp, copy its data into the existing data list. Also
     # do this if it's the first message encountered.
     if timestamp == last_timestamp or last_timestamp is None:
-        newData = [str(data[y]) if y not in ["timestamp", "lat", "lng"] else "" for y in fields]
+        newData = [str(data[y]) if y not in ["timestamp", "lat", "lng", "spd"] else "" for y in fields]
 
         for i, val in enumerate(newData):
             if val:
@@ -148,9 +151,10 @@ while True:
         csv_out[0] = "{:.8f}".format(last_timestamp)
         csv_out[1] = "{:.8f}".format(last_lat)
         csv_out[2] = "{:.8f}".format(last_lng)
+        csv_out[3] = "{:.8f}".format(last_spd)
         print(args.csv_sep.join(csv_out))
 
-        csv_out = [str(data[y]) if y not in ["timestamp", "lat", "lng"] else "" for y in fields]
+        csv_out = [str(data[y]) if y not in ["timestamp", "lat", "lng", "spd"] else "" for y in fields]
 
     # Update our last timestamp value.
     last_timestamp = timestamp
