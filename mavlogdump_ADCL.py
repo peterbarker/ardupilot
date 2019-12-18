@@ -81,12 +81,14 @@ last_spd = 0.0
 # for DF logs pre-calculate types list
 match_types=['FMT', 'FMTU', 'UNIT', 'MULT', 'GPS', 'ADCL']
 
+csv_out = None
+
 # Keep track of data from the current timestep. If the following timestep has the same data, it's stored in here as well. Output should therefore have entirely unique timesteps.
 while True:
     m = mlog.recv_match(type=match_types)
     if m is None:
         # write the final csv line before exiting
-        if csv_out:
+        if csv_out is not None:
             csv_out[0] = "{:.8f}".format(last_timestamp)
             csv_out[1] = "{:.8f}".format(last_lat)
             csv_out[2] = "{:.8f}".format(last_lng)
