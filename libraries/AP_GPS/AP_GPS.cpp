@@ -1616,17 +1616,21 @@ bool AP_GPS::is_healthy(uint8_t instance) const
 
     const uint16_t gps_max_delta_ms = 245; // 200 ms (5Hz) + 45 ms buffer
 
-    bool last_msg_valid = last_message_delta_time_ms(instance) < gps_max_delta_ms;
+    if (last_message_delta_time_ms(instance) >= gps_max_delta_ms) {
+        return false;
+    }
 
 #if defined(GPS_BLENDED_INSTANCE)
     if (instance == GPS_BLENDED_INSTANCE) {
-        return last_msg_valid && blend_health_check();
+        return blend_health_check();
     }
 #endif
 
-    return last_msg_valid &&
-           drivers[instance] != nullptr &&
-           drivers[instance]->is_healthy();
+    if (drivers[instance] == nullptr) {
+        return false;
+    }
+
+    return drivers[instance]->is_healthy();
 }
 
 bool AP_GPS::prepare_for_arming(void) {
