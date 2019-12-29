@@ -46,6 +46,8 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Logger/AP_Logger.h>
 
+#include <stdio.h>
+
 #define GPS_RTK_INJECT_TO_ALL 127
 #define GPS_MAX_RATE_MS 200 // maximum value of rate_ms (i.e. slowest update rate) is 5hz or 200ms
 #define GPS_BAUD_TIME_MS 1200
@@ -1608,29 +1610,34 @@ void AP_GPS::calc_blended_state(void)
 }
 #endif // GPS_BLENDED_INSTANCE
 
-bool AP_GPS::is_healthy(uint8_t instance) const
+bool AP_GPS::is_healthy(uint8_t instance, char *failmsg, uint8_t failmsg_len) const
 {
     if (instance >= GPS_MAX_INSTANCES) {
+        snprintf(failmsg, failmsg_len, "Invalid instance (%u)", instance);
         return false;
     }
 
     const uint16_t gps_max_delta_ms = 245; // 200 ms (5Hz) + 45 ms buffer
 
     if (last_message_delta_time_ms(instance) >= gps_max_delta_ms) {
+        snprintf(failmsg, failmsg_len, "Invalid instance (%u)", instance);
         return false;
     }
 
 #if defined(GPS_BLENDED_INSTANCE)
     if (instance == GPS_BLENDED_INSTANCE) {
-        return blend_health_check();
+        if (!blend_health_check()) {
+            snprintf(failmsg, failmsg_len, "Bad blend health");
+        }
     }
 #endif
 
     if (drivers[instance] == nullptr) {
+        snprintf(failmsg, failmsg_len, "Instance is nullptr");
         return false;
     }
 
-    return drivers[instance]->is_healthy();
+    return drivers[instance]->is_healthy(failmsg, failmsg_len);
 }
 
 bool AP_GPS::prepare_for_arming(void) {

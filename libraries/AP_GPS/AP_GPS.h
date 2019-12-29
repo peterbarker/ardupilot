@@ -425,8 +425,8 @@ public:
 
     // report if the gps is healthy (this is defined as existing, an update at a rate greater than 4Hz,
     // as well as any driver specific behaviour)
-    bool is_healthy(uint8_t instance) const;
-    bool is_healthy(void) const { return is_healthy(primary_instance); }
+    bool is_healthy(uint8_t instance, char *failmsg, uint8_t failmsg_len) const;
+    bool is_healthy(char *failmsg, uint8_t failmsg_len) const { return is_healthy(primary_instance, failmsg, failmsg_len); }
 
     // returns true if all GPS instances have passed all final arming checks/state changes
     bool prepare_for_arming(void);

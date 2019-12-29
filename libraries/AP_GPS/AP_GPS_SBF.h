@@ -45,7 +45,7 @@ public:
     // get the velocity lag, returns true if the driver is confident in the returned value
     bool get_lag(float &lag_sec) const override { lag_sec = 0.08f; return true; } ;
 
-    bool is_healthy(void) const override;
+    bool is_healthy(char *failmsg, uint8_t failmsg_len) const override;
 
     bool logging_healthy(void) const override;
 

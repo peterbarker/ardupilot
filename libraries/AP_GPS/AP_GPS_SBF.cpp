@@ -24,6 +24,8 @@
 #include "AP_GPS_SBF.h"
 #include <GCS_MAVLink/GCS.h>
 
+#include <stdio.h>
+
 extern const AP_HAL::HAL& hal;
 
 #define SBF_DEBUGGING 0
@@ -392,8 +394,12 @@ bool AP_GPS_SBF::is_configured (void) {
              _init_blob_index >= ARRAY_SIZE(_initialisation_blob));
 }
 
-bool AP_GPS_SBF::is_healthy (void) const {
-    return (RxError & RX_ERROR_MASK) == 0;
+bool AP_GPS_SBF::is_healthy(char *failmsg, uint8_t failmsg_len) const {
+    if ((RxError & RX_ERROR_MASK) != 0) {
+        snprintf(failmsg, failmsg_len, "Receive errors");
+        return false;
+    }
+    return true;
 }
 
 void AP_GPS_SBF::mount_disk (void) const {
