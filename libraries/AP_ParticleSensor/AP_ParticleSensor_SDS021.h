@@ -11,6 +11,13 @@
 
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+  DEV=/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+  ./Tools/autotest/sim_vehicle.py --gdb --debug -v APMrover2 -A --uartF=uart:$DEV --speedup=1
+
+  param set SERIAL5_PROTOCOL 27
+  reboot
+
  */
 #pragma once
 
