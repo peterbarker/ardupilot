@@ -138,6 +138,7 @@ public:
         SerialProtocol_Hott = 27,
         SerialProtocol_Scripting = 28,
         SerialProtocol_SDS021 = 29,
+        SerialProtocol_PMS1003 = 30,
     };
 
     // get singleton instance
