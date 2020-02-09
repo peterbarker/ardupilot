@@ -1,6 +1,8 @@
 #include "Copter.h"
 #include <AP_ESC_Telem/AP_ESC_Telem.h>
 
+#include <AP_Filesystem/AP_Filesystem.h>
+
 /*****************************************************************************
 *   The init_ardupilot function processes everything we need for an in - air restart
 *        We will determine later if we are actually on the ground and process a
@@ -11,6 +13,19 @@
 static void failsafe_check_static()
 {
     copter.failsafe_check();
+}
+
+void write_16k_to_sd()
+{
+    const char *file_path = "flash.dat";
+    int fd = AP::FS().open(file_path, O_RDWR|O_CREAT);
+    if (fd == -1) {
+        AP_HAL::panic("w16k: Failed to open");
+    }
+    const uint8_t *flash = (const uint8_t*)(0x08000000 + 16*1024);
+    ssize_t ret = AP::FS().write(fd, flash, 16*1024);
+    gcs().send_text(MAV_SEVERITY_WARNING, "ret=%u", (unsigned)ret);
+    AP::FS().close(fd);
 }
 
 void Copter::init_ardupilot()
@@ -215,6 +230,8 @@ void Copter::init_ardupilot()
 
     // flag that initialisation has completed
     ap.initialised = true;
+
+    write_16k_to_sd();
 }
 
 
