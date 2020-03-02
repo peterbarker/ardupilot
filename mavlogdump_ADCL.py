@@ -85,7 +85,7 @@ print(args.csv_sep.join(csv_out))
 
 # Keep track of data from the current timestep. If the following timestep has the same data, it's stored in here as well. Output should therefore have entirely unique timesteps.
 while True:
-    m = mlog.recv_match(type=types.keys())
+    m = mlog.recv_match(type=list(types.keys()))
     if m is None:
         break
 
