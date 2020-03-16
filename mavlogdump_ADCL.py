@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import fnmatch
 import os
+import time
 
 try:
     from pymavlink.mavextra import *
@@ -30,28 +31,42 @@ mlog = mavutil.mavlink_connection(filename,
                                   robust_parsing=args.robust,
                                   zero_time_base=args.zero_time_base)
 
+class Column:
+    def __init__(self, msg, field, function=None, units=None, print_fmt=None, heading=None):
+        self.msg = msg
+        self.field = field
+        self.units = units
+        self.print_fmt = print_fmt
+        self.heading = heading
+        self.function = function
+
 columns = [
-    ('GPS','Lat', "{:.8f}"),
-    ('GPS','Lng', "{:.8f}"),
-    ('GPS','Spd', "{:.8f}"),
-    ('GPS','HDop', None),
-    ('GPS','Status', None),
-    ('NKF1', 'VN', None),
-    ('NKF1', 'VE', None),
-    ('POS', 'Lat', None),
-    ('POS', 'Lng', None),
-    ('ADCL','ADC1', None),
-    ('ADCL','ADC2', None),
-    ('ATT', 'Pitch', None),
-    ('ATT', 'Roll', None),
-    ('IMU','AccX', None),
-    ('IMU','AccY', None),
-    ('IMU','AccZ', None),
+    Column(None, None, heading='Date', function=lambda:time.strftime('%Y-%m-%d', time.gmtime(m._timestamp))),
+    Column(None, None, heading='Time', function=lambda:time.strftime('%H:%M:%S', time.gmtime(m._timestamp))),
+    Column('GPS','Lat', units='DegreesLatitude', print_fmt="{:.8f}"),
+    Column('GPS','Lng', units='DegreesLongitude', print_fmt="{:.8f}"),
+    Column('GPS','Spd', units='metres_per_second', print_fmt="{:.8f}"),
+    Column('GPA','HAcc', units='metres'),
+    Column('GPS','Status'),
+    Column('NKF1', 'VN', units='metres_per_second'),
+    Column('NKF1', 'VE', units='metres_per_second'),
+    Column('POS', 'Lat', units='DegreesLatitude'),
+    Column('POS', 'Lng', units='DegreesLongitude'),
+    Column('ADCL', 'ADC1'),
+    Column('ADCL', 'ADC2'),
+    Column(None, None, function=lambda:(last_msgs["ADCL"].ADC1+last_msgs["ADCL"].ADC2)/2, heading="ADCL Average"),
+    Column('ATT', 'Pitch', units='degrees'),
+    Column('ATT', 'Roll', units='degrees'),
+    Column('IMU','AccX', units='metres_per_second_per_second'),
+    Column('IMU','AccY', units='metres_per_second_per_second'),
+    Column('IMU','AccZ', units='metres_per_second_per_second'),
 ]
 
 types = {}
 for column in columns:
-    types[column[0]] = 1
+    if column.msg is None:
+        continue
+    types[column.msg] = 1
 
 ext = os.path.splitext(filename)[1]
 isbin = ext in ['.bin', '.BIN']
@@ -70,16 +85,19 @@ def match_type(mtype, patterns):
             return True
     return False
 
-# Write out a header row as we're outputting in CSV format.
-fields = ['timestamp', 'lat', 'lng', "spd"]
-
 last_msgs = {}
 
 csv_out = [
     "timestamp",
 ]
 for column in columns:
-    csv_out.append(".".join([column[0],column[1]]))
+    if column.heading is not None:
+        heading = column.heading
+    else:
+        heading = "_".join([column.msg,column.field])
+    if column.units is not None:
+        heading += "_in_" + column.units
+    csv_out.append(heading)
 
 print(args.csv_sep.join(csv_out))
 
@@ -109,12 +127,14 @@ while True:
         "{:.8f}".format(m._timestamp),
     ]
     for column in columns:
-        (msgname, field, fmt) = column
-        value = last_msgs[msgname].__getattr__(field) # getattr itself is overridden!
-        if fmt is None:
+        if column.msg is None:
+            value = column.function()
+        else:
+            value = last_msgs[column.msg].__getattr__(column.field) # getattr itself is overridden!
+        if column.print_fmt is None:
             value = str(value)
         else:
-            value = fmt.format(value)
+            value = column.print_fmt.format(value)
         csv_out.append(value)
 
     print(args.csv_sep.join(csv_out))
