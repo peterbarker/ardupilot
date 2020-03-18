@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import fnmatch
 import os
+import re
 import time
 
 try:
@@ -54,7 +55,7 @@ columns = [
     Column('POS', 'Lng', units='DegreesLongitude'),
     Column('ADCL', 'ADC1'),
     Column('ADCL', 'ADC2'),
-    Column(None, None, function=lambda:(last_msgs["ADCL"].ADC1+last_msgs["ADCL"].ADC2)/2, heading="ADCL Average"),
+    Column(None, None, function=lambda:(last_msgs["ADCL"].ADC1+last_msgs["ADCL"].ADC2)/2, heading="ADCL_Average"),
     Column('ATT', 'Pitch', units='degrees'),
     Column('ATT', 'Roll', units='degrees'),
     Column('IMU','AccX', units='metres_per_second_per_second'),
@@ -97,6 +98,8 @@ for column in columns:
         heading = "_".join([column.msg,column.field])
     if column.units is not None:
         heading += "_in_" + column.units
+    if re.search("[\s;,]", heading):
+        raise Exception("Invalid heading (%s)" % str(heading))
     csv_out.append(heading)
 
 print(args.csv_sep.join(csv_out))
