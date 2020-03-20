@@ -467,6 +467,8 @@ MissionItemProtocol *GCS::get_prot_for_mission_type(const MAV_MISSION_TYPE missi
 // handle a request for the number of items we have stored for a mission type:
 void GCS_MAVLINK::handle_mission_request_list(const mavlink_message_t &msg)
 {
+    gcs().canary++;
+
     // decode
     mavlink_mission_request_list_t packet;
     mavlink_msg_mission_request_list_decode(&msg, &packet);

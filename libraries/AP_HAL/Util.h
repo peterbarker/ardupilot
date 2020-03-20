@@ -126,6 +126,11 @@ public:
     virtual void commandline_arguments(uint8_t &argc, char * const *&argv) { argc = 0; }
 
     /*
+      
+     */
+    virtual bool register_canary(void *address, void(*callback)(void)) { return false; }
+
+    /*
         ToneAlarm Driver
     */
     virtual bool toneAlarm_init() { return false;}

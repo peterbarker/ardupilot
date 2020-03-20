@@ -127,4 +127,7 @@ private:
     // save/load key persistent parameters in bootloader sector
     bool get_persistent_params(ExpandingString &str) const;
 #endif
+
+    bool register_canary(void *address, void(*callback)(void)) override;
+
 };

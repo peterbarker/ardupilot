@@ -877,6 +877,8 @@ public:
     virtual MAV_TYPE frame_type() const = 0;
     virtual const char* frame_string() const { return nullptr; }
 
+    bool canary;
+
     void send_to_active_channels(uint32_t msgid, const char *pkt);
 
     void send_text(MAV_SEVERITY severity, const char *fmt, ...) FMT_PRINTF(3, 4);

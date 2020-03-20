@@ -516,4 +516,20 @@ void Util::uart_info(ExpandingString &str)
 #if !defined(HAL_NO_UARTDRIVER)    
     ChibiOS::UARTDriver::uart_info(str);
 #endif
+
+bool Util::register_canary(void *address, void(*callback)(void))
+{
+// https://electronics.stackexchange.com/questions/325560/can-cortex-m4-data-watchpoint-trigger-an-interrupt-without-a-debugger
+
+    DWT->COMP1 = (uint32_t)address;
+    DWT->MASK1 = 0; //match all comparator bits, don't ignore any
+    DWT->FUNCTION1 = (1 << 11)/*DATAVSIZE 1 - match whole word*/
+        | (1 << 1) | (1 << 2)/*generate a watchpoint event on write*/;
+
+
+    // enable the Debug monitor:
+    CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk /*enable tracing*/ |
+                       CoreDebug_DEMCR_MON_EN_Msk /*enable debug interrupt*/;
+
+    return true;
 }

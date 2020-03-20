@@ -156,6 +156,15 @@ void HardFault_Handler(void) {
     while(1) {}
 }
 
+bool debugmonitor_handler_called;
+void DebugMonitor_Handler(void);
+void DebugMonitor_Handler(void)
+{
+    debugmonitor_handler_called = true;
+}
+
+// void DebugMonitor_Handler(void) __attribute__((alias("HardFault_Handler")));
+
 // For the BusFault handler to be active SCB_SHCSR_BUSFAULTENA_Msk should be set in SCB->SHCSR
 // ChibiOS does not do this by default
 void BusFault_Handler(void) __attribute__((alias("HardFault_Handler")));
