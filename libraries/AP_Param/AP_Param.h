@@ -24,6 +24,8 @@
 #include <stdint.h>
 #include <cmath>
 
+#include <stdio.h>
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/utility/RingBuffer.h>
 #include <StorageManager/StorageManager.h>
@@ -89,6 +91,8 @@
 
 // hide parameter from param download
 #define AP_PARAM_FLAG_HIDDEN (1<<6)
+
+#define AP_PARAM_FLAG_SETHOOKS (1<<7)
 
 // keep all flags before the FRAME tags
 
@@ -204,6 +208,14 @@ public:
         float value;        // parameter value
     };
 
+    struct ValidationHooks {
+        const void *ptr;
+        struct ValidationHooks *next;
+        bool (*function)(float newvalue);
+    };
+
+    static ValidationHooks *validation_hooks;
+
     // called once at startup to setup the _var_info[] table. This
     // will also check the EEPROM header and re-initialise it if the
     // wrong version is found
@@ -246,6 +258,9 @@ public:
 
     // return true if AP_Param has been initialised via setup()
     static bool initialised(void);
+
+    static bool addhook(const char *name, bool (*function)(float newvalue));
+    bool check_value(float value) const;
 
     // the 'group_id' of a element of a group is the 18 bit identifier
     // used to distinguish between this element of the group and other
