@@ -292,6 +292,12 @@ void GCS_MAVLINK::handle_param_set(const mavlink_message_t &msg)
         return;
     }
 
+    if (parameter_flags & AP_PARAM_FLAG_SETHOOKS &&
+        !vp->check_value(packet.param_value)) {
+        gcs().send_text(MAV_SEVERITY_WARNING, "Bad parameter value (%s)", key);
+        return;
+    }
+
     // set the value
     vp->set_float(packet.param_value, var_type);
 
