@@ -76,16 +76,25 @@ public:
 
     FUNCTOR_TYPEDEF(task_fn_t, void);
 
+    enum class TaskPriority {
+        DO_TAXES = 0,
+        FLIGHT_CRITICAL = 76,
+    };
     struct Task {
         task_fn_t function;
         const char *name;
         float rate_hz;
         uint16_t max_time_micros;
+        TaskPriority priority;
     };
 
     enum class Options : uint8_t {
         RECORD_TASK_INFO = 1 << 0
     };
+
+    // ordered_tasks could instead be uint8_t *ordered_tasks and be an
+    // offset into the tasks list.  Space/speed tradeoff.
+    const Task **ordered_tasks;
 
     // initialise scheduler
     void init(const Task *tasks, uint8_t num_tasks, uint32_t log_performance_bit);

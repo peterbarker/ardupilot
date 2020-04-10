@@ -107,11 +107,42 @@ void AP_Scheduler::init(const AP_Scheduler::Task *tasks, uint8_t num_tasks, uint
     }
     _last_loop_time_s = 1.0 / _loop_rate_hz;
 
+    _num_tasks = num_tasks;
+
     AP_Vehicle* vehicle = AP::vehicle();
+    uint8_t num_common_tasks = 0;
     if (vehicle != nullptr) {
-        vehicle->get_common_scheduler_tasks(_common_tasks, _num_tasks);
+        vehicle->get_common_scheduler_tasks(_common_tasks, num_common_tasks);
+        _num_tasks += num_common_tasks;
     }
-    _num_tasks += num_tasks;
+
+    ordered_tasks = new const Task*[_num_tasks];
+    if (ordered_tasks == nullptr) {
+        AP_HAL::panic("Really?  Really?!");
+    }
+
+    for (uint8_t i=0; i<_num_tasks; i++) {
+        if (i < _num_tasks) {
+            ordered_tasks[i] = &tasks[i];
+        } else {
+            ordered_tasks[i] = &_common_tasks[i];
+        }
+    }
+
+    // Guess the algorithm!
+    bool any_swapped = true;
+    while (any_swapped) {
+        any_swapped = false;
+        for (uint8_t i=1; i<_num_tasks; i++) {
+            if (ordered_tasks[i-1]->priority > ordered_tasks[i]->priority) {
+                const Task *tmp = ordered_tasks[i];
+                ordered_tasks[i] = ordered_tasks[i-1];
+                ordered_tasks[i-1] = tmp;
+                any_swapped = true;
+            }
+        }
+    }
+
     _tasks = tasks;
     _num_unshared_tasks = num_tasks;
 
@@ -158,11 +189,11 @@ void AP_Scheduler::run(uint32_t time_available)
     uint32_t now = run_started_usec;
 
     for (uint8_t i=0; i<_num_tasks; i++) {
-        const AP_Scheduler::Task& task = (i < _num_unshared_tasks) ? _tasks[i] : _common_tasks[i - _num_unshared_tasks];
+        const AP_Scheduler::Task* task = ordered_tasks[i];
 
         const uint16_t dt = _tick_counter - _last_run[i];
         // we allow 0 to mean loop rate
-        uint32_t interval_ticks = (is_zero(task.rate_hz) ? 1 : _loop_rate_hz / task.rate_hz);
+        uint32_t interval_ticks = (is_zero(task->rate_hz) ? 1 : _loop_rate_hz / task->rate_hz);
         if (interval_ticks < 1) {
             interval_ticks = 1;
         }
@@ -171,7 +202,7 @@ void AP_Scheduler::run(uint32_t time_available)
             continue;
         }
         // this task is due to run. Do we have enough time to run it?
-        _task_time_allowed = task.max_time_micros;
+        _task_time_allowed = task->max_time_micros;
 
         if (dt >= interval_ticks*2) {
             perf_info.task_slipped(i);
@@ -195,7 +226,7 @@ void AP_Scheduler::run(uint32_t time_available)
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
         fill_nanf_stack();
 #endif
-        task.function();
+        task->function();
         hal.util->persistent_data.scheduler_task = -1;
 
         // record the tick counter when we ran. This drives
@@ -211,7 +242,7 @@ void AP_Scheduler::run(uint32_t time_available)
             // the event overran!
             debug(3, "Scheduler overrun task[%u-%s] (%u/%u)\n",
                   (unsigned)i,
-                  task.name,
+                  task->name,
                   (unsigned)time_taken,
                   (unsigned)_task_time_allowed);
         }
