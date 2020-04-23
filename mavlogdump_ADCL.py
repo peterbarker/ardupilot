@@ -55,7 +55,7 @@ columns = [
     Column('POS', 'Lng', units='DegreesLongitude'),
     Column('ADCL', 'ADC1'),
     Column('ADCL', 'ADC2'),
-    Column(None, None, function=lambda:(last_msgs["ADCL"].ADC1+last_msgs["ADCL"].ADC2), heading="ADCL_Sum"),
+    Column(None, None, function=lambda:((last_msgs["ADCL"].ADC1+last_msgs["ADCL"].ADC2)*1000), heading="Lux"),
     Column('ATT', 'Pitch', units='degrees'),
     Column('ATT', 'Roll', units='degrees'),
     Column('IMU','AccX', units='metres_per_second_per_second'),
