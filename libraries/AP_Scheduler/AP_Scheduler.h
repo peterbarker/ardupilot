@@ -133,6 +133,9 @@ public:
     // return the number of microseconds available for the current task
     uint16_t time_available_usec(void) const;
 
+    // return the number of microseconds left in the current loop
+    uint16_t loop_time_available_usec(void) { return _time_available; }
+
     // return debug parameter
     uint8_t debug_flags(void) { return _debug; }
 
@@ -219,6 +222,9 @@ private:
     // number of 'ticks' that have passed (number of times that
     // tick() has been called
     uint16_t _tick_counter;
+
+    // time remaining in current scheduler loop
+    uint32_t _time_available;
 
     // tick counter at the time we last ran each task
     uint16_t *_last_run;

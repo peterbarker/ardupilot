@@ -174,6 +174,7 @@ static void fill_nanf_stack(void)
  */
 void AP_Scheduler::run(uint32_t time_available)
 {
+    _time_available = time_available;
     uint32_t run_started_usec = AP_HAL::micros();
     uint32_t now = run_started_usec;
 
@@ -236,7 +237,7 @@ void AP_Scheduler::run(uint32_t time_available)
                 task_not_achieved++;
             }
 
-            if (_task_time_allowed > time_available) {
+            if (_task_time_allowed > _time_available) {
                 // not enough time to run this task.  Continue loop -
                 // maybe another task will fit into time remaining
                 continue;
@@ -272,17 +273,17 @@ void AP_Scheduler::run(uint32_t time_available)
                   (unsigned)_task_time_allowed);
         }
 
-        perf_info.update_task_info(i, time_taken, overrun);
+        perf_info.update_task_info(i, _time_taken, overrun);
 
-        if (time_taken >= time_available) {
-            time_available = 0;
+        if (time_taken >= _time_available) {
+            _time_available = 0;
             break;
         }
-        time_available -= time_taken;
+        _time_available -= time_taken;
     }
 
     // update number of spare microseconds
-    _spare_micros += time_available;
+    _spare_micros += _time_available;
 
     _spare_ticks++;
     if (_spare_ticks == 32) {
