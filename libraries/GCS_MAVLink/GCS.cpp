@@ -341,7 +341,17 @@ bool GCS::out_of_time() const
         return false;
     }
 
-    if (min_loop_time_remaining_for_message_send_us() <= AP::scheduler().time_available_usec()) {
+    uint16_t remaining;
+    if (AP::scheduler().get_loop_rate_hz() > 100) {
+        // stay within our own timeslice:
+        remaining = AP::scheduler().time_available_usec();
+    } else {
+        // stay within main-loop time boundary.  This may starve other
+        // processes of their timeslice!
+        remaining = AP::scheduler().loop_time_available_usec();
+    }
+
+    if (min_loop_time_remaining_for_message_send_us() <= remaining) {
         return false;
     }
 
