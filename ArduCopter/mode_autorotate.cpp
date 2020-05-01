@@ -70,6 +70,18 @@ bool ModeAutorotate::init(bool ignore_checks)
     return true;
 }
 
+bool ModeAutorotate::controlling_position() const
+{
+    switch (nav_pos_switch) {
+    case Navigation_Decision::USER_CONTROL_STABILISED:
+        return false:
+    case Navigation_Decision::STRAIGHT_AHEAD:
+    case Navigation_Decision::INTO_WIND:
+    case Navigation_Decision::NEAREST_RALLY:
+        return true;
+    }
+    return true;  // should not be reached
+}
 
 
 void ModeAutorotate::run()

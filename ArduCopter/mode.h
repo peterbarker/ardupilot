@@ -64,6 +64,8 @@ public:
     virtual bool allows_save_trim() const { return false; }
     virtual bool allows_autotune() const { return false; }
     virtual bool allows_flip() const { return false; }
+    virtual bool controlling_altitude() const = 0;
+    virtual bool controlling_position() const = 0;
 
     // return a string for this flightmode
     virtual const char *name() const = 0;
@@ -281,6 +283,8 @@ public:
     void air_mode_aux_changed();
     bool allows_save_trim() const override { return true; }
     bool allows_flip() const override { return true; }
+    bool controlling_altitude() const override { return false; }
+    bool controlling_position() const override { return false; }
 
 protected:
 
@@ -332,6 +336,8 @@ public:
     }
     bool allows_autotune() const override { return true; }
     bool allows_flip() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return false; }
 
 protected:
 
@@ -359,6 +365,8 @@ public:
     bool allows_arming(AP_Arming::Method method) const override;
     bool is_autopilot() const override { return true; }
     bool in_guided_mode() const override { return mode() == SubMode::NAVGUIDED; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
     // Auto modes
     enum class SubMode : uint8_t {
@@ -589,6 +597,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return false; }
     bool is_autopilot() const override { return false; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override;
 
     void save_tuning_gains();
     void reset();
@@ -620,6 +630,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return false; };
     bool is_autopilot() const override { return false; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
     void timeout_to_loiter_ms(uint32_t timeout_ms);
 
@@ -652,6 +664,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return false; };
     bool is_autopilot() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
 protected:
 
@@ -683,6 +697,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return true; };
     bool is_autopilot() const override { return false; }
+    bool controlling_altitude() const override { return false; }
+    bool controlling_position() const override { return false; }
 
 protected:
 
@@ -710,6 +726,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return false; };
     bool is_autopilot() const override { return false; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
 protected:
 
@@ -760,6 +778,8 @@ public:
         return !must_navigate;
     }
     bool allows_flip() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -842,6 +862,8 @@ public:
     bool is_autopilot() const override { return true; }
     bool has_user_takeoff(bool must_navigate) const override { return true; }
     bool in_guided_mode() const override { return true; }
+    bool controlling_altitude() const override;
+    bool controlling_position() const override;
 
     bool requires_terrain_failsafe() const override { return true; }
 
@@ -952,13 +974,12 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return false; };
     bool is_autopilot() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return control_position; }
 
     bool is_landing() const override { return true; };
 
     void do_not_use_GPS();
-
-    // returns true if LAND mode is trying to control X/Y position
-    bool controlling_position() const { return control_position; }
 
     void set_land_pause(bool new_value) { land_pause = new_value; }
 
@@ -995,6 +1016,8 @@ public:
     bool is_autopilot() const override { return false; }
     bool has_user_takeoff(bool must_navigate) const override { return true; }
     bool allows_autotune() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
 #if PRECISION_LANDING == ENABLED
     void set_precision_loiter_enabled(bool value) { _precision_loiter_enabled = value; }
@@ -1038,6 +1061,8 @@ public:
     bool is_autopilot() const override { return false; }
     bool has_user_takeoff(bool must_navigate) const override { return true; }
     bool allows_autotune() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
 protected:
 
@@ -1123,6 +1148,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return false; };
     bool is_autopilot() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
     bool requires_terrain_failsafe() const override { return true; }
 
@@ -1288,6 +1315,8 @@ public:
     bool has_user_takeoff(bool must_navigate) const override {
         return !must_navigate;
     }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return false; }
 
 protected:
 
@@ -1315,6 +1344,8 @@ public:
     bool allows_save_trim() const override { return true; }
     bool allows_autotune() const override { return true; }
     bool allows_flip() const override { return true; }
+    bool controlling_altitude() const override { return false; }
+    bool controlling_position() const override { return false; }
 
 protected:
 
@@ -1358,6 +1389,8 @@ public:
     bool logs_attitude() const override { return true; }
 
     void set_magnitude(float input) { waveform_magnitude = input; }
+    bool controlling_altitude() const override { return false; }
+    bool controlling_position() const override { return false; }
 
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -1424,6 +1457,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return true; };
     bool is_autopilot() const override { return false; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
     // Throw types
     enum class ThrowType {
@@ -1557,6 +1592,8 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return true; }
     bool is_autopilot() const override { return true; }
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override { return true; }
 
     // save current position as A or B.  If both A and B have been saved move to the one specified
     void save_or_move_to_destination(Destination ab_dest);
@@ -1632,6 +1669,8 @@ public:
     bool requires_GPS() const override { return false; }
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(AP_Arming::Method method) const override { return false; };
+    bool controlling_altitude() const override { return true; }
+    bool controlling_position() const override;
 
     static const struct AP_Param::GroupInfo  var_info[];
 

@@ -125,6 +125,12 @@ void ModeAutoTune::run()
     autotune.run();
 }
 
+bool ModeAutoTune::controlling_position() const
+{
+    return autotune.controlling_position();
+}
+
+
 void ModeAutoTune::save_tuning_gains()
 {
     autotune.save_tuning_gains();

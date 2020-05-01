@@ -86,6 +86,36 @@ void ModeGuided::run()
     }
  }
 
+bool ModeGuided::controlling_altitude() const
+{
+    switch (guided_mode) {
+    case SubMode::TakeOff:
+    case SubMode::WP:
+    case SubMode::PosVel:
+        return true;
+
+    case SubMode::Velocity:
+    case SubMode::Angle:
+        return false;
+    }
+    return false;  // should never get here
+}
+
+bool ModeGuided::controlling_position() const
+{
+    switch (guided_mode) {
+    case SubMode::TakeOff:
+    case SubMode::WP:
+    case SubMode::PosVel:
+        return true;
+
+    case SubMode::Velocity:
+    case SubMode::Angle:
+        return false;
+    }
+    return false;  // should never get here
+}
+
 bool ModeGuided::allows_arming(AP_Arming::Method method) const
 {
     // always allow arming from the ground station
