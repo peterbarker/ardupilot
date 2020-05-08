@@ -42,6 +42,7 @@ sum_adc2 = 0
 point_count = 0
 tstart = time.time()
 
+buckets_adc = {}
 buckets_adc1 = {}
 buckets_adc2 = {}
 
@@ -53,8 +54,8 @@ if True:
         m = mlog.recv_match(type='ADCL')
         if m is None:
             break
-#        if m.ADC1 == 0 or m.ADC2 == 0:
-#            continue
+        if m.ADC1 == 0 or m.ADC2 == 0:
+            continue
         sum_adc1 += m.ADC1
         sum_adc2 += m.ADC2
         if m.ADC1 not in buckets_adc1:
@@ -63,6 +64,14 @@ if True:
         if m.ADC2 not in buckets_adc2:
             buckets_adc2[m.ADC2] = 0
         buckets_adc2[m.ADC2] += 1
+
+        if m.ADC1 not in buckets_adc:
+            buckets_adc[m.ADC1] = 0
+        if m.ADC2 not in buckets_adc:
+            buckets_adc[m.ADC2] = 0
+        buckets_adc[m.ADC1] += 1
+        buckets_adc[m.ADC2] += 1
+
         point_count += 1
 
 if sum_adc2 == 0:
@@ -78,8 +87,11 @@ def dump_bucket(name, bucket):
     for key in sorted(bucket.keys()):
         print("%f %u" % (key, bucket[key]))
 
-dump_bucket("ADC1", buckets_adc1)
-dump_bucket("ADC2", buckets_adc2)
+dump_bucket("ADC", buckets_adc)
+
+#dump_bucket("ADC1", buckets_adc1)
+#dump_bucket("ADC2", buckets_adc2)
+sys.exit(0)
 
 if scale_adc2 < 1:
     raise ValueError("Expected to be scaling up adc2")
