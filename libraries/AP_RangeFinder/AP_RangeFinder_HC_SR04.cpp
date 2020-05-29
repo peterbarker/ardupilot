@@ -157,6 +157,20 @@ void AP_RangeFinder_HC_SR04::update(void)
         // gcs().send_text(MAV_SEVERITY_WARNING, "Pong!");
         // a new reading - convert time to distance
         state.distance_cm = value_us / 58.0f;  // 58 is from datasheet
+
+        if (labs(state.distance_cm - last_distance_cm) > 50) {  // glitch remover: measurement is greater than .5m from last
+            // if greater for 5 readings then pass it as new height, otherwise use last reading
+            if (++glitch_count > 4) {
+                 last_distance_cm = state.distance_cm;
+            } else {
+                 state.distance_cm = last_distance_cm;
+            }
+        } else {
+            // is not greater 0.5m, pass on and reset glitch counter
+            last_distance_cm = state.distance_cm;
+            glitch_count=0;
+        }
+
         last_reading_ms = now;
     }
 
