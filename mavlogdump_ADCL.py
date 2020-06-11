@@ -78,24 +78,24 @@ if sum_adc2 == 0:
    print("No non-zero adc2 points?")
    sys.exit(1)
 
-scale_adc2 = (sum_adc1 / sum_adc2)
+#scale_adc2 = (sum_adc1 / sum_adc2)
 
-debug("Scaling factor: %s (%s/%s) points=%u" %
-      (str(scale_adc2), sum_adc1, sum_adc2, point_count))
+#debug("Scaling factor: %s (%s/%s) points=%u" %
+#      (str(scale_adc2), sum_adc1, sum_adc2, point_count))
 
 def dump_bucket(name, bucket):
     for key in sorted(bucket.keys()):
         print("%f %u" % (key, bucket[key]))
 
-dump_bucket("ADC", buckets_adc)
+# dump_bucket("ADC", buckets_adc)
 
 #dump_bucket("ADC1", buckets_adc1)
 #dump_bucket("ADC2", buckets_adc2)
-sys.exit(0)
+# sys.exit(0)
 
-if scale_adc2 < 1:
-    raise ValueError("Expected to be scaling up adc2")
-sys.exit(0)
+#if scale_adc2 < 1:
+#    raise ValueError("Expected to be scaling up adc2")
+#sys.exit(0)
 
 mlog = mavutil.mavlink_connection(filename, 
                                   robust_parsing=args.robust,
