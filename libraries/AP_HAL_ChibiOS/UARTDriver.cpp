@@ -793,6 +793,8 @@ void UARTDriver::handle_tx_timeout(void *arg)
     chSysUnlockFromISR();
 }
 
+uint32_t locked_out_counts[16];
+
 /*
   write out pending bytes with DMA
  */
@@ -814,6 +816,7 @@ void UARTDriver::write_pending_bytes_DMA(uint32_t n)
     }
     if (!dma_handle->lock_nonblock()) {
         tx_len = 0;
+        locked_out_counts[serial_num]++;
         return;
     }
     if (dma_handle->has_contention()) {

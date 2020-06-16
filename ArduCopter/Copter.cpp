@@ -461,9 +461,20 @@ void Copter::three_hz_loop()
     tuning();
 }
 
+extern uint32_t locked_out_counts[];
+
 // one_hz_loop - runs at 1Hz
 void Copter::one_hz_loop()
 {
+    gcs().chan(0)->send_text(MAV_SEVERITY_WARNING,
+                             "0=%u 1=%u 2=%u 3=%u 4=%u 5=%u",
+                             unsigned(locked_out_counts[0]),
+                             unsigned(locked_out_counts[1]),
+                             unsigned(locked_out_counts[2]),
+                             unsigned(locked_out_counts[3]),
+                             unsigned(locked_out_counts[4]),
+                             unsigned(locked_out_counts[5]));
+
     if (should_log(MASK_LOG_ANY)) {
         Log_Write_Data(LogDataID::AP_STATE, ap.value);
     }
