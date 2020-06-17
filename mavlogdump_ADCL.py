@@ -36,67 +36,6 @@ def debug(msg):
 
 filename = args.log
 
-# calculate a scaling factor to move ADC2 to match ADC1
-sum_adc1 = 0
-sum_adc2 = 0
-point_count = 0
-tstart = time.time()
-
-buckets_adc = {}
-buckets_adc1 = {}
-buckets_adc2 = {}
-
-if True:
-    mlog = mavutil.mavlink_connection(filename,
-                                      robust_parsing=args.robust,
-                                      zero_time_base=args.zero_time_base)
-    while True:
-        m = mlog.recv_match(type='ADCL')
-        if m is None:
-            break
-        if m.ADC1 == 0 or m.ADC2 == 0:
-            continue
-        sum_adc1 += m.ADC1
-        sum_adc2 += m.ADC2
-        if m.ADC1 not in buckets_adc1:
-            buckets_adc1[m.ADC1] = 0
-        buckets_adc1[m.ADC1] += 1
-        if m.ADC2 not in buckets_adc2:
-            buckets_adc2[m.ADC2] = 0
-        buckets_adc2[m.ADC2] += 1
-
-        if m.ADC1 not in buckets_adc:
-            buckets_adc[m.ADC1] = 0
-        if m.ADC2 not in buckets_adc:
-            buckets_adc[m.ADC2] = 0
-        buckets_adc[m.ADC1] += 1
-        buckets_adc[m.ADC2] += 1
-
-        point_count += 1
-
-if sum_adc2 == 0:
-   print("No non-zero adc2 points?")
-   sys.exit(1)
-
-#scale_adc2 = (sum_adc1 / sum_adc2)
-
-#debug("Scaling factor: %s (%s/%s) points=%u" %
-#      (str(scale_adc2), sum_adc1, sum_adc2, point_count))
-
-def dump_bucket(name, bucket):
-    for key in sorted(bucket.keys()):
-        print("%f %u" % (key, bucket[key]))
-
-# dump_bucket("ADC", buckets_adc)
-
-#dump_bucket("ADC1", buckets_adc1)
-#dump_bucket("ADC2", buckets_adc2)
-# sys.exit(0)
-
-#if scale_adc2 < 1:
-#    raise ValueError("Expected to be scaling up adc2")
-#sys.exit(0)
-
 mlog = mavutil.mavlink_connection(filename, 
                                   robust_parsing=args.robust,
                                   zero_time_base=args.zero_time_base)
