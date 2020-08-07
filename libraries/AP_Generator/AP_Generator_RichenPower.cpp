@@ -22,6 +22,7 @@
 #include <AP_SerialManager/AP_SerialManager.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Vehicle/AP_Vehicle.h>
+#include <AP_Filesystem/AP_Filesystem.h>
 
 #include <AP_HAL/utility/sparse-endian.h>
 
@@ -86,6 +87,15 @@ bool AP_Generator_RichenPower::get_reading()
     if (nbytes == 0) {
         return false;
     }
+    static int log_fd;
+    if (log_fd == 0 && log_fd != -1 && AP_HAL::millis() > 2000) {
+        log_fd = AP::FS().open("richenpower.log", O_WRONLY|O_CREAT|O_TRUNC);
+    }
+    if (log_fd != -1) {
+        AP::FS().write(log_fd, &u.parse_buffer[body_length], nbytes);
+        AP::FS().fsync(log_fd);
+    }
+
     body_length += nbytes;
 
     move_header_in_buffer(0);
