@@ -48,6 +48,7 @@
 #include "AP_RangeFinder_SITL.h"
 #include "AP_RangeFinder_MSP.h"
 #include "AP_RangeFinder_USD1_CAN.h"
+#include "AP_RangeFinder_TOF10120.h"
 
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_Logger/AP_Logger.h>
@@ -413,6 +414,17 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
             if (_add_backend(AP_RangeFinder_Benewake_TFMiniPlus::detect(state[instance], params[instance],
                                                                         hal.i2c_mgr->get_device(i, params[instance].address)),
                     instance)) {
+                break;
+            }
+        }
+        break;
+    case Type::TOF10120:
+        FOREACH_I2C(i) {
+            if (_add_backend(AP_RangeFinder_TOF10120::detect(
+                                 state[instance],
+                                 params[instance],
+                                 hal.i2c_mgr->get_device(i, 0x52)),
+                             instance)) {
                 break;
             }
         }
