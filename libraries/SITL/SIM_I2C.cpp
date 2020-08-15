@@ -37,6 +37,7 @@
 #include "SIM_MS5525.h"
 #include "SIM_MS5611.h"
 #include "SIM_QMC5883L.h"
+#include "SIM_RF_TOF10120.h"
 #include "SIM_Temperature_MCP9600.h"
 #include "SIM_Temperature_SHT3x.h"
 #include "SIM_Temperature_TSYS01.h"
@@ -122,6 +123,10 @@ static TeraRangerI2C terarangeri2c;
 static AS5600 as5600;  // AoA sensor
 #endif  // AP_SIM_AS5600_ENABLED
 
+#if AP_SIM_TOF10120_ENABLED
+static TOF10120 tof10120;
+#endif  // AP_SIM_TOF10120_ENABLED
+
 struct i2c_device_at_address {
     uint8_t bus;
     uint8_t addr;
@@ -154,6 +159,9 @@ struct i2c_device_at_address {
     { 1, 0x36, as5600 },
 #endif
     { 1, 0x40, ignored }, // KellerLD
+#if AP_SIM_TOF10120_ENABLED
+    { 1, 0x52, tof10120 },  // https://www.banggood.com/TOF10120-Laser-Range-Sensor-Module-10-180cm-Distance-Sensor-RS232-Interface-UART-I2C-IIC-Output-3-5V-p-1566456.html
+#endif
 #if AP_SIM_MS5525_ENABLED
     { 1, 0x76, ms5525 },  // MS5525: ARSPD_TYPE = 4
 #endif
