@@ -182,6 +182,9 @@ public:
 #if AP_RANGEFINDER_RDS02UF_ENABLED
         RDS02UF = 43,
 #endif
+#if AP_RANGEFINDER_TOF10120_ENABLED
+        TOF10120 = 44,
+#endif
 #if AP_RANGEFINDER_SIM_ENABLED
         SIM = 100,
 #endif
