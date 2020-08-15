@@ -37,6 +37,7 @@
 #include "SIM_MS5525.h"
 #include "SIM_MS5611.h"
 #include "SIM_QMC5883L.h"
+#include "SIM_RF_TOF10120.h"
 
 #include <signal.h>
 
@@ -85,6 +86,7 @@ static IS31FL3195 is31fl3195;
 #if AP_SIM_COMPASS_QMC5883L_ENABLED
 static QMC5883L qmc5883l;
 #endif
+static TOF10120 tof10120;
 
 struct i2c_device_at_address {
     uint8_t bus;
@@ -101,6 +103,7 @@ struct i2c_device_at_address {
     { 1, 0x38, ignored }, // NCP5623
     { 1, 0x39, ignored }, // NCP5623C
     { 1, 0x40, ignored }, // KellerLD
+    { 1, 0x52, tof10120 },  // https://www.banggood.com/TOF10120-Laser-Range-Sensor-Module-10-180cm-Distance-Sensor-RS232-Interface-UART-I2C-IIC-Output-3-5V-p-1566456.html
     { 1, 0x76, ms5525 },  // MS5525: ARSPD_TYPE = 4
     { 1, 0x77, tsys01 },
     { 1, 0x0B, rotoye },        // Rotoye: BATTx_MONITOR 19, BATTx_I2C_ADDR 13
