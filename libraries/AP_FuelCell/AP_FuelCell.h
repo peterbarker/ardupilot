@@ -23,6 +23,7 @@
 #define HEALTHY_TIMEOUT_MS 5000 // time for driver to be marked un-healthy
 
 // failsafe messages
+// IE 600 800 W messages
 #define TEMP_1_CRIT         "Fuel Cell: Failsafe Temp 1 critical"
 #define TEMP_2_CRIT         "Fuel Cell: Failsafe Temp 2 critical"
 #define BAT_VOLT_CRIT       "Fuel Cell: Failsafe Battery Voltage Critical"
@@ -39,6 +40,18 @@
 #define TANK_UNDER_PRESS    "Fuel Cell: Failsafe Tank Under Pressue"
 #define TANK_LOW_PRESS      "Fuel Cell: Failsafe Tank Low Pressue"
 #define SAFETY_FLAG         "Fuel Cell: Safety Flag"
+
+// IE 2.4 kW messages
+#define MINOR_INTERNAL      "Fuel Cell: Minor Internal Error"
+#define REDUCE_PWR          "Fuel Cell: Reduced Power"
+#define SPM_LOST            "Fuel Cell: SPM Lost"
+#define PRESS_LOW           "Fuel Cell: Pressure Low"
+#define BAT_LOW             "Fuel Cell: Battery Low"
+#define PRESS_ALERT         "Fuel Cell: Pressure Alert"
+#define START_DEN           "Fuel Cell: Start Denied"
+#define SYS_CRIT            "Fuel Cell: System Critical"
+#define PRESS_CRIT          "Fuel Cell: Pressure Critical"
+#define BAT_CRIT            "Fuel Cell: Battery Critical"
 
 // statues messages
 #define STATUS_START    "Fuel Cell: Status Starting"
@@ -66,16 +79,22 @@ public:
     // Initialize the datalogger object and prepare it for use
     void init();
 
-    // Update datalogging
+    // Update fuel cell
     void update();
 
     // get the tank remaining ratio
-    float get_tank() const;
+    float get_tank_remain() const;
 
     // get the battery remaining ratio
-    float get_battery() const;
+    float get_battery_remain() const;
 
-    // check if readings are health
+    // get the battery power output
+    int16_t get_battery_pwr() const;
+
+    // get the battery voltage
+    float get_battery_volt() const;
+
+    // check if readings are healthy
     bool healthy() const;
 
     // check for arming
@@ -84,8 +103,17 @@ public:
     // check for failsafes
     AP_BattMonitor::BatteryFailsafe update_failsafes() const;
 
+    // Return fuel cell type
+    uint8_t get_type() const;
+
     // parameter block
     static const struct AP_Param::GroupInfo var_info[];
+
+    enum FUEL_CELL_TYPE {
+        _FUEL_CELL_NONE = 0,
+        _FUEL_CELL_IE6   = 1,
+        _FUEL_CELL_IE24   = 2,
+    };
 
 private:
 
@@ -97,31 +125,36 @@ private:
     // Pointer to serial uart
     AP_HAL::UARTDriver *_uart = nullptr; 
 
-    enum FUEL_CELL_TYPE {
-        _FUEL_CELL_NONE = 0,
-        _FUEL_CELL_IE   = 1,
-    };
-
     enum FUEL_CELL_FAILSAFE {
-        _FUEL_CELL_FAILSAFE_STACK_OT1               = (1 << 31),
-        _FUEL_CELL_FAILSAFE_STACK_OT2               = (1 << 30),
-        _FUEL_CELL_FAILSAFE_BAT_UV                  = (1 << 29),
-        _FUEL_CELL_FAILSAFE_BAT_OT                  = (1 << 28),
-        _FUEL_CELL_FAILSAFE_NO_FAN                  = (1 << 27),
-        _FUEL_CELL_FAILSAFE_FAN_OVERRUN             = (1 << 26),
-        _FUEL_CELL_FAILSAFE_STACK_OT1_2             = (1 << 25),
-        _FUEL_CELL_FAILSAFE_STACK_OT2_2             = (1 << 24),
-        _FUEL_CELL_FAILSAFE_BAT_UV_2                = (1 << 23),
-        _FUEL_CELL_FAILSAFE_BAT_OT_2                = (1 << 22),
-        _FUEL_CELL_FAILSAFE_START_TIMEOUT           = (1 << 21),
-        _FUEL_CELL_FAILSAFE_STOP_TIMEOUT            = (1 << 20),
-        _FUEL_CELL_FAILSAFE_START_UNDER_PRESSURE    = (1 << 19),
-        _FUEL_CELL_FAILSAFE_TANK_UNDER_PRESSURE     = (1 << 18),
-        _FUEL_CELL_FAILSAFE_TANK_LOW_PRESSURE       = (1 << 17),
-        _FUEL_CELL_FAILSAFE_SAFETY_FLAG             = (1 << 16),
+        _FUEL_CELL_FAILSAFE_IE6_STACK_OT1               = (1 << 31),
+        _FUEL_CELL_FAILSAFE_IE6_STACK_OT2               = (1 << 30),
+        _FUEL_CELL_FAILSAFE_IE6_BAT_UV                  = (1 << 29),
+        _FUEL_CELL_FAILSAFE_IE6_BAT_OT                  = (1 << 28),
+        _FUEL_CELL_FAILSAFE_IE6_NO_FAN                  = (1 << 27),
+        _FUEL_CELL_FAILSAFE_IE6_FAN_OVERRUN             = (1 << 26),
+        _FUEL_CELL_FAILSAFE_IE6_STACK_OT1_2             = (1 << 25),
+        _FUEL_CELL_FAILSAFE_IE6_STACK_OT2_2             = (1 << 24),
+        _FUEL_CELL_FAILSAFE_IE6_BAT_UV_2                = (1 << 23),
+        _FUEL_CELL_FAILSAFE_IE6_BAT_OT_2                = (1 << 22),
+        _FUEL_CELL_FAILSAFE_IE6_START_TIMEOUT           = (1 << 21),
+        _FUEL_CELL_FAILSAFE_IE6_STOP_TIMEOUT            = (1 << 20),
+        _FUEL_CELL_FAILSAFE_IE6_START_UNDER_PRESSURE    = (1 << 19),
+        _FUEL_CELL_FAILSAFE_IE6_TANK_UNDER_PRESSURE     = (1 << 18),
+        _FUEL_CELL_FAILSAFE_IE6_TANK_LOW_PRESSURE       = (1 << 17),
+        _FUEL_CELL_FAILSAFE_IE6_SAFETY_FLAG             = (1 << 16),
+        _FUEL_CELL_FAILSAFE_IE24_MINOR_INTERNAL         = (1 << 15),
+        _FUEL_CELL_FAILSAFE_IE24_REDUCED_POWER          = (1 << 14),
+        _FUEL_CELL_FAILSAFE_IE24_SPM_LOST               = (1 << 13),
+        _FUEL_CELL_FAILSAFE_IE24_PRESSURE_LOW           = (1 << 12),
+        _FUEL_CELL_FAILSAFE_IE24_BATTERY_LOW            = (1 << 11),
+        _FUEL_CELL_FAILSAFE_IE24_PRESSURE_ALERT         = (1 << 10),
+        _FUEL_CELL_FAILSAFE_IE24_START_DENIED           = (1 << 9),
+        _FUEL_CELL_FAILSAFE_IE24_SYSTEM_CRITICAL        = (1 << 8),
+        _FUEL_CELL_FAILSAFE_IE24_PRESSURE_CRITICAL      = (1 << 7),
+        _FUEL_CELL_FAILSAFE_IE24_BATTERY_CRITICAL       = (1 << 6),
     };
 
-    enum  FUEL_CELL_STATE {
+    enum FUEL_CELL_STATE {
         _FUEL_CELL_STATE_STARTING       = 0,
         _FUEL_CELL_STATE_READY          = 1,
         _FUEL_CELL_STATE_RUNNING        = 2,
@@ -129,10 +162,29 @@ private:
         _FUEL_CELL_STATE_BATTERY_ONLY   = 8,
     };
 
+    enum IE24_ERR_CODE {
+        _FUEL_CELL_ERR_CODE_NO_ERROR = 0,
+        _FUEL_CELL_ERR_CODE_MINOR_INTERNAL = 1,
+        _FUEL_CELL_ERR_CODE_REDUCED_POWER = 10,
+        _FUEL_CELL_ERR_CODE_SPM_LOST = 11,
+        _FUEL_CELL_ERR_CODE_PRESSURE_LOW = 20,
+        _FUEL_CELL_ERR_CODE_BATTERY_LOW = 21,
+        _FUEL_CELL_ERR_CODE_PRESSURE_ALERT = 30,
+        _FUEL_CELL_ERR_CODE_START_DENIED = 31,
+        _FUEL_CELL_ERR_CODE_SYSTEM_CRITICAL = 32,
+        _FUEL_CELL_ERR_CODE_PRESSURE_CRITICAL = 33,
+        _FUEL_CELL_ERR_CODE_BATTERY_CRITICAL = 40,
+    };
+
     // The fuel cell state structure
     struct BattMonitor_State {
         float       tank_pct;              // tank percentage remaining
+        uint16_t    tank_bar;              // fuel tank pressure
         float       battery_pct;           // battery percentage remaining
+        float       battery_volt;          // battery voltage
+        int16_t     pwr_out;               // output power (Watts)
+        uint16_t    spm_pwr;               // SPM power draw (Watts)
+        int16_t     battery_pwr;           // battery output power
         uint32_t    failsafe;              // the failsafe state
         uint32_t    last_failsafe;         // the previous failsafe state
         uint8_t     state;                 // the PSU state
@@ -142,9 +194,14 @@ private:
     };
     BattMonitor_State _state;
 
-    // tempary state params
+    // temporary state params
     float _temp_tank_pct;
+    uint16_t _temp_tank_bar;
     float _temp_battery_pct;
+    float _temp_battery_volt;
+    int16_t _temp_pwr_out;
+    uint16_t _temp_spm_pwr;
+    int16_t _temp_battery_pwr;
     uint8_t _temp_state;
     uint32_t _temp_failsafe;
 
@@ -164,8 +221,20 @@ private:
 
     void decode_latest_term();
 
+    // process data string for IE 600 800 W
+    void decode_IE6();
+
+    // process data string for IE 2.4 W
+    void decode_IE24();
+
     // check if we should notify on any change of fuel cell state
     void check_status();
+
+    // ensure failsafe bitmask is valid for only the failsafes that are related to the specific fuel cell model
+    void check_failsafe_type();
+
+    // convert the error code received over serial to bit mask
+    bool err_code_to_failsafe(uint32_t err_code);
 
     static AP_FuelCell *_singleton;
 };
