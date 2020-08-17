@@ -13,7 +13,7 @@ AP_BattMonitor_FuelCell::AP_BattMonitor_FuelCell(AP_BattMonitor &mon,
                                              AP_BattMonitor_Params &params) :
     AP_BattMonitor_Backend(mon, mon_state, params)
 {
-    _state.voltage = 1.0; // show a fixed voltage of 1v
+    _state.consumed_wh = 0.0;
 }
 
 // read - read the voltage and current
@@ -32,27 +32,61 @@ void AP_BattMonitor_FuelCell::read()
     }
     _state.healthy = fuel_cell->healthy();
 
-    float proportion_remaining = 0.0f;
-    switch (_params._type) {
-        case AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_TANK:
-            proportion_remaining = fuel_cell->get_tank();
-            _state.last_time_micros = AP_HAL::micros();
+    // calculate time since last read
+    uint32_t tnow = AP_HAL::micros();
+    float dt = tnow - _state.last_time_micros;
 
-            break;
-        case AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_BATTERY:
-            proportion_remaining = fuel_cell->get_battery();
-            _state.last_time_micros = AP_HAL::micros();
-            break;
-        default:
-            _state.healthy = false;
-            break;
+    if ((_params._type == AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_TANK && fuel_cell->healthy()) || 
+    (_params._type == AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_BATTERY && fuel_cell->get_type() == AP_FuelCell::_FUEL_CELL_IE6 && fuel_cell->healthy())) {
+        float proportion_remaining = 0.0f;
+        if (_params._type == AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_TANK) {
+            // Not available, show a fixed voltage of 1v
+            _state.voltage = 1.0;
+            proportion_remaining = fuel_cell->get_tank_remain();
+        } else {
+            // Must be the battery monitor for the 600 800 W unit
+            _state.voltage = fuel_cell->get_battery_volt();
+            proportion_remaining = fuel_cell->get_battery_remain();
+        }
+
+        // Map consumed_mah to consumed percentage
+        _state.consumed_mah = (1 - proportion_remaining) * _params._pack_capacity;
+
+        // Map consumed_wh using fixed voltage of 1
+        _state.consumed_wh = _state.consumed_mah;
+
+        _state.last_time_micros = tnow;
+
+    } else if (_params._type == AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_BATTERY && fuel_cell->get_type() == AP_FuelCell::_FUEL_CELL_IE24 && fuel_cell->healthy()) {
+        // Inteligent Energy convention is that negative battery power is a draw on the battery positive battery power 
+        // is charging the battery.  This is oppose to AP convention hence power is *-1.
+        _state.voltage = fuel_cell->get_battery_volt();
+
+        int16_t pwr = -1 * fuel_cell->get_battery_pwr();
+
+        // Calculate current and battery consumed
+        if (!is_zero(_state.voltage)) {
+            _state.current_amps =  (float)pwr/_state.voltage;
+
+            //0.0000002778f = 1/1E6(us->s) * 1/3600(s->hr) * 1000(A->mA)
+            float mah = _state.current_amps * dt * 0.0000002778f;
+            _state.consumed_mah += mah;
+
+            _state.consumed_wh = 0.001f * mah * _state.voltage;
+
+        } else {
+            _state.current_amps = 0.0f;
+        }
+
+        _state.last_time_micros = tnow;
+
+    } else {
+        _state.healthy = false;
+        _state.voltage = 0;
+        _state.consumed_wh = 0;
+        _state.consumed_mah = 0;
+        _state.current_amps = 0;
     }
-
-    // map consumed_mah to consumed percentage
-    _state.consumed_mah = (1 - proportion_remaining) * _params._pack_capacity;
-
-    // map consumed_wh using fixed voltage of 1
-    _state.consumed_wh = _state.consumed_mah;
 }
 
 AP_BattMonitor::BatteryFailsafe AP_BattMonitor_FuelCell::update_failsafes()

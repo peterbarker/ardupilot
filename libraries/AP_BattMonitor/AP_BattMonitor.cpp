@@ -151,9 +151,10 @@ AP_BattMonitor::init()
             case AP_BattMonitor_Params::BattMonitor_TYPE_Generator:
                 drivers[instance] = new AP_BattMonitor_Generator(*this, state[instance], _params[instance]);
                 break;
-#if ENABLE_FUELCELL == ENABLED
+#if ENABLE_FUELCELL
             case AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_TANK:
             case AP_BattMonitor_Params::BattMonitor_TYPE_FuelCell_BATTERY:
+                gcs().send_text(MAV_SEVERITY_WARNING, "Debug: Fuel Cell Detected");
                 drivers[instance] = new AP_BattMonitor_FuelCell(*this, state[instance], _params[instance]);
                 break;
 #endif
