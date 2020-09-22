@@ -28,6 +28,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
 {
     T tmp;
     switch (rotation) {
+    case ROTATION_INVALID:
+        break;
     case ROTATION_NONE:
         return;
     case ROTATION_YAW_45: {
