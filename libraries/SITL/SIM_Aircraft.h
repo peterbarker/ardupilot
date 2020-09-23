@@ -129,6 +129,7 @@ public:
     void set_gripper_servo(Gripper_Servo *_gripper) { gripper = _gripper; }
     void set_gripper_epm(Gripper_EPM *_gripper_epm) { gripper_epm = _gripper_epm; }
     void set_richenpower(RichenPower *_richenpower) { richenpower = _richenpower; }
+    void set_ie24(IntelligentEnergy24 *_ie24) { ie24 = _ie24; }
     void set_precland(SIM_Precland *_precland);
 
 protected:
@@ -282,6 +283,7 @@ private:
     Gripper_EPM *gripper_epm;
     Parachute *parachute;
     RichenPower *richenpower;
+    IntelligentEnergy24 *ie24;
     SIM_Precland *precland;
 };
 
