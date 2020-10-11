@@ -9,10 +9,10 @@
 class AP_PM_SNGCJA5 {
     public:
         // init - initialize sensor library
-        void init(int8_t bus);
+        void init();
 
         // retrieve latest sensor data - returns true if new data is available
-        bool update();
+        void update();
 
     private:
         AP_HAL::OwnPtr<AP_HAL::Device> dev;
@@ -20,4 +20,7 @@ class AP_PM_SNGCJA5 {
         void read_frames(void);
 
         uint32_t _last_read_ms;
+
+        // init(bus) - attempt to initialise sensor on bus
+        bool init(int8_t bus);
 };

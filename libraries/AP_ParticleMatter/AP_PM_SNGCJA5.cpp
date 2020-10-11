@@ -44,21 +44,28 @@ extern const AP_HAL::HAL& hal;
 #define SNGCJA5_PC_10_0_L 0x18
 #define SNGCJA5_PC_10_0_H 0x19
 
-void AP_PM_SNGCJA5::init(int8_t bus)
+void AP_PM_SNGCJA5::init()
 {
-    if (bus < 0) {
-        // default to i2c external bus
-        bus = 1;
+    FOREACH_I2C(i) {
+        if (init(i)) {
+            return;
+        }
     }
+    gcs().send_text(MAV_SEVERITY_INFO, "No SNGCJA5 found");
+}
+
+bool AP_PM_SNGCJA5::init(int8_t bus)
+{
     dev = std::move(hal.i2c_mgr->get_device(bus, SNGCJA5_I2C_ADDRESS));
     if (!dev) {
-        return;
+        return false;
     }
 
     // read at 2Hz
     printf("Starting Particle Matter Sensor on I2C\n");
 
     dev->register_periodic_callback(500000, FUNCTOR_BIND_MEMBER(&AP_PM_SNGCJA5::read_frames, void));
+    return true;
 }
 
 void AP_PM_SNGCJA5::read_frames(void)
@@ -68,11 +75,11 @@ void AP_PM_SNGCJA5::read_frames(void)
         return;
     }
 
-    gcs().send_text(MAV_SEVERITY_INFO,"Particle Sensor: %c",(int)val);
+    gcs().send_text(MAV_SEVERITY_INFO,"Particle Sensor: %u", (unsigned)val[0]);
 }
 
-// retrieve latest sensor data - returns true if new data is available
-bool AP_PM_SNGCJA5::update()
+// periodically called from vehicle code
+void AP_PM_SNGCJA5::update()
 {
-    return false;
+    read_frames();
 }
