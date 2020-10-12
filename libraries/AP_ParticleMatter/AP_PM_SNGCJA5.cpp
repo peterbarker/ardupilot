@@ -70,6 +70,8 @@ bool AP_PM_SNGCJA5::init(int8_t bus)
 
 void AP_PM_SNGCJA5::read_frames(void)
 {
+    WITH_SEMAPHORE(dev->get_semaphore());
+
     uint8_t val[1];
     if (!dev->read_registers(SNGCJA5_STATUS, val, sizeof(val))) {
         return;
