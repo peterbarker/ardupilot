@@ -132,7 +132,8 @@ I2CDevice::I2CDevice(I2CBus &bus, uint8_t address)
 bool I2CDevice::transfer(const uint8_t *send, uint32_t send_len,
                          uint8_t *recv, uint32_t recv_len)
 {
-//    kill(0, SIGTRAP);
+    _bus.sem.check_owner();
+
     // combined transfer
     if (!_transfer(send, send_len, recv, recv_len)) {
         return false;
