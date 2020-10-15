@@ -272,7 +272,7 @@ private:
     AP_Int8     reversed;
     AP_Int16    dead_zone;
 
-    ControlType type_in;
+    ControlType type_in = ControlType::ANGLE;
     int16_t     high_in;
 
     // the input channel this corresponds to

@@ -142,11 +142,13 @@ bool RC_Channel::update(void)
         return false;
     }
 
-    if (type_in == ControlType::RANGE) {
+    switch (type_in) {
+    case ControlType::RANGE:
         control_in = pwm_to_range();
-    } else {
-        //ControlType::ANGLE
+        break;
+    case ControlType::ANGLE:
         control_in = pwm_to_angle();
+        break;
     }
 
     return true;
@@ -157,11 +159,13 @@ bool RC_Channel::update(void)
 // to give the same output as input
 void RC_Channel::recompute_pwm_no_deadzone()
 {
-    if (type_in == ControlType::RANGE) {
+    switch (type_in) {
+    case ControlType::RANGE:
         control_in = pwm_to_range_dz(0);
-    } else {
-        //RC_CHANNEL_ANGLE
+        break;
+    case ControlType::ANGLE:
         control_in = pwm_to_angle_dz(0);
+        break;
     }
 }
 
@@ -171,7 +175,8 @@ void RC_Channel::recompute_pwm_no_deadzone()
  */
 int16_t RC_Channel::get_control_mid() const
 {
-    if (type_in == ControlType::RANGE) {
+    switch (type_in) {
+    case ControlType::RANGE: {
         int16_t r_in = (radio_min.get() + radio_max.get())/2;
 
         if (reversed) {
@@ -181,9 +186,12 @@ int16_t RC_Channel::get_control_mid() const
         int16_t radio_trim_low  = radio_min + dead_zone;
 
         return (((int32_t)(high_in) * (int32_t)(r_in - radio_trim_low)) / (int32_t)(radio_max - radio_trim_low));
-    } else {
-        return 0;
     }
+    case ControlType::ANGLE:
+        break;
+    }
+    INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+    return 0;
 }
 
 /*
@@ -260,9 +268,13 @@ int16_t RC_Channel::pwm_to_range() const
 
 int16_t RC_Channel::get_control_in_zero_dz(void) const
 {
-    if (type_in == ControlType::RANGE) {
+    switch (type_in) {
+    case ControlType::RANGE:
         return pwm_to_range_dz(0);
+    case ControlType::ANGLE:
+        return pwm_to_angle_dz(0);
     }
+    INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     return pwm_to_angle_dz(0);
 }
 
