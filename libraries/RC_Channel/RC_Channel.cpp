@@ -150,6 +150,7 @@ bool RC_Channel::update(void)
         control_in = pwm_to_angle();
         break;
     case ControlType::AUX_FUNC:
+    case ControlType::NONE:
         break;
     }
 
@@ -169,6 +170,10 @@ void RC_Channel::recompute_pwm_no_deadzone()
         control_in = pwm_to_angle_dz(0);
         break;
     case ControlType::AUX_FUNC:
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        break;
+    case ControlType::NONE:
+        control_in = pwm_to_angle_dz(0);
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         break;
     }
@@ -194,6 +199,7 @@ int16_t RC_Channel::get_control_mid() const
     }
     case ControlType::ANGLE:
     case ControlType::AUX_FUNC:
+    case ControlType::NONE:
         break;
     }
     INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
@@ -277,6 +283,9 @@ int16_t RC_Channel::get_control_in_zero_dz(void) const
     switch (type_in) {
     case ControlType::RANGE:
         return pwm_to_range_dz(0);
+    case ControlType::NONE:
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        // FALLTHROUGH
     case ControlType::ANGLE:
         return pwm_to_angle_dz(0);
     case ControlType::AUX_FUNC:

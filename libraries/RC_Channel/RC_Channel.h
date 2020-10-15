@@ -20,6 +20,7 @@ public:
         ANGLE = 0,
         RANGE = 1,
         AUX_FUNC = 2,
+        NONE = 3,
     };
 
     // setup the control preferences
@@ -273,7 +274,7 @@ private:
     AP_Int8     reversed;
     AP_Int16    dead_zone;
 
-    ControlType type_in = ControlType::ANGLE;
+    ControlType type_in = ControlType::NONE;
     int16_t     high_in;
 
     // the input channel this corresponds to
