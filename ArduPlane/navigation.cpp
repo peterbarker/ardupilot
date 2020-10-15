@@ -151,6 +151,9 @@ void Plane::calc_airspeed_errors()
                 case RC_Channel::ControlType::RANGE:
                     control_mid = channel_throttle->get_control_mid();
                     break;
+                case RC_Channel::ControlType::AUX_FUNC:
+                    INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+                    break;
             }
             if (control_in <= control_mid) {
                 target_airspeed_cm = linear_interpolate(aparm.airspeed_min * 100, aparm.airspeed_cruise_cm,
