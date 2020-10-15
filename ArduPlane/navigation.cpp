@@ -152,6 +152,7 @@ void Plane::calc_airspeed_errors()
                     control_mid = channel_throttle->get_control_mid();
                     break;
                 case RC_Channel::ControlType::AUX_FUNC:
+                case RC_Channel::ControlType::NONE:
                     INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
                     break;
             }
