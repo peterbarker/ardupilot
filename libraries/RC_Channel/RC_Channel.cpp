@@ -149,6 +149,8 @@ bool RC_Channel::update(void)
     case ControlType::ANGLE:
         control_in = pwm_to_angle();
         break;
+    case ControlType::AUX_FUNC:
+        break;
     }
 
     return true;
@@ -165,6 +167,9 @@ void RC_Channel::recompute_pwm_no_deadzone()
         break;
     case ControlType::ANGLE:
         control_in = pwm_to_angle_dz(0);
+        break;
+    case ControlType::AUX_FUNC:
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         break;
     }
 }
@@ -188,6 +193,7 @@ int16_t RC_Channel::get_control_mid() const
         return (((int32_t)(high_in) * (int32_t)(r_in - radio_trim_low)) / (int32_t)(radio_max - radio_trim_low));
     }
     case ControlType::ANGLE:
+    case ControlType::AUX_FUNC:
         break;
     }
     INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
@@ -273,6 +279,8 @@ int16_t RC_Channel::get_control_in_zero_dz(void) const
         return pwm_to_range_dz(0);
     case ControlType::ANGLE:
         return pwm_to_angle_dz(0);
+    case ControlType::AUX_FUNC:
+        return 0;
     }
     INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     return pwm_to_angle_dz(0);
@@ -519,6 +527,10 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
                            (unsigned)(this->ch_in+1), (unsigned)ch_option);
 #endif
         break;
+    }
+
+    if (ch_option != AUX_FUNC::DO_NOTHING) {
+        type_in = ControlType::AUX_FUNC;
     }
 }
 
