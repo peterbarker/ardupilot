@@ -56,6 +56,8 @@
 #include <SITL/SIM_PS_TeraRangerTower.h>
 #include <SITL/SIM_PS_LightWare_SF45B.h>
 
+#include <SITL/SIM_Beacon_NoopLoop.h>
+
 #include <SITL/SIM_RichenPower.h>
 #include <SITL/SIM_FETtecOneWireESC.h>
 #include <AP_HAL/utility/Socket.h>
@@ -269,6 +271,9 @@ private:
     SITL::PS_LightWare_SF45B *sf45b;
 
     SITL::PS_TeraRangerTower *terarangertower;
+
+    // simulated NoopLoop Beacon system:
+    SITL::Beacon_NoopLoop *nooploop;
 
     // simulated CRSF devices
     SITL::CRSF *crsf;

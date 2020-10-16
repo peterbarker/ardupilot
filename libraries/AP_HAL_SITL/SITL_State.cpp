@@ -303,7 +303,7 @@ int SITL_State::sim_fd(const char *name, const char *arg)
         return nmea->fd();
 
     } else if (streq(name, "rf_mavlink")) {
-        if (wasp != nullptr) {
+        if (rf_mavlink != nullptr) {
             AP_HAL::panic("Only one rf_mavlink at a time");
         }
         rf_mavlink = new SITL::RF_MAVLink();
@@ -402,6 +402,12 @@ int SITL_State::sim_fd(const char *name, const char *arg)
         }
         gps[x-1] = new SITL::GPS(x-1);
         return gps[x-1]->fd();
+    } else if (streq(name, "nooploop")) {
+        if (nooploop != nullptr) {
+            AP_HAL::panic("Only one nooploop at a time");
+        }
+        nooploop = new SITL::Beacon_NoopLoop();
+        return nooploop->fd();
     }
 
     AP_HAL::panic("unknown simulated device: %s", name);
@@ -549,6 +555,11 @@ int SITL_State::sim_fd_write(const char *name)
             AP_HAL::panic("Bad GPS number %u", x);
         }
         return gps[x-1]->write_fd();
+    } else if (streq(name, "nooploop")) {
+        if (nooploop == nullptr) {
+            AP_HAL::panic("No nooploop created");
+        }
+        return nooploop->write_fd();
     }
     AP_HAL::panic("unknown simulated device: %s", name);
 }
@@ -782,6 +793,10 @@ void SITL_State::_fdm_input_local(void)
         if (gps[i] != nullptr) {
             gps[i]->update();
         }
+    }
+
+    if (nooploop != nullptr) {
+        nooploop->update(sitl_model->get_location());
     }
 
     if (_sitl && _use_fg_view) {
