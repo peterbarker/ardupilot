@@ -2153,6 +2153,11 @@ class AutoTestCopter(AutoTest):
         """Disable GPS navigation, enable Vicon input."""
         # scribble down a location we can set origin to:
 
+        self.progress("Building Replay")
+        util.build_SITL('tools/Replay', clean=False, configure=False)
+
+        self.set_parameter("LOG_REPLAY", 1)
+        self.set_parameter("LOG_DISARMED", 1)
         self.customise_SITL_commandline(["--uartF=sim:vicon:"])
         self.progress("Waiting for location")
         self.mavproxy.send('switch 6\n')  # stabilize mode
@@ -2172,11 +2177,16 @@ class AutoTestCopter(AutoTest):
             self.set_parameter("VISO_TYPE", 1)
             self.set_parameter("SERIAL5_PROTOCOL", 1)
             self.reboot_sitl()
+
             # without a GPS or some sort of external prompting, AP
             # doesn't send system_time messages.  So prompt it:
             self.mav.mav.system_time_send(int(time.time() * 1000000), 0)
             self.progress("Waiting for non-zero-lat")
             tstart = self.get_sim_time()
+
+            current_log_filepath = self.current_onboard_log_filepath()
+            self.progress("Current log path: %s" % str(current_log_filepath))
+
             while True:
                 self.mav.mav.set_gps_global_origin_send(1,
                                                         old_pos.lat,
@@ -2230,6 +2240,20 @@ class AutoTestCopter(AutoTest):
             self.progress("Exception caught: %s" % (
                 self.get_exception_stacktrace(e)))
             ex = e
+
+        self.progress("Running replay")
+
+        util.run_cmd(['build/sitl/tools/Replay', current_log_filepath],
+                     directory=util.topdir(), checkfail=True, show=True)
+
+        replay_log_filepath = self.current_onboard_log_filepath()
+        self.progress("Replay log path: %s" % str(replay_log_filepath))
+
+        check_replay = util.load_local_module("Tools/Replay/check_replay.py")
+
+        ok = check_replay.check_log(replay_log_filepath, self.progress)
+        if not ok:
+            raise NotAchievedException("check_replay failed")
 
         self.context_pop()
         self.zero_throttle()
