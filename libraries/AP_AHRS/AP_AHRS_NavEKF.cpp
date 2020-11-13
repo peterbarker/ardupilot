@@ -2152,7 +2152,7 @@ bool AP_AHRS_NavEKF::get_vel_innovations_and_variances_for_source(uint8_t source
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     case EKFType::SITL:
-        // EKF2 does not support source level variances
+        // SITL does not support source level variances
         return false;
 #endif
     }
