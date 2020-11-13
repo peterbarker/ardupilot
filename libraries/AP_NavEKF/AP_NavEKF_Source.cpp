@@ -162,8 +162,8 @@ void AP_NavEKF_Source::init()
     _active_source.initialised = true;
 }
 
-// set position source to either 0=primary or 1=secondary
-void AP_NavEKF_Source::setPosVelXYZSource(uint8_t source_idx)
+// set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
+void AP_NavEKF_Source::setPosVelYawSource(uint8_t source_idx)
 {
     // ensure init has been run
     init();

@@ -55,8 +55,8 @@ public:
     SourceXY getPosXYSource() const { return _active_source.initialised ? _active_source.posxy : (SourceXY)_source[0].posxy.get(); }
     SourceZ getPosZSource() const { return _active_source.initialised ? _active_source.posz : (SourceZ)_source[0].posz.get() ; }
 
-    // set position and velocity sources to either 0=primary, 1=secondary, 2=tertiary
-    void setPosVelXYZSource(uint8_t source_idx);
+    // set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
+    void setPosVelYawSource(uint8_t source_idx);
 
     // get/set velocity source
     SourceXY getVelXYSource() const { return _active_source.initialised ? _active_source.velxy : (SourceXY)_source[0].velxy.get(); }
