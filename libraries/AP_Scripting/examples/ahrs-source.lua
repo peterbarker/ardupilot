@@ -145,7 +145,7 @@ function update()
       auto_switch = false                        -- disable auto switching of source
       if sw_source_pos ~= source_prev then       -- check if source will change
         source_prev = sw_source_pos              -- record pilot's selected source
-        ahrs:set_position_source(source_prev)    -- switch to pilot's selected source
+        ahrs:set_posvelyaw_source(source_prev)   -- switch to pilot's selected source
         gcs:send_text(0, "Auto source disabled, switched to Source " .. string.format("%d", source_prev+1))
       else
         gcs:send_text(0, "Auto source disabled, already Source " .. string.format("%d", source_prev+1))
@@ -156,7 +156,7 @@ function update()
         gcs:send_text(0, "Auto source enabled, undecided, Source " .. string.format("%d", source_prev+1))
       elseif auto_source ~= source_prev then     -- check if source will change
         source_prev = auto_source                -- record pilot's selected source
-        ahrs:set_position_source(source_prev)    -- switch to pilot's selected source
+        ahrs:set_posvelyaw_source(source_prev)   -- switch to pilot's selected source
         gcs:send_text(0, "Auto source enabled, switched to Source " .. string.format("%d", source_prev+1))
       else
         gcs:send_text(0, "Auto source enabled, already Source " .. string.format("%d", source_prev+1))
@@ -167,7 +167,7 @@ function update()
   -- auto switching
   if auto_switch and (auto_source >= 0) and (auto_source ~= source_prev) then
     source_prev = auto_source                  -- record selected source
-    ahrs:set_position_source(source_prev)    -- switch to pilot's selected source
+    ahrs:set_posvelyaw_source(source_prev)     -- switch to pilot's selected source
     gcs:send_text(0, "Auto switched to Source " .. string.format("%d", source_prev+1))
   end
 
