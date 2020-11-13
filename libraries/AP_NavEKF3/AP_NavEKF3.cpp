@@ -1600,7 +1600,7 @@ bool NavEKF3::getDataEKFGSF(int8_t instance, float &yaw_composite, float &yaw_co
 void NavEKF3::convert_parameters()
 {
     // exit immediately if param conversion has been done before
-    if (_sources.params_configured_in_storage()) {
+    if (_sources.any_params_configured_in_storage()) {
         return;
     }
 
