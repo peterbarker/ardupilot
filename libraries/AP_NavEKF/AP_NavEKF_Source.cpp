@@ -399,14 +399,14 @@ bool AP_NavEKF_Source::pre_arm_check(char *failure_msg, uint8_t failure_msg_len)
             // valid yaw value
             break;
         default:
-            // invalid posz value
+            // invalid yaw value
             hal.util->snprintf(failure_msg, failure_msg_len, "Check EK3_SRC%s_YAW", idx_str[i]);
             return false;
         }
     }
 
-    // check all required sensor are available
-    const char* ekf_requires_msg = "EK3_SRC requires %s";
+    // check all required sensors are available
+    const char* ekf_requires_msg = "EK3 sources require %s";
     if (baro_required && (dal.baro().num_instances() == 0)) {
         hal.util->snprintf(failure_msg, failure_msg_len, ekf_requires_msg, "Baro");
         return false;

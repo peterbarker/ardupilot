@@ -34,6 +34,7 @@ public:
         BEACON = 4,
         // OPTFLOW = 5 (not applicable)
         EXTNAV = 6
+        // WHEEL_ENCODER = 7 (not applicable)
     };
 
     enum class SourceYaw {
