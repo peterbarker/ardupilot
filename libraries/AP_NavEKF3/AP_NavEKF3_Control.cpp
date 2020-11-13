@@ -509,10 +509,15 @@ bool NavEKF3_core::use_compass(void) const
 {
     const auto *compass  = dal.get_compass();
     const AP_NavEKF_Source::SourceYaw yaw_source = frontend->_sources.getYawSource();
-    return (yaw_source == AP_NavEKF_Source::SourceYaw::COMPASS || yaw_source == AP_NavEKF_Source::SourceYaw::EXTERNAL_COMPASS_FALLBACK) &&
-            compass &&
-            compass->use_for_yaw(magSelectIndex) &&
-            !allMagSensorsFailed;
+    if ((yaw_source != AP_NavEKF_Source::SourceYaw::COMPASS) &&
+        (yaw_source != AP_NavEKF_Source::SourceYaw::EXTERNAL_COMPASS_FALLBACK)) {
+        // not using compass as a yaw source
+        return false;
+    }
+
+    return compass &&
+           compass->use_for_yaw(magSelectIndex) &&
+           !allMagSensorsFailed;
 }
 
 // are we using a yaw source other than the magnetomer?
