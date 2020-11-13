@@ -13,9 +13,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AP_NavEKF_Source.h"
 #include <AP_Math/AP_Math.h>
 #include <AP_DAL/AP_DAL.h>
-#include "AP_NavEKF_Source.h"
 
 extern const AP_HAL::HAL& hal;
 
