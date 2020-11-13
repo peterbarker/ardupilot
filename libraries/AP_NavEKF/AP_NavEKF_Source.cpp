@@ -242,7 +242,7 @@ bool AP_NavEKF_Source::haveVelZSource() const
 // align position of inactive sources to ahrs
 void AP_NavEKF_Source::align_inactive_sources()
 {
-    // align visual odometry to GPS
+    // align visual odometry
 #if HAL_VISUALODOM_ENABLED
     bool posxy_could_use_extnav = false;
     bool posz_could_use_extnav = false;
@@ -260,9 +260,7 @@ void AP_NavEKF_Source::align_inactive_sources()
     if (align_posxy || align_posz) {
         auto *visual_odom = AP::dal().visualodom();
         if (visual_odom && visual_odom->enabled()) {
-            if (align_posxy || align_posz) {
-                visual_odom->align_position_to_ahrs(align_posxy, align_posz);
-            }
+            visual_odom->align_position_to_ahrs(align_posxy, align_posz);
         }
     }
 #endif
