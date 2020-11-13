@@ -72,7 +72,7 @@ function update()
   -- get external nav innovations from ahrs
   local extnav_innov = Vector3f()
   local extnav_var = Vector3f()
-  extnav_innov, extnav_var = ahrs:get_vel_innovations_and_variances_by_source(6)
+  extnav_innov, extnav_var = ahrs:get_vel_innovations_and_variances_for_source(6)
   local extnav_over_threshold = (extnav_innov == nil) or (extnav_innov:z() == 0.0) or (math.abs(extnav_innov:z()) > extnav_innov_thresh)
 
   -- get rangefinder distance
