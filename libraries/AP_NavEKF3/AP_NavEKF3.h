@@ -198,7 +198,7 @@ public:
     // return the diagonals from the covariance matrix for the specified instance
     void getStateVariances(int8_t instance, float stateVar[24]) const;
 
-    // get a source's velocity innovations for the specified instance.  Set instsance to -1 for the primary instance
+    // get a source's velocity innovations for the specified instance.  Set instance to -1 for the primary instance
     // returns true on success and results are placed in innovations and variances arguments
     bool getVelInnovationsAndVariancesForSource(int8_t instance, AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const;
 
