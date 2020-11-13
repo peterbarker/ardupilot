@@ -1671,14 +1671,12 @@ void NavEKF3::convert_parameters()
     // use EK3_MAG_CAL to set EK3_SRC1_YAW
     switch (_magCal.get()) {
     case 5:
-        // EK3_MAG_CAL = 5 (External Yaw sensor)
+        // EK3_MAG_CAL = 5 (External Yaw sensor).  We rely on effective_magCal to interpret old "5" values as Never
         AP_Param::set_and_save_by_name("EK3_SRC1_YAW", (int8_t)AP_NavEKF_Source::SourceYaw::EXTERNAL);
-        _magCal.set_and_save((int8_t)NavEKF3_core::MagCal::NEVER);
         break;
     case 6:
-        // EK3_MAG_CAL = 6 (ExtYUaw with Compass fallback)
+        // EK3_MAG_CAL = 6 (ExtYaw with Compass fallback).  We rely on effective_magCal to interpret old "5" values as Never
         AP_Param::set_and_save_by_name("EK3_SRC1_YAW", (int8_t)AP_NavEKF_Source::SourceYaw::EXTERNAL_COMPASS_FALLBACK);
-        _magCal.set_and_save((int8_t)NavEKF3_core::MagCal::NEVER);
         break;
     default:
         // do nothing
