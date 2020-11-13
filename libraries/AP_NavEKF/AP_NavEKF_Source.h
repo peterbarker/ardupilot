@@ -2,7 +2,7 @@
 
 #include <AP_Param/AP_Param.h>
 
-#define AP_NAKEKF_SOURCE_COUNT 3    // three banks of sources
+#define AP_NAKEKF_SOURCES_MAX 3 // three banks of sources
 
 class AP_NavEKF_Source
 {
@@ -105,7 +105,7 @@ private:
         AP_Int8 posz;   // position z (aka altitude or height) source
         AP_Int8 velz;   // velocity z source
         AP_Int8 yaw;    // yaw source
-    } _source[AP_NAKEKF_SOURCE_COUNT];
+    } _source[AP_NAKEKF_SOURCES_MAX];
 
     AP_Int16 _options;      // source options bitmask
 
