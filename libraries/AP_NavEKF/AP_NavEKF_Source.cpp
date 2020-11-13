@@ -21,35 +21,35 @@ extern const AP_HAL::HAL& hal;
 
 const AP_Param::GroupInfo AP_NavEKF_Source::var_info[] = {
 
-    // @Param: POSXY
+    // @Param: 1_POSXY
     // @DisplayName: Position Horizontal Source (Primary)
     // @Description: Position Horizontal Source (Primary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("1_POSXY", 1, AP_NavEKF_Source, _source[0].posxy, (int8_t)AP_NavEKF_Source::SourceXY::GPS),
 
-    // @Param: VELXY
+    // @Param: 1_VELXY
     // @DisplayName: Velocity Horizontal Source
     // @Description: Velocity Horizontal Source
     // @Values: 0:None, 3:GPS, 4:Beacon, 5:OpticalFlow, 6:ExternalNav, 7:WheelEncoder
     // @User: Advanced
     AP_GROUPINFO("1_VELXY", 2, AP_NavEKF_Source, _source[0].velxy, (int8_t)AP_NavEKF_Source::SourceXY::GPS),
 
-    // @Param: POSZ
+    // @Param: 1_POSZ
     // @DisplayName: Position Vertical Source
     // @Description: Position Vertical Source
     // @Values: 0:None, 1:Baro, 2:RangeFinder, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("1_POSZ", 3, AP_NavEKF_Source, _source[0].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
 
-    // @Param: VELZ
+    // @Param: 1_VELZ
     // @DisplayName: Velocity Vertical Source
     // @Description: Velocity Vertical Source
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("1_VELZ", 4, AP_NavEKF_Source, _source[0].velz, (int8_t)AP_NavEKF_Source::SourceZ::GPS),
 
-    // @Param: YAW
+    // @Param: 1_YAW
     // @DisplayName: Yaw Source
     // @Description: Yaw Source
     // @Values: 0:None, 1:Compass, 2:External, 3:External with Compass Fallback
@@ -57,35 +57,35 @@ const AP_Param::GroupInfo AP_NavEKF_Source::var_info[] = {
     AP_GROUPINFO("1_YAW", 5, AP_NavEKF_Source, _source[0].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
 
 #if AP_NAKEKF_SOURCE_COUNT >= 2
-    // @Param: POSXY2
+    // @Param: 2_POSXY
     // @DisplayName: Position Horizontal Source (Secondary)
     // @Description: Position Horizontal Source (Secondary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("2_POSXY", 6, AP_NavEKF_Source, _source[1].posxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
-    // @Param: VELXY2
+    // @Param: 2_VELXY
     // @DisplayName: Velocity Horizontal Source (Secondary)
     // @Description: Velocity Horizontal Source (Secondary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 5:OpticalFlow, 6:ExternalNav, 7:WheelEncoder
     // @User: Advanced
     AP_GROUPINFO("2_VELXY", 7, AP_NavEKF_Source, _source[1].velxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
-    // @Param: POSZ2
+    // @Param: 2_POSZ
     // @DisplayName: Position Vertical Source (Secondary)
     // @Description: Position Vertical Source (Secondary)
     // @Values: 0:None, 1:Baro, 2:RangeFinder, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("2_POSZ", 8, AP_NavEKF_Source, _source[1].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
 
-    // @Param: VELZ2
+    // @Param: 2_VELZ
     // @DisplayName: Velocity Vertical Source (Secondary)
     // @Description: Velocity Vertical Source (Secondary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("2_VELZ", 9, AP_NavEKF_Source, _source[1].velz, (int8_t)AP_NavEKF_Source::SourceZ::NONE),
 
-    // @Param: YAW2
+    // @Param: 2_YAW
     // @DisplayName: Yaw Source (Secondary)
     // @Description: Yaw Source (Secondary)
     // @Values: 0:None, 1:Compass, 2:External, 3:External with Compass Fallback
@@ -94,35 +94,35 @@ const AP_Param::GroupInfo AP_NavEKF_Source::var_info[] = {
 #endif
 
 #if AP_NAKEKF_SOURCE_COUNT >= 3
-    // @Param: POSXY3
+    // @Param: 3_POSXY
     // @DisplayName: Position Horizontal Source (Tertiary)
     // @Description: Position Horizontal Source (Tertiary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("3_POSXY", 11, AP_NavEKF_Source, _source[2].posxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
-    // @Param: VELXY3
+    // @Param: 3_VELXY
     // @DisplayName: Velocity Horizontal Source (Tertiary)
     // @Description: Velocity Horizontal Source (Tertiary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 5:OpticalFlow, 6:ExternalNav, 7:WheelEncoder
     // @User: Advanced
     AP_GROUPINFO("3_VELXY", 12, AP_NavEKF_Source, _source[2].velxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
-    // @Param: POSZ3
+    // @Param: 3_POSZ
     // @DisplayName: Position Vertical Source (Tertiary)
     // @Description: Position Vertical Source (Tertiary)
     // @Values: 0:None, 1:Baro, 2:RangeFinder, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("3_POSZ", 13, AP_NavEKF_Source, _source[2].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
 
-    // @Param: VELZ3
+    // @Param: 3_VELZ
     // @DisplayName: Velocity Vertical Source (Tertiary)
     // @Description: Velocity Vertical Source (Tertiary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
     AP_GROUPINFO("3_VELZ", 14, AP_NavEKF_Source, _source[2].velz, (int8_t)AP_NavEKF_Source::SourceZ::NONE),
 
-    // @Param: YAW3
+    // @Param: 3_YAW
     // @DisplayName: Yaw Source (Tertiary)
     // @Description: Yaw Source (Tertiary)
     // @Values: 0:None, 1:Compass, 2:External, 3:External with Compass Fallback
