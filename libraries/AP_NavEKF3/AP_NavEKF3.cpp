@@ -1616,10 +1616,8 @@ void NavEKF3::convert_parameters()
     if (AP_Param::find_old_parameter(&gps_type_info, &gps_type_old)) {
         switch (gps_type_old.get()) {
         case 0:
-            // EK3_GPS_TYPE == 0 (GPS 3D Vel and 2D Pos) then EK3_SRC1_POSXY = GPS(1), EK3_SRC1_VELXY = GPS(1), EK3_SRC1_VELZ = GPS(3)
-            AP_Param::set_and_save_by_name("EK3_SRC1_POSXY", (int8_t)AP_NavEKF_Source::SourceXY::GPS);
-            AP_Param::set_and_save_by_name("EK3_SRC1_VELXY", (int8_t)AP_NavEKF_Source::SourceXY::GPS);
-            AP_Param::set_and_save_by_name("EK3_SRC1_VELZ", (int8_t)AP_NavEKF_Source::SourceZ::GPS);
+            // EK3_GPS_TYPE == 0 (GPS 3D Vel and 2D Pos), the default so do nothing
+            // sources default to EK3_SRC1_POSXY = GPS, EK3_SRC1_VELXY = GPS, EK3_SRC1_VELZ = GPS
             break;
         case 1:
             // EK3_GPS_TYPE == 1 (GPS 2D Vel and 2D Pos) then EK3_SRC1_POSXY = GPS(1), EK3_SRC1_VELXY = GPS(1), EK3_SRC1_VELZ = NONE(0)
