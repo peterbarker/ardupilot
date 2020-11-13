@@ -591,7 +591,7 @@ void NavEKF3_core::checkGyroCalStatus(void)
     // check delta angle bias variances
     const float delAngBiasVarMax = sq(radians(0.15f * dtEkfAvg));
     const AP_NavEKF_Source::SourceYaw yaw_source = frontend->_sources.getYawSource();
-    if (!use_compass() && (yaw_source != AP_NavEKF_Source::SourceYaw::EXTERNAL_COMPASS_FALLBACK)) {
+    if (!use_compass() && (yaw_source != AP_NavEKF_Source::SourceYaw::EXTERNAL) && (yaw_source != AP_NavEKF_Source::SourceYaw::EXTERNAL_COMPASS_FALLBACK)) {
         // rotate the variances into earth frame and evaluate horizontal terms only as yaw component is poorly observable without a yaw reference
         // which can make this check fail
         Vector3f delAngBiasVarVec = Vector3f(P[10][10],P[11][11],P[12][12]);
