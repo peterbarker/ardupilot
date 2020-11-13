@@ -276,7 +276,7 @@ bool AP_NavEKF_Source::usingGPS() const
 }
 
 // true if some parameters have been configured (used during parameter conversion)
-bool AP_NavEKF_Source::params_configured_in_storage() const
+bool AP_NavEKF_Source::any_params_configured_in_storage() const
 {
     return _source[0].posxy.configured_in_storage() ||
            _source[0].velxy.configured_in_storage() ||
