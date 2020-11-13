@@ -1023,15 +1023,15 @@ void RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         switch (ch_flag) {
         case AuxSwitchPos::LOW:
             // low switches to primary source
-            AP::ahrs().set_position_source(0);
+            AP::ahrs().set_posvelyaw_source(0);
             break;
         case AuxSwitchPos::MIDDLE:
             // middle switches to secondary source
-            AP::ahrs().set_position_source(1);
+            AP::ahrs().set_posvelyaw_source(1);
             break;
         case AuxSwitchPos::HIGH:
             // high switches to tertiary source
-            AP::ahrs().set_position_source(2);
+            AP::ahrs().set_posvelyaw_source(2);
             break;
         }
         break;
