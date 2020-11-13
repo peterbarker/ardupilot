@@ -43,6 +43,11 @@ public:
         EXTERNAL_COMPASS_FALLBACK = 3
     };
 
+    // enum for OPTIONS parameter
+    enum class SourceOptions {
+        FUSE_ALL_VELOCITIES = (1 << 0)
+    };
+
     // initialisation
     void init();
 
@@ -57,6 +62,13 @@ public:
     SourceXY getVelXYSource() const { return _active_source.initialised ? _active_source.velxy : (SourceXY)_source[0].velxy.get(); }
     SourceZ getVelZSource() const { return _active_source.initialised ? _active_source.velz : (SourceZ)_source[0].velz.get(); }
     void setVelZSource(SourceZ source) { _active_source.velz = source; }
+
+    // true/false of whether velocity source should be used
+    bool useVelXYSource(SourceXY velxy_source) const;
+    bool useVelZSource(SourceZ velz_source) const;
+
+    // true if a velocity source is configured
+    bool haveVelZSource() const;
 
     // get yaw source
     SourceYaw getYawSource() const { return _active_source.initialised ? _active_source.yaw : (SourceYaw)_source[0].yaw.get(); }
@@ -94,6 +106,8 @@ private:
         AP_Int8 velz;   // velocity z source
         AP_Int8 yaw;    // yaw source
     } _source[AP_NAKEKF_SOURCE_COUNT];
+
+    AP_Int16 _options;      // source options bitmask
 
     // active sources
     struct {

@@ -130,6 +130,13 @@ const AP_Param::GroupInfo AP_NavEKF_Source::var_info[] = {
     AP_GROUPINFO("3_YAW", 15, AP_NavEKF_Source, _source[2].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
 #endif
 
+    // @Param: _OPTIONS
+    // @DisplayName: EKF Source Options
+    // @Description: EKF Source Options
+    // @Bitmask: 0:FuseAllVelocities
+    // @User: Advanced
+    AP_GROUPINFO("_OPTIONS", 16, AP_NavEKF_Source, _options, 0),
+
     AP_GROUPEND
 };
 
@@ -171,6 +178,65 @@ void AP_NavEKF_Source::setPosVelXYZSource(uint8_t source_idx)
     _active_source.posz = (SourceZ)_source[source_idx].posz.get();
     _active_source.velz = (SourceZ)_source[source_idx].velz.get();
     _active_source.yaw = (SourceYaw)_source[source_idx].yaw.get();
+}
+
+// true/false of whether velocity source should be used
+bool AP_NavEKF_Source::useVelXYSource(SourceXY velxy_source) const
+{
+    if (velxy_source == _active_source.velxy) {
+        return true;
+    }
+
+    // check for fuse all velocities
+    if (_options.get() & (uint16_t)(SourceOptions::FUSE_ALL_VELOCITIES)) {
+        for (uint8_t i=0; i<AP_NAKEKF_SOURCE_COUNT; i++) {
+            if (getVelXYSourceByIndex(i) == velxy_source) {
+                return true;
+            }
+        }
+    }
+
+    // if we got this far source should not be used
+    return false;
+}
+
+bool AP_NavEKF_Source::useVelZSource(SourceZ velz_source) const
+{
+    if (velz_source == _active_source.velz) {
+        return true;
+    }
+
+    // check for fuse all velocities
+    if (_options.get() & (uint16_t)(SourceOptions::FUSE_ALL_VELOCITIES)) {
+        for (uint8_t i=0; i<AP_NAKEKF_SOURCE_COUNT; i++) {
+            if (getVelZSourceByIndex(i) == velz_source) {
+                return true;
+            }
+        }
+    }
+
+    // if we got this far source should not be used
+    return false;
+}
+
+// true if a velocity source is configured
+bool AP_NavEKF_Source::haveVelZSource() const
+{
+    if (_active_source.velz != SourceZ::NONE) {
+        return true;
+    }
+
+    // check for fuse all velocities
+    if (_options.get() & (uint16_t)(SourceOptions::FUSE_ALL_VELOCITIES)) {
+        for (uint8_t i=0; i<AP_NAKEKF_SOURCE_COUNT; i++) {
+            if (getVelZSourceByIndex(i) != SourceZ::NONE) {
+                return true;
+            }
+        }
+    }
+
+    // if we got this far no velocity z source has been configured
+    return false;
 }
 
 // align position of inactive sources to ahrs
