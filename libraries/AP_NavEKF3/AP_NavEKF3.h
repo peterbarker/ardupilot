@@ -200,7 +200,7 @@ public:
 
     // get a source's velocity innovations for the specified instance.  Set instsance to -1 for the primary instance
     // returns true on success and results are placed in innovations and variances arguments
-    bool getVelInnovationsAndVariancesBySource(int8_t instance, AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const;
+    bool getVelInnovationsAndVariancesForSource(int8_t instance, AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const;
 
     // should we use the compass? This is public so it can be used for
     // reporting via ahrs.use_compass()

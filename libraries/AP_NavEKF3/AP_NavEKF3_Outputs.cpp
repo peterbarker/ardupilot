@@ -515,7 +515,7 @@ void  NavEKF3_core::getStateVariances(float stateVar[24])
 
 // get a particular source's velocity innovations
 // returns true on success and results are placed in innovations and variances arguments
-bool NavEKF3_core::getVelInnovationsAndVariancesBySource(AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const
+bool NavEKF3_core::getVelInnovationsAndVariancesForSource(AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const
 {
     switch (source) {
     case AP_NavEKF_Source::SourceXY::GPS:

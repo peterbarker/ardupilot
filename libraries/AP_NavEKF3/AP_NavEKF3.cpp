@@ -1417,13 +1417,13 @@ void NavEKF3::getStateVariances(int8_t instance, float stateVar[24]) const
 
 // get a source's velocity innovations for the specified instance.  Set instsance to -1 for the primary instance
 // returns true on success and results are placed in innovations and variances arguments
-bool NavEKF3::getVelInnovationsAndVariancesBySource(int8_t instance, AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const
+bool NavEKF3::getVelInnovationsAndVariancesForSource(int8_t instance, AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const
 {
     if (instance < 0 || instance >= num_cores) {
         instance = primary;
     }
     if (core) {
-        return core[instance].getVelInnovationsAndVariancesBySource(source, innovations, variances);
+        return core[instance].getVelInnovationsAndVariancesForSource(source, innovations, variances);
     }
     return false;
 }
