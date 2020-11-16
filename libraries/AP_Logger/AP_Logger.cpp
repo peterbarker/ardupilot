@@ -696,7 +696,7 @@ void AP_Logger::WriteBlock(const void *pBuffer, uint16_t size) {
 // have space for the msg
 bool AP_Logger::WriteReplayBlock(uint8_t msg_id, const void *pBuffer, uint16_t size) {
     bool ret = true;
-    if (log_replay()) {
+    if (log_replay() || true) {
         uint8_t buf[3+size];
         buf[0] = HEAD_BYTE1;
         buf[1] = HEAD_BYTE2;

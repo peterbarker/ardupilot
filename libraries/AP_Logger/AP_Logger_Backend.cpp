@@ -114,9 +114,9 @@ void AP_Logger_Backend::push_log_blocks() {
 // for other messages to go out to the log
 bool AP_Logger_Backend::WriteBlockCheckStartupMessages()
 {
-#if APM_BUILD_TYPE(APM_BUILD_Replay)
-    return true;
-#endif
+// #if APM_BUILD_TYPE(APM_BUILD_Replay)
+//     return true;
+// #endif
 
     if (_startup_messagewriter->fmt_done()) {
         return true;
@@ -149,9 +149,9 @@ bool AP_Logger_Backend::WriteBlockCheckStartupMessages()
 // source more messages from the startup message writer:
 void AP_Logger_Backend::WriteMoreStartupMessages()
 {
-#if APM_BUILD_TYPE(APM_BUILD_Replay)
-    return;
-#endif
+// #if APM_BUILD_TYPE(APM_BUILD_Replay)
+//     return;
+// #endif
 
     if (_startup_messagewriter->finished()) {
         return;
@@ -169,10 +169,10 @@ void AP_Logger_Backend::WriteMoreStartupMessages()
 
 bool AP_Logger_Backend::Write_Emit_FMT(uint8_t msg_type)
 {
-#if APM_BUILD_TYPE(APM_BUILD_Replay)
-    // sure, sure we did....
-    return true;
-#endif
+// #if APM_BUILD_TYPE(APM_BUILD_Replay)
+//     // sure, sure we did....
+//     return true;
+// #endif
 
     // get log structure from front end:
     char ls_name[LS_NAME_SIZE] = {};

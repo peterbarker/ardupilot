@@ -47,6 +47,8 @@ void LoggerMessageWriter_DFLogStart::reset()
 
 bool LoggerMessageWriter_DFLogStart::out_of_time_for_writing_messages() const
 {
+    return false;
+
     if (stage == Stage::FORMATS) {
         // write out the FMT messages as fast as we can
         return AP::scheduler().time_available_usec() == 0;
