@@ -304,7 +304,7 @@ public:
     void request_yaw_reset(void) override;
 
     // set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
-    void set_posvelyaw_source(uint8_t source_idx) override;
+    void set_posvelyaw_source(uint8_t source_set_idx) override;
 
     void Log_Write();
 
