@@ -39,6 +39,7 @@ public:
     NavEKF3 &operator=(const NavEKF3&) = delete;
 
     static const struct AP_Param::GroupInfo var_info[];
+    static const struct AP_Param::GroupInfo var_info2[];
 
     // allow logging to determine the number of active cores
     uint8_t activeCores(void) const {
@@ -625,5 +626,5 @@ private:
     void Log_Write_GSF(uint8_t core, uint64_t time_us) const;
 
     // position, velocity and yaw source control
-    AP_NavEKF_Source _sources;
+    AP_NavEKF_Source sources;
 };
