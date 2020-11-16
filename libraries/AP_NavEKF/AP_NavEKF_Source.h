@@ -53,15 +53,15 @@ public:
     void init();
 
     // get current position source
-    SourceXY getPosXYSource() const { return _active_source_set.initialised ? _active_source_set.posxy : (SourceXY)_source_set[0].posxy.get(); }
-    SourceZ getPosZSource() const { return _active_source_set.initialised ? _active_source_set.posz : (SourceZ)_source_set[0].posz.get() ; }
+    SourceXY getPosXYSource() const { return _active_source_set.posxy; }
+    SourceZ getPosZSource() const { return _active_source_set.posz; }
 
     // set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
     void setPosVelYawSource(uint8_t source_set_idx);
 
     // get/set velocity source
-    SourceXY getVelXYSource() const { return _active_source_set.initialised ? _active_source_set.velxy : (SourceXY)_source_set[0].velxy.get(); }
-    SourceZ getVelZSource() const { return _active_source_set.initialised ? _active_source_set.velz : (SourceZ)_source_set[0].velz.get(); }
+    SourceXY getVelXYSource() const { return _active_source_set.velxy; }
+    SourceZ getVelZSource() const { return _active_source_set.velz; }
     void setVelZSource(SourceZ source) { _active_source_set.velz = source; }
 
     // true/false of whether velocity source should be used
@@ -72,7 +72,7 @@ public:
     bool haveVelZSource() const;
 
     // get yaw source
-    SourceYaw getYawSource() const { return _active_source_set.initialised ? _active_source_set.yaw : (SourceYaw)_source_set[0].yaw.get(); }
+    SourceYaw getYawSource() const { return _active_source_set.yaw; }
 
     // align position of inactive sources to ahrs
     void align_inactive_sources();
@@ -112,11 +112,11 @@ private:
 
     // active sources
     struct {
-        bool initialised;   // true once init has been run
         SourceXY posxy;     // current xy position source
         SourceZ posz;       // current z position source
         SourceXY velxy;     // current xy velocity source
         SourceZ velz;       // current z velocity source
         SourceYaw yaw;      // current yaw source
     } _active_source_set;
+    bool initialised;       // true once init has been run
 };

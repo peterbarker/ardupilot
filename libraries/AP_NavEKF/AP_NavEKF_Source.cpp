@@ -148,7 +148,7 @@ AP_NavEKF_Source::AP_NavEKF_Source()
 void AP_NavEKF_Source::init()
 {
     // ensure init is only run once
-    if (_active_source_set.initialised) {
+    if (initialised) {
         return;
     }
 
@@ -159,7 +159,7 @@ void AP_NavEKF_Source::init()
     _active_source_set.velz = (SourceZ)_source_set[0].velz.get();
     _active_source_set.yaw = (SourceYaw)_source_set[0].yaw.get();
 
-    _active_source_set.initialised = true;
+    initialised = true;
 }
 
 // set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
