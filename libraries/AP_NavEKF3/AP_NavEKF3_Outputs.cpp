@@ -519,6 +519,10 @@ bool NavEKF3_core::getVelInnovationsAndVariancesForSource(AP_NavEKF_Source::Sour
 {
     switch (source) {
     case AP_NavEKF_Source::SourceXY::GPS:
+        // check for timeouts
+        if (AP_HAL::millis() - gpsVelInnovTime_ms > 500) {
+            return false;
+        }
         innovations = gpsVelInnov;
         variances = gpsVelVarInnov;
         return true;
