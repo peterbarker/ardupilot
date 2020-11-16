@@ -213,7 +213,7 @@ public:
 
     // get a particular source's velocity innovations
     // returns true on success and results are placed in innovations and variances arguments
-    bool getVelInnovationsAndVariancesForSource(AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const;
+    bool getVelInnovationsAndVariancesForSource(AP_NavEKF_Source::SourceXY source, Vector3f &innovations, Vector3f &variances) const WARN_IF_UNUSED;
 
     // should we use the compass? This is public so it can be used for
     // reporting via ahrs.use_compass()
