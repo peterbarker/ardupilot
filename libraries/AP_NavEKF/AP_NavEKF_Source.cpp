@@ -26,108 +26,108 @@ const AP_Param::GroupInfo AP_NavEKF_Source::var_info[] = {
     // @Description: Position Horizontal Source (Primary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("1_POSXY", 1, AP_NavEKF_Source, _source[0].posxy, (int8_t)AP_NavEKF_Source::SourceXY::GPS),
+    AP_GROUPINFO("1_POSXY", 1, AP_NavEKF_Source, _source_set[0].posxy, (int8_t)AP_NavEKF_Source::SourceXY::GPS),
 
     // @Param: 1_VELXY
     // @DisplayName: Velocity Horizontal Source
     // @Description: Velocity Horizontal Source
     // @Values: 0:None, 3:GPS, 4:Beacon, 5:OpticalFlow, 6:ExternalNav, 7:WheelEncoder
     // @User: Advanced
-    AP_GROUPINFO("1_VELXY", 2, AP_NavEKF_Source, _source[0].velxy, (int8_t)AP_NavEKF_Source::SourceXY::GPS),
+    AP_GROUPINFO("1_VELXY", 2, AP_NavEKF_Source, _source_set[0].velxy, (int8_t)AP_NavEKF_Source::SourceXY::GPS),
 
     // @Param: 1_POSZ
     // @DisplayName: Position Vertical Source
     // @Description: Position Vertical Source
     // @Values: 0:None, 1:Baro, 2:RangeFinder, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("1_POSZ", 3, AP_NavEKF_Source, _source[0].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
+    AP_GROUPINFO("1_POSZ", 3, AP_NavEKF_Source, _source_set[0].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
 
     // @Param: 1_VELZ
     // @DisplayName: Velocity Vertical Source
     // @Description: Velocity Vertical Source
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("1_VELZ", 4, AP_NavEKF_Source, _source[0].velz, (int8_t)AP_NavEKF_Source::SourceZ::GPS),
+    AP_GROUPINFO("1_VELZ", 4, AP_NavEKF_Source, _source_set[0].velz, (int8_t)AP_NavEKF_Source::SourceZ::GPS),
 
     // @Param: 1_YAW
     // @DisplayName: Yaw Source
     // @Description: Yaw Source
     // @Values: 0:None, 1:Compass, 2:External, 3:External with Compass Fallback
     // @User: Advanced
-    AP_GROUPINFO("1_YAW", 5, AP_NavEKF_Source, _source[0].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
+    AP_GROUPINFO("1_YAW", 5, AP_NavEKF_Source, _source_set[0].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
 
-#if AP_NAKEKF_SOURCES_MAX >= 2
+#if AP_NAKEKF_SOURCE_SET_MAX >= 2
     // @Param: 2_POSXY
     // @DisplayName: Position Horizontal Source (Secondary)
     // @Description: Position Horizontal Source (Secondary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("2_POSXY", 6, AP_NavEKF_Source, _source[1].posxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
+    AP_GROUPINFO("2_POSXY", 6, AP_NavEKF_Source, _source_set[1].posxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
     // @Param: 2_VELXY
     // @DisplayName: Velocity Horizontal Source (Secondary)
     // @Description: Velocity Horizontal Source (Secondary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 5:OpticalFlow, 6:ExternalNav, 7:WheelEncoder
     // @User: Advanced
-    AP_GROUPINFO("2_VELXY", 7, AP_NavEKF_Source, _source[1].velxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
+    AP_GROUPINFO("2_VELXY", 7, AP_NavEKF_Source, _source_set[1].velxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
     // @Param: 2_POSZ
     // @DisplayName: Position Vertical Source (Secondary)
     // @Description: Position Vertical Source (Secondary)
     // @Values: 0:None, 1:Baro, 2:RangeFinder, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("2_POSZ", 8, AP_NavEKF_Source, _source[1].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
+    AP_GROUPINFO("2_POSZ", 8, AP_NavEKF_Source, _source_set[1].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
 
     // @Param: 2_VELZ
     // @DisplayName: Velocity Vertical Source (Secondary)
     // @Description: Velocity Vertical Source (Secondary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("2_VELZ", 9, AP_NavEKF_Source, _source[1].velz, (int8_t)AP_NavEKF_Source::SourceZ::NONE),
+    AP_GROUPINFO("2_VELZ", 9, AP_NavEKF_Source, _source_set[1].velz, (int8_t)AP_NavEKF_Source::SourceZ::NONE),
 
     // @Param: 2_YAW
     // @DisplayName: Yaw Source (Secondary)
     // @Description: Yaw Source (Secondary)
     // @Values: 0:None, 1:Compass, 2:External, 3:External with Compass Fallback
     // @User: Advanced
-    AP_GROUPINFO("2_YAW", 10, AP_NavEKF_Source, _source[1].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
+    AP_GROUPINFO("2_YAW", 10, AP_NavEKF_Source, _source_set[1].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
 #endif
 
-#if AP_NAKEKF_SOURCES_MAX >= 3
+#if AP_NAKEKF_SOURCE_SET_MAX >= 3
     // @Param: 3_POSXY
     // @DisplayName: Position Horizontal Source (Tertiary)
     // @Description: Position Horizontal Source (Tertiary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("3_POSXY", 11, AP_NavEKF_Source, _source[2].posxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
+    AP_GROUPINFO("3_POSXY", 11, AP_NavEKF_Source, _source_set[2].posxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
     // @Param: 3_VELXY
     // @DisplayName: Velocity Horizontal Source (Tertiary)
     // @Description: Velocity Horizontal Source (Tertiary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 5:OpticalFlow, 6:ExternalNav, 7:WheelEncoder
     // @User: Advanced
-    AP_GROUPINFO("3_VELXY", 12, AP_NavEKF_Source, _source[2].velxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
+    AP_GROUPINFO("3_VELXY", 12, AP_NavEKF_Source, _source_set[2].velxy, (int8_t)AP_NavEKF_Source::SourceXY::NONE),
 
     // @Param: 3_POSZ
     // @DisplayName: Position Vertical Source (Tertiary)
     // @Description: Position Vertical Source (Tertiary)
     // @Values: 0:None, 1:Baro, 2:RangeFinder, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("3_POSZ", 13, AP_NavEKF_Source, _source[2].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
+    AP_GROUPINFO("3_POSZ", 13, AP_NavEKF_Source, _source_set[2].posz, (int8_t)AP_NavEKF_Source::SourceZ::BARO),
 
     // @Param: 3_VELZ
     // @DisplayName: Velocity Vertical Source (Tertiary)
     // @Description: Velocity Vertical Source (Tertiary)
     // @Values: 0:None, 3:GPS, 4:Beacon, 6:ExternalNav
     // @User: Advanced
-    AP_GROUPINFO("3_VELZ", 14, AP_NavEKF_Source, _source[2].velz, (int8_t)AP_NavEKF_Source::SourceZ::NONE),
+    AP_GROUPINFO("3_VELZ", 14, AP_NavEKF_Source, _source_set[2].velz, (int8_t)AP_NavEKF_Source::SourceZ::NONE),
 
     // @Param: 3_YAW
     // @DisplayName: Yaw Source (Tertiary)
     // @Description: Yaw Source (Tertiary)
     // @Values: 0:None, 1:Compass, 2:External, 3:External with Compass Fallback
     // @User: Advanced
-    AP_GROUPINFO("3_YAW", 15, AP_NavEKF_Source, _source[2].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
+    AP_GROUPINFO("3_YAW", 15, AP_NavEKF_Source, _source_set[2].yaw, (int8_t)AP_NavEKF_Source::SourceYaw::COMPASS),
 #endif
 
     // @Param: _OPTIONS
@@ -148,48 +148,48 @@ AP_NavEKF_Source::AP_NavEKF_Source()
 void AP_NavEKF_Source::init()
 {
     // ensure init is only run once
-    if (_active_source.initialised) {
+    if (_active_source_set.initialised) {
         return;
     }
 
     // initialise active sources
-    _active_source.posxy = (SourceXY)_source[0].posxy.get();
-    _active_source.velxy = (SourceXY)_source[0].velxy.get();
-    _active_source.posz = (SourceZ)_source[0].posz.get();
-    _active_source.velz = (SourceZ)_source[0].velz.get();
-    _active_source.yaw = (SourceYaw)_source[0].yaw.get();
+    _active_source_set.posxy = (SourceXY)_source_set[0].posxy.get();
+    _active_source_set.velxy = (SourceXY)_source_set[0].velxy.get();
+    _active_source_set.posz = (SourceZ)_source_set[0].posz.get();
+    _active_source_set.velz = (SourceZ)_source_set[0].velz.get();
+    _active_source_set.yaw = (SourceYaw)_source_set[0].yaw.get();
 
-    _active_source.initialised = true;
+    _active_source_set.initialised = true;
 }
 
 // set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
-void AP_NavEKF_Source::setPosVelYawSource(uint8_t source_idx)
+void AP_NavEKF_Source::setPosVelYawSource(uint8_t source_set_idx)
 {
     // ensure init has been run
     init();
 
     // sanity check source idx
-    if (source_idx >= AP_NAKEKF_SOURCES_MAX) {
+    if (source_set_idx >= AP_NAKEKF_SOURCE_SET_MAX) {
         return;
     }
 
-    _active_source.posxy = (SourceXY)_source[source_idx].posxy.get();
-    _active_source.velxy = (SourceXY)_source[source_idx].velxy.get();
-    _active_source.posz = (SourceZ)_source[source_idx].posz.get();
-    _active_source.velz = (SourceZ)_source[source_idx].velz.get();
-    _active_source.yaw = (SourceYaw)_source[source_idx].yaw.get();
+    _active_source_set.posxy = (SourceXY)_source_set[source_set_idx].posxy.get();
+    _active_source_set.velxy = (SourceXY)_source_set[source_set_idx].velxy.get();
+    _active_source_set.posz = (SourceZ)_source_set[source_set_idx].posz.get();
+    _active_source_set.velz = (SourceZ)_source_set[source_set_idx].velz.get();
+    _active_source_set.yaw = (SourceYaw)_source_set[source_set_idx].yaw.get();
 }
 
 // true/false of whether velocity source should be used
 bool AP_NavEKF_Source::useVelXYSource(SourceXY velxy_source) const
 {
-    if (velxy_source == _active_source.velxy) {
+    if (velxy_source == _active_source_set.velxy) {
         return true;
     }
 
     // check for fuse all velocities
     if (_options.get() & (uint16_t)(SourceOptions::FUSE_ALL_VELOCITIES)) {
-        for (uint8_t i=0; i<AP_NAKEKF_SOURCES_MAX; i++) {
+        for (uint8_t i=0; i<AP_NAKEKF_SOURCE_SET_MAX; i++) {
             if (getVelXYSourceByIndex(i) == velxy_source) {
                 return true;
             }
@@ -202,13 +202,13 @@ bool AP_NavEKF_Source::useVelXYSource(SourceXY velxy_source) const
 
 bool AP_NavEKF_Source::useVelZSource(SourceZ velz_source) const
 {
-    if (velz_source == _active_source.velz) {
+    if (velz_source == _active_source_set.velz) {
         return true;
     }
 
     // check for fuse all velocities
     if (_options.get() & (uint16_t)(SourceOptions::FUSE_ALL_VELOCITIES)) {
-        for (uint8_t i=0; i<AP_NAKEKF_SOURCES_MAX; i++) {
+        for (uint8_t i=0; i<AP_NAKEKF_SOURCE_SET_MAX; i++) {
             if (getVelZSourceByIndex(i) == velz_source) {
                 return true;
             }
@@ -222,13 +222,13 @@ bool AP_NavEKF_Source::useVelZSource(SourceZ velz_source) const
 // true if a velocity source is configured
 bool AP_NavEKF_Source::haveVelZSource() const
 {
-    if (_active_source.velz != SourceZ::NONE) {
+    if (_active_source_set.velz != SourceZ::NONE) {
         return true;
     }
 
     // check for fuse all velocities
     if (_options.get() & (uint16_t)(SourceOptions::FUSE_ALL_VELOCITIES)) {
-        for (uint8_t i=0; i<AP_NAKEKF_SOURCES_MAX; i++) {
+        for (uint8_t i=0; i<AP_NAKEKF_SOURCE_SET_MAX; i++) {
             if (getVelZSourceByIndex(i) != SourceZ::NONE) {
                 return true;
             }
@@ -247,7 +247,7 @@ void AP_NavEKF_Source::align_inactive_sources()
     bool posxy_could_use_extnav = false;
     bool posz_could_use_extnav = false;
 
-    for (uint8_t i=0; i<AP_NAKEKF_SOURCES_MAX; i++) {
+    for (uint8_t i=0; i<AP_NAKEKF_SOURCE_SET_MAX; i++) {
         posxy_could_use_extnav |= (getPosXYSourceByIndex(i) == SourceXY::EXTNAV);
         posz_could_use_extnav |= (getPosZSourceByIndex(i) == SourceZ::EXTNAV);
     }
@@ -278,11 +278,11 @@ bool AP_NavEKF_Source::usingGPS() const
 // true if some parameters have been configured (used during parameter conversion)
 bool AP_NavEKF_Source::any_params_configured_in_storage() const
 {
-    return _source[0].posxy.configured_in_storage() ||
-           _source[0].velxy.configured_in_storage() ||
-           _source[0].posz.configured_in_storage() ||
-           _source[0].velz.configured_in_storage() ||
-           _source[0].yaw.configured_in_storage();
+    return _source_set[0].posxy.configured_in_storage() ||
+           _source_set[0].velxy.configured_in_storage() ||
+           _source_set[0].posz.configured_in_storage() ||
+           _source_set[0].velz.configured_in_storage() ||
+           _source_set[0].yaw.configured_in_storage();
 }
 
 // returns false if we fail arming checks, in which case the buffer will be populated with a failure message
@@ -298,13 +298,13 @@ bool AP_NavEKF_Source::pre_arm_check(char *failure_msg, uint8_t failure_msg_len)
     bool optflow_required = false;
 
     // string array for error messages
-    const char* idx_str[AP_NAKEKF_SOURCES_MAX] = {"", "2", "3"};
+    const char* idx_str[AP_NAKEKF_SOURCE_SET_MAX] = {"", "2", "3"};
 
     // check source params are valid
-    for (uint8_t i=0; i<AP_NAKEKF_SOURCES_MAX; i++) {
+    for (uint8_t i=0; i<AP_NAKEKF_SOURCE_SET_MAX; i++) {
 
         // check posxy
-        switch ((SourceXY)_source[i].posxy.get()) {
+        switch ((SourceXY)_source_set[i].posxy.get()) {
         case SourceXY::NONE:
             break;
         case SourceXY::GPS:
@@ -325,7 +325,7 @@ bool AP_NavEKF_Source::pre_arm_check(char *failure_msg, uint8_t failure_msg_len)
         }
 
         // check velxy
-        switch ((SourceXY)_source[i].velxy.get()) {
+        switch ((SourceXY)_source_set[i].velxy.get()) {
         case SourceXY::NONE:
             break;
         case SourceXY::GPS:
@@ -348,7 +348,7 @@ bool AP_NavEKF_Source::pre_arm_check(char *failure_msg, uint8_t failure_msg_len)
         }
 
         // check posz
-        switch ((SourceZ)_source[i].posz.get()) {
+        switch ((SourceZ)_source_set[i].posz.get()) {
         case SourceZ::BARO:
             baro_required = true;
             break;
@@ -372,7 +372,7 @@ bool AP_NavEKF_Source::pre_arm_check(char *failure_msg, uint8_t failure_msg_len)
         }
 
         // check velz
-        switch ((SourceZ)_source[i].velz.get()) {
+        switch ((SourceZ)_source_set[i].velz.get()) {
         case SourceZ::NONE:
             break;
         case SourceZ::GPS:
@@ -391,7 +391,7 @@ bool AP_NavEKF_Source::pre_arm_check(char *failure_msg, uint8_t failure_msg_len)
         }
 
         // check yaw
-        switch ((SourceYaw)_source[i].yaw.get()) {
+        switch ((SourceYaw)_source_set[i].yaw.get()) {
         case SourceYaw::NONE:
         case SourceYaw::COMPASS:
         case SourceYaw::EXTERNAL:
@@ -453,43 +453,43 @@ bool AP_NavEKF_Source::pre_arm_check(char *failure_msg, uint8_t failure_msg_len)
 }
 
 // get source by id
-AP_NavEKF_Source::SourceXY AP_NavEKF_Source::getPosXYSourceByIndex(uint8_t idx) const
+AP_NavEKF_Source::SourceXY AP_NavEKF_Source::getPosXYSourceByIndex(uint8_t source_set_idx) const
 {
-    if (idx >= AP_NAKEKF_SOURCES_MAX) {
+    if (source_set_idx >= AP_NAKEKF_SOURCE_SET_MAX) {
         return SourceXY::NONE;
     }
-    return (SourceXY)_source[idx].posxy.get();
+    return (SourceXY)_source_set[source_set_idx].posxy.get();
 }
 
-AP_NavEKF_Source::SourceZ AP_NavEKF_Source::getPosZSourceByIndex(uint8_t idx) const
+AP_NavEKF_Source::SourceZ AP_NavEKF_Source::getPosZSourceByIndex(uint8_t source_set_idx) const
 {
-    if (idx >= AP_NAKEKF_SOURCES_MAX) {
+    if (source_set_idx >= AP_NAKEKF_SOURCE_SET_MAX) {
         return SourceZ::NONE;
     }
-    return (SourceZ)_source[idx].posz.get();
+    return (SourceZ)_source_set[source_set_idx].posz.get();
 }
 
-AP_NavEKF_Source::SourceXY AP_NavEKF_Source::getVelXYSourceByIndex(uint8_t idx) const
+AP_NavEKF_Source::SourceXY AP_NavEKF_Source::getVelXYSourceByIndex(uint8_t source_set_idx) const
 {
-    if (idx >= AP_NAKEKF_SOURCES_MAX) {
+    if (source_set_idx >= AP_NAKEKF_SOURCE_SET_MAX) {
         return SourceXY::NONE;
     }
-    return (SourceXY)_source[idx].velxy.get();
+    return (SourceXY)_source_set[source_set_idx].velxy.get();
 }
 
-AP_NavEKF_Source::SourceZ AP_NavEKF_Source::getVelZSourceByIndex(uint8_t idx) const
+AP_NavEKF_Source::SourceZ AP_NavEKF_Source::getVelZSourceByIndex(uint8_t source_set_idx) const
 {
-    if (idx >= AP_NAKEKF_SOURCES_MAX) {
+    if (source_set_idx >= AP_NAKEKF_SOURCE_SET_MAX) {
         return SourceZ::NONE;
     }
-    return (SourceZ)_source[idx].velz.get();
+    return (SourceZ)_source_set[source_set_idx].velz.get();
 }
 
-AP_NavEKF_Source::SourceYaw AP_NavEKF_Source::getYawSourceByIndex(uint8_t idx) const
+AP_NavEKF_Source::SourceYaw AP_NavEKF_Source::getYawSourceByIndex(uint8_t source_set_idx) const
 {
-    if (idx >= AP_NAKEKF_SOURCES_MAX) {
+    if (source_set_idx >= AP_NAKEKF_SOURCE_SET_MAX) {
         return SourceYaw::NONE;
     }
-    return (SourceYaw)_source[idx].yaw.get();
+    return (SourceYaw)_source_set[source_set_idx].yaw.get();
 }
 
