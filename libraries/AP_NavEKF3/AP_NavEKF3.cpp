@@ -993,9 +993,9 @@ void NavEKF3::resetCoreErrors(void)
 }
 
 // set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
-void NavEKF3::setPosVelYawSource(uint8_t source_idx)
+void NavEKF3::setPosVelYawSource(uint8_t source_set_idx)
 {
-    _sources.setPosVelYawSource(source_idx);
+    _sources.setPosVelYawSource(source_set_idx);
 }
 
 // Check basic filter health metrics and return a consolidated health status
