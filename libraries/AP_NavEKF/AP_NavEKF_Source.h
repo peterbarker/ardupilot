@@ -4,12 +4,32 @@
 
 #define AP_NAKEKF_SOURCE_SET_MAX 3  // three sets of sources
 
+class AP_NavEKF_Source_Params
+{
+public:
+    static const struct AP_Param::GroupInfo var_info[];
+
+    AP_NavEKF_Source_Params() {
+    }
+
+    /* Do not allow copies */
+    AP_NavEKF_Source_Params(const AP_NavEKF_Source_Params &other) = delete;
+    AP_NavEKF_Source_Params &operator=(const AP_NavEKF_Source_Params&) = delete;
+
+    AP_Int8 posxy;  // xy position source
+    AP_Int8 velxy;  // xy velocity source
+    AP_Int8 posz;   // position z (aka altitude or height) source
+    AP_Int8 velz;   // velocity z source
+    AP_Int8 yaw;    // yaw source
+};
+
 class AP_NavEKF_Source
 {
 
 public:
+
     // Constructor
-    AP_NavEKF_Source();
+    AP_NavEKF_Source() {}
 
     /* Do not allow copies */
     AP_NavEKF_Source(const AP_NavEKF_Source &other) = delete;
@@ -88,7 +108,10 @@ public:
     // returns false if we fail arming checks, in which case the buffer will be populated with a failure message
     bool pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const;
 
-    static const struct AP_Param::GroupInfo var_info[];
+    // Parameters
+    AP_NavEKF_Source_Params *_source_set;
+
+    AP_Int16 _options;      // source options bitmask
 
 private:
 
@@ -98,17 +121,6 @@ private:
     SourceXY getVelXYSourceByIndex(uint8_t source_set_idx) const;
     SourceZ getVelZSourceByIndex(uint8_t source_set_idx) const;
     SourceYaw getYawSourceByIndex(uint8_t source_set_idx) const;
-
-    // Parameters
-    struct {
-        AP_Int8 posxy;  // xy position source
-        AP_Int8 velxy;  // xy velocity source
-        AP_Int8 posz;   // position z (aka altitude or height) source
-        AP_Int8 velz;   // velocity z source
-        AP_Int8 yaw;    // yaw source
-    } _source_set[AP_NAKEKF_SOURCE_SET_MAX];
-
-    AP_Int16 _options;      // source options bitmask
 
     // active sources
     struct {

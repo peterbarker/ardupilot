@@ -41,6 +41,9 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
     static const struct AP_Param::GroupInfo var_info2[];
 
+    // Parameters
+    AP_NavEKF_Source_Params _source_set[AP_NAKEKF_SOURCE_SET_MAX];
+
     // allow logging to determine the number of active cores
     uint8_t activeCores(void) const {
         return num_cores;

@@ -647,9 +647,28 @@ const AP_Param::GroupInfo NavEKF3::var_info[] = {
 // second table of parameters. allows us to go beyond the 64 parameter limit
 const AP_Param::GroupInfo NavEKF3::var_info2[] = {
 
-    // @Group: SRC
+    // @Group: SRC1_
     // @Path: ../AP_NavEKF/AP_NavEKF_Source.cpp
-    AP_SUBGROUPINFO(sources, "SRC", 1, NavEKF3, AP_NavEKF_Source),
+    AP_SUBGROUPINFO(_source_set[0], "SRC1_", 1, NavEKF3, AP_NavEKF_Source_Params),
+
+#if AP_NAKEKF_SOURCE_SET_MAX >= 2
+    // @Group: SRC2_
+    // @Path: ../AP_NavEKF/AP_NavEKF_Source.cpp
+    AP_SUBGROUPINFO(_source_set[1], "SRC2_", 2, NavEKF3, AP_NavEKF_Source_Params),
+#endif
+
+#if AP_NAKEKF_SOURCE_SET_MAX >= 3
+    // @Group: SRC3_
+    // @Path: ../AP_NavEKF/AP_NavEKF_Source.cpp
+    AP_SUBGROUPINFO(_source_set[2], "SRC3_", 3, NavEKF3, AP_NavEKF_Source_Params),
+#endif
+
+    // @Param: _OPTIONS
+    // @DisplayName: EKF Source Options
+    // @Description: EKF Source Options
+    // @Bitmask: 0:FuseAllVelocities
+    // @User: Advanced
+    AP_GROUPINFO("_OPTIONS", 6, AP_NavEKF_Source, _options, 0),
 
     AP_GROUPEND
 };
@@ -658,6 +677,12 @@ NavEKF3::NavEKF3()
 {
     AP_Param::setup_object_defaults(this, var_info);
     AP_Param::setup_object_defaults(this, var_info2);
+
+    AP_Param::setup_object_defaults(this, _source_set[0].var_info);
+    AP_Param::setup_object_defaults(this, _source_set[1].var_info);
+    AP_Param::setup_object_defaults(this, _source_set[2].var_info);
+
+    sources._source_set = _source_set;
 }
 
 
