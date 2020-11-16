@@ -447,7 +447,7 @@ void NavEKF3_core::SelectVelPosFusion()
         gpsVelInnovTime_ms = AP_HAL::millis();
     }
 
-    // detect position source changes
+    // detect position source changes.  Trigger position reset if position source is valid
     AP_NavEKF_Source::SourceXY pos_source = frontend->_sources.getPosXYSource();
     if (pos_source != pos_source_last) {
         pos_source_reset = (pos_source != AP_NavEKF_Source::SourceXY::NONE);
