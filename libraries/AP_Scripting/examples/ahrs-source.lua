@@ -1,22 +1,19 @@
--- switches between AHRS/EKF sources if the rangefinder distance is less than 10m and the pilot's source selection switch is in the middle
--- this script is intended to help vehicles from between GPS and Non-GPS environments
+-- switches between AHRS/EKF sources based on the pilot's source selection switch or using an automatic source selection algorithm
+-- this script is intended to help vehicles move between GPS and Non-GPS environments
 --
 -- setup RCx_OPTION = 90 (EKF Pos Source) to select the source (low=primary, middle=secondary, high=tertiary)
 -- setup RCx_OPTION = 83 (ZigZag Auto).  When this switch is pulled high, the source will be automatically selected
 -- setup EK3_SRCn_ parameters so that GPS is the primary source, Non-GPS (i.e. T265) is secondary and optical flow tertiary
 -- configure a forward or downward facing lidar with a range of more than 5m
 --
--- When the auxiliary switch is in middle position, automatic source selection uses these thresholds:
+-- When the auxiliary switch (ZigZag Auto) is pulled high automatic source selection uses these thresholds:
 -- SCR_USER1 holds the threshold for rangefinder altitude:
---     if rangefinder distance >= SCR_USER1, source1 will be used
---     if rangefinder distance < SCR_USER1, source2 will be used
+--     if rangefinder distance >= SCR_USER1, source2 (ExtNav) will be used (if Non-GPS vel innovations are good)
+--     if rangefinder distance < SCR_USER1, source3 (optical flow) will be used (if Non-GPS vel innovations are not good)
 -- SCR_USER2 holds the threshold for GPS speed accuracy (around 0.3 is a good choice)
--- SCR_USER3 holds the threshold for Non-GPS vertical speed innovation (about 0.5 may be a good choice)
+-- SCR_USER3 holds the threshold for Non-GPS vertical speed innovation (about 0.3 is a good choice)
 --     if both GPS speed accuracy <= SCR_USER2 and ExternalNav speed variance >= SCR_USER3, source1 will be used
---     otherwise source2 will be used
---
---    GPS will be used when RangeFinder returns distance of >=8m for at least 3 seconds
---    NonGPS will be used when RangeFinder returns distance of <8m for at least 3 seconds
+--     otherwise source2 (T265) or source3 (optical flow) will be used based on rangefinder distance
 
 local rangefinder_rotation = 25     -- check downward (25) facing lidar
 local source_prev = 0               -- previous source, defaults to primary source
@@ -30,7 +27,7 @@ local extnav_vs_opticalflow_vote = 0 -- vote counter for extnav vs optical flow 
 
 local debug_counter = 0
 
--- the main update function that uses the takeoff and velocity controllers to fly a rough square pattern
+-- the main update function
 function update()
 
   -- check switches are configured
