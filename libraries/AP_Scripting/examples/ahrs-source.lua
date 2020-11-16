@@ -25,8 +25,6 @@ local vote_counter_max = 20         -- when a vote counter reaches this number (
 local gps_vs_nongps_vote = 0        -- vote counter for GPS vs NonGPS (-20 = GPS, +20 = NonGPS)
 local extnav_vs_opticalflow_vote = 0 -- vote counter for extnav vs optical flow (-20 = extnav, +20 = opticalflow)
 
-local debug_counter = 0
-
 -- the main update function
 function update()
 
@@ -62,8 +60,8 @@ function update()
   end
 
   -- check if GPS speed accuracy is over threshold
-  local gps_speed_accuracy = gps:speed_accuracy(0)
-  local gps_over_threshold = (gps_speed_accuracy == nil) or (gps:speed_accuracy(0) > gps_speedaccuracy_thresh)
+  local gps_speed_accuracy = gps:speed_accuracy(gps:primary())
+  local gps_over_threshold = (gps_speed_accuracy == nil) or (gps:speed_accuracy(gps:primary()) > gps_speedaccuracy_thresh)
   local gps_usable = (gps_speed_accuracy ~= nil) and (gps_speed_accuracy <= gps_usable_accuracy)
 
   -- get external nav innovations from ahrs
@@ -79,15 +77,8 @@ function update()
   end
   local rngfnd_over_threshold = (rngfnd_distance_m == 0) or (rngfnd_distance_m > rangefinder_thresh_dist)
 
-  -- NpnGPS is usable if extnav innovations are good or rangefinder distance is short (for optical flow)
+  -- NonGPS is usable if extnav innovations are good or rangefinder distance is short (for optical flow)
   local nongps_usable = (not extnav_over_threshold) or (not rngfnd_over_threshold)
-
-  -- debug.debug
-  debug_counter = debug_counter + 1
-  if (debug_counter > 30) then
-    debug_counter = 0
-    --gcs:send_text(0, string.format("gpsu:%s ot:%s extot:%s rngot:%s nongpsu:%s", tostring(gps_usable), tostring(gps_over_threshold), tostring(extnav_over_threshold), tostring(rngfnd_over_threshold), tostring(nongps_usable)))
-  end
 
   -- automatic selection logic --
 
