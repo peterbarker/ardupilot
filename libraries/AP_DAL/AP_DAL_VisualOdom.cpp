@@ -14,8 +14,7 @@
 */
 void AP_DAL_VisualOdom::align_position_to_ahrs(bool align_xy, bool align_z)
 {
-#ifndef HAL_NO_GCS
-    // use HAL_NO_GCS to avoid breaking AP_DAL_Standalone.
+#if !APM_BUILD_TYPE(APM_BUILD_AP_DAL_Standalone)
     auto *vo = AP::visualodom();
     vo->align_position_to_ahrs(align_xy, align_z);
 #endif
