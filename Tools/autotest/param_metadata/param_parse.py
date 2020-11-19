@@ -367,8 +367,13 @@ for vehicle in vehicles:
     for param in vehicle.params:
         clean_param(param)
 
+seen_params = {}
+
 for vehicle in vehicles:
     for param in vehicle.params:
+        if param.name in seen_params:
+            error("%s appears twice in parameters (also in %s)" % (param.name, seen_params[param.name]))
+        seen_params[param.name] = param.real_path
         validate(param)
 
 # Find duplicate names in library and fix up path
@@ -394,6 +399,9 @@ for library in libraries:
 
 for library in libraries:
     for param in library.params:
+        if param.name in seen_params:
+            error("%s appears twice in parameters (also in %s)" % (param.name, seen_params[param.name]))
+        seen_params[param.name] = param.real_path
         validate(param)
 
 
