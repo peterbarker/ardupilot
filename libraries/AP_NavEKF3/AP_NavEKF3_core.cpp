@@ -67,7 +67,7 @@ bool NavEKF3_core::setup_core(uint8_t _imu_index, uint8_t _core_index)
             return false;
         }
         // limit the time delay value from the GPS library to a max of 250 msec which is the max value the EKF has been tested for.
-        maxTimeDelay_ms = MAX(maxTimeDelay_ms , MIN((uint16_t)(gps_delay_sec * 1000.0f),250));
+        maxTimeDelay_ms = MAX(maxTimeDelay_ms , MIN((uint16_t)(gps_delay_sec * 1000.0f),2500));
     }
 
     // airspeed sensing can have large delays and should not be included if disabled
