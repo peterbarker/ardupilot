@@ -193,7 +193,8 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
     argc -= gopt.optind;
 
     if (argc > 0) {
-        filename = argv[0];
+        filename_csv_imu = argv[0];
+        filename_csv_pos = argv[1];
     }
 }
 
@@ -226,20 +227,22 @@ void Replay::setup()
         exit(1);
     }
 
-    if (filename == nullptr) {
+    if (filename_csv_pos == nullptr || filename_csv_imu == nullptr) {
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
         // allow replay on stm32
         filename = "APM/replayin.bin";
 #else
-        ::printf("You must supply a log filename\n");
+        ::printf("You must supply log filenames\n");
         exit(1);
 #endif
     }
-    // LogReader reader = LogReader(log_structure);
-    if (!reader.open_log(filename)) {
-        ::printf("open(%s): %m\n", filename);
+    reader.set_filename_csv_imu(filename_csv_imu);
+    reader.set_filename_csv_pos(filename_csv_pos);
+    if (!reader.init()) {
+        perror("reader.init");
         exit(1);
     }
+    ::printf("init OK\n");
 }
 
 void Replay::loop()

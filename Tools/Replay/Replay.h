@@ -15,7 +15,8 @@
 
 #include <AP_Vehicle/AP_Vehicle.h>
 
-#include "LogReader.h"
+// #include "LogReader.h"
+#include "CSVLogReader.h"
 
 struct user_parameter {
     struct user_parameter *next;
@@ -81,10 +82,12 @@ public:
     bool check_user_param(const char *name);
     
 private:
-    const char *filename;
+    const char *filename_csv_pos;
+    const char *filename_csv_imu;
     ReplayVehicle &_vehicle;
 
-    LogReader reader{_vehicle.log_structure, _vehicle.ekf2, _vehicle.ekf3};
+    // LogReader reader{_vehicle.log_structure, _vehicle.ekf2, _vehicle.ekf3};
+    CSVLogReader reader{_vehicle.log_structure, _vehicle.ekf2, _vehicle.ekf3};
 
     void _parse_command_line(uint8_t argc, char * const argv[]);
 
