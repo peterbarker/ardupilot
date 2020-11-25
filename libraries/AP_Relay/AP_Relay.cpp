@@ -100,14 +100,56 @@ const AP_Param::GroupInfo AP_Relay::var_info[] = {
     // @Description: Digital pin number for 5th relay control. Some common values are given, but see the Wiki's "GPIOs" page for how to determine the pin number for a given autopilot.
     // @User: Standard
     // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,62:BBBMini Pin P8.13,101:MainOut1,102:MainOut2,103:MainOut3,104:MainOut4,105:MainOut5,106:MainOut6,107:MainOut7,108:MainOut8
-    AP_GROUPINFO("PIN5",  5, AP_Relay, _pin[4], RELAY5_PIN_DEFAULT),
+    AP_GROUPINFO("PIN5",  50, AP_Relay, _pin[4], RELAY5_PIN_DEFAULT),
 
     // @Param: PIN6
     // @DisplayName: Sixth Relay Pin
     // @Description: Digital pin number for 6th relay control. Some common values are given, but see the Wiki's "GPIOs" page for how to determine the pin number for a given autopilot.
     // @User: Standard
     // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,37:BBBMini Pin P8.14,101:MainOut1,102:MainOut2,103:MainOut3,104:MainOut4,105:MainOut5,106:MainOut6,107:MainOut7,108:MainOut8
-    AP_GROUPINFO("PIN6",  6, AP_Relay, _pin[5], RELAY6_PIN_DEFAULT),
+    AP_GROUPINFO("PIN6",  51, AP_Relay, _pin[5], RELAY6_PIN_DEFAULT),
+
+    // @Param: PIN7
+    // @DisplayName: Seventh Relay Pin
+    // @Description: Digital pin number for 7th relay control.
+    // @User: Standard
+    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,37:BBBMini Pin P8.14
+    AP_GROUPINFO("PIN7",  52, AP_Relay, _pin[6], -1),
+
+    // @Param: PIN8
+    // @DisplayName: Eighth Relay Pin
+    // @Description: Digital pin number for 8th relay control.
+    // @User: Standard
+    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,37:BBBMini Pin P8.14
+    AP_GROUPINFO("PIN8",  53, AP_Relay, _pin[7], -1),
+
+    // @Param: PIN9
+    // @DisplayName: Ninth Relay Pin
+    // @Description: Digital pin number for 9th relay control.
+    // @User: Standard
+    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,37:BBBMini Pin P8.14
+    AP_GROUPINFO("PIN9",  54, AP_Relay, _pin[8], -1),
+
+    // @Param: PIN10
+    // @DisplayName: Tenth Relay Pin
+    // @Description: Digital pin number for 10th relay control.
+    // @User: Standard
+    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,37:BBBMini Pin P8.14
+    AP_GROUPINFO("PIN10",  55, AP_Relay, _pin[9], -1),
+
+    // @Param: PIN11
+    // @DisplayName: Eleventh Relay Pin
+    // @Description: Digital pin number for 11th relay control.
+    // @User: Standard
+    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,37:BBBMini Pin P8.14
+    AP_GROUPINFO("PIN11",  56, AP_Relay, _pin[10], -1),
+
+    // @Param: PIN12
+    // @DisplayName: Twelfth Relay Pin
+    // @Description: Digital pin number for 12th relay control.
+    // @User: Standard
+    // @Values: -1:Disabled,49:BB Blue GP0 pin 4,50:AUXOUT1,51:AUXOUT2,52:AUXOUT3,53:AUXOUT4,54:AUXOUT5,55:AUXOUT6,57:BB Blue GP0 pin 3,113:BB Blue GP0 pin 6,116:BB Blue GP0 pin 5,37:BBBMini Pin P8.14
+    AP_GROUPINFO("PIN12",  57, AP_Relay, _pin[11], -1),
 
     AP_GROUPEND
 };
