@@ -626,7 +626,10 @@ void NavEKF3_core::send_status_report(GCS_MAVLINK &link) const
         flags |= EKF_UNINITIALIZED;
     }
     if (filterStatus.flags.gps_glitching) {
-        flags |= (1<<15);
+        flags |= EKF_GPS_GLITCHING;
+    }
+    if (core_index == frontend->getPrimaryCoreIndex()) {
+        flags |= EKF_IS_PRIMARY;
     }
 
     // get variances
@@ -651,7 +654,8 @@ void NavEKF3_core::send_status_report(GCS_MAVLINK &link) const
         fmaxf(fmaxf(magVar.x,magVar.y),magVar.z),
         temp,
         flags,
-        tasVar
+        tasVar,
+        uint8_t(core_index + 1U),
     };
 
     // send message
