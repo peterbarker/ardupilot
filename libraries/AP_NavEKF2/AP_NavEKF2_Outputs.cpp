@@ -536,6 +536,12 @@ void NavEKF2_core::send_status_report(GCS_MAVLINK &link) const
     if (!filterStatus.flags.initalized) {
         flags |= EKF_UNINITIALIZED;
     }
+    if (filterStatus.flags.gps_glitching) {
+        flags |= EKF_GPS_GLITCHING;
+    }
+    if (core_index == frontend->getPrimaryCoreIndex()) {
+        flags |= EKF_IS_PRIMARY;
+    }
 
     // get variances
     float velVar = 0, posVar = 0, hgtVar = 0, tasVar = 0;
@@ -556,7 +562,7 @@ void NavEKF2_core::send_status_report(GCS_MAVLINK &link) const
     }
 
     // send message
-    mavlink_msg_ekf_status_report_send(link.get_chan(), flags, velVar, posVar, hgtVar, mag_max, temp, tasVar);
+    mavlink_msg_ekf_status_report_send(link.get_chan(), flags, velVar, posVar, hgtVar, mag_max, temp, tasVar, uint8_t(core_index + 1U));
 }
 #endif  // HAL_GCS_ENABLED
 
