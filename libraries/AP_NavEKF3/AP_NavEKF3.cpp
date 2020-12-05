@@ -1879,9 +1879,16 @@ void NavEKF3::getFilterStatus(nav_filter_status &status) const
 // send an EKF_STATUS_REPORT message to GCS
 void NavEKF3::send_status_report(GCS_MAVLINK &link) const
 {
-    if (core) {
-        core[primary].send_status_report(link);
+    if (!core) {
+        return;
     }
+    for (uint8_t i=0; i<num_cores; i++) {
+        if (i == primary) {
+            continue;
+        }
+        core[i].send_status_report(link);
+    }
+    core[primary].send_status_report(link);
 }
 
 // provides the height limit to be observed by the control loops
