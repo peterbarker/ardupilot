@@ -107,7 +107,6 @@ public:
     // The RangeFinder_State structure is filled in by the backend driver
     struct RangeFinder_State {
         uint16_t distance_cm;           // distance: in cm
-        uint16_t voltage_mv;            // voltage in millivolts, if applicable, otherwise 0
         enum RangeFinder::Status status; // sensor status
         uint8_t  range_valid_count;     // number of consecutive valid readings (maxes out at 10)
         uint32_t last_reading_ms;       // system time of last successful update from sensor

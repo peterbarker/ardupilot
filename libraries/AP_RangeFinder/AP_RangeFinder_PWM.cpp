@@ -95,7 +95,6 @@ void AP_RangeFinder_PWM::update(void)
                 hal.gpio->write(params.stop_pin, false);
                 set_status(RangeFinder::Status::NoData);
                 state.distance_cm = 0;
-                state.voltage_mv = 0;
                 was_out_of_range = oor;
             }
             return;

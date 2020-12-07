@@ -64,15 +64,15 @@ bool AP_RangeFinder_analog::detect(AP_RangeFinder_Params &_params)
 void AP_RangeFinder_analog::update_voltage(void)
 {
    if (source == nullptr) {
-       state.voltage_mv = 0;
+       voltage_mv = 0;
        return;
    }
    // cope with changed settings
    source->set_pin(params.pin);
    if (params.ratiometric) {
-       state.voltage_mv = source->voltage_average_ratiometric() * 1000U;
+       voltage_mv = source->voltage_average_ratiometric() * 1000U;
    } else {
-       state.voltage_mv = source->voltage_average() * 1000U;
+       voltage_mv = source->voltage_average() * 1000U;
    }
 }
 
@@ -82,7 +82,7 @@ void AP_RangeFinder_analog::update_voltage(void)
 void AP_RangeFinder_analog::update(void)
 {
     update_voltage();
-    float v = state.voltage_mv * 0.001f;
+    float v = voltage_mv * 0.001f;
     float dist_m = 0;
     float scaling = params.scaling;
     float offset  = params.offset;

@@ -27,4 +27,6 @@ private:
     void update_voltage(void);
 
     AP_HAL::AnalogSource *source;
+
+    uint16_t voltage_mv;            // voltage in millivolts
 };
