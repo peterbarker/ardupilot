@@ -6,6 +6,8 @@
 
 #include "AP_DAL/AP_DAL.h"
 
+#include <stdio.h>
+
 // Control filter mode transitions
 void NavEKF3_core::controlFilterModes()
 {
@@ -416,7 +418,8 @@ void NavEKF3_core::checkAttitudeAlignmentStatus()
     // Once the tilt variances have reduced, re-set the yaw and magnetic field states
     // and declare the tilt alignment complete
     if (!tiltAlignComplete) {
-        if (tiltErrorVariance < sq(radians(5.0f))) {
+        ::printf("tiltErrorVariance=%f\n", tiltErrorVariance);
+        if (tiltErrorVariance < sq(radians(20.0f))) {
             tiltAlignComplete = true;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 IMU%u tilt alignment complete",(unsigned)imu_index);
         }
@@ -484,9 +487,12 @@ bool NavEKF3_core::readyToUseBodyOdm(void) const
 #endif // EK3_FEATURE_BODY_ODOM
 }
 
+#include <stdio.h>
+
 // return true if the filter to be ready to use gps
 bool NavEKF3_core::readyToUseGPS(void) const
 {
+    ::printf("validOrigin=%u tiltAlignComplete=%u yawAlignComplete=%u zss=%u\n", validOrigin, tiltAlignComplete, yawAlignComplete, assume_zero_sideslip());
     if (frontend->sources.getPosXYSource() != AP_NavEKF_Source::SourceXY::GPS) {
         return false;
     }
