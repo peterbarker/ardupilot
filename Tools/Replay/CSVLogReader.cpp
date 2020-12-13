@@ -233,11 +233,11 @@ bool CSVLogReader::update()
         vehicle_class  : (uint8_t)AP_DAL::VehicleClass::FIXED_WING,
         ekf_type : (uint8_t)AP_DAL::EKFType::EKF2,
         armed : true,
-        rangefinder_ptr_is_null : true,
         get_compass_is_null : true,
-        airspeed_ptr_is_null : true,
         fly_forward : true,
         ahrs_airspeed_sensor_enabled : false,
+        opticalflow_enabled : false,
+        wheelencoder_enabled : false,
         _end            : 0
     };
     dal_handle_message(LOG_RFRN_MSG, rfrn);
