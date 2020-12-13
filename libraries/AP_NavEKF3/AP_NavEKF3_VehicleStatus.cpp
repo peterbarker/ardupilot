@@ -318,8 +318,8 @@ void NavEKF3_core::detectFlight()
             }
         }
 
-        // trigger at 10 m/s GPS velocity, but not if GPS is reporting bad velocity errors
-        if (gndSpdSq > 100.0f && gpsSpdAccuracy < 1.0f) {
+        // trigger at 1 m/s GPS velocity, but not if GPS is reporting bad velocity errors
+        if (gndSpdSq > 1.0f && gpsSpdAccuracy < 1.0f) {
             highGndSpd = true;
         }
 
@@ -327,6 +327,8 @@ void NavEKF3_core::detectFlight()
         if (fabsf(hgtMea) > 10.0f) {
             largeHgtChange = true;
         }
+
+        highAirSpd = highGndSpd;
 
         if (motorsArmed) {
             onGround = false;
