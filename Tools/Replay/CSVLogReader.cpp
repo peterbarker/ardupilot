@@ -84,6 +84,10 @@ bool CSVLogReader::init()
         printf("Failed to set COMPASS_USE\n");
         exit(1);
     }
+    if (!set_parameter("EK3_SRC1_YAW", 0)) {
+        printf("Failed to set EK3_SRC1_YAW\n");
+        exit(1);
+    }
 
     reader_imu.open(filename_csv_imu);
     reader_pos.open(filename_csv_pos);
