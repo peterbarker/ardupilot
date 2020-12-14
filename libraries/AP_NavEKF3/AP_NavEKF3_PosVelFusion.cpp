@@ -192,6 +192,7 @@ void NavEKF3_core::ResetPositionD(float posD)
     // Add the offset to the output observer states
     outputDataNew.position.z += posResetD;
     vertCompFiltState.pos = outputDataNew.position.z;
+    ::printf("############## Reset to %f\n", vertCompFiltState.pos);
     outputDataDelayed.position.z += posResetD;
     for (uint8_t i=0; i<imu_buffer_length; i++) {
         storedOutput[i].position.z += posResetD;

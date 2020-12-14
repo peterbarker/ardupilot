@@ -22,6 +22,8 @@
 
 #if !defined(HAL_DEBUG_BUILD) || !HAL_DEBUG_BUILD
     #pragma GCC optimize("O2")
+#else
+    #pragma GCC optimize("O0")
 #endif
 
 #include <AP_Common/Location.h>
@@ -926,6 +928,7 @@ private:
     // Run the GPS velocity correction step for the GSF yaw estimator and use the
     // yaw estimate to reset the main EKF yaw if requested
     void runYawEstimatorCorrection(void);
+    bool runYawEstimatorCorrection_can_use_EKFGSF();
 
     // reset the quaternion states using the supplied yaw angle, maintaining the previous roll and pitch
     // also reset the body to nav frame rotation matrix

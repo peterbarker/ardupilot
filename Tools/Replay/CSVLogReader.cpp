@@ -149,6 +149,7 @@ bool CSVLogReader::populate_rgpj_from_reader_pos(struct log_RGPJ &rgpj, uint64_t
 
     rgpj_itow = reader.get_value("ITOW") * 1000000;
 
+    ::printf("VN=%f VE=%f\n", rgpj.velocity[0], rgpj.velocity[1]);
     // ::printf("ts=%lu lat=%u lng=%u\n", rgpj_itow, rgpj.lat, rgpj.lng);
 
     return true;
@@ -246,6 +247,7 @@ bool CSVLogReader::update()
     uint64_t frame_start_us = 0;
     uint64_t last_tow = 0;
 
+    uint8_t sample_count = 0;
     while (reader_imu.next_line()) {
         // TOW is in seconds-since-GPS-week-start
         ::printf("IMU TOW: %f\n", reader_imu.get_value("TOW"));
@@ -266,21 +268,27 @@ bool CSVLogReader::update()
             delta_velocity_acc.zero();
             delta_angle_acc.zero();
             loop_delta_time_acc_us = 0;
+            sample_count = 0;
         }
 
+        sample_count++;
         const double delta_t = loop_delta_time / 1000000.0f;
         delta_velocity_acc += Vector3f{
             float(reader_imu.get_value("ACCL_X") * delta_t),
-                float(reader_imu.get_value("ACCL_Y") * delta_t),
-                float(reader_imu.get_value("ACCL_Z") * delta_t)
-                };
+            float(reader_imu.get_value("ACCL_Y") * delta_t),
+            float(reader_imu.get_value("ACCL_Z") * delta_t)
+        };
         delta_angle_acc += Vector3f{
             float(reader_imu.get_value("GYRO_X") * delta_t),
-                float(reader_imu.get_value("GYRO_Y") * delta_t),
-                float(reader_imu.get_value("GYRO_Z") * delta_t)
-                };
-        loop_delta_time_acc_us += tow - last_tow;
+            float(reader_imu.get_value("GYRO_Y") * delta_t),
+            float(reader_imu.get_value("GYRO_Z") * delta_t)
+        };
+//        loop_delta_time_acc_us += tow - last_tow;
+        loop_delta_time_acc_us += loop_delta_time;
         last_tow = tow;
+        (void)last_tow;
+
+        ::fprintf(stderr, "%u accl_z=%f acc_accl_z_acc=%f time=%u\n", sample_count, reader_imu.get_value("ACCL_Z"), delta_velocity_acc.z, (unsigned)loop_delta_time_acc_us);
     }
 
     return true;
@@ -315,8 +323,9 @@ void CSVLogReader::run_ekf(uint64_t frame_start_us,
 
     const float delta_angle_dt {loop_delta_time_acc_us / 1000000.0f};
     const float delta_velocity_dt {loop_delta_time_acc_us / 1000000.0f};
+    ::printf("### dv.z=%f dv_dt=%f\n", delta_velocity_acc.z, delta_velocity_dt);
     const struct log_RISI risi{
-    delta_velocity    : delta_velocity_acc,
+            delta_velocity    : delta_velocity_acc,
             delta_angle       : delta_angle_acc,
             delta_velocity_dt : delta_velocity_dt,
             delta_angle_dt    : delta_angle_dt,

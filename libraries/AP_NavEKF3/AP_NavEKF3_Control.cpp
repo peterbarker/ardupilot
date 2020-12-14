@@ -692,6 +692,7 @@ void NavEKF3_core::runYawEstimatorPrediction()
         trueAirspeed = 0.0f;
     }
 
+    ::printf("delvel.z=%f delveldt=%f\n", imuDataDelayed.delVel.z, imuDataDelayed.delVelDT);
     yawEstimator->update(imuDataDelayed.delAng, imuDataDelayed.delVel, imuDataDelayed.delAngDT, imuDataDelayed.delVelDT, EKFGSF_run_filterbank, trueAirspeed);
 }
 
@@ -711,6 +712,7 @@ void NavEKF3_core::runYawEstimatorCorrection()
         if (gpsDataToFuse) {
             Vector2f gpsVelNE = Vector2f(gpsDataDelayed.vel.x, gpsDataDelayed.vel.y);
             float gpsVelAcc = fmaxf(gpsSpdAccuracy, frontend->_gpsHorizVelNoise);
+            ::printf("fusing (vel=%f,%f velaccuracy=%f)\n", gpsVelNE[0], gpsVelNE[1], gpsVelAcc);
             yawEstimator->fuseVelData(gpsVelNE, gpsVelAcc);
 
             // after velocity data has been fused the yaw variance estimate will have been refreshed and
@@ -718,6 +720,7 @@ void NavEKF3_core::runYawEstimatorCorrection()
             float gsfYaw, gsfYawVariance;
             if (EKFGSF_getYaw(gsfYaw, gsfYawVariance)) {
                 if (EKFGSF_yaw_valid_count <  GSF_YAW_VALID_HISTORY_THRESHOLD) {
+                    AP_HAL::panic("success");
                     EKFGSF_yaw_valid_count++;
                 }
             } else {

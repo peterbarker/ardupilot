@@ -13,6 +13,7 @@
 // Control reset of yaw and magnetic field states
 void NavEKF3_core::controlMagYawReset()
 {
+    ::printf("inFlight=%u\n", inFlight);
 
     // Vehicles that can use a zero sideslip assumption (Planes) are a special case
     // They can use the GPS velocity to recover from bad initial compass data
@@ -228,6 +229,7 @@ void NavEKF3_core::SelectMagFusion()
          yaw_source != AP_NavEKF_Source::SourceYaw::EXTNAV)) {
 
         // because this type of reset event is not as time critical, require a continuous history of valid estimates
+        ::printf("yac=%u ysr=%u yvc=%u\n", yawAlignComplete, yaw_source_reset, EKFGSF_yaw_valid_count);
         if ((!yawAlignComplete || yaw_source_reset) && EKFGSF_yaw_valid_count >= GSF_YAW_VALID_HISTORY_THRESHOLD) {
             yawAlignComplete = EKFGSF_resetMainFilterYaw();
             yaw_source_reset = false;

@@ -5,6 +5,8 @@
 #include <GCS_MAVLink/GCS.h>
 #include <AP_DAL/AP_DAL.h>
 
+#pragma GCC optimize("O0")
+
 /* Monitor GPS data to see if quality is good enough to initialise the EKF
    Monitor magnetometer innovations to see if the heading is good enough to use GPS
    Return true if all criteria pass for 10 seconds
@@ -394,6 +396,7 @@ void NavEKF3_core::detectFlight()
     updateTouchdownExpected();
 
     // handle reset of counters used to control how many times we will try to reset the yaw to the EKF-GSF value per flight
+    ::printf("yawEstimator=%p erf=%u inFlight=%u expectTakeoff=%u gpsacc=%u\n", yawEstimator, (unsigned)inFlight, (unsigned)EKFGSF_run_filterbank, (unsigned)expectTakeoff, (unsigned)gpsAccuracyGood);
     if ((!prevOnGround && onGround) || !gpsAccuracyGood) {
         // disable filter bank
         EKFGSF_run_filterbank = false;

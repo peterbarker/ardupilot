@@ -26,6 +26,13 @@
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <GCS_MAVLink/GCS.h>
 
+#if !defined(HAL_DEBUG_BUILD) || !HAL_DEBUG_BUILD
+// consider #pragma GCC optimize("O2")
+#else
+    #pragma GCC optimize("O0")
+#endif
+
+
 EKFGSF_yaw::EKFGSF_yaw() {};
 
 void EKFGSF_yaw::update(const Vector3f &delAng,
@@ -104,7 +111,7 @@ void EKFGSF_yaw::update(const Vector3f &delAng,
     // Calculate a composite yaw as a weighted average of the states for each model.
     // To avoid issues with angle wrapping, the yaw state is converted to a vector with legnth
     // equal to the weighting value before it is summed.
-    Vector2f yaw_vector = {};
+    Vector2f yaw_vector;
     for (uint8_t mdl_idx = 0; mdl_idx < N_MODELS_EKFGSF; mdl_idx ++) {
         yaw_vector[0] += GSF.weights[mdl_idx] * cosf(EKF[mdl_idx].X[2]);
         yaw_vector[1] += GSF.weights[mdl_idx] * sinf(EKF[mdl_idx].X[2]);
@@ -127,8 +134,10 @@ void EKFGSF_yaw::update(const Vector3f &delAng,
     }
     */
 
+    ::fprintf(stderr, "GSF.yaw=%f\n", degrees(GSF.yaw));
     GSF.yaw_variance = 0.0f;
     for (uint8_t mdl_idx = 0; mdl_idx < N_MODELS_EKFGSF; mdl_idx ++) {
+        ::printf("model yaw: %f\n", degrees(EKF[mdl_idx].X[2]));
         float yawDelta = wrap_PI(EKF[mdl_idx].X[2] - GSF.yaw);
         GSF.yaw_variance +=  GSF.weights[mdl_idx] * (EKF[mdl_idx].P[2][2] + sq(yawDelta));
     }
@@ -196,7 +205,7 @@ void EKFGSF_yaw::predictAHRS(const uint8_t mdl_idx)
     // Perform angular rate correction using accel data and reduce correction as accel magnitude moves away from 1 g (reduces drift when vehicle picked up and moved).
     // During fixed wing flight, compensate for centripetal acceleration assuming coordinated turns and X axis forward
 
-    Vector3f tilt_error_gyro_correction = {}; // (rad/sec)
+    Vector3f tilt_error_gyro_correction; // (rad/sec)
 
     if (accel_gain > 0.0f) {
 
@@ -245,7 +254,7 @@ void EKFGSF_yaw::alignTilt()
 
     // Calculate earth frame North axis unit vector rotated into body frame, orthogonal to 'down_in_bf'
     // * operator is overloaded to provide a dot product
-    const Vector3f i_vec_bf(1.0f,0.0f,0.0f);
+    const Vector3f i_vec_bf{1.0f,0.0f,0.0f};
     Vector3f north_in_bf = i_vec_bf - down_in_bf * (i_vec_bf * down_in_bf);
     north_in_bf.normalize();
 
