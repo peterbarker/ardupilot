@@ -1,0 +1,3 @@
+ - uint64_t is too big
+ - doesn't handle not having UTC at arming/takeoff (can be fixed in comments)
+ - doesn't indicate whether you're still flying
