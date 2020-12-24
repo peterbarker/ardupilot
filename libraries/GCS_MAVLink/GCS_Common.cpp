@@ -237,6 +237,20 @@ int8_t GCS_MAVLINK::battery_remaining_pct(const uint8_t instance) const {
     return AP::battery().capacity_remaining_pct(percentage, instance) ? MIN(percentage, INT8_MAX) : -1;
 }
 
+void GCS_MAVLINK::flight_information(void)
+{
+    uint64_t arming_time_utc;
+    uint64_t takeoff_time_utc;
+    const uint64_t flight_uuid = 0;
+    mavlink_msg_flight_information_send(
+        chan,
+        AP_HAL::millis(),  // time_boot_ms
+        arming_time_utc,
+        takeoff_time_utc,
+        flight_uuid
+        );
+}
+
 void GCS_MAVLINK::send_battery_status(const uint8_t instance) const
 {
     // catch the battery backend not supporting the required number of cells
@@ -1043,6 +1057,7 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_DEEPSTALL,             MSG_LANDING},
 #endif
         { MAVLINK_MSG_ID_EXTENDED_SYS_STATE,    MSG_EXTENDED_SYS_STATE},
+        { MAVLINK_MSG_ID_FLIGHT_INFORMATION,    MSG_FLIGHT_INFORMATION},
         { MAVLINK_MSG_ID_AUTOPILOT_VERSION,     MSG_AUTOPILOT_VERSION},
 #if HAL_EFI_ENABLED
         { MAVLINK_MSG_ID_EFI_STATUS,            MSG_EFI_STATUS},
@@ -6042,6 +6057,11 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         break;
     }
 #endif
+
+    case MSG_FLIGHT_INFORMATION:
+        CHECK_PAYLOAD_SIZE(FLIGHT_INFORMATION);
+        send_flight_information();
+        break;
 
 #if AP_WINCH_ENABLED
     case MSG_WINCH_STATUS:
