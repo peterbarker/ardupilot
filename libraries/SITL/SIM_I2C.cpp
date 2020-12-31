@@ -26,6 +26,7 @@
 #include "SIM_BattMonitor_SMBus_Maxell.h"
 #include "SIM_BattMonitor_SMBus_Rotoye.h"
 #include "SIM_Airspeed_DLVR.h"
+#include "SIM_RF_GP2Y0E03.h"
 
 #include <signal.h>
 
@@ -49,6 +50,7 @@ static MaxSonarI2CXL maxsonari2cxl;
 static Maxell maxell;
 static Rotoye rotoye;
 static Airspeed_DLVR airspeed_dlvr;
+static GP2Y0E03 gp2y0e03;
 
 struct i2c_device_at_address {
     uint8_t bus;
@@ -63,6 +65,7 @@ struct i2c_device_at_address {
     { 1, 0x76, ignored }, // MS56XX
     { 2, 0x0B, rotoye },
     { 2, 0x28, airspeed_dlvr },
+    { 2, 0x80, gp2y0e03 },
 };
 
 void I2C::init()
