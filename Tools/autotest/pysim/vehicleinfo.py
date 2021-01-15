@@ -140,6 +140,7 @@ class VehicleInfo(object):
             },
             "heli-compound": {
                 "waf_target": "bin/arducopter-heli",
+                "default_params_filename": ["default_params/copter-heli.parm"],
             },
             "singlecopter": {
                 "waf_target": "bin/arducopter",
@@ -158,6 +159,7 @@ class VehicleInfo(object):
             "calibration": {
                 "extra_mavlink_cmds": "module load sitl_calibration;",
                 "external": True,  # lies!  OTOH, hard to take off with this
+                "default_params_filename": [],
             },
             "Callisto": {
                 "model": "octa-quad:@ROMFS/models/Callisto.json",
@@ -299,14 +301,17 @@ class VehicleInfo(object):
                 "waf_target": "bin/ardurover",
                 "default_params_filename": ["default_params/rover.parm",
                                             "default_params/rover-skid.parm"],
+                "external_model": True,
             },
             "airsim-rover": {
                 "waf_target": "bin/ardurover",
                 "default_params_filename": ["default_params/rover.parm",
                                             "default_params/airsim-rover.parm"],
+                "external_model": True,
             },
             "calibration": {
                 "extra_mavlink_cmds": "module load sitl_calibration;",
+                "default_params_filename": [],
             },
         },
     },
@@ -332,6 +337,7 @@ class VehicleInfo(object):
         "frames": {
             "tracker": {
                 "waf_target": "bin/antennatracker",
+                "default_params_filename": [],
             },
         },
     },
