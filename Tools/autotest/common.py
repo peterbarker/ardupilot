@@ -3996,7 +3996,7 @@ class AutoTest(ABC):
                     self.mav.flightmode, mode, custom_num))
             if (timeout is not None and
                     self.get_sim_time_cached() > tstart + timeout):
-                raise WaitModeTimeout("Did not change mode")
+                raise WaitModeTimeout("Did not change mode to (%s)" % mode)
             self.mavproxy.send('mode %s\n' % mode)
         self.progress("Got mode %s" % mode)
 
