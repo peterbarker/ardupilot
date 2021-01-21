@@ -3439,10 +3439,11 @@ class AutoTest(ABC):
         self.context_pop()
         return ret
 
-    def arm_motors_with_switch(self, switch_chan, timeout=20):
+    def arm_motors_with_switch(self, switch_chan, timeout=5):
         """Arm motors with switch."""
         self.progress("Arm motors with switch %d" % switch_chan)
         self.set_rc(switch_chan, 2000)
+        self.do_timesync_roundtrip()
         tstart = self.get_sim_time()
         while self.get_sim_time_cached() - tstart < timeout:
             self.wait_heartbeat()
@@ -3455,6 +3456,9 @@ class AutoTest(ABC):
     def disarm_motors_with_switch(self, switch_chan, timeout=20):
         """Disarm motors with switch."""
         self.progress("Disarm motors with switch %d" % switch_chan)
+        if not self.armed():
+            self.progress("Not armed, returning True for disarm_motors_with_switch")
+            return True
         self.set_rc(switch_chan, 1000)
         tstart = self.get_sim_time()
         while self.get_sim_time_cached() < tstart + timeout:
