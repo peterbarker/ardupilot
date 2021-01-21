@@ -14,6 +14,7 @@ from common import AutoTestTimeoutException, NotAchievedException, PreconditionF
 from pysim import vehicleinfo
 import operator
 
+from arduplane import AutoTestPlane
 
 # get location of scripts
 testdir = os.path.dirname(os.path.realpath(__file__))
@@ -438,6 +439,50 @@ class AutoTestQuadPlane(AutoTest):
             raise NotAchievedException("FFT did not detect a motor peak at %f, found %f, wanted %f" % (dblevel, pkAvg, freq))
 
         return freq
+
+    @staticmethod
+    def all_mode_information():
+        ret = {}
+#        ret.update(AutoTestPlane.all_mode_information())
+        ret.update({
+
+            'QSTABILIZE': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'QHOVER': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'QLOITER': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'QLAND': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'QRTL': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'QAUTOTUNE': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'QACRO': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+        })
+        return ret
 
     def fly_gyro_fft(self):
         """Use dynamic harmonic notch to control motor noise."""

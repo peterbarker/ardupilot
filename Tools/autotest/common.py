@@ -6348,6 +6348,27 @@ Also, ignores heartbeats not from our target system'''
         if ex is not None:
             raise ex
 
+    def mode_information(self, mode):
+        return self.all_mode_information()[mode]
+
+    def mode_can_be_set_via_mavlink(self, mode):
+        return self.mode_information(mode).get("settable_mavlink", True)
+
+    def mode_can_be_set(self, mode):
+        return self.mode_can_be_set_via_mavlink(mode)
+
+    def mode_is_rudder_armable(self, mode):
+        return self.mode_information(mode)["rudder_armable"]
+
+    def mode_is_rudder_disarmable(self, mode):
+        return self.mode_information(mode)["rudder_disarmable"]
+
+    def mode_is_switch_armable(self, mode):
+        return self.mode_information(mode)["switch_armable"]
+
+    def mode_is_switch_disarmable(self, mode):
+        return self.mode_is_switch_armable(mode)
+
     def test_arm_feature(self):
         """Common feature to test."""
         # TEST ARMING/DISARM
@@ -6381,28 +6402,71 @@ Also, ignores heartbeats not from our target system'''
         if not self.mavproxy_disarm_vehicle():
             raise NotAchievedException("Failed to DISARM")
 
-        if not self.is_sub():
-            self.start_subtest("Test arm with rc input")
-            if not self.arm_motors_with_rc_input():
-                raise NotAchievedException("Failed to arm with RC input")
-            self.progress("disarm with rc input")
-            if self.is_balancebot():
-                self.progress("balancebot can't disarm with RC input")
-                self.disarm_vehicle()
+#        for mode in self.mav.mode_mapping(): TODO: verify mode_mapping vs all_mode_information
+        for mode in self.all_mode_information().keys():
+            if mode == 'QRTL' or mode == 'QLAND':
+                # these won't let you disarm until the landing detector has fired
+                continue
+            if mode == 'QAUTOTUNE':
+                # QAUTOTUNE can't be entered on the ground
+                continue
+            if self.armed():
+                raise PreconditionFailedException("Shouldn't be armed here")
+            if self.is_plane() and mode == "AUTO":
+                # will automatically switch to RTL :-/
+                continue
+            if not self.mode_can_be_set(mode):
+                continue
+            self.change_mode(mode)
+            self.start_subtest("Test arm with rc input (mode=%s)" % mode)
+            armed = self.arm_motors_with_rc_input()
+            if self.mode_is_rudder_armable(mode):
+                if not armed:
+                    raise NotAchievedException("Failed to arm with RC input")
             else:
-                if not self.disarm_motors_with_rc_input():
-                    raise NotAchievedException("Failed to disarm with RC input")
+                if armed:
+                    raise NotAchievedException("Armed with RC input when I shouldn't've been able to")
 
-            self.start_subtest("Test arm and disarm with switch")
+            self.progress("disarm with rc input")
+            disarmed = self.disarm_motors_with_rc_input()
+            if self.mode_is_rudder_disarmable(mode):
+                if not disarmed:
+                    raise NotAchievedException("Failed to disarm with RC input")
+            else:
+                if disarmed:
+                    raise NotAchievedException("Disarmed with RC input when I shouldn't've been able to")
+
+            self.start_subtest("Test arm and disarm with switch (mode=%s)" % mode)
             arming_switch = 7
             self.set_parameter("RC%d_OPTION" % arming_switch, 41)
             self.set_rc(arming_switch, 1000)
             # delay so a transition is seen by the RC switch code:
             self.delay_sim_time(0.5)
-            if not self.arm_motors_with_switch(arming_switch):
-                raise NotAchievedException("Failed to arm with switch")
-            if not self.disarm_motors_with_switch(arming_switch):
-                raise NotAchievedException("Failed to disarm with switch")
+            armed = self.arm_motors_with_switch(arming_switch)
+            if self.mode_is_switch_armable(mode):
+                if not armed:
+                    raise NotAchievedException("Failed to arm with switch")
+            else:
+                if armed:
+                    raise NotAchievedException("Armed with switch when I wasn't supposed to")
+
+            # try to disarm with switch even if we didn't arm:
+            if not armed:
+                try:
+                    self.arm_vehicle()
+                    armed = True
+                except:
+                    pass
+
+            if armed:
+                disarmed = self.disarm_motors_with_switch(arming_switch)
+                if self.mode_is_switch_disarmable(mode):
+                    if not disarmed:
+                        raise NotAchievedException("Failed to disarm with switch")
+                else:
+                    if disarmed:
+                        raise NotAchievedException("Disarmed with switch when I wasn't supposed to")
+
             self.set_rc(arming_switch, 1000)
 
             if self.is_copter():
@@ -6422,19 +6486,21 @@ Also, ignores heartbeats not from our target system'''
                 self.set_rc(arming_switch, 1000)
 
             # Sub doesn't have 'stick commands'
-            self.start_subtest("Test arming failure with ARMING_RUDDER=0")
+            self.start_subtest("Test arming failure with ARMING_RUDDER=0 (mode=%s)" % mode)
             self.set_parameter("ARMING_RUDDER", 0)
             if self.arm_motors_with_rc_input():
                 raise NotAchievedException(
                     "Armed with rudder when ARMING_RUDDER=0")
-            self.start_subtest("Test disarming failure with ARMING_RUDDER=0")
+
+            self.start_subtest("Test disarming failure with ARMING_RUDDER=0 (mode=%s)" % mode)
             self.arm_vehicle()
             if self.disarm_motors_with_rc_input(watch_for_disabled=True):
                 raise NotAchievedException(
                     "Disarmed with rudder when ARMING_RUDDER=0")
             self.disarm_vehicle()
             self.wait_heartbeat()
-            self.start_subtest("Test disarming failure with ARMING_RUDDER=1")
+
+            self.start_subtest("Test disarming failure with ARMING_RUDDER=1 (mode=%s)" % mode)
             self.set_parameter("ARMING_RUDDER", 1)
             self.arm_vehicle()
             if self.disarm_motors_with_rc_input():
@@ -6832,6 +6898,12 @@ Also, ignores heartbeats not from our target system'''
         if mission_type == mavutil.mavlink.MAV_MISSION_TYPE_MISSION:
             self.last_wp_load = time.time()
 
+
+    def all_mode_names_from_mavlink_enum(self, enum_name):
+        ret = [x.name for x in mavutil.mavlink.enums[enum_name].values()]
+        print("ret: %s" % str(ret))
+        ret = [re.sub(".*_MODE_", "", x) for x in ret]
+        return ret
 
     def clear_fence_using_mavproxy(self, timeout=10):
         self.mavproxy.send("fence clear\n")

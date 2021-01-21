@@ -1746,6 +1746,98 @@ class AutoTestPlane(AutoTest):
         self.load_mission("Kingaroy-vlarge.txt")
         self.load_mission("Kingaroy-vlarge2.txt")
 
+    @staticmethod
+    def all_mode_information():
+        return {
+            'MANUAL': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'CIRCLE': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'STABILIZE': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'TRAINING': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'ACRO': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'FBWA': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'FBWB': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'CRUISE': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'AUTOTUNE': {
+                "rudder_armable": True,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'AUTO': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'RTL': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'LOITER': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'TAKEOFF': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'AVOID_ADSB': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'GUIDED': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+            },
+            'INITIALISING': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": False,
+                "settable_mavlink": False,
+            },
+            'THERMAL': {
+                "rudder_armable": False,
+                "rudder_disarmable": True,
+                "switch_armable": True,
+                "settable_mavlink": False,  # FIXME: can be set, but needs prep
+            },
+        }
+
     def fly_soaring(self):
 
         model="plane-soaring"

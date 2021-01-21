@@ -66,6 +66,47 @@ class AutoTestSub(AutoTest):
     def is_sub(self):
         return True
 
+    def mode_information(self, mode):
+        modes = {
+            "STABILIZE": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "ACRO": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "ALT_HOLD": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "AUTO": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "GUIDED": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "CIRCLE": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "SURFACE": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "POSHOLD": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+            "MANUAL": {
+                "rudder_armable": False,
+                "rudder_disarmable": False,
+            },
+        }
+        return modes[mode]
+
     def watch_altitude_maintained(self, delta=1, timeout=5.0):
         """Watch and wait for the actual altitude to be maintained
 
