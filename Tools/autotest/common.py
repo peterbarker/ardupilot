@@ -6575,11 +6575,15 @@ Also, ignores heartbeats not from our target system'''
         if m is None:
             raise NotAchievedException("Did not find an Armed EV message")
 
+        self.drain_mav_unparsed()
+
         self.progress("Checking for a disarm event")
         dfreader = self.dfreader_for_current_onboard_log()
         m = dfreader.recv_match(type="EV", condition="EV.Id==11") # disarmed
         if m is None:
             raise NotAchievedException("Did not find a disarmed EV message")
+
+        self.drain_mav_unparsed()
 
         self.progress("Checking for ARM.ArmState==1")
         dfreader = self.dfreader_for_current_onboard_log()
@@ -6587,11 +6591,15 @@ Also, ignores heartbeats not from our target system'''
         if m is None:
             raise NotAchievedException("Did not find a armed ARM message")
 
+        self.drain_mav_unparsed()
+
         self.progress("Checking for ARM.ArmState==0")
         dfreader = self.dfreader_for_current_onboard_log()
         m = dfreader.recv_match(type="ARM", condition="ARM.ArmState==0")
         if m is None:
             raise NotAchievedException("Did not find a disarmed ARM message")
+
+        self.drain_mav_unparsed()
 
         self.progress("ALL PASS")
     # TODO : Test arming magic;
