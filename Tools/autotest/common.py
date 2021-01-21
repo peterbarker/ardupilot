@@ -3393,7 +3393,7 @@ class AutoTest(ABC):
         self.wait_disarmed()
         return True
 
-    def arm_motors_with_rc_input(self, timeout=20):
+    def arm_motors_with_rc_input(self, timeout=10):
         """Arm motors with radio."""
         self.progress("Arm motors with radio")
         self.set_output_to_max(self.get_stick_arming_channel())
@@ -3402,14 +3402,14 @@ class AutoTest(ABC):
             self.wait_heartbeat()
             tdelta = self.get_sim_time_cached() - tstart
             if self.mav.motors_armed():
-                self.progress("MOTORS ARMED OK WITH RADIO")
+                self.progress("MOTORS ARMED OK WITH RC input")
                 self.set_output_to_trim(self.get_stick_arming_channel())
                 self.progress("Arm in %ss" % tdelta)  # TODO check arming time
                 return True
             print("Not armed after %f seconds" % (tdelta))
             if tdelta > timeout:
                 break
-        self.progress("Failed to ARM with radio")
+        self.progress("Failed to ARM with RC input")
         self.set_output_to_trim(self.get_stick_arming_channel())
         return False
 
