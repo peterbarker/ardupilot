@@ -7055,6 +7055,10 @@ class AutoTestCopter(AutoTest):
                  "Test RC CRSF",
                  self.test_crsf),  # 20secs ish
 
+            Test("IBus",
+                 "Test RC IBus",
+                 self.test_ibus), #20secs ish
+
             Test("MotorTest",
                  "Run Motor Tests",
                  self.test_motortest),  # 20secs ish
