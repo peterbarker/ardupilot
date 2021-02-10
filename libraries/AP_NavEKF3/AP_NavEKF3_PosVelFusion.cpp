@@ -874,6 +874,7 @@ void NavEKF3_core::FuseVelPosNED()
 
                 // inhibit delta angle bias state estimation by setting Kalman gains to zero
                 if (!inhibitDelAngBiasStates) {
+                    ::printf("############# calculating delta-angle-bias states\n");
                     for (uint8_t i = 10; i<=12; i++) {
                         Kfusion[i] = P[i][stateIndex]*SK;
                     }

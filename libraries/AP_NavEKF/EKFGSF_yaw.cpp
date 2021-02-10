@@ -227,6 +227,7 @@ void EKFGSF_yaw::predictAHRS(const uint8_t mdl_idx)
     // Gyro bias estimation
     const float gyro_bias_limit = radians(5.0f);
     const float spinRate = ang_rate_delayed_raw.length();
+    ::printf("spinrate: %f   z=%f\n", spinRate, gyro_bias_limit);
     if (spinRate < 0.175f) {
         AHRS[mdl_idx].gyro_bias -= tilt_error_gyro_correction * (EKFGSF_gyroBiasGain * angle_dt);
 
