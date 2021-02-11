@@ -250,7 +250,7 @@ bool CSVLogReader::update()
     uint8_t sample_count = 0;
     while (reader_imu.next_line()) {
         // TOW is in seconds-since-GPS-week-start
-        ::printf("IMU TOW: %f\n", reader_imu.get_value("TOW"));
+        ::fprintf(stderr, "    IMU TOW: %f\n", reader_imu.get_value("TOW"));
         const uint64_t tow = reader_imu.get_value("TOW") * 1000000;
         // ::printf("TOW=%lu (%f)\n", tow, reader_imu.get_value("TOW") * double(1000000));
         if (frame_start_us == 0) {
@@ -263,7 +263,9 @@ bool CSVLogReader::update()
         const uint64_t loop_delta_time = tow - frame_start_us;
 
         if (loop_delta_time >= loop_interval_us)  {
+            printf("Feeding data to EKF @ %lu\n", frame_start_us);
             run_ekf(frame_start_us, loop_delta_time_acc_us, delta_velocity_acc, delta_angle_acc);
+            printf("run_ekf done\n");
             frame_start_us = tow;
             delta_velocity_acc.zero();
             delta_angle_acc.zero();
@@ -272,7 +274,7 @@ bool CSVLogReader::update()
         }
 
         sample_count++;
-        const double delta_t = loop_delta_time / 1000000.0f;
+        const double delta_t = (tow - last_tow) / 1000000.0f;
         delta_velocity_acc += Vector3f{
             float(reader_imu.get_value("ACCL_X") * delta_t),
             float(reader_imu.get_value("ACCL_Y") * delta_t),
@@ -284,11 +286,15 @@ bool CSVLogReader::update()
             float(reader_imu.get_value("GYRO_Z") * delta_t)
         };
 //        loop_delta_time_acc_us += tow - last_tow;
-        loop_delta_time_acc_us += loop_delta_time;
+        loop_delta_time_acc_us += (tow - last_tow);
         last_tow = tow;
         (void)last_tow;
 
-        ::fprintf(stderr, "%u accl_z=%f acc_accl_z_acc=%f time=%u\n", sample_count, reader_imu.get_value("ACCL_Z"), delta_velocity_acc.z, (unsigned)loop_delta_time_acc_us);
+        ::fprintf(stderr, "    %u accl_z=%f accl_z_acc=%f time=%u\n",
+                  sample_count,
+                  reader_imu.get_value("ACCL_Z"),
+                  delta_velocity_acc.z,
+                  (unsigned)loop_delta_time_acc_us);
     }
 
     return true;
@@ -301,7 +307,6 @@ void CSVLogReader::run_ekf(uint64_t frame_start_us,
     )
 {
     const uint16_t loop_rate_hz = 50;
-    printf("Go! (%lu)\n", frame_start_us);
 
     const struct log_RFRH rfrh{
     time_us : frame_start_us,

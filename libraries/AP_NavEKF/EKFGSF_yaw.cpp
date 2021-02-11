@@ -35,6 +35,8 @@
 
 EKFGSF_yaw::EKFGSF_yaw() {};
 
+#include <stdio.h>
+
 void EKFGSF_yaw::update(const Vector3f &delAng,
                         const Vector3f &delVel,
                         const float delAngDT,
