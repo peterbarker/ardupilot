@@ -176,7 +176,12 @@ void AP_Vehicle::setup()
     generator.init();
 #endif
 
+#if HAL_IBUS_TELEM_ENABLED
+    //will try to init IBus telemetry if configured on a serial port
+    ibus_telem.init();
+#endif
 }
+
 
 void AP_Vehicle::loop()
 {
@@ -230,6 +235,9 @@ const AP_Scheduler::Task AP_Vehicle::scheduler_tasks[] = {
 #endif
 #if OSD_ENABLED
     SCHED_TASK(publish_osd_info, 1, 10),
+#endif
+#if HAL_IBUS_TELEM_ENABLED
+    SCHED_TASK_CLASS(AP_IBus_Telem, &vehicle.ibus_telem,    loop,                     400, 85),
 #endif
 };
 
