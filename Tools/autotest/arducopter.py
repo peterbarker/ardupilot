@@ -2178,6 +2178,23 @@ class AutoTestCopter(AutoTest):
         self.wait_disarmed()
         self.progress("MOTORS DISARMED OK")
 
+
+    def interrupted_mission(self):
+        self.progress("Duck into CIRCLE part-way through a mission")
+        self.set_parameter("AUTO_OPTIONS", 3)
+        num_wp = self.load_mission("copter_mission.txt", strict=False)
+        self.change_mode("AUTO")
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_current_waypoint(2)
+        self.change_mode('CIRCLE')
+        self.delay_sim_time(10)
+        self.change_mode('AUTO')
+        self.wait_current_waypoint(2)
+        self.progress("Ensuring we go to correct waypoint")
+        self.wait_waypoint(0, num_wp-1, timeout=500)
+        self.wait_disarmed()
+
     # fly_auto_test using CAN GPS - fly mission which tests normal operation alongside CAN GPS
     def fly_auto_test_using_can_gps(self):
         self.set_parameter("CAN_P1_DRIVER", 1)
@@ -7555,6 +7572,10 @@ class AutoTestCopter(AutoTest):
             ("CopterMission",
              "Fly copter mission",
              self.fly_auto_test),  # 37s
+
+            ("InterruptedMission",
+             "Fly interrupted copter mission",
+             self.interrupted_mission),  # 37s
 
             ("SplineLastWaypoint",
              "Test Spline as last waypoint",
