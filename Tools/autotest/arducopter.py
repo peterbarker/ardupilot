@@ -2143,6 +2143,18 @@ class AutoTestCopter(AutoTest):
 
         self.progress("Auto mission completed: passed!")
 
+        self.progress("Auto mission completed: passed!")
+
+        self.start_subtest("Use auto-arming and no-throttle Run consecutive missions")
+        self.set_parameter("AUTO_OPTIONS", 3)
+
+        self.progress("Starting second run")
+        self.arm_vehicle()
+        self.wait_waypoint(0, num_wp-1, timeout=500)
+        self.wait_disarmed()
+
+        self.progress("Back-to-back missions work")
+
     def fly_loaded_mission(self, num_wp):
         '''fly mission loaded on vehicle.  FIXME: get num_wp from vehicle'''
         self.progress("test: Fly a mission from 1 to %u" % num_wp)
