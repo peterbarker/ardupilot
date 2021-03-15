@@ -473,7 +473,7 @@ public:
 
     /// load_cmd_from_storage - load command from storage
     ///     true is return if successful
-    bool read_cmd_from_storage(uint16_t index, Mission_Command& cmd) const;
+    bool read_cmd_from_storage(uint16_t index, Mission_Command& cmd) const WARN_IF_UNUSED;
 
     /// write_cmd_to_storage - write a command to storage
     ///     cmd.index is used to calculate the storage location
