@@ -296,7 +296,12 @@ bool AP_Logger_Backend::Write_Mission_Cmd(const AP_Mission &mission,
                                               const AP_Mission::Mission_Command &cmd)
 {
     mavlink_mission_item_int_t mav_cmd = {};
-    AP_Mission::mission_cmd_to_mavlink_int(cmd,mav_cmd);
+    if (!AP_Mission::mission_cmd_to_mavlink_int(cmd,mav_cmd)) {
+        gcs().send_text(MAV_SEVERITY_INFO, "long-to-int conversion failure");
+        // have to lie about successfully writing the block; the
+        // assumption for failure is "no space" and we'll get retried
+        return true;
+    }
     const struct log_Cmd pkt{
         LOG_PACKET_HEADER_INIT(LOG_CMD_MSG),
         time_us         : AP_HAL::micros64(),
