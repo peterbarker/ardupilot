@@ -442,19 +442,19 @@ public:
 
     /// resume - continues the mission execution from where we last left off
     ///     previous running commands will be re-initialised
-    void resume();
+    bool resume() WARN_IF_UNUSED;
 
     /// start_or_resume - if MIS_AUTORESTART=0 this will call resume(), otherwise it will call start()
     void start_or_resume();
 
     /// check mission starts with a takeoff command
-    bool starts_with_takeoff_cmd();
+    bool starts_with_takeoff_cmd() WARN_IF_UNUSED;
 
     /// reset - reset mission to the first command
     void reset();
 
     /// clear - clears out mission
-    bool clear();
+    bool clear() WARN_IF_UNUSED;
 
     /// truncate - truncate any mission items beyond given index
     void truncate(uint16_t index);
@@ -470,15 +470,15 @@ public:
     /// add_cmd - adds a command to the end of the command list and writes to storage
     ///     returns true if successfully added, false on failure
     ///     cmd.index is updated with it's new position in the mission
-    bool add_cmd(Mission_Command& cmd);
+    bool add_cmd(Mission_Command& cmd) WARN_IF_UNUSED;
 
     /// replace_cmd - replaces the command at position 'index' in the command list with the provided cmd
     ///     replacing the current active command will have no effect until the command is restarted
     ///     returns true if successfully replaced, false on failure
-    bool replace_cmd(uint16_t index, const Mission_Command& cmd);
+    bool replace_cmd(uint16_t index, const Mission_Command& cmd) WARN_IF_UNUSED;
 
     /// is_nav_cmd - returns true if the command's id is a "navigation" command, false if "do" or "conditional" command
-    static bool is_nav_cmd(const Mission_Command& cmd);
+    static bool is_nav_cmd(const Mission_Command& cmd) WARN_IF_UNUSED;
 
     /// get_current_nav_cmd - returns the current "navigation" command
     const Mission_Command& get_current_nav_cmd() const
@@ -527,7 +527,7 @@ public:
     /// get_next_nav_cmd - gets next "navigation" command found at or after start_index
     ///     returns true if found, false if not found (i.e. reached end of mission command list)
     ///     accounts for do_jump commands
-    bool get_next_nav_cmd(uint16_t start_index, Mission_Command& cmd);
+    bool get_next_nav_cmd(uint16_t start_index, Mission_Command& cmd) WARN_IF_UNUSED;
 
     /// get the ground course of the next navigation leg in centidegrees
     /// from 0 36000. Return default_angle if next navigation
@@ -547,7 +547,7 @@ public:
     }
 
     // set_current_cmd - jumps to command specified by index
-    bool set_current_cmd(uint16_t index, bool rewind = false);
+    bool set_current_cmd(uint16_t index, bool rewind = false) WARN_IF_UNUSED;
 
     // restart current navigation command.  Used to handle external changes to mission
     // returns true on success, false if current nav command has been deleted
@@ -555,16 +555,16 @@ public:
 
     /// load_cmd_from_storage - load command from storage
     ///     true is return if successful
-    bool read_cmd_from_storage(uint16_t index, Mission_Command& cmd) const;
+    bool read_cmd_from_storage(uint16_t index, Mission_Command& cmd) const WARN_IF_UNUSED;
 
     /// write_cmd_to_storage - write a command to storage
     ///     cmd.index is used to calculate the storage location
     ///     true is returned if successful
-    bool write_cmd_to_storage(uint16_t index, const Mission_Command& cmd);
+    bool write_cmd_to_storage(uint16_t index, const Mission_Command& cmd) WARN_IF_UNUSED;
 
     /// write_home_to_storage - writes the special purpose cmd 0 (home) to storage
     ///     home is taken directly from ahrs
-    void write_home_to_storage();
+    bool write_home_to_storage() WARN_IF_UNUSED;
 
     static MAV_MISSION_RESULT convert_MISSION_ITEM_to_MISSION_ITEM_INT(const mavlink_mission_item_t &mission_item,
             mavlink_mission_item_int_t &mission_item_int) WARN_IF_UNUSED;
@@ -581,7 +581,7 @@ public:
 
     // mission_cmd_to_mavlink_int - converts an AP_Mission::Mission_Command object to a mavlink message which can be sent to the GCS
     //  return true on success, false on failure
-    static bool mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& cmd, mavlink_mission_item_int_t& packet);
+    static bool mission_cmd_to_mavlink_int(const AP_Mission::Mission_Command& cmd, mavlink_mission_item_int_t& packet) WARN_IF_UNUSED;
 
     // return the last time the mission changed in milliseconds
     uint32_t last_change_time_ms(void) const
@@ -597,13 +597,13 @@ public:
     // find the nearest landing sequence starting point (DO_LAND_START) and
     // switch to that mission item.  Returns false if no DO_LAND_START
     // available.
-    bool jump_to_landing_sequence(void);
+    bool jump_to_landing_sequence(void) WARN_IF_UNUSED;
 
     // jumps the mission to the closest landing abort that is planned, returns false if unable to find a valid abort
-    bool jump_to_abort_landing_sequence(void);
+    bool jump_to_abort_landing_sequence(void) WARN_IF_UNUSED;
 
     // check which is the shortest route to landing an RTL via a DO_LAND_START or continuing on the current mission plan
-    bool is_best_land_sequence(void);
+    bool is_best_land_sequence(void) WARN_IF_UNUSED;
 
     // set in_landing_sequence flag
     void set_in_landing_sequence_flag(bool flag)
@@ -612,7 +612,7 @@ public:
     }
 
     // get in_landing_sequence flag
-    bool get_in_landing_sequence_flag() const {
+    bool get_in_landing_sequence_flag() const WARN_IF_UNUSED {
         return _flags.in_landing_sequence;
     }
 
@@ -645,7 +645,7 @@ public:
       disarm and mission logic should stop
      */
     bool continue_after_land_check_for_takeoff(void);
-    bool continue_after_land(void) const {
+    bool continue_after_land(void) const WARN_IF_UNUSED {
         return (_options.get() & AP_MISSION_MASK_CONTINUE_AFTER_LAND) != 0;
     }
 
@@ -653,8 +653,8 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
     // allow lua to get/set any WP items in any order in a mavlink-ish kinda way.
-    bool get_item(uint16_t index, mavlink_mission_item_int_t& result) const ;
-    bool set_item(uint16_t index, mavlink_mission_item_int_t& source) ;
+    bool get_item(uint16_t index, mavlink_mission_item_int_t& result) const WARN_IF_UNUSED;
+    bool set_item(uint16_t index, mavlink_mission_item_int_t& source) WARN_IF_UNUSED;
 
 private:
     static AP_Mission *_singleton;
@@ -682,15 +682,15 @@ private:
     /// complete - mission is marked complete and clean-up performed including calling the mission_complete_fn
     void complete();
 
-    bool verify_command(const Mission_Command& cmd);
-    bool start_command(const Mission_Command& cmd);
+    bool verify_command(const Mission_Command& cmd) WARN_IF_UNUSED;
+    bool start_command(const Mission_Command& cmd) WARN_IF_UNUSED;
 
     /// advance_current_nav_cmd - moves current nav command forward
     //      starting_index is used to set the index from which searching will begin, leave as 0 to search from the current navigation target
     ///     do command will also be loaded
     ///     accounts for do-jump commands
     //      returns true if command is advanced, false if failed (i.e. mission completed)
-    bool advance_current_nav_cmd(uint16_t starting_index = 0);
+    bool advance_current_nav_cmd(uint16_t starting_index = 0) WARN_IF_UNUSED;
 
     /// advance_current_do_cmd - moves current do command forward
     ///     accounts for do-jump commands
@@ -701,13 +701,13 @@ private:
     ///     returns true if found, false if not found (i.e. mission complete)
     ///     accounts for do_jump commands
     ///     increment_jump_num_times_if_found should be set to true if advancing the active navigation command
-    bool get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool increment_jump_num_times_if_found, bool send_gcs_msg = true);
+    bool get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool increment_jump_num_times_if_found, bool send_gcs_msg = true) WARN_IF_UNUSED;
 
     /// get_next_do_cmd - gets next "do" or "conditional" command after start_index
     ///     returns true if found, false if not found
     ///     stops and returns false if it hits another navigation command before it finds the first do or conditional command
     ///     accounts for do_jump commands but never increments the jump's num_times_run (get_next_nav_cmd is responsible for this)
-    bool get_next_do_cmd(uint16_t start_index, Mission_Command& cmd);
+    bool get_next_do_cmd(uint16_t start_index, Mission_Command& cmd) WARN_IF_UNUSED;
 
     ///
     /// jump handling methods
@@ -727,16 +727,16 @@ private:
     void check_eeprom_version();
 
     // check if command is a landing type command.  Asside the obvious, MAV_CMD_DO_PARACHUTE is considered a type of landing
-    bool is_landing_type_cmd(uint16_t id) const;
+    bool is_landing_type_cmd(uint16_t id) const WARN_IF_UNUSED;
 
     // check if command is a takeoff type command.
     bool is_takeoff_type_cmd(uint16_t id) const;
 
     // approximate the distance travelled to get to a landing.  DO_JUMP commands are observed in look forward.
-    bool distance_to_landing(uint16_t index, float &tot_distance,Location current_loc);
+    bool distance_to_landing(uint16_t index, float &tot_distance,Location current_loc) WARN_IF_UNUSED;
 
     // calculate the location of a resume cmd wp
-    bool calc_rewind_pos(Mission_Command& rewind_cmd);
+    bool calc_rewind_pos(Mission_Command& rewind_cmd) WARN_IF_UNUSED;
 
     // update progress made in mission to store last position in the event of mission exit
     void update_exit_position(void);
@@ -787,12 +787,12 @@ private:
     static HAL_Semaphore _rsem;
 
     // mission items common to all vehicles:
-    bool start_command_do_aux_function(const AP_Mission::Mission_Command& cmd);
-    bool start_command_do_gripper(const AP_Mission::Mission_Command& cmd);
-    bool start_command_do_servorelayevents(const AP_Mission::Mission_Command& cmd);
-    bool start_command_camera(const AP_Mission::Mission_Command& cmd);
-    bool start_command_parachute(const AP_Mission::Mission_Command& cmd);
-    bool command_do_set_repeat_dist(const AP_Mission::Mission_Command& cmd);
+    bool start_command_do_aux_function(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
+    bool start_command_do_gripper(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
+    bool start_command_do_servorelayevents(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
+    bool start_command_camera(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
+    bool start_command_parachute(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
+    bool command_do_set_repeat_dist(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
 
     bool start_command_do_sprayer(const AP_Mission::Mission_Command& cmd);
     bool start_command_do_scripting(const AP_Mission::Mission_Command& cmd);
@@ -803,6 +803,10 @@ private:
       format to take advantage of new packing
      */
     void format_conversion(uint8_t tag_byte, const Mission_Command &cmd, PackedContent &packed_content) const;
+
+    bool start_command_do_sprayer(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
+    bool start_command_do_scripting(const AP_Mission::Mission_Command& cmd) WARN_IF_UNUSED;
+
 };
 
 namespace AP

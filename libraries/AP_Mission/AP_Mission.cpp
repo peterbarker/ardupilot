@@ -61,8 +61,11 @@ void AP_Mission::init()
 
     // If Mission Clear bit is set then it should clear the mission, otherwise retain the mission.
     if (AP_MISSION_MASK_MISSION_CLEAR & _options) {
-        gcs().send_text(MAV_SEVERITY_INFO, "Clearing Mission");
-        clear();
+        if (clear()) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Cleared Mission");
+        } else {
+            gcs().send_text(MAV_SEVERITY_INFO, "Cleared Mission failed");
+        }
     }
 
     _last_change_time_ms = AP_HAL::millis();
@@ -91,12 +94,12 @@ void AP_Mission::stop()
 
 /// resume - continues the mission execution from where we last left off
 ///     previous running commands will be re-initialized
-void AP_Mission::resume()
+bool AP_Mission::resume()
 {
     // if mission had completed then start it from the first command
     if (_flags.state == MISSION_COMPLETE) {
         start();
-        return;
+        return true;
     }
 
     // if mission had stopped then restart it
@@ -106,7 +109,7 @@ void AP_Mission::resume()
         // if no valid nav command index restart from beginning
         if (_nav_cmd.index == AP_MISSION_CMD_INDEX_NONE) {
             start();
-            return;
+            return true;
         }
     }
 
@@ -116,7 +119,7 @@ void AP_Mission::resume()
         // been from a previously loaded mission it is illogical to ever resume
         // flying to a command that has been excluded from the current mission
         start();
-        return;
+        return true;
     }
 
     // rewind the mission wp if the repeat distance has been set via MAV_CMD_DO_SET_RESUME_REPEAT_DIST
@@ -133,7 +136,7 @@ void AP_Mission::resume()
             _flags.nav_cmd_loaded = true;
             // set flag to prevent history being re-written
             _flags.resuming_mission = true;
-            return;
+            return true;
         }
     }
 
@@ -144,14 +147,20 @@ void AP_Mission::resume()
 
     if (_flags.do_cmd_loaded && _do_cmd.index != AP_MISSION_CMD_INDEX_NONE) {
         // restart the active do command, which will also load the nav command for us
-        set_current_cmd(_do_cmd.index);
+        if (!set_current_cmd(_do_cmd.index)) {
+            return false;
+        }
     } else if (_flags.nav_cmd_loaded) {
         // restart the active nav command
-        set_current_cmd(_nav_cmd.index);
+        if (!set_current_cmd(_nav_cmd.index)) {
+            return false;
+        }
     }
 
     // Note: if there is no active command then the mission must have been stopped just after the previous nav command completed
     //      update will take care of finding and starting the nav command
+
+    return true;
 }
 
 /// check if the next nav command is a takeoff, skipping delays
@@ -215,7 +224,9 @@ void AP_Mission::start_or_resume()
     if (_restart == 1 && !_force_resume) {
         start();
     } else {
-        resume();
+        if (!resume()) {
+            // ignored - probably not a good thing
+        }
         _force_resume = false;
     }
 }
@@ -855,12 +866,12 @@ bool AP_Mission::write_cmd_to_storage(uint16_t index, const Mission_Command& cmd
 
 /// write_home_to_storage - writes the special purpose cmd 0 (home) to storage
 ///     home is taken directly from ahrs
-void AP_Mission::write_home_to_storage()
+bool AP_Mission::write_home_to_storage()
 {
     Mission_Command home_cmd = {};
     home_cmd.id = MAV_CMD_NAV_WAYPOINT;
     home_cmd.content.location = AP::ahrs().get_home();
-    write_cmd_to_storage(0,home_cmd);
+    return write_cmd_to_storage(0,home_cmd);
 }
 
 MAV_MISSION_RESULT AP_Mission::sanity_check_params(const mavlink_mission_item_int_t& packet)
@@ -1877,7 +1888,9 @@ bool AP_Mission::advance_current_nav_cmd(uint16_t starting_index)
             if (!_flags.do_cmd_loaded) {
                 _do_cmd = cmd;
                 _flags.do_cmd_loaded = true;
-                start_command(_do_cmd);
+                if (!start_command(_do_cmd)) {
+                    // ignore this failure (e.g. no sprayer configured)
+                }
             }
         }
         // move onto next command
@@ -1928,7 +1941,9 @@ void AP_Mission::advance_current_do_cmd()
     // set current do command and start it
     _do_cmd = cmd;
     _flags.do_cmd_loaded = true;
-    start_command(_do_cmd);
+    if (!start_command(_do_cmd)) {
+        // ignore this e.g. sprayer not configured
+    }
 }
 
 /// get_next_cmd - gets next command found at or after start_index
@@ -2172,7 +2187,10 @@ bool AP_Mission::jump_to_landing_sequence(void)
 
         //if the mission has ended it has to be restarted
         if (state() == AP_Mission::MISSION_STOPPED) {
-            resume();
+            if (!resume()) {
+                gcs().send_text(MAV_SEVERITY_WARNING, "Unable to start landing sequence");
+                return false;
+            }
         }
 
         gcs().send_text(MAV_SEVERITY_INFO, "Landing sequence start");
@@ -2212,7 +2230,9 @@ bool AP_Mission::jump_to_abort_landing_sequence(void)
 
         //if the mission has ended it has to be restarted
         if (state() == AP_Mission::MISSION_STOPPED) {
-            resume();
+            if (!resume()) {
+                return false;
+            }
         }
 
         _flags.in_landing_sequence = false;
