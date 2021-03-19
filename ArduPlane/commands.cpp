@@ -148,7 +148,11 @@ bool Plane::set_home_persistently(const Location &loc)
     }
 
     // Save Home to EEPROM
-    mission.write_home_to_storage();
+    if (!mission.write_home_to_storage()) {
+        // this is a litle embarassing as we have actually managed to
+        // set it in the AHRS but not in eeprom.  We'll report success
+        // in this case.
+    }
 
     return true;
 }
