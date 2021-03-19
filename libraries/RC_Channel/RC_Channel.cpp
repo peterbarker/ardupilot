@@ -882,7 +882,9 @@ void RC_Channel::do_aux_function_clear_wp(const AuxSwitchPos ch_flag)
         return;
     }
     if (ch_flag == AuxSwitchPos::HIGH) {
-        mission->clear();
+        if (!mission->clear()) {
+            // ignore this error
+        }
     }
 }
 
