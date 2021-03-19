@@ -4570,7 +4570,7 @@ class AutoTest(ABC):
         """Manually direct the vehicle to the target heading."""
         if self.is_copter() or self.is_sub():
             self.set_rc(4, 1580)
-            self.wait_heading(heading)
+            self.wait_heading(heading, timeout=60)
             self.set_rc(4, 1500)
         if self.is_plane():
             self.progress("NOT IMPLEMENTED")

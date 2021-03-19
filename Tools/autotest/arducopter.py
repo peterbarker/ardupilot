@@ -1364,9 +1364,7 @@ class AutoTestCopter(AutoTest):
 
         # first east
         self.progress("turn east")
-        self.set_rc(4, 1580)
-        self.wait_heading(160)
-        self.set_rc(4, 1500)
+        self.reach_heading_manual(160)
 
         # fly forward (east) at least 20m
         self.set_rc(2, 1100)
