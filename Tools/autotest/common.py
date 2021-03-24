@@ -1184,11 +1184,12 @@ class LocationInt(object):
 
 class Test(object):
     '''a test definition - information about a test'''
-    def __init__(self, name, description, function, attempts=1):
+    def __init__(self, name, description, function, attempts=1, speedup=None):
         self.name = name
         self.description = description
         self.function = function
         self.attempts = attempts
+        self.speedup = speedup
 
 
 class AutoTest(ABC):
@@ -5664,12 +5665,18 @@ Also, ignores heartbeats not from our target system'''
 
         start_time = time.time()
 
+        orig_speedup = None
+
         ex = None
         try:
             self.check_rc_defaults()
             self.change_mode(self.default_mode())
             self.drain_mav()
             self.drain_all_pexpects()
+            if test.speedup is not None:
+                self.progress("Overriding speedup to %u" % test.speedup)
+                orig_speedup = self.get_parameter("SIM_SPEEDUP")
+                self.set_parameter("SIM_SPEEDUP", test.speedup)
 
             test_function()
         except Exception as e:
@@ -5678,6 +5685,9 @@ Also, ignores heartbeats not from our target system'''
         self.test_timings[desc] = time.time() - start_time
         reset_needed = self.contexts[-1].sitl_commandline_customised
         self.context_pop()
+
+        if orig_speedup is not None:
+            self.set_parameter("SIM_SPEEDUP", orig_speedup)
 
         passed = True
         if ex is not None:

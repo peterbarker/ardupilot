@@ -19,6 +19,8 @@ from common import AutoTest
 from common import AutoTestTimeoutException
 from common import NotAchievedException
 from common import PreconditionFailedException
+from common import Test
+
 from pymavlink.rotmat import Vector3
 
 import operator
@@ -2883,13 +2885,15 @@ class AutoTestPlane(AutoTest):
              "Test external AHRS support",
              self.fly_external_AHRS),
 
-            ("Deadreckoning",
-             "Test deadreckoning support",
-             self.deadreckoning),
+            Test("Deadreckoning",
+                 "Test deadreckoning support",
+                 self.deadreckoning,
+                 speedup=8),
 
-            ("DeadreckoningNoAirSpeed",
-             "Test deadreckoning support with no airspeed sensor",
-             self.deadreckoning_no_airspeed_sensor),
+            Test("DeadreckoningNoAirSpeed",
+                 "Test deadreckoning support with no airspeed sensor",
+                 self.deadreckoning_no_airspeed_sensor,
+                 speedup=8),
 
             ("EKFlaneswitch",
              "Test EKF3 Affinity and Lane Switching",
