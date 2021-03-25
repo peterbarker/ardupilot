@@ -46,6 +46,8 @@ public:
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo var_info[];
 
+    bool controlling_position() const { return use_poshold; }
+
 protected:
     // methods that must be supplied by the vehicle specific subclass
     virtual bool init(void) = 0;
