@@ -252,7 +252,7 @@ while True:
                 # timestamp,Lat,Lng,ADC1,matched_ADC2,Lux,speed
                 match_count += 1
                 lux = (entry.adcl.ADC1+adc_to_use.ADC2)
-                if lux > 0.01:  # "less than 2 decimal places is noise
+                if lux > 0.001:  # Firstly anything below 0.001 should be considered zero.
                     non_zero_match_count += 1
                 print("%u,%f,%f,%f,%f,%f,%f" % (entry.adcl.TimeUS,
                                                 entry.location[0],
