@@ -5,104 +5,43 @@ Stripped down version of mavlogdump.py.
 '''
 from __future__ import print_function
 
-import fnmatch
-import pymavlink.mavextra
-import os
-import re
 import sys
-import time
 import math
 
+from pymavlink import mavextra
+from pymavlink import mavutil
+
 try:
-    from pymavlink.mavextra import *
-except:
+    from pymavlink.mavextra import *  # noqa
+except Exception:
     print("WARNING: Numpy missing, mathematical notation will not be supported..")
 
 from argparse import ArgumentParser
 parser = ArgumentParser(description=__doc__)
 
 parser.add_argument("--robust", action='store_true', help="Enable robust parsing (skip over bad data)")
-parser.add_argument("--csv_sep", dest="csv_sep", default=",", help="Select the delimiter between columns for the output CSV file. Use 'tab' to specify tabs.")
+parser.add_argument(
+    "--csv_sep",
+    dest="csv_sep",
+    default=",",
+    help="Select the delimiter between columns for the output CSV file. Use 'tab' to specify tabs."
+)
 parser.add_argument("--zero-time-base", action='store_true', help="use Z time base for DF logs")
 parser.add_argument("log", metavar="LOG")
 parser.add_argument("--debug", action='store_true', help="debug mode")
 
 args = parser.parse_args()
 
-from pymavlink import mavutil
 
 def debug(msg):
     if not args.debug:
         return
     print(msg, file=sys.stderr)
 
-filename = args.log
-
-class Column:
-    def __init__(self, msg, field, function=None, units=None, print_fmt=None, heading=None):
-        self.msg = msg
-        self.field = field
-        self.units = units
-        self.print_fmt = print_fmt
-        self.heading = heading
-        self.function = function
-
-columns = [
-    Column(None, None, heading='Date', function=lambda:time.strftime('%Y-%m-%d', time.gmtime(m._timestamp))),
-    Column(None, None, heading='Time', function=lambda:time.strftime('%H:%M:%S', time.gmtime(m._timestamp))),
-    Column('GPS','Lat', units='DegreesLatitude', print_fmt="{:.8f}"),
-    Column('GPS','Lng', units='DegreesLongitude', print_fmt="{:.8f}"),
-    Column('GPS','Spd', units='metres_per_second', print_fmt="{:.8f}"),
-    Column('GPA','HAcc', units='metres'),
-    Column('GPS','Status'),
-    Column('NKF1', 'VN', units='metres_per_second'),
-    Column('NKF1', 'VE', units='metres_per_second'),
-    Column('POS', 'Lat', units='DegreesLatitude'),
-    Column('POS', 'Lng', units='DegreesLongitude'),
-#    Column('ADCL', 'ADC1'),
-#    Column('ADCL', 'ADC2'),
-    Column(None, None, function=lambda:((closest_adc1_value_for_adc2(last_msgs["POS"],last_msgs["ATT"],last_msgs["NKF1"])+last_msgs["ADCL"].ADC2)*1000), heading="Lux"),
-    Column('ATT', 'Pitch', units='degrees'),
-    Column('ATT', 'Roll', units='degrees'),
-    Column('IMU','AccX', units='metres_per_second_per_second'),
-    Column('IMU','AccY', units='metres_per_second_per_second'),
-    Column('IMU','AccZ', units='metres_per_second_per_second'),
-]
-
-types = set(["ADCL"])
-for column in columns:
-    if column.msg is None:
-        continue
-    types.add(column.msg)
-
-ext = os.path.splitext(filename)[1]
-isbin = ext in ['.bin', '.BIN']
-
-if not (isbin):
-    print("Need bin", file=sys.stderr)
-    quit()
-
-if args.csv_sep == "tab":
-    args.csv_sep = "\t"
-
-csv_out = [
-    "timestamp",
-]
-for column in columns:
-    if column.heading is not None:
-        heading = column.heading
-    else:
-        heading = "_".join([column.msg,column.field])
-    if column.units is not None:
-        heading += "_in_" + column.units
-    if re.search("[\s;,]", heading):
-        raise Exception("Invalid heading (%s)" % str(heading))
-    csv_out.append(heading)
-
-#print(args.csv_sep.join(csv_out))
 
 adc1_x_offset = 2.5 # metres towards front of vehicle
 adc2_x_offset = -2.5 # metres towards front of vehicle
+
 
 # from MAVProxy's mp_util:
 def gps_distance(lat1, lon1, lat2, lon2):
@@ -118,7 +57,8 @@ def gps_distance(lat1, lon1, lat2, lon2):
 
     a = math.sin(0.5*dLat)**2 + math.sin(0.5*dLon)**2 * math.cos(lat1) * math.cos(lat2)
     c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0-a))
-    return radius_of_earth * c
+    return mavextra.radius_of_earth * c
+
 
 def ensure_messages(an_mlog, types):
     # step mlog forward until we have all required messages
@@ -135,11 +75,14 @@ def ensure_messages(an_mlog, types):
         if have_all:
             break
 
+
 only_do_percent = 5
 only_do_percent = None
 
 
 last_percent = -1
+
+filename = args.log
 
 mlog_adc1 = mavutil.mavlink_connection(
     filename,
@@ -147,8 +90,11 @@ mlog_adc1 = mavutil.mavlink_connection(
     zero_time_base=args.zero_time_base
 )
 
+types = set(['ADCL', 'GPS', 'GPA', 'NKF1', 'POS', 'ATT', 'IMU'])
+
 print("Looking for all messages present on mlog", file=sys.stderr)
 ensure_messages(mlog_adc1, types)
+
 
 class NeedMatch(object):
     def __init__(self, adcl, location):
@@ -159,12 +105,12 @@ class NeedMatch(object):
 
 # algorithm:
 #  - when we get an ADCL:
-#      - its location is set at the current location projected 2.5m forward of the current canonical vehicle position (GPS+accels+math)
+#      - its location is set at the current location projected 2.5m forward of the current canonical vehicle position (GPS+accels+math)  # noqa
 #      - sum up the distance travelled (speed*time_since_last_ADCL) into each of the things in the list of outstanding items
 #      - when the length of one of those vectors reaches 5m:
 #           - choose the current ADCL or the previous, whichever gets us closer to 5m
-#           - emit a match, location is expiring ADCL measurement, Lux is sum of (current_or_previous_adcl and the expiring ADCL measurement)
-#       - if the distance travelled is less than 5m and the time delta is greater than 20 seconds then discard this measurement; the vehicle has probably stopped for a long time in this case and summed-movement is probably GPS-drift-dominated
+#           - emit a match, location is expiring ADCL measurement, Lux is sum of (current_or_previous_adcl and the expiring ADCL measurement)  # noqa
+#       - if the distance travelled is less than 5m and the time delta is greater than 20 seconds then discard this measurement; the vehicle has probably stopped for a long time in this case and summed-movement is probably GPS-drift-dominated  # noqa
 
 needmatch = []
 
@@ -182,7 +128,8 @@ while True:
     if adc1 is None:
         break
     if int(mlog_adc1.percent*100) != int(last_percent*100):
-        print("\rMatching: %5.2f%% discard=%u match=%u non_noise_matches=%u" % (mlog_adc1.percent, discard_count, match_count,non_zero_match_count),
+        print("\rMatching: %5.2f%% discard=%u match=%u non_noise_matches=%u" %
+              (mlog_adc1.percent, discard_count, match_count, non_zero_match_count),
               end='',
               file=sys.stderr)
         last_percent = mlog_adc1.percent
@@ -200,7 +147,6 @@ while True:
         if vel < 1.0:
             continue
         if vel > 5:
-            debug = True
             debug_count = 0
 
 #    print("adc1: %s yaw=%s" % (str(adc1), mlog_adc1.messages["ATT"].Yaw))
@@ -214,9 +160,9 @@ while True:
 #    yaw = mlog_adc1.messages["ATT"].Yaw,
 
     speed = mlog_adc1.messages["GPS"].Spd
-#    speed = math.sqrt(mlog_adc1.messages["NKF1"].VN*mlog_adc1.messages["NKF1"].VN + mlog_adc1.messages["NKF1"].VE*mlog_adc1.messages["NKF1"].VE)
+#    speed = math.sqrt(mlog_adc1.messages["NKF1"].VN*mlog_adc1.messages["NKF1"].VN + mlog_adc1.messages["NKF1"].VE*mlog_adc1.messages["NKF1"].VE)  # noqa
 
-    projected_forwards_location = pymavlink.mavextra.gps_newpos(
+    projected_forwards_location = mavextra.gps_newpos(
         mlog_adc1.messages["POS"].Lat,
         mlog_adc1.messages["POS"].Lng,
         yaw,
@@ -247,13 +193,15 @@ while True:
                     # use previous
                     adc_to_use = last_adc1
                     distance_delta = entry.distance
-#                print("Matched (%s) with (%s) after %fm tdelta=%f spd=%f len=%u" % (str(entry.adcl), str(adc_to_use), distance_delta, (adc_to_use.TimeUS-entry.adcl.TimeUS)/1000000.0, speed, len(needmatch)))
+#                print("Matched (%s) with (%s) after %fm tdelta=%f spd=%f len=%u" % (str(entry.adcl), str(adc_to_use), distance_delta, (adc_to_use.TimeUS-entry.adcl.TimeUS)/1000000.0, speed, len(needmatch)))  # noqa
 
                 # timestamp,Lat,Lng,ADC1,matched_ADC2,Lux,speed
                 match_count += 1
                 lux = (entry.adcl.ADC1+adc_to_use.ADC2)
                 if lux > 0.001:  # Firstly anything below 0.001 should be considered zero.
                     non_zero_match_count += 1
+                else:
+                    lux = 0
                 print("%u,%f,%f,%f,%f,%f,%f" % (entry.adcl.TimeUS,
                                                 entry.location[0],
                                                 entry.location[1],
