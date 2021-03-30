@@ -815,18 +815,7 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_packet(const mavlink_command_i
 
     case MAV_CMD_NAV_VTOL_LAND:
     case MAV_CMD_NAV_LAND:
-        if (!copter.set_mode(Mode::Number::LAND, ModeReason::GCS_COMMAND)) {
-            return MAV_RESULT_FAILED;
-        }
-        return MAV_RESULT_ACCEPTED;
-
-#if MODE_AUTO_ENABLED == ENABLED
-    case MAV_CMD_DO_LAND_START:
-        if (copter.mode_auto.jump_to_landing_sequence_auto_RTL(ModeReason::GCS_COMMAND)) {
-            return MAV_RESULT_ACCEPTED;
-        }
-        return MAV_RESULT_FAILED;
-#endif
+        return handle_MAV_CMD_VTOL_LAND(packet);
 
     default:
         return GCS_MAVLINK::handle_command_int_packet(packet, msg);
@@ -850,6 +839,27 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_mount(const mavlink_command_int_t 
     return GCS_MAVLINK::handle_command_mount(packet, msg);
 }
 #endif
+
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_VTOL_LAND(const mavlink_command_int_t &packet)
+{
+    if (copter.flightmode->handles_land_commands()) {
+        Location loc;
+        if (!location_from_command_t(packet, loc)) {
+            return MAV_RESULT_DENIED;
+        }
+        // TODO: support abort alt, land mode and yaw angle
+        if (!copter.flightmode->handle_land(loc)) {
+            return MAV_RESULT_FAILED;
+        }
+        return MAV_RESULT_ACCEPTED;
+    }
+
+    if (copter.set_mode(Mode::Number::LAND, ModeReason::GCS_COMMAND)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+
+    return MAV_RESULT_FAILED;
+}
 
 MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_NAV_TAKEOFF(const mavlink_command_int_t &packet)
 {

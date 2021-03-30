@@ -112,6 +112,7 @@ private:
 
     MAV_RESULT handle_MAV_CMD_MISSION_START(const mavlink_command_int_t &packet);
     MAV_RESULT handle_MAV_CMD_NAV_TAKEOFF(const mavlink_command_int_t &packet);
+    MAV_RESULT handle_MAV_CMD_VTOL_LAND(const mavlink_command_int_t &packet);
 
 #if AP_WINCH_ENABLED
     MAV_RESULT handle_MAV_CMD_DO_WINCH(const mavlink_command_int_t &packet);

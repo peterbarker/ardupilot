@@ -94,6 +94,11 @@ void ModeGuided::run()
     case SubMode::Angle:
         angle_control_run();
         break;
+
+    case SubMode::Land:
+        // run land controller
+        land_run();
+        break;
     }
  }
 
@@ -974,6 +979,30 @@ void ModeGuided::angle_control_run()
         pos_control->set_pos_target_z_from_climb_rate_cm(climb_rate_cms);
         pos_control->update_z_controller();
     }
+}
+
+// initialise guided mode's posvel controller
+void ModeGuided::handle_land(const Location &loc)
+{
+    guided_mode = SubMode::Land;
+    submodelandstate = SubModeLandState::FlyToLocation;
+    wp_start(loc);
+}
+
+void ModeGuided::land_run()
+{
+    switch (submodelandstate) {
+    case SubModeLandState::FlyToLocation:
+        if (copter.wp_nav->reached_wp_destination()) {
+            // get destination so we can use it for loiter target
+            const Vector3f& dest = copter.wp_nav->get_wp_destination();
+
+            // initialise landing controller
+            land_start(dest);
+
+            // advance to next state
+            state = State::Descending;
+        }
 }
 
 // helper function to set yaw state and targets

@@ -102,6 +102,9 @@ public:
     virtual bool is_taking_off() const;
     static void takeoff_stop() { takeoff.stop(); }
 
+    virtual bool handles_land_commands() const { return false; }
+    virtual bool handle_land(const Location &loc);
+
     virtual bool is_landing() const { return false; }
 
     // mode requires terrain to be present to be functional
@@ -1031,6 +1034,9 @@ public:
     // takeoff_alt_cm is interpreted as alt-above-home (in cm) or alt-above-terrain if a rangefinder is available
     bool do_user_takeoff_start(float takeoff_alt_cm) override;
 
+    bool handles_land_commands() const override { return true; }
+    bool handle_land(const Location &loc) override;
+
     enum class SubMode {
         TakeOff,
         WP,
@@ -1039,9 +1045,15 @@ public:
         VelAccel,
         Accel,
         Angle,
+        Land,
     };
 
     SubMode submode() const { return guided_mode; }
+
+    enum class SubModeLandState {
+        FlyToLocation = 0,
+        Descending = 1
+    } submodelandstate;
 
     void angle_control_start();
     void angle_control_run();
