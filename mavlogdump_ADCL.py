@@ -6,6 +6,7 @@ Stripped down version of mavlogdump.py.
 from __future__ import print_function
 
 import sys
+import time
 import math
 
 from pymavlink import mavextra
@@ -97,10 +98,14 @@ ensure_messages(mlog_adc1, types)
 
 
 class NeedMatch(object):
-    def __init__(self, adcl, location):
+    def __init__(self, adcl, location, gps, gpa, nkf1, att):
         self.adcl = adcl
         self.location = location
         self.distance = 0
+        self.gps = gps
+        self.gpa = gpa
+        self.nkf1 = nkf1
+        self.att = att
 
 
 # algorithm:
@@ -114,7 +119,57 @@ class NeedMatch(object):
 
 needmatch = []
 
-print("timestamp,Lat,Lng,ADC1,matched_ADC2,Lux,Speed")
+#  headings = ['timestamp', 'Lat', 'Lng', 'ADC1', 'matched_ADC2', 'Lux', 'Speed']
+headings = [
+    'timestamp',
+    'Date',
+    'Time',
+    'Lat',
+    'Lng',
+    'Lux',
+    'GPS_Spd',
+    'GPA_HAcc',
+    'GPS_Status',
+    'NKF1.VN',
+    'NKF1.VE',
+    'ATT.Pitch',
+    'ATT.Roll',
+]
+headings_count = len(headings)
+
+
+def emit_headings():
+    print(headings.join(','))
+    global headings_count
+    headings_count = len(headings)
+
+
+def emit_row(entry, adc_to_use, lux, speed):
+    out = [
+        "%u" % entry.adcl.TimeUS,
+        time.strftime('%Y-%m-%d', time.gmtime(entry.gps._timestamp)),
+        time.strftime('%H:%M:%S', time.gmtime(entry.gps._timestamp)),
+        "%f" % entry.location[0],
+        "%f" % entry.location[1],
+        "%f" % entry.gps.Spd,
+        "%f" % entry.gpa.HAcc,
+        "%u" % entry.gps.Status,
+        "%f" % entry.nkf1.VN,
+        "%f" % entry.nkf1.VE,
+        "%f" % entry.att.Pitch,
+        "%f" % entry.att.Roll,
+    ]
+    print(','.join(out))
+
+    # entry.adcl.TimeUS,
+    # entry.location[0],
+    # entry.location[1],
+    # entry.adcl.ADC1,
+    # adc_to_use.ADC2,
+    # lux,
+    # speed,
+    # ])
+
 
 print("Starting loop", file=sys.stderr)
 count = 0
@@ -202,14 +257,7 @@ while True:
                     non_zero_match_count += 1
                 else:
                     lux = 0
-                print("%u,%f,%f,%f,%f,%f,%f" % (entry.adcl.TimeUS,
-                                                entry.location[0],
-                                                entry.location[1],
-                                                entry.adcl.ADC1,
-                                                adc_to_use.ADC2,
-                                                lux,
-                                                speed,)
-                      )
+                emit_row(entry, adc_to_use, lux, speed)
             else:
                 if adc1.TimeUS - entry.adcl.TimeUS < max_match_time_delta_us:
                     entry.distance += distance_travelled
@@ -221,7 +269,14 @@ while True:
 
         needmatch = new_needmatch
 
-    new_needmatch_entry = NeedMatch(adc1, projected_forwards_location)
+    new_needmatch_entry = NeedMatch(
+        adc1,
+        projected_forwards_location,
+        mlog_adc1.messages["GPS"],
+        mlog_adc1.messages["GPA"],
+        mlog_adc1.messages["NKF1"],
+        mlog_adc1.messages["ATT"],
+    )
     needmatch.append(new_needmatch_entry)
 
     last_adc1 = adc1
