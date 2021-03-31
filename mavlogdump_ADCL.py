@@ -8,6 +8,7 @@ from __future__ import print_function
 import sys
 import time
 import math
+import re
 
 from pymavlink import mavextra
 from pymavlink import mavutil
@@ -30,6 +31,7 @@ parser.add_argument(
 parser.add_argument("--zero-time-base", action='store_true', help="use Z time base for DF logs")
 parser.add_argument("log", metavar="LOG")
 parser.add_argument("--debug", action='store_true', help="debug mode")
+parser.add_argument("--kml", action='store_true', help="emit kml")
 
 args = parser.parse_args()
 
@@ -135,22 +137,167 @@ headings = [
     'ATT.Pitch',
     'ATT.Roll',
 ]
-headings_count = len(headings)
 
 
-def emit_headings():
+def emit_headings_kml(entry):
+    lat = entry.location[0]
+    lon = entry.location[1]
+    print("""<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+  <Document>
+    <name>Lux Graph</name>
+    <snippet>Created Fri Nov 24 11:08:37 2017</snippet>
+    <LookAt>
+      <gx:TimeSpan>
+        <begin>2017-11-12T12:26:18Z</begin>
+        <end>2017-11-12T13:42:12Z</end>
+      </gx:TimeSpan>
+      <longitude>{lon}</longitude>
+      <latitude>{lat}</latitude>
+      <range>1300.000000</range>
+    </LookAt>
+    <!-- Normal track style -->
+    <Style id="track_n">
+      <IconStyle>
+        <scale>.5</scale>
+        <Icon>
+          <href>http://earth.google.com/images/kml-icons/track-directional/track-none.png</href>
+        </Icon>
+      </IconStyle>
+      <LabelStyle>
+        <scale>0</scale>
+      </LabelStyle>
+    </Style>
+    <!-- Highlighted track style -->
+    <Style id="track_h">
+      <IconStyle>
+        <scale>1.2</scale>
+        <Icon>
+          <href>http://earth.google.com/images/kml-icons/track-directional/track-none.png</href>
+        </Icon>
+      </IconStyle>
+    </Style>
+    <StyleMap id="track">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#track_n</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#track_h</styleUrl>
+      </Pair>
+    </StyleMap>
+    <!-- Normal waypoint style -->
+    <Style id="waypoint_n">
+      <IconStyle>
+        <Icon>
+          <href>http://maps.google.com/mapfiles/kml/pal4/icon61.png</href>
+        </Icon>
+      </IconStyle>
+    </Style>
+    <!-- Highlighted waypoint style -->
+    <Style id="waypoint_h">
+      <IconStyle>
+        <scale>1.2</scale>
+        <Icon>
+          <href>http://maps.google.com/mapfiles/kml/pal4/icon61.png</href>
+        </Icon>
+      </IconStyle>
+    </Style>
+    <StyleMap id="waypoint">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#waypoint_n</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#waypoint_h</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="lineStyle">
+      <LineStyle>
+        <color>99ffac59</color>
+        <width>6</width>
+      </LineStyle>
+    </Style>
+        <Folder>
+          <name>Points</name>
+    """.format(lat=lat, lon=lon))
+
+
+def emit_footer_kml():
+    print("""
+    </Folder>
+  </Document>
+</kml>
+""")
+
+
+# <LookAt>
+#  <longitude>{lon}</longitude>
+#  <latitude>{lat}</latitude>
+#  <tilt>66</tilt>
+# </LookAt>
+
+def emit_row_kml(entry, adc_to_use, lux, speed):
+    pm = """<Placemark>
+ <name>{name}</name>
+ <description><![CDATA[
+  <table>
+  <tr><td>Lon: {lon}</td></tr>
+  <tr><td>Lat: {lat}</td></tr>
+  <tr><td>Lux: {lux}</td></tr>
+  <tr><td>Spd: {speed} m/s</td></tr>
+  <tr><td>Hdg: {heading}</td></tr>
+  <tr><td>Time: {time}</td></tr>
+  </table>]]>
+ </description>
+ <TimeStamp><when>{timestamp}</when></TimeStamp>
+ <styleUrl>#track</styleUrl>
+ <Point>
+   <altitudeMode>relativeToGround</altitudeMode>
+   <extrude>1</extrude>
+   <coordinates>{lon},{lat},{alt}</coordinates>
+ </Point>
+</Placemark>""".format(name="name-%u" % entry.gps.TimeUS,
+           lat=entry.location[0],
+           lon=entry.location[1],
+           alt=lux * 10000,
+           lux=lux,
+           speed=speed,
+           heading=entry.gps.GCrs,
+           time=time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(entry.gps._timestamp)),
+           timestamp=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(entry.gps._timestamp)))
+    pm = re.sub(r"^ +", "", pm, flags=re.M)
+    print(pm)
+
+
+def emit_headings(entry):
+    global args
+    if args.kml:
+        emit_headings_kml(entry)
+        return
     print(headings.join(','))
-    global headings_count
-    headings_count = len(headings)
+
+
+def emit_footer():
+    global args
+    if args.kml:
+        emit_footer_kml()
 
 
 def emit_row(entry, adc_to_use, lux, speed):
+    global args
+    if args.kml:
+        emit_row_kml(entry, adc_to_use, lux, speed)
+        return
     out = [
         "%u" % entry.adcl.TimeUS,
         time.strftime('%Y-%m-%d', time.gmtime(entry.gps._timestamp)),
         time.strftime('%H:%M:%S', time.gmtime(entry.gps._timestamp)),
         "%f" % entry.location[0],
         "%f" % entry.location[1],
+        "%f" % lux,
         "%f" % entry.gps.Spd,
         "%f" % entry.gpa.HAcc,
         "%u" % entry.gps.Status,
@@ -172,13 +319,19 @@ def emit_row(entry, adc_to_use, lux, speed):
 
 
 print("Starting loop", file=sys.stderr)
+
 count = 0
 debug_count = 0
 last_adc1 = None
 discard_count = 0
 match_count = 0
 non_zero_match_count = 0
+max_rows = None
+emitted_rows = 0
+emitted_headings = False
 while True:
+    if max_rows is not None and emitted_rows >= max_rows:
+        break
     adc1 = mlog_adc1.recv_match(type=types)
     if adc1 is None:
         break
@@ -257,7 +410,11 @@ while True:
                     non_zero_match_count += 1
                 else:
                     lux = 0
+                if not emitted_headings:
+                    emit_headings(entry)
+                    emitted_headings = True
                 emit_row(entry, adc_to_use, lux, speed)
+                emitted_rows += 1
             else:
                 if adc1.TimeUS - entry.adcl.TimeUS < max_match_time_delta_us:
                     entry.distance += distance_travelled
@@ -280,3 +437,5 @@ while True:
     needmatch.append(new_needmatch_entry)
 
     last_adc1 = adc1
+
+emit_footer()
