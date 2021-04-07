@@ -29,6 +29,7 @@ COMMON_VEHICLE_DEPENDENT_LIBRARIES = [
     'AP_CANManager',
     'AP_Common',
     'AP_Compass',
+    'AP_CodevEsc',
     'AP_Declination',
     'AP_GPS',
     'AP_HAL',

@@ -690,6 +690,12 @@ class sitl(Board):
         if len(env.ROMFS_FILES) > 0:
             env.CXXFLAGS += ['-DHAL_HAVE_AP_ROMFS_EMBEDDED_H']
 
+        # enabled the CodevESC serial ESC driver:
+        env.CXXFLAGS += ['-DHAL_CODEVESC_ENABLED']
+        env.CXXFLAGS += ['-DHAL_ESC_SELECT0_GPIO_PIN=13']
+        env.CXXFLAGS += ['-DHAL_ESC_SELECT1_GPIO_PIN=14']
+        env.CXXFLAGS += ['-DHAL_ESC_SELECT2_GPIO_PIN=15']
+
         if cfg.options.sitl_rgbled:
             env.CXXFLAGS += ['-DWITH_SITL_RGBLED']
 
