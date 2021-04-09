@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include "AS5600_AOA.h"
 #include <AP_Common/AP_Common.h>
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -27,7 +28,7 @@ extern const AP_HAL::HAL &hal;
 ***************************************************/
  AS5600_AOA::AS5600_AOA()
 {
-    bus = 1; //Sets the bus number for the device, unclear what this number should be, trial and error to make it work
+    bus = 2; //Sets the bus number for the device, unclear what this number should be, trial and error to make it work
     address = 0x36; //This is the I2C address for the device, it is set by the manufacturer
 }
 
@@ -83,6 +84,7 @@ void AS5600_AOA::update(void)
   //Gets the two relevant register values and multiplies by conversion factor to get degrees
   uint16_t angleRaw = ((highByte << 8) | lowByte)*0.087;
 
+  gcs().send_named_float("ANGLE", angleRaw);
   AP::logger().Write("AOAR", "TimeUS, Angle", "QH", AP_HAL::micros64(), angleRaw);
 }
 
