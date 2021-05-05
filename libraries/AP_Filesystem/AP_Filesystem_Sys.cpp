@@ -51,13 +51,13 @@ static const SysFileList sysfs_file_list[] = {
     {"storage.bin"},
 };
 
-int8_t AP_Filesystem_Sys::file_in_sysfs(const char *fname) {
+bool AP_Filesystem_Sys::file_in_sysfs(const char *fname) {
     for (uint8_t i = 0; i <  ARRAY_SIZE(sysfs_file_list); i++) {
         if (strcmp(fname, sysfs_file_list[i].name) == 0) {
-            return i;
+            return true;
         }
     }
-    return -1;
+    return false;
 }
 
 int AP_Filesystem_Sys::open(const char *fname, int flags, bool allow_absolute_paths)
@@ -84,8 +84,7 @@ int AP_Filesystem_Sys::open(const char *fname, int flags, bool allow_absolute_pa
     }
 
     // This ensure that whenever new sys file is added its also added to list above
-    int8_t pos = file_in_sysfs(fname);
-    if (pos < 0) {
+    if (!file_in_sysfs(fname)) {
         delete r.str;
         r.str = nullptr;
         errno = ENOENT;
@@ -261,8 +260,7 @@ int AP_Filesystem_Sys::stat(const char *pathname, struct stat *stbuf)
     if (pathname[0] == '/') {
         pathname_noslash = &pathname[1];
     }
-    int8_t pos = file_in_sysfs(pathname_noslash);
-    if (pos < 0) {
+    if (!file_in_sysfs(pathname_noslash)) {
         errno = ENOENT;
         return -1;
     }

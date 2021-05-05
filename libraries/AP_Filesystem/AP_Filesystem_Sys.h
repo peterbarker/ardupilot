@@ -35,7 +35,7 @@ public:
 private:
     // only allow up to 4 files at a time
     static constexpr uint8_t max_open_file = 4;
-    int8_t file_in_sysfs(const char *fname);
+    bool file_in_sysfs(const char *fname);
 
     struct DirReadTracker {
         size_t file_offset;
