@@ -662,6 +662,12 @@ private:
 
     bool calibrate_gyros();
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if HAVE_FILESYSTEM_SUPPORT
+    void register_sysfs_files();
+#endif
+#endif
+
     /// The stream we are communicating over
     AP_HAL::UARTDriver *_port;
 

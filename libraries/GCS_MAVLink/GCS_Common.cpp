@@ -6032,6 +6032,16 @@ uint8_t GCS_MAVLINK::receiver_rssi() const
     return aprssi->read_receiver_rssi() * 254;
 }
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if HAVE_FILESYSTEM_SUPPORT
+void GCS_MAVLINK::register_sysfs_files()
+{
+    AP::FS().add_sysfs_file("message-rates.txt", FUNCTOR_BIND_MEMBER(GCS_MAVLINK::sysfs_message_rates_readfn));
+}
+#endif
+#endif
+
+
 GCS &gcs()
 {
     return *GCS::get_singleton();

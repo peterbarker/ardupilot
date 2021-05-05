@@ -19,6 +19,8 @@
 
 class ExpandingString;
 
+FUNCTOR_TYPEDEF(sysfs_file_readfn_t, void, ExpandingString *estr);
+
 class AP_Filesystem_Sys : public AP_Filesystem_Backend
 {
 public:
@@ -31,6 +33,8 @@ public:
     void *opendir(const char *pathname) override;
     struct dirent *readdir(void *dirp) override;
     int closedir(void *dirp) override;
+
+    void add_sysfs_file(const char *name, sysfs_file_readfn_t readfn);
 
 private:
     // only allow up to 4 files at a time

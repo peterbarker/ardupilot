@@ -51,12 +51,50 @@ static const SysFileList sysfs_file_list[] = {
     {"storage.bin"},
 };
 
+struct DynamicSysFile {
+    const char* name;
+    sysfs_file_readfn_t readfn;
+    struct DynamicSysFiles *next;
+};
+
+// singly linked list of runtime-registered sysfs files
+DynamicSysFile *dynamic_sys_files;
+
+void add_sysfs_file(const char *name, sysfs_file_readfn_t readfn)
+{
+    DynamicSysFile *new_entry = new DynamicSysFile();
+    if (new_entry == nullptr) {
+        goto OUT_ERR;
+    }
+    new_entry.name = strdup(name);
+    if (new_entry.name == nullptr) {
+        goto OUT_ERR;
+    }
+    new_entry.readfn = readfn;
+
+    // add to linked list
+    new_entry.next = dynamic_sys_files;
+    dynamic_sys_files = new_entry;
+    return;
+
+OUT_ERR:
+    delete new_entry.name;
+    delete new_entry;
+}
+
 bool AP_Filesystem_Sys::file_in_sysfs(const char *fname) {
     for (uint8_t i = 0; i <  ARRAY_SIZE(sysfs_file_list); i++) {
         if (strcmp(fname, sysfs_file_list[i].name) == 0) {
             return true;
         }
     }
+
+    // search for runtime-registered files:
+    for (DynamicSysFile *sf = dynamic_sys_files; sf!=nullptr; sf=sf.next) {
+        if (strcmp(fname, sf->name) == 0) {
+            return true;
+    }
+
     return false;
 }
 
