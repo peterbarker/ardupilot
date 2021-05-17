@@ -394,7 +394,7 @@ const AP_Param::GroupInfo AP_InertialSensor::var_info[] = {
     // @Param: _GYR_CAL
     // @DisplayName: Gyro Calibration scheme
     // @Description: Conrols when automatic gyro calibration is performed
-    // @Values: 0:Never, 1:Start-up only
+    // @Values: 0:Never, 1:Start-up only, 2:Wait For IMU Temperature
     // @User: Advanced
     AP_GROUPINFO("_GYR_CAL", 24, AP_InertialSensor, _gyro_cal_timing, 1),
 
@@ -968,9 +968,7 @@ AP_InertialSensor::init(uint16_t loop_rate)
     }
 
     // calibrate gyros unless gyro calibration has been disabled
-    if (gyro_calibration_timing() != GYRO_CAL_NEVER && _gyro_count > 0) {
-        init_gyro();
-    }
+    check_gyro_calibration();
 
     _sample_period_usec = 1000*1000UL / _loop_rate;
 
@@ -1396,13 +1394,35 @@ bool AP_InertialSensor::_calculate_trim(const Vector3f &accel_sample, Vector3f &
 }
 
 void
-AP_InertialSensor::init_gyro()
+AP_InertialSensor::check_gyro_calibration_gyro()
 {
-    _init_gyro();
-
+    if (_calibrating_gyro) {
+        update_gyro_calibration();
+        return;
+    }
+        // see if we are complete...
     // save calibration
     _save_gyro_calibration();
+
+    // we've probably just step-changed the sensor data output.
+    // That may annoy the estimators, so apologise to them:
+    AP::ahrs().reset_gyro_drift();
+        return;
+    }
+
+    switch (gyro_calibration_timing()) {
+    case GYRO_CAL_NEVER:
+    case GYRO_CAL_WAIT_IMU_TEMPERATURE:
+        break;
+    case GYRO_CAL_STARTUP_ONLY:
+        if (!automatic_gyrocal_attempted) {
+            start_gyro_calibration();
+            automatic_gyrocal_attempted = true;
+        }
+        break;
+    };
 }
+
 
 // output GCS startup messages
 bool AP_InertialSensor::get_output_banner(uint8_t backend_id, char* banner, uint8_t banner_len)
@@ -1719,21 +1739,16 @@ bool AP_InertialSensor::use_accel(uint8_t instance) const
 }
 
 void
-AP_InertialSensor::_init_gyro()
+AP_InertialSensor::start_gyro_calibration()
 {
-    uint8_t num_gyros = MIN(get_gyro_count(), INS_MAX_INSTANCES);
-    Vector3f last_average[INS_MAX_INSTANCES], best_avg[INS_MAX_INSTANCES];
-    Vector3f new_gyro_offset[INS_MAX_INSTANCES];
-    float best_diff[INS_MAX_INSTANCES];
-    bool converged[INS_MAX_INSTANCES];
-#if HAL_INS_TEMPERATURE_CAL_ENABLE
-    float start_temperature[INS_MAX_INSTANCES] {};
-#endif
-
-    // exit immediately if calibration is already in progress
+    // exit immediately if calibration is already in progress.  This
+    // could legitmately happen if we receive a command from the GCS
+    // while we are already calibrating.
     if (calibrating()) {
         return;
     }
+
+    gyro_cal_data.num_gyros = MIN(get_gyro_count(), INS_MAX_INSTANCES);
 
     // record we are calibrating
     _calibrating_gyro = true;
@@ -1742,7 +1757,7 @@ AP_InertialSensor::_init_gyro()
     AP_Notify::flags.initialising = true;
 
     // cold start
-    DEV_PRINTF("Init Gyro");
+    gcs().send_text(MAV_SEVERITY_INFO, "Init Gyro");
 
     /*
       we do the gyro calibration with no board rotation. This avoids
@@ -1752,7 +1767,7 @@ AP_InertialSensor::_init_gyro()
     _board_orientation = ROTATION_NONE;
 
     // remove existing gyro offsets
-    for (uint8_t k=0; k<num_gyros; k++) {
+    for (uint8_t k=0; k<gyro_cal_data.num_gyros; k++) {
         _gyro_offset(k).set(Vector3f());
         new_gyro_offset[k].zero();
         best_diff[k] = -1.f;
@@ -1760,20 +1775,38 @@ AP_InertialSensor::_init_gyro()
         converged[k] = false;
     }
 
-    for(int8_t c = 0; c < 5; c++) {
-        hal.scheduler->delay(5);
-        update();
+    gyro_cal_start_ms = AP_HAL::millis();
+    gyro_cal_stage = GyroCalStage::WaitForTemperature;
+}
+
+void
+AP_InertialSensor::update_gyro_calibration()
+{
+    const uint32_t now_ms = AP_HAL::millis();
+
+    switch (gyro_cal_stage) {
+    case GyroCalStage::WaitForTemperature:
+        // discard 25ms worth of samples to avoid sensor startup oddities
+        if (now - gyro_cal_data.gyro_cal_start_ms < 25) {
+            return;
+        }
+        gyro_cal_data.gyro_cal_stage = GyroCalStage::GetStartTemperature;
+        FALLTHROUGH;
+    case GyroCalStage::GetStartTemperature:
+#if HAL_INS_TEMPERATURE_CAL_ENABLE
+        // get start temperature. gyro cal usually happens when the board
+        // has just been powered on, so the temperature may be changing
+        // rapidly. We use the average between start and end temperature
+        // as the calibration temperature to minimise errors
+        for (uint8_t k=0; k<num_gyros; k++) {
+            gyro_cal_data.start_temperature[k] = get_temperature(k);
+        }
+#endif
+        gyro_cal_data.gyro_cal_stage = GyroCalStage::CollectSamples;
+        FALLTHROUGH;
+    case GyroCalStage::CollectSamples1:
     }
 
-#if HAL_INS_TEMPERATURE_CAL_ENABLE
-    // get start temperature. gyro cal usually happens when the board
-    // has just been powered on, so the temperature may be changing
-    // rapidly. We use the average between start and end temperature
-    // as the calibration temperature to minimise errors
-    for (uint8_t k=0; k<num_gyros; k++) {
-        start_temperature[k] = get_temperature(k);
-    }
-#endif
 
     // the strategy is to average 50 points over 0.5 seconds, then do it
     // again and see if the 2nd average is within a small margin of
@@ -1932,6 +1965,13 @@ void AP_InertialSensor::set_primary(uint8_t instance)
  */
 void AP_InertialSensor::update(void)
 {
+    if (gyro_calibration_timing() == Gyro_Calibration_Timing::GYRO_CAL_WAIT_IMU_TEMPERATURE &&
+        !gyro_cal_warm_init_attempted &&
+        imu_up_to_temperature()) {
+        start_gyro_calibration();
+        automatic_gyrocal_attempted = true;
+    }
+
     // during initialisation update() may be called without
     // wait_for_sample(), and a wait is implied
     wait_for_sample();
