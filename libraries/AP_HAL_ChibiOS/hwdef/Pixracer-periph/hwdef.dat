@@ -13,10 +13,10 @@ FLASH_SIZE_KB 2048
 STM32_ST_USE_TIMER 5
 
 # bootloader starts firmware at 64k
-FLASH_RESERVE_START_KB 64
+FLASH_RESERVE_START_KB 16
 
 # store parameters in pages 2 and 3
-define STORAGE_FLASH_PAGE 2
+#define STORAGE_FLASH_PAGE 2
 define HAL_STORAGE_SIZE 16384
 
 # board ID for firmware load
@@ -190,7 +190,7 @@ PB10 SPI2_SCK SPI2
 PB14 SPI2_MISO SPI2
 PB15 SPI2_MOSI SPI2
 PD7 BARO_CS CS
-# PD10 FRAM_CS CS
+PD10 FRAM_CS CS
 
 # SPI device table. The DEVID values are chosen to match the PX4 port
 # of ArduPilot so users don't need to re-do their accel and compass calibrations
@@ -200,7 +200,7 @@ SPIDEV ms5611_int  SPI2 DEVID3  BARO_CS    MODE3  20*MHZ  20*MHZ
 # SPIDEV icm20608    SPI1 DEVID6  20608_CS   MODE3   2*MHZ   8*MHZ //future use
 SPIDEV hmc5843     SPI1 DEVID5  MAG_CS     MODE3  11*MHZ  11*MHZ
 SPIDEV lis3mdl     SPI1 DEVID5  MAG_CS     MODE3 500*KHZ 500*KHZ
-# SPIDEV ramtron     SPI2 DEVID10 FRAM_CS    MODE3   8*MHZ   8*MHZ //unused
+SPIDEV ramtron     SPI2 DEVID10 FRAM_CS    MODE3   8*MHZ   8*MHZ //unused
 
 # one barometer
 BARO MS56XX SPI:ms5611_int
@@ -209,6 +209,14 @@ BARO MS56XX SPI:ms5611_int
 COMPASS HMC5843 SPI:hmc5843 false ROTATION_PITCH_180
 COMPASS LIS3MDL SPI:lis3mdl false ROTATION_NONE
 # COMPASS AK8963:probe_mpu9250 0 ROTATION_ROLL_180_YAW_9
+
+# ---------------- SD card
+PC8 SDIO_D0 SDIO
+PC9 SDIO_D1 SDIO
+PC10 SDIO_D2 SDIO
+PC11 SDIO_D3 SDIO
+PC12 SDIO_CK SDIO
+PD2 SDIO_CMD SDIO
 
 --------------- ALARM -----------------
 # PWM output for buzzer
@@ -231,4 +239,13 @@ PE9  TIM1_CH1 TIM1 PWM(4) GPIO(53)
 PD13 TIM4_CH2 TIM4 PWM(5) GPIO(54)
 PD14 TIM4_CH3 TIM4 PWM(6) GPIO(55)
 
+# enable FAT filesystem
+define HAL_OS_FATFS_IO 1
+define HAL_BOARD_LOG_DIRECTORY "/APM/LOGS"
+
 define BOARD_PWM_COUNT_DEFAULT 6
+
+define HAL_WITH_RAMTRON 1
+
+
+define HAL_LOGGING_ENABLED 1
