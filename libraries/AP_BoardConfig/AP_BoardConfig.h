@@ -262,7 +262,9 @@ private:
 #endif
     
     // real-time-clock; private because access is via the singleton
+#if HAL_RTC_ENABLED
     AP_RTC rtc;
+#endif
 
 #if HAL_HAVE_BOARD_VOLTAGE
     AP_Float _vbus_min;
