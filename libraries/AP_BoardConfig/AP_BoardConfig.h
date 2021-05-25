@@ -197,7 +197,7 @@ public:
     // should be toggled
     bool safety_button_handle_pressed(uint8_t press_count);
 
-#if HAL_HAVE_IMU_HEATER
+#if HAL_HAVE_IMU_HEATER && !defined(HAL_BUILD_AP_PERIPH)
     void set_imu_temp(float current_temp_c);
 
     // heater duty cycle is as a percentage (0 to 100)
@@ -244,7 +244,7 @@ private:
 
     static bool _in_sensor_config_error;
 
-#if HAL_HAVE_IMU_HEATER
+#if HAL_HAVE_IMU_HEATER && !defined(HAL_BUILD_AP_PERIPH)
     struct {
         AP_Int8 imu_target_temperature;
         uint32_t last_update_ms;

@@ -177,7 +177,7 @@ const AP_Param::GroupInfo AP_BoardConfig::var_info[] = {
     AP_GROUPINFO("SAFETY_MASK", 7, AP_BoardConfig, state.ignore_safety_channels, 0),
 #endif
 
-#if HAL_HAVE_IMU_HEATER
+#if HAL_HAVE_IMU_HEATER && !defined(HAL_BUILD_AP_PERIPH)
     // @Param: IMU_TARGTEMP
     // @DisplayName: Target IMU temperature
     // @Description: This sets the target IMU temperature for boards with controllable IMU heating units. DO NOT SET to -1 on the Cube. Set to -1 to disable the heater, please reboot after setting to -1.
@@ -283,7 +283,7 @@ const AP_Param::GroupInfo AP_BoardConfig::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("BOOT_DELAY", 20, AP_BoardConfig, _boot_delay_ms, HAL_DEFAULT_BOOT_DELAY),
 
-#if HAL_HAVE_IMU_HEATER
+#if HAL_HAVE_IMU_HEATER && !defined(HAL_BUILD_AP_PERIPH)
     // @Param: IMUHEAT_P
     // @DisplayName: IMU Heater P gain
     // @Description: IMU Heater P gain
