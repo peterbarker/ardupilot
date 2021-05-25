@@ -560,11 +560,15 @@ uint32_t AP_Logger_File::_get_log_time(const uint16_t log_num)
             // it is the file we are currently writing
             free(fname);
             write_fd_semaphore.give();
+#if HAL_RTC_ENABLED
             uint64_t utc_usec;
             if (!AP::rtc().get_utc_usec(utc_usec)) {
                 return 0;
             }
             return utc_usec / 1000000U;
+#else
+            return 0;
+#endif
         }
         write_fd_semaphore.give();
     }
@@ -807,7 +811,7 @@ void AP_Logger_File::start_new_log(void)
         return;
     }
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS && HAL_RTC_ENABLED
     // remember if we had utc time when we opened the file
     uint64_t utc_usec;
     _need_rtc_update = !AP::rtc().get_utc_usec(utc_usec);
@@ -992,7 +996,7 @@ void AP_Logger_File::io_timer(void)
         last_io_operation = "";
 #endif
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS && HAL_RTC_ENABLED
         // ChibiOS does not update mtime on writes, so if we opened
         // without knowing the time we should update it later
         if (_need_rtc_update) {
