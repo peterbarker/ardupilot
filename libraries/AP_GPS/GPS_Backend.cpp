@@ -92,7 +92,7 @@ void AP_GPS_Backend::make_gps_time(uint32_t bcd_date, uint32_t bcd_milliseconds)
     tm.tm_hour = v % 100U;
 
     // convert from time structure to unix time
-    time_t unix_time = AP::rtc().mktime(&tm);
+    time_t unix_time = ap_mktime(&tm);
 
     // convert to time since GPS epoch
     const uint32_t unix_to_GPS_secs = 315964800UL;
