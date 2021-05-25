@@ -2267,8 +2267,12 @@ def add_apperiph_defaults(f):
 #ifndef HAL_RALLY_ENABLED
 #define HAL_RALLY_ENABLED 0
 #endif
+// RTC is on by default but can be disabled in hwdef:
+#ifndef HAL_RTC_ENABLED
+#define HAL_RTC_ENABLED 1
+#endif
 ''')
-            
+
 
 # process input file
 for fname in args.hwdef:
