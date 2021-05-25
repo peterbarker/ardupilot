@@ -90,6 +90,10 @@ void AP_Periph_FW::init()
 
     stm32_watchdog_pat();
 
+#if HAL_PERIPH_BOARDCONFIG_ENABLED
+    BoardConfig.init();
+#endif
+
     hal.serial(0)->begin(AP_SERIALMANAGER_CONSOLE_BAUD, 32, 32);
     hal.serial(3)->begin(115200, 128, 256);
 

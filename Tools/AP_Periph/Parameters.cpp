@@ -333,6 +333,12 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     GSCALAR(sysid_this_mav,         "SYSID_THISMAV",  MAV_SYSTEM_ID),
 #endif
 
+#if HAL_PERIPH_BOARDCONFIG_ENABLED
+    // @Group: BRD_
+    // @Path: ../libraries/AP_BoardConfig/AP_BoardConfig.cpp
+    GOBJECT(BoardConfig,            "BRD_",       AP_BoardConfig),
+#endif
+
     AP_VAREND
 };
 

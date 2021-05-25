@@ -22,6 +22,7 @@
 #elif CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <AP_HAL_SITL/CANSocketIface.h>
 #endif
+#include <AP_BoardConfig/AP_BoardConfig.h>
 
 #ifndef HAL_NO_GCS
 #include "GCS_MAVLink.h"
@@ -50,6 +51,10 @@
 #error "Battery MPPT PacketDigital driver requires at least two CAN Ports"
 #endif
 
+// RTC's parameters are stored in BoardConfig
+#ifndef HAL_PERIPH_BOARDCONFIG_ENABLED
+#define HAL_PERIPH_BOARDCONFIG_ENABLED HAL_RTC_ENABLED
+#endif
 
 #include "Parameters.h"
 
@@ -217,6 +222,12 @@ public:
 #ifndef HAL_NO_GCS
     GCS_Periph _gcs;
 #endif
+
+#if HAL_PERIPH_BOARDCONFIG_ENABLED
+    // board specific config
+    AP_BoardConfig BoardConfig;
+#endif
+
     // setup the var_info table
     AP_Param param_loader{var_info};
 
