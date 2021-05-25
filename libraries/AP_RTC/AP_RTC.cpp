@@ -1,5 +1,7 @@
 #include "AP_RTC.h"
 
+#if HAL_RTC_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS.h>
@@ -206,10 +208,24 @@ uint32_t AP_RTC::get_time_utc(int32_t hour, int32_t min, int32_t sec, int32_t ms
 }
 
 
+// singleton instance
+AP_RTC *AP_RTC::_singleton;
+
+namespace AP {
+
+AP_RTC &rtc()
+{
+    return *AP_RTC::get_singleton();
+}
+
+}
+
+#endif
+
 /*
   mktime replacement from Samba
  */
-time_t AP_RTC::mktime(const struct tm *t)
+time_t ap_mktime(const struct tm *t)
 {
     time_t epoch = 0;
     int n;
@@ -246,16 +262,4 @@ time_t AP_RTC::mktime(const struct tm *t)
     epoch += t->tm_hour * HOUR + t->tm_min * MINUTE + t->tm_sec;
 
     return epoch;
-}
-
-// singleton instance
-AP_RTC *AP_RTC::_singleton;
-
-namespace AP {
-
-AP_RTC &rtc()
-{
-    return *AP_RTC::get_singleton();
-}
-
 }
