@@ -5464,7 +5464,6 @@ class AutoTestCopter(AutoTest):
         self.set_parameter("FOLL_OFS_X", -foll_ofs_x)
         self.set_parameter("FOLL_OFS_TYPE", 1) # relative to other vehicle heading
         self.takeoff(10, mode="LOITER")
-        self.set_parameter("SIM_SPEEDUP", 1)
         self.change_mode("FOLLOW")
         new_loc = self.mav.location()
         new_loc_offset_n = 20
