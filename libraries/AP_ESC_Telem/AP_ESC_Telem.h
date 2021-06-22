@@ -51,8 +51,8 @@ public:
     // return all of the motor frequencies in Hz for dynamic filtering
     uint8_t get_motor_frequencies_hz(uint8_t nfreqs, float* freqs) const;
 
-    // get the number of valid ESCs
-    uint8_t get_num_active_escs() const;
+    // get the number of ESCs that sent valid telemetry data in the last ESC_TELEM_DATA_TIMEOUT_MS
+    uint8_t get_num_active_escs(uint16_t mask = 0xffff) const;
 
     // return the last time telemetry data was received in ms for the given ESC or 0 if never
     uint32_t get_last_telem_data_ms(uint8_t esc_index) const {

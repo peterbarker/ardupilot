@@ -71,14 +71,16 @@ uint8_t AP_ESC_Telem::get_motor_frequencies_hz(uint8_t nfreqs, float* freqs) con
     return MIN(valid_escs, nfreqs);
 }
 
-// return number of active ESCs present
-uint8_t AP_ESC_Telem::get_num_active_escs() const {
+// get the number of ESCs that sent valid telemetry data in the last ESC_TELEM_DATA_TIMEOUT_MS
+uint8_t AP_ESC_Telem::get_num_active_escs(uint16_t mask) const {
+    static_assert(ESC_TELEM_MAX_ESCS <= 16, "mask must be wide enough for ESC_TELEM_MAX_ESCS");
     uint8_t nmotors = 0;
-    uint32_t now = AP_HAL::millis();
+    const uint32_t now = AP_HAL::millis();
     for (uint8_t i = 0; i < ESC_TELEM_MAX_ESCS; i++) {
-        if (now - _telem_data[i].last_update_ms < ESC_TELEM_DATA_TIMEOUT_MS) {
+        if (now - _telem_data[i].last_update_ms < ESC_TELEM_DATA_TIMEOUT_MS && (mask & 0x0001)) {
             nmotors++;
         }
+        mask >>= 1;
     }
     return nmotors;
 }
