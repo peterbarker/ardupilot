@@ -29,7 +29,11 @@ extern const AP_HAL::HAL& hal;
 
 static constexpr uint8_t FRAME_OVERHEAD = 6;
 static constexpr uint8_t MAX_TRANSMIT_LENGTH = 4;
+#if HAL_AP_FETTEC_ONEWIRE_GET_STATIC_INFO
 static constexpr uint8_t MAX_RECEIVE_LENGTH = 12;
+#else
+static constexpr uint8_t MAX_RECEIVE_LENGTH = 1;
+#endif
 static constexpr uint8_t MAX_RESPONSE_LENGTH = FRAME_OVERHEAD + MAX_RECEIVE_LENGTH;
 
 const AP_Param::GroupInfo AP_FETtecOneWire::var_info[] {
@@ -66,9 +70,11 @@ AP_FETtecOneWire::AP_FETtecOneWire()
 
     _response_length[uint8_t(msg_type::OK)] = 1;
     _response_length[uint8_t(msg_type::BL_START_FW)] = 0;        // Bootloader only
+#if HAL_AP_FETTEC_ONEWIRE_GET_STATIC_INFO
     _response_length[uint8_t(msg_type::REQ_TYPE)] = 1;
     _response_length[uint8_t(msg_type::REQ_SN)] = 12;
     _response_length[uint8_t(msg_type::REQ_SW_VER)] = 2;
+#endif
     _response_length[uint8_t(msg_type::SET_FAST_COM_LENGTH)] = 1;
     _response_length[uint8_t(msg_type::SET_TLM_TYPE)] = 1;
 }
