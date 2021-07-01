@@ -39,12 +39,20 @@ static constexpr uint8_t MAX_RESPONSE_LENGTH = FRAME_OVERHEAD + MAX_RECEIVE_LENG
 const AP_Param::GroupInfo AP_FETtecOneWire::var_info[] {
 
     // @Param: MASK
-    // @DisplayName: Servo Channel Output Bitmask
+    // @DisplayName: Servo channel output bitmask
     // @Description: Servo channel mask specifying FETtec ESC output.  Set bits must be contiguous.  The SERVOn number is used as the FETtec ESC Id
     // @Bitmask: 0:SERVO1,1:SERVO2,2:SERVO3,3:SERVO4,4:SERVO5,5:SERVO6,6:SERVO7,7:SERVO8,8:SERVO9,9:SERVO10,10:SERVO11,11:SERVO12,12:SERVO13,13:SERVO14,14:SERVO15,15:SERVO16
     // @RebootRequired: True
     // @User: Standard
     AP_GROUPINFO("MASK",  1, AP_FETtecOneWire, _motor_mask, 0),
+
+    // @Param: REVMASK
+    // @DisplayName: Servo channel reverse rotation bitmask
+    // @Description: Servo channel mask to reverse rotation of FETtec ESC outputs.  Set bits must be contiguous.
+    // @Bitmask: 0:SERVO1,1:SERVO2,2:SERVO3,3:SERVO4,4:SERVO5,5:SERVO6,6:SERVO7,7:SERVO8,8:SERVO9,9:SERVO10,10:SERVO11,11:SERVO12,12:SERVO13,13:SERVO14,14:SERVO15,15:SERVO16
+    // @RebootRequired: True
+    // @User: Standard
+    AP_GROUPINFO("REVMASK",  2, AP_FETtecOneWire, _reverse_mask, 0),
 
     // @Param: POLES
     // @DisplayName: Nr. electrical poles
@@ -52,7 +60,7 @@ const AP_Param::GroupInfo AP_FETtecOneWire::var_info[] {
     // @Range: 2 50
     // @RebootRequired: False
     // @User: Standard
-    AP_GROUPINFO("POLES", 2, AP_FETtecOneWire, _pole_count, 14),
+    AP_GROUPINFO("POLES", 3, AP_FETtecOneWire, _pole_count, 14),
 
     AP_GROUPEND
 };
@@ -710,6 +718,9 @@ void AP_FETtecOneWire::update()
             break;
         }
         motor_pwm[i] = constrain_int16(c->get_output_pwm(), 1000, 2000);
+        if (_reverse_mask.get() & (1U << i)) {
+            motor_pwm[i] -= 1000;
+        }
     }
 
 #if HAL_WITH_ESC_TELEM

@@ -92,6 +92,7 @@ private:
     static constexpr uint8_t MOTOR_COUNT_MAX = 12;                 ///< OneWire supports up-to 15 ESCs, but Ardupilot only supports 12
 #endif
     AP_Int32 _motor_mask;
+    AP_Int32 _reverse_mask;
     AP_Int8 _pole_count;
 
     enum class return_type : uint8_t
