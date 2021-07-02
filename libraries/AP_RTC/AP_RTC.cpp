@@ -45,6 +45,13 @@ void AP_RTC::set_utc_usec(uint64_t time_utc_usec, source_type type)
 {
     const uint64_t oldest_acceptable_date = 1546300800000; // 2019-01-01 0:00
 
+    static uint32_t last_debug_sent_ms;
+    const uint32_t now32 = AP_HAL::millis();
+    if (now32 - last_debug_sent_ms > 1000) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "RTC: set_utc_usec(%u, type=%u)", (unsigned)time_utc_usec, (unsigned)type);
+        last_debug_sent_ms = now32;
+    }
+
     if (type >= rtc_source_type) {
         // e.g. system-time message when we've been set by the GPS
         return;
@@ -66,6 +73,7 @@ void AP_RTC::set_utc_usec(uint64_t time_utc_usec, source_type type)
         // can't allow time to go backwards, ever
         return;
     }
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "RTC: setting to %u (source=%u)", (unsigned)time_utc_usec, (unsigned)type);
     WITH_SEMAPHORE(rsem);
 
     rtc_shift = tmp;

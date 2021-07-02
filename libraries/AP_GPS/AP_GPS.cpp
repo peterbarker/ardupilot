@@ -895,9 +895,26 @@ void AP_GPS::update_instance(uint8_t instance)
     }
 #endif
 
+    static uint32_t last_debug_sent_ms;
+    const uint32_t now32 = AP_HAL::millis();
+    bool send_debug = false;
+    if (now32 - last_debug_sent_ms > 1000) {
+        send_debug = true;
+        last_debug_sent_ms = now32;
+    }
+    if (send_debug) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "GPS: Sending debug");
+    }
+
 #if HAL_RTC_ENABLED
+    if (send_debug) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "GPS: status=%u", state[instance].status);
+    }
     if (state[instance].status >= GPS_OK_FIX_3D) {
         const uint64_t now = time_epoch_usec(instance);
+        if (send_debug) {
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "GPS: time-epoch=%u", (unsigned)now);
+        }
         if (now != 0) {
             AP::rtc().set_utc_usec(now, AP_RTC::SOURCE_GPS);
         }

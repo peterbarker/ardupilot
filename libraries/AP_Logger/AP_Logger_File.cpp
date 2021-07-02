@@ -999,11 +999,28 @@ void AP_Logger_File::io_timer(void)
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS && HAL_RTC_ENABLED
         // ChibiOS does not update mtime on writes, so if we opened
         // without knowing the time we should update it later
+        static uint32_t last_debug_sent_ms;
+        const uint32_t now32 = AP_HAL::millis();
+        bool send_debug = false;
+        static bool did_set_mtime = false;
+        if (now32 - last_debug_sent_ms > 1000) {
+            send_debug = true;
+            last_debug_sent_ms = now32;
+        }
+        if (send_debug) {
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "LF: need_update=%u (did-set-mtime=%u)", (unsigned)_need_rtc_update, did_set_mtime);
+        }
         if (_need_rtc_update) {
             uint64_t utc_usec;
             if (AP::rtc().get_utc_usec(utc_usec)) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "LF: setting mtime");
+                did_set_mtime = true;
                 AP::FS().set_mtime(_write_filename, utc_usec/(1000U*1000U));
                 _need_rtc_update = false;
+            } else {
+                if (send_debug) {
+                    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "LF: No rtc time yet");
+                }
             }
         }
 #endif
