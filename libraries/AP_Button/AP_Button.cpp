@@ -160,6 +160,14 @@ void AP_Button::update(void)
     setup_pins();
 
     if (!initialised) {
+        if (AP_HAL::millis() < 1000) {
+            // don't set up buttons for the first second.  If we are
+            // using pwm input for a button and we're using out own
+            // PWM output then we don't want to *not* see that PWM out
+            // - which can happen if we are initialised but the IOMCU
+            // hasn't for example.
+            return;
+        }
         initialised = true;
 
         // get initial mask
