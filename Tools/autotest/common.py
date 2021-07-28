@@ -2805,16 +2805,38 @@ class AutoTest(ABC):
         seq = 0
         ret = []
         for (t, n, e, alt) in items:
-            lat = 0
-            lng = 0
-            if n != 0 or e != 0:
-                loc = self.home_relative_loc_ne(n, e)
-                lat = loc.lat
-                lng = loc.lng
             p1 = 0
+            p2 = 0
+            p3 = 0
+            p4 = 0
+            p5 = 0
+            p6 = 0
+            p7 = 0
+            if t == mavutil.mavlink.MAV_CMD_DO_SEND_SCRIPT_MESSAGE:
+                p1 = n
+                p2 = e
+                p3 = alt
+                p4 = 0
+            else:
+                lat = 0
+                lng = 0
+                if n != 0 or e != 0:
+                    loc = self.home_relative_loc_ne(n, e)
+                    lat = loc.lat
+                    lng = loc.lng
+                p5 = int(lat*1e7) # latitude
+                p6 = int(lng*1e7)
+                p7 = alt
             frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
             if not self.ardupilot_stores_frame_for_cmd(t):
                 frame = mavutil.mavlink.MAV_FRAME_GLOBAL
+            # print("p1=%s" % str(p1))
+            # print("p2=%s" % str(p2))
+            # print("p3=%s" % str(p3))
+            # print("p4=%s" % str(p4))
+            # print("p5=%s" % str(p5))
+            # print("p6=%s" % str(p6))
+            # print("p7=%s" % str(p7))
             ret.append(self.mav.mav.mission_item_int_encode(
                 target_system,
                 target_component,
@@ -2823,13 +2845,13 @@ class AutoTest(ABC):
                 t,
                 0, # current
                 0, # autocontinue
-                p1, # p1
-                0, # p2
-                0, # p3
-                0, # p4
-                int(lat*1e7), # latitude
-                int(lng*1e7), # longitude
-                alt, # altitude
+                p1,
+                p2,
+                p3,
+                p4,
+                p5, # typically latitude
+                p6, # typically longitude
+                p7, # typically altitude
                 mavutil.mavlink.MAV_MISSION_TYPE_MISSION),
             )
             seq += 1
@@ -3148,6 +3170,7 @@ class AutoTest(ABC):
     def ardupilot_stores_frame_for_cmd(self, t):
         # ardupilot doesn't remember frame on these commands
         return t not in [
+            mavutil.mavlink.MAV_CMD_DO_SEND_SCRIPT_MESSAGE,
             mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED,
             mavutil.mavlink.MAV_CMD_CONDITION_YAW,
             mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,

@@ -3191,6 +3191,158 @@ class AutoTestPlane(AutoTest):
         if m.intake_manifold_temperature < 20:
             raise NotAchievedException("Bad intake manifold temperature")
 
+    def epoch_ms_to_gps_time(self, epoch_ms):
+        '''convert time in milliseconds seconds since 1970 to GPS week and TOW'''
+        tmp = epoch_ms/1000 + 18 - 86400*(10*365 + int((1980-1969)/4) + 1 + 6 - 2)
+        weeks = tmp // (86400*7)
+        msec = int((tmp - (weeks * (86400*7))) * 1000)
+
+        return (weeks, msec)
+
+    def load_mission_lua_waypoints(self):
+        alt = 20
+        items = [
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, alt)
+        ]
+
+        dist = 1200
+        time_between_wp = dist/15  # i.e. 15 metres/second
+        start_delay_ms = 60
+        tstart = self.get_sim_time()
+        while True:
+            uav_now_us = self.poll_message("SYSTEM_TIME").time_unix_usec
+            if uav_now_us != 0:
+                break
+            if self.get_sim_time_cached() - tstart > 10:
+                raise NotAchievedException("Did not get time_unix_usec")
+        start_time_ms = uav_now_us/1000 + start_delay_ms
+        t_ms = start_time_ms + 45000  # allow 45s for takeoff
+        timed_wp_ms = {}
+        # first time is divided by 2 because we're already half-way-ish there...
+        for (ofs_n, ofs_e, delta_t_seconds) in [
+                (dist/2, dist/2, time_between_wp/2),
+                (dist/2, -dist/2, time_between_wp),
+                (-dist/2, -dist/2, time_between_wp),
+                (-dist/2, dist/2, time_between_wp),
+                (dist/2, dist/2, time_between_wp)]:
+            t_ms += delta_t_seconds*1000
+            (gps_week, gps_ms) = self.epoch_ms_to_gps_time(t_ms)
+            # epoch = mavextra.gps_time_to_epoch(gps_week, gps_ms)
+            # print("delta: %s" % str(epoch - t_ms))
+
+            # self.progress("In: %u\n" % t_ms)
+            p1 = len(items)+2
+            p2 = gps_week
+            p3 = gps_ms
+            # self.progress("InP2: %u\n" % p2)
+            # self.progress("InP3: %u\n" % p3)
+            items.append((mavutil.mavlink.MAV_CMD_DO_SEND_SCRIPT_MESSAGE,
+                          p1,
+                          p2,
+                          p3,
+                          ))
+            items.append((mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, ofs_n, ofs_e, alt))
+            timed_wp_ms[len(items)] = t_ms
+
+        items.append((mavutil.mavlink.MAV_CMD_DO_LAND_START, 0, 0, 0))
+        items.append((mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, -35.363136, 149.162750, 60.000000))
+        items.append((mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, -35.365467, 149.164215, 55.000000))
+        items.append((mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, -35.365009, 149.165482, 39.889999))
+        items.append((mavutil.mavlink.MAV_CMD_NAV_LAND, -35.363041, 149.165222, 0.000000))
+
+        self.upload_simple_relhome_mission(items)
+
+        return timed_wp_ms
+
+    def LUATimedWaypoints(self):
+        self.start_subtest("Scripting - timed waypoints")
+
+        self.context_push()
+        self.context_collect("STATUSTEXT")
+
+        ex = None
+        example_script = "plane-timed-waypoints.lua"
+        try:
+            self.install_example_script(example_script)
+
+            # set up some wind
+            wind_speed = 10
+            wind_dir = 63
+
+            self.set_parameters({
+                "SCR_ENABLE": 1,
+                "SCR_HEAP_SIZE": 128 * 1024,
+                "TRIM_ARSPD_CM": 1000,
+                "WP_RADIUS": 1,
+                # "RC10_OPTION": 300,  # script 1
+                'SIM_WIND_SPD': wind_speed,
+                'SIM_WIND_DIR': wind_dir,
+                'SIM_TERRAIN': 0,
+                #                'MIN_GNDSPD_CM': 12,
+            })
+
+            timed_wp_ms = self.load_mission_lua_waypoints()
+
+            self.reboot_sitl()
+
+            self.wait_ready_to_arm()
+
+            self.arm_vehicle()
+            self.change_mode('AUTO')
+            tstart = self.get_sim_time()
+            current_seq = None
+            current_desttime_ms = None
+            time_errors = {}
+            while True:
+                if self.get_sim_time_cached() - tstart > 30000:
+                    raise NotAchievedException("Did not finish mission")
+                if not self.armed():
+                    break
+                seq = self.mav.waypoint_current()
+                if seq != current_seq:
+                    if current_desttime_ms is not None:
+                        # make sure we hit our target
+                        uav_now_us = self.poll_message("SYSTEM_TIME").time_unix_usec
+                        uav_now_ms = uav_now_us/1000.0
+                        time_error_ms = abs(uav_now_ms - current_desttime_ms)
+                        self.progress(
+                            "uav_now_ms=%f current_desttime_ms=%f error_s=%f" %
+                            (uav_now_ms, current_desttime_ms, time_error_ms/1000.0))
+#                        if time_error_ms > 15000:  # 1/2 second
+#                            raise NotAchievedException(
+#                                "Did not hit target (now=%f want=%f error=%fms)" %
+#                                (uav_now_ms, current_desttime_ms, time_error_ms))
+                        time_errors[seq] = time_error_ms
+                        current_desttime_ms = None
+                    current_seq = seq
+                    if seq in timed_wp_ms:
+                        current_desttime_ms = timed_wp_ms[seq]
+                        del timed_wp_ms[seq]
+                    else:
+                        current_desttime_ms = None
+            if len(timed_wp_ms.keys()):
+                raise NotAchievedException("Did not hit all waypoints (remaining=%s" % str(timed_wp_ms))
+
+            for (wp, time_error) in time_errors.items():
+                self.progress("time error[%u]=%fs" % (wp, time_error/1000.0))
+
+            # things to test:
+            # - push wind up, make sure throttle goes up
+
+        except Exception as e:
+            self.print_exception_caught(e)
+            ex = e
+
+        self.remove_example_script(example_script)
+
+        self.context_pop()
+
+        self.disarm_vehicle(force=True)
+        self.reboot_sitl()
+
+        if ex is not None:
+            raise ex
+
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestPlane, self).tests()
@@ -3427,6 +3579,10 @@ class AutoTestPlane(AutoTest):
             ("MegaSquirt",
              "Test MegaSquirt EFI",
              self.MegaSquirt),
+
+            ("LUATimedWaypoints",
+             "Test timed waypoints lua script",
+             self.LUATimedWaypoints),
 
             ("LogUpload",
              "Log upload",
