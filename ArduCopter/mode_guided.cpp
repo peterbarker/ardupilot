@@ -97,7 +97,8 @@ void ModeGuided::run()
 
     case SubMode::Land:
         // run land controller
-        land_run();
+        land_run_horizontal_control();
+        land_run_vertical_control();
         break;
     }
  }
@@ -982,11 +983,27 @@ void ModeGuided::angle_control_run()
 }
 
 // initialise guided mode's posvel controller
-void ModeGuided::handle_land(const Location &loc)
+bool ModeGuided::handle_land(const Location &loc)
 {
+#if AC_FENCE == ENABLED
+    // reject destination outside the fence.
+    // Note: there is a danger that a target specified as a terrain altitude might not be checked if the conversion to alt-above-home fails
+    if (!copter.fence.check_destination_within_fence(dest_loc)) {
+        AP::logger().Write_Error(LogErrorSubsystem::NAVIGATION, LogErrorCode::DEST_OUTSIDE_FENCE);
+        // failure is propagated to GCS with NAK
+        return false;
+    }
+#endif
+
     guided_mode = SubMode::Land;
     submodelandstate = SubModeLandState::FlyToLocation;
-    wp_start(loc);
+
+    // set position target and zero velocity and acceleration
+    Vector3f pos_target_f;
+    bool terrain_alt;
+    if (!wp_nav->get_vector_NEU(dest_loc, pos_target_f, terrain_alt)) {
+        return false;
+    }
 }
 
 void ModeGuided::land_run()

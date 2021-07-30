@@ -7258,6 +7258,13 @@ class AutoTest(ABC):
         # assume this is a number....
         return self.mav.messages['HEARTBEAT'].custom_mode == mode
 
+    def assert_mode(self, mode):
+        if self.mode_is(mode):
+            return
+        raise NotAchievedException(
+            "Expected mode %s got mode %s" %
+            (str(mode), str(self.mav.messages['HEARTBEAT'].custom_mode)))
+
     def wait_mode(self, mode, timeout=60):
         """Wait for mode to change."""
         self.progress("Waiting for mode %s" % mode)

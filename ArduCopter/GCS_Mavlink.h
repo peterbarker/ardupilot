@@ -71,6 +71,8 @@ private:
     bool handle_guided_request(AP_Mission::Mission_Command &cmd) override;
     bool try_send_message(enum ap_message id) override;
 
+    MAV_RESULT handle_command_int_nav_land(const mavlink_command_int_t &packet);
+
     void packetReceived(const mavlink_status_t &status,
                         const mavlink_message_t &msg) override;
 

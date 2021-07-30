@@ -4764,6 +4764,13 @@ class AutoTestCopter(AutoTest):
         self._DO_WINCH(self.run_cmd_int)
         self._DO_WINCH(self.run_cmd)
 
+    def GuidedLand(self):
+        """Ensure we can land in guided mode."""
+        self.takeoff(10, mode='GUIDED')
+        self.run_cmd(mavutil.mavlink.MAV_CMD_NAV_LAND)
+        self.wait_disarmed()
+        self.assert_mode('GUIDED')
+
     def GuidedSubModeChange(self):
         """"Ensure we can move around in guided after a takeoff command."""
 
@@ -9893,6 +9900,7 @@ class AutoTestCopter(AutoTest):
              self.AutoTune,
              self.AutoTuneYawD,
              self.NoRCOnBootPreArmFailure,
+             self.GuidedLand,
         ])
         return ret
 
