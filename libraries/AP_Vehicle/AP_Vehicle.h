@@ -209,6 +209,10 @@ public:
 
     // set steering and throttle (-1 to +1) (for use by scripting with Rover)
     virtual bool set_steering_and_throttle(float steering, float throttle) { return false; }
+
+    // set minimum groundspeed in m/s (for use by scripting)
+    virtual bool set_groundspeed_min(float speed) { return false; }
+
 #endif // ENABLE_SCRIPTING
 
 
