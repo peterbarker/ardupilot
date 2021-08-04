@@ -1181,6 +1181,8 @@ public:
 #ifdef ENABLE_SCRIPTING
     bool set_target_location(const Location& target_loc) override;
     bool get_target_location(Location& target_loc) override;
+    // set minimum groundspeed in m/s (for use by scripting)
+    virtual bool set_groundspeed_min(float speed) override;
 #endif // ENABLE_SCRIPTING
 
 };
