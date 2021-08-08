@@ -18,7 +18,7 @@
 #include "Variometer.h"
 #include "SpeedToFly.h"
 
-static constexpr float INITIAL_THERMAL_RADIUS = 80.0;
+static constexpr float INITIAL_THERMAL_RADIUS = 30.0;
 static constexpr float INITIAL_STRENGTH_COVARIANCE = 0.0049;
 static constexpr float INITIAL_RADIUS_COVARIANCE = 400.0;
 static constexpr float INITIAL_POSITION_COVARIANCE = 400.0;
