@@ -304,7 +304,7 @@ void ModeAuto::rtl_start()
 // takeoff_start - initialise waypoint controller to implement take-off
 void ModeAuto::punch_takeoff_start(const Location& dest_loc, uint16_t time_ms, uint8_t throttle_pct)
 {
-    _mode = Auto_TakeOff;
+    _mode = SubMode::TAKEOFF;
 
     // initialise yaw
     auto_yaw.set_mode(AUTO_YAW_HOLD);
@@ -989,12 +989,12 @@ void ModeAuto::punch_takeoff_run()
     switch (motors->get_spool_state()) {
     case AP_Motors::SpoolState::SHUT_DOWN:
         // Motors Stopped
-        attitude_control->set_yaw_target_to_current_heading();
+        attitude_control->reset_yaw_target_and_rate(false);
         attitude_control->reset_rate_controller_I_terms();
         break;
     case AP_Motors::SpoolState::GROUND_IDLE:
         // Landed
-        attitude_control->set_yaw_target_to_current_heading();
+        attitude_control->reset_yaw_target_and_rate(false);
         attitude_control->reset_rate_controller_I_terms();
         break;
     case AP_Motors::SpoolState::THROTTLE_UNLIMITED:
