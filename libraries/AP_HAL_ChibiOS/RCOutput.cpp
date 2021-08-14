@@ -2185,11 +2185,13 @@ void RCOutput::serial_end(void)
             serial_thread = nullptr;
         }
         irq.waiter = nullptr;
+#if HAL_PWM_COUNT > 0
         for (uint8_t i = 0; i < NUM_GROUPS; i++ ) {
             pwm_group &group = pwm_group_list[i];
             set_group_mode(group);
             set_freq_group(group);
         }
+#endif
     }
     serial_group = nullptr;
 }
