@@ -2402,6 +2402,7 @@ INCLUDE common.ld
                     (gpio, enabled, pwm, port, pin, p))
         # and write #defines for use by config code
         f.write('}\n\n')
+        f.write('#define HAL_GPIO_NUM_PINS %u\\\n' % len(gpios))
         f.write('// full pin define list\n')
         last_label = None
         for label in sorted(list(set(self.bylabel.keys()))):

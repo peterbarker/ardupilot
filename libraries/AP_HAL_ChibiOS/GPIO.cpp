@@ -39,7 +39,7 @@ extern AP_IOMCU iomcu;
 
 
 // GPIO pin table from hwdef.dat
-static struct gpio_entry {
+struct gpio_entry {
     uint8_t pin_num;
     bool enabled;
     uint8_t pwm_num;
@@ -51,13 +51,18 @@ static struct gpio_entry {
     uint16_t isr_quota;
     uint8_t isr_disabled_ticks;
     AP_HAL::GPIO::INTERRUPT_TRIGGER_TYPE isr_mode;
-} _gpio_tab[] = HAL_GPIO_PINS;
+};
+
+#if HAL_GPIO_NUM_PINS
+static struct gpio_entry _gpio_tab[] = HAL_GPIO_PINS;
+#endif
 
 /*
   map a user pin number to a GPIO table entry
  */
 static struct gpio_entry *gpio_by_pin_num(uint8_t pin_num, bool check_enabled=true)
 {
+#if HAL_GPIO_NUM_PINS
     for (uint8_t i=0; i<ARRAY_SIZE(_gpio_tab); i++) {
         const auto &t = _gpio_tab[i];
         if (pin_num == t.pin_num) {
@@ -67,6 +72,7 @@ static struct gpio_entry *gpio_by_pin_num(uint8_t pin_num, bool check_enabled=tr
             return &_gpio_tab[i];
         }
     }
+#endif
     return NULL;
 }
 
@@ -78,6 +84,7 @@ GPIO::GPIO()
 
 void GPIO::init()
 {
+#if HAL_GPIO_NUM_PINS
 #if !APM_BUILD_TYPE(APM_BUILD_iofirmware) && !defined(HAL_BOOTLOADER_BUILD)
     uint8_t chan_offset = 0;
 #if HAL_WITH_IO_MCU
@@ -99,6 +106,7 @@ void GPIO::init()
             g->enabled = SRV_Channels::is_GPIO((g->pwm_num-1)+chan_offset);
         }
     }
+#endif // HAL_GPIO_NUM_PINS
 #endif // HAL_BOOTLOADER_BUILD
 #ifdef HAL_PIN_ALT_CONFIG
     setup_alt_config();
@@ -579,6 +587,7 @@ void GPIO::set_mode(uint8_t pin, uint32_t mode)
 */
 void GPIO::timer_tick()
 {
+#if HAL_GPIO_NUM_PINS
     // allow 100k interrupts/second max for GPIO interrupt sources, which is
     // 10k per 100ms call to timer_tick()
     const uint16_t quota = 10000U;
@@ -628,6 +637,7 @@ void GPIO::timer_tick()
             }
         }
     }
+#endif
 }
 
 // Check for ISR floods
