@@ -176,7 +176,7 @@ include AP_Terrain/AP_Terrain.h
 singleton AP_Terrain depends defined(AP_TERRAIN_AVAILABLE) && AP_TERRAIN_AVAILABLE == 1
 singleton AP_Terrain rename terrain
 singleton AP_Terrain method enabled boolean
-singleton AP_Terrain enum TerrainStatusDisabled TerrainStatusUnhealthy TerrainStatusOK
+singleton AP_Terrain enum Status::Disabled Status::Unhealthy Status::OK
 singleton AP_Terrain method status uint8_t
 singleton AP_Terrain method height_amsl boolean Location float'Null boolean
 singleton AP_Terrain method height_terrain_difference_home boolean float'Null boolean
