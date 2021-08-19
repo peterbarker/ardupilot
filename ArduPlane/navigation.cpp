@@ -52,7 +52,7 @@ void Plane::loiter_angle_update(void)
         */
         float altitude_agl = 0;
         if (target_altitude.terrain_following) {
-            if (terrain.status() == AP_Terrain::TerrainStatusOK &&
+            if (terrain.status() == AP_Terrain::Status::OK &&
                 terrain.height_above_terrain(altitude_agl, true)) {
                 terrain_status_ok = true;
             }

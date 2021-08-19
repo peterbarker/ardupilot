@@ -12,7 +12,7 @@ void Plane::read_rangefinder(void)
     // during low-altitude flight when configured to power down during higher-altitude flight
     float height;
 #if AP_TERRAIN_AVAILABLE
-    if (terrain.status() == AP_Terrain::TerrainStatusOK && terrain.height_above_terrain(height, true)) {
+    if (terrain.status() == AP_Terrain::Status::OK && terrain.height_above_terrain(height, true)) {
         rangefinder.set_estimated_terrain_height(height);
     } else
 #endif
