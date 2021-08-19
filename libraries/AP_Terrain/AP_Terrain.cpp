@@ -359,15 +359,15 @@ void AP_Terrain::update(void)
     if (allocate()) {
         if (!pos_valid) {
             // we don't know where we are
-            system_status = TerrainStatusUnhealthy;
+            system_status = Status::Unhealthy;
         } else if (!terrain_valid) {
             // we don't have terrain data at current location
-            system_status = TerrainStatusUnhealthy;
+            system_status = Status::Unhealthy;
         } else {
-            system_status = TerrainStatusOK;
+            system_status = Status::OK;
         }
     } else {
-        system_status = TerrainStatusDisabled;
+        system_status = Status::Disabled;
     }
 }
 

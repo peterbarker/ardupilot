@@ -90,10 +90,10 @@ public:
 
     static AP_Terrain *get_singleton(void) { return singleton; }
 
-    enum TerrainStatus {
-        TerrainStatusDisabled  = 0, // not enabled
-        TerrainStatusUnhealthy = 1, // no terrain data for current location
-        TerrainStatusOK        = 2  // terrain data available
+    enum class Status : uint8_t {
+        Disabled  = 0, // not enabled
+        Unhealthy = 1, // no terrain data for current location
+        OK        = 2  // terrain data available
     };
 
     static const struct AP_Param::GroupInfo var_info[];
@@ -105,7 +105,7 @@ public:
     void set_enabled(bool _enable) { enable.set(_enable); }
 
     // return status enum for health reporting
-    enum TerrainStatus status(void) const { return system_status; }
+    Status status(void) const { return system_status; }
 
     bool pre_arm_checks(char *failure_msg, uint8_t failure_msg_len) const;
 
@@ -457,7 +457,7 @@ private:
     char *file_path = nullptr;
 
     // status
-    enum TerrainStatus system_status = TerrainStatusDisabled;
+    Status system_status = Status::Disabled;
 
     // memory allocation status
     bool memory_alloc_failed;
