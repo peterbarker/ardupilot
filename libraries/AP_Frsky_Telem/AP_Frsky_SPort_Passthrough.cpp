@@ -733,7 +733,7 @@ uint32_t AP_Frsky_SPort_Passthrough::calc_terrain(void)
         value |= prep_number(roundf(height_above_terrain * 10), 3, 2);
     }
     // terrain unhealthy flag
-    value |= (uint8_t)(terrain->status() == AP_Terrain::TerrainStatus::TerrainStatusUnhealthy) << TERRAIN_UNHEALTHY_OFFSET;
+    value |= (uint8_t)(terrain->status() == AP_Terrain::Status::Unhealthy) << TERRAIN_UNHEALTHY_OFFSET;
 #endif
     return value;
 }
