@@ -8864,6 +8864,28 @@ class AutoTestCopter(AutoTest):
         self.context_pop()
         self.reboot_sitl()
 
+    def CodevESC_flight(self):
+        '''fly with servo outputs from Codev ESC'''
+        self.start_subtest("Codev ESC flight")
+        num_wp = self.load_mission("copter_mission.txt", strict=False)
+        self.fly_loaded_mission(num_wp)
+
+    def CodevESC(self):
+        self.set_parameters({
+            "SERIAL5_PROTOCOL": 41,
+            "SIM_CDVESC_ENA": 1,
+            # "SERVO1_FUNCTION": 0,
+            # "SERVO2_FUNCTION": 0,
+            # "SERVO3_FUNCTION": 0,
+            # "SERVO4_FUNCTION": 33,
+            # "SERVO5_FUNCTION": 0,
+            # "SERVO6_FUNCTION": 34,
+            # "SERVO7_FUNCTION": 35,
+            # "SERVO8_FUNCTION": 36,
+        })
+        self.customise_SITL_commandline(["--uartF=sim:codevesc"])
+        self.CodevESC_flight()
+
     def tests1a(self):
         '''return list of all tests'''
         ret = super(AutoTestCopter, self).tests()  # about 5 mins and ~20 initial tests from autotest/common.py
@@ -9047,6 +9069,7 @@ class AutoTestCopter(AutoTest):
             self.DefaultIntervalsFromFiles,
             self.GPSTypes,
             self.MultipleGPS,
+            self.CodevESC,
         ])
         return ret
 
