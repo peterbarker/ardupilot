@@ -122,13 +122,20 @@ uint8_t crc8_dvb_s2_update(uint8_t crc, const void *data, uint32_t length)
     return crc;
 }
 
+// crc8 update-CRC-from-supplied-buffer function which takes the
+// polynomial seed
+uint8_t crc8_update_seed(uint8_t crc, const uint8_t* buf, const uint16_t buf_len, const uint8_t seed)
+{
+    for (uint16_t i = 0; i < buf_len; i++) {
+        crc = crc8_dvb(buf[i], crc, seed);
+    }
+    return crc;
+}
+
 // copied from AP_FETtecOneWire.cpp
 uint8_t crc8_dvb_update(uint8_t crc, const uint8_t* buf, const uint16_t buf_len)
 {
-    for (uint16_t i = 0; i < buf_len; i++) {
-        crc = crc8_dvb(buf[i], crc, 0x7);
-    }
-    return crc;
+    return crc8_update_seed(crc, buf, buf_len, 0x07);
 }
 
 /*
