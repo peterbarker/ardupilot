@@ -59,6 +59,7 @@
 
 #include <SITL/SIM_RichenPower.h>
 #include <SITL/SIM_FETtecOneWireESC.h>
+#include <SITL/SIM_CodevESC.h>
 #include <AP_HAL/utility/Socket.h>
 
 class HAL_SITL;
@@ -253,6 +254,9 @@ private:
 
     // simulated FETtec OneWire ESCs:
     SITL::FETtecOneWireESC *fetteconewireesc;
+
+    // simulated Codev ESCs:
+    SITL::CodevESC *codevesc;
 
 #if HAL_SIM_PS_LIGHTWARE_SF45B_ENABLED
     // simulated SF45B proximity sensor:

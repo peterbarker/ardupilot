@@ -367,6 +367,9 @@ SITL::SerialDevice *SITL_State::create_serial_sim(const char *name, const char *
     } else if (streq(name, "fetteconewireesc")) {
         sitl_model->set_fetteconewireesc(&_sitl->fetteconewireesc_sim);
         return &_sitl->fetteconewireesc_sim;
+    } else if (streq(name, "codevesc")) {
+        sitl_model->set_codevesc(&_sitl->codevesc_sim);
+        return _sitl->codevesc_sim;
     } else if (streq(name, "ie24")) {
         sitl_model->set_ie24(&_sitl->ie24_sim);
         return &_sitl->ie24_sim;
@@ -780,6 +783,17 @@ void SITL_State::_simulator_servos(struct sitl_input &input)
         if (_sitl != nullptr) {
             if (_sitl->fetteconewireesc_sim.enabled()) {
                 _sitl->fetteconewireesc_sim.update_sitl_input_pwm(input);
+                for (uint8_t i=0; i<ARRAY_SIZE(input.servos); i++) {
+                    if (input.servos[i] != 0 && input.servos[i] < 1000) {
+                        AP_HAL::panic("Bad input servo value (%u)", input.servos[i]);
+                    }
+                }
+            }
+        }
+        // Codev ESC simulation support.
+        if (_sitl != nullptr) {
+            if (_sitl->codevesc_sim.enabled()) {
+                _sitl->codevesc_sim.update_sitl_input_pwm(input);
                 for (uint8_t i=0; i<ARRAY_SIZE(input.servos); i++) {
                     if (input.servos[i] != 0 && input.servos[i] < 1000) {
                         AP_HAL::panic("Bad input servo value (%u)", input.servos[i]);
