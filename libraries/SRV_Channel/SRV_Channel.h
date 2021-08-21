@@ -22,6 +22,7 @@
 #include <AP_SBusOut/AP_SBusOut.h>
 #include <AP_BLHeli/AP_BLHeli.h>
 #include <AP_FETtecOneWire/AP_FETtecOneWire.h>
+#include <AP_CodevEsc/AP_CodevEsc.h>
 
 #ifndef NUM_SERVO_CHANNELS
 #if defined(HAL_BUILD_AP_PERIPH) && defined(HAL_PWM_COUNT)
@@ -625,6 +626,11 @@ private:
     AP_FETtecOneWire fetteconwire;
     static AP_FETtecOneWire *fetteconwire_ptr;
 #endif  // AP_FETTEC_ONEWIRE_ENABLED
+
+#if HAL_CODEVESC_ENABLED
+    AP_CodevEsc codevesc;
+    static AP_CodevEsc *codevesc_ptr;
+#endif  // HAL_CODEVESC_ENABLED
 
     // mask of disabled channels
     static uint32_t disabled_mask;

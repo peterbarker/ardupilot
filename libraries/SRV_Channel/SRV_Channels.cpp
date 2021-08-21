@@ -59,6 +59,10 @@ AP_RobotisServo *SRV_Channels::robotis_ptr;
 AP_FETtecOneWire *SRV_Channels::fetteconwire_ptr;
 #endif
 
+#if HAL_CODEVESC_ENABLED
+AP_CodevEsc *SRV_Channels::codevesc_ptr;
+#endif
+
 uint16_t SRV_Channels::override_counter[NUM_SERVO_CHANNELS];
 
 #if HAL_SUPPORT_RCOUT_SERIAL
@@ -221,6 +225,12 @@ const AP_Param::GroupInfo SRV_Channels::var_info[] = {
     AP_SUBGROUPINFO(fetteconwire, "_FTW_",  25, SRV_Channels, AP_FETtecOneWire),
 #endif
 
+#if HAL_CODEVESC_ENABLED
+    // @Group: _CDVE_
+    // @Path: ../AP_CodevEsc/AP_CodevEsc.cpp
+    AP_SUBGROUPINFO(codevesc, "_FTW_",  26, SRV_Channels, AP_CodevEsc),
+#endif
+
     // @Param: _DSHOT_RATE
     // @DisplayName: Servo DShot output rate
     // @Description: This sets the DShot output rate for all outputs as a multiple of the loop rate. 0 sets the output rate to be fixed at 1Khz for low loop rates. This value should never be set below 500Hz.
@@ -377,6 +387,10 @@ SRV_Channels::SRV_Channels(void)
     fetteconwire_ptr = &fetteconwire;
 #endif
 
+#if HAL_CODEVESC_ENABLED
+    codevesc_ptr = &codevesc;
+#endif
+
 #if AP_VOLZ_ENABLED
     volz_ptr = &volz;
 #endif
@@ -530,6 +544,10 @@ void SRV_Channels::push()
 
 #if AP_FETTEC_ONEWIRE_ENABLED
     fetteconwire_ptr->update();
+#endif
+
+#if HAL_CODEVESC_ENABLED
+    codevesc_ptr->update();
 #endif
 
 #if HAL_CANMANAGER_ENABLED
