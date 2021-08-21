@@ -1,12 +1,18 @@
-/// @file	AP_CodevEsc.h
-/// @brief	exectue the codev esc
 #pragma once
-#include "drv_codev_esc.h"
-#include <AP_HAL/AP_HAL.h>
-#include <GCS_MAVLink/GCS.h>
 
-#include <AP_SerialManager/AP_SerialManager.h>
-#include <AP_Motors/AP_Motors_Class.h>
+#include <AP_HAL/AP_HAL_Boards.h>
+
+#ifndef HAL_CODEVESC_ENABLED
+#define HAL_CODEVESC_ENABLED 0
+#endif
+
+#if HAL_CODEVESC_ENABLED
+
+#include "drv_codev_esc.h"
+
+#include <AP_HAL/AP_HAL.h>
+
+#include <AP_Param/AP_Param.h>
 
 #define BOARD_TAP_ESC_MODE 2
 
@@ -19,23 +25,23 @@
 #define LED_ON_TIME_MS  50
 #define LED_OFF_TIME_MS 1450
 
-// Circular from back right in CCW direction
-#define ESC_POS {2, 1, 0, 3, 4, 5, 6, 7}
-// 0 is CW, 1 is CCW
-#define ESC_DIR {0, 1, 1, 0, 1 ,1, 1, 1}
-const uint8_t _device_mux_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_POS;
-const uint8_t _device_dir_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_DIR;
-
 class AP_CodevEsc
 {
 public:
-    AP_CodevEsc(/* args */);
-    ~AP_CodevEsc();
 
-    /// Startup initialisation.
+    AP_CodevEsc() {}
+
+    static const struct AP_Param::GroupInfo var_info[];
+
+    CLASS_NO_COPY(AP_CodevEsc);
+
     void init();
 
-    static AP_CodevEsc *get_singleton() { return _singleton; }
+    void update();
+
+private:
+
+    AP_Int32 _reverse_mask;
 
     bool uart_state() { return uart==nullptr?false:true;}
 
@@ -44,11 +50,9 @@ public:
     void set_vehicle_control_mode(uint8_t mode) {control_mode = mode;};
     void send_esc_telemetry_mavlink(uint8_t mav_chan);
 
-    void execute_codev_esc();
     void receive_esc_status();
 
     Esc_Status _esc_status[HAL_ESC_NUM] = {};
-
 
     enum CONTROL_MODE_TYPE {
         STABILIZE =     0,  // manual airframe angle with manual throttle
@@ -77,11 +81,7 @@ public:
         AUTOROTATE =   26,  // Autonomous autorotation
     };
 
-private:
-
-    static AP_CodevEsc *_singleton;
-
-    int configure_esc();
+    bool configure_esc();
     // strobe the corresponding buffer channel
 	void select_responder(uint8_t channel);
     void send_esc_outputs();
@@ -95,14 +95,14 @@ private:
     uint32_t baudrate = 0;
 
     uint8_t    	  channels_count = 0; 		///< nnumber of ESC channels
-    int8_t 	    responding_esc = -1;
-    uint16_t motor_out[AP_MOTORS_MAX_NUM_MOTORS];
+    int8_t 	    responding_esc = 0;
+    uint16_t motor_out[4];  // FIXME
     uint8_t led_on_off = 0;
     uint8_t control_mode = 0;
 
     unsigned long _esc_led_on_time_us = 0;
+
+    bool configured;  // true once we know what ESCs we have to talk to
 };
 
-namespace AP {
-    AP_CodevEsc *codevesc();
-};
+#endif  // HAL_CODEVESC_ENABLED

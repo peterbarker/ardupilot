@@ -14,51 +14,56 @@
 */
 
 #include "AP_CodevEsc.h"
+
+#if HAL_CODEVESC_ENABLED
+
+const AP_Param::GroupInfo AP_CodevEsc::var_info[] {
+
+    // @Param: MASK
+    // @DisplayName: Servo channel output bitmask
+    // @Description: Servo channel mask specifying FETtec ESC output.
+    // @Bitmask: 0:SERVO1,1:SERVO2,2:SERVO3,3:SERVO4,4:SERVO5,5:SERVO6,6:SERVO7,7:SERVO8,8:SERVO9,9:SERVO10,10:SERVO11,11:SERVO12
+    // @RebootRequired: True
+    // @User: Standard
+//    AP_GROUPINFO_FLAGS("MASK",  1, AP_FETtecOneWire, _motor_mask_parameter, 0, AP_PARAM_FLAG_ENABLE),
+
+    // @Param: RVMASK
+    // @DisplayName: Servo channel reverse rotation bitmask
+    // @Description: Servo channel mask to reverse rotation of Codev ESC outputs.
+    // @Bitmask: 0:SERVO1,1:SERVO2,2:SERVO3,3:SERVO4,4:SERVO5,5:SERVO6,6:SERVO7,7:SERVO8,8:SERVO9,9:SERVO10,10:SERVO11,11:SERVO12
+    // @User: Standard
+    AP_GROUPINFO("RVMASK",  2, AP_CodevEsc, _reverse_mask, 0),
+
+    AP_GROUPEND
+        };
+
 #include <AP_Arming/AP_Arming.h>
 #include <AP_BattMonitor/AP_BattMonitor.h>
 
+#include <AP_SerialManager/AP_SerialManager.h>
 
+#include <AP_Motors/AP_Motors.h>
 
 extern const AP_HAL::HAL &hal;
-
-AP_CodevEsc::AP_CodevEsc(/* args */)
-{
-    if (_singleton != nullptr) {
-        AP_HAL::panic("Fence must be singleton");
-    }
-
-    _singleton = this;
-}
-
-AP_CodevEsc::~AP_CodevEsc()
-{
-    channels_count = 0;
-}
 
 void AP_CodevEsc::init()
 {
     channels_count = HAL_ESC_NUM;
     const AP_SerialManager &serial_manager = AP::serialmanager();
     uart = serial_manager.find_serial(AP_SerialManager::SerialProtocol_CodevEsc, 0);
-    if (uart != nullptr) {
-        baudrate = serial_manager.find_baudrate(AP_SerialManager::SerialProtocol_CodevEsc, 0);
-        uart->begin(baudrate);
-
-        // configure and initialise the esc
-        configure_esc();
+    if (uart == nullptr) {
+        return;
     }
+    baudrate = serial_manager.find_baudrate(AP_SerialManager::SerialProtocol_CodevEsc, 0);
+    uart->begin(baudrate);
 }
 
 
-int AP_CodevEsc::configure_esc()
+bool AP_CodevEsc::configure_esc()
 {
-
-    unsigned long _esc_start_time_us;
-
-    _esc_start_time_us = AP_HAL::micros64();
-
-    if (_esc_start_time_us < MAX_BOOT_TIME_MS * 1000) {
-        hal.scheduler->delay_microseconds((MAX_BOOT_TIME_MS * 1000) - _esc_start_time_us);
+    // give ESCs time to boot:
+    if (AP_HAL::millis() < MAX_BOOT_TIME_MS) {
+        return false;
     }
 
     /* Issue Basic Config */
@@ -71,10 +76,11 @@ int AP_CodevEsc::configure_esc()
 
     /* Asign the id's to the ESCs to match the mux */
 	for (uint8_t phy_chan_index = 0; phy_chan_index < channels_count; phy_chan_index++) {
-		config.channelMapTable[phy_chan_index] = _device_mux_map[phy_chan_index] &
-				ESC_MASK_MAP_CHANNEL;
-		config.channelMapTable[phy_chan_index] |= (_device_dir_map[phy_chan_index] << 4) &
-				ESC_MASK_MAP_RUNNING_DIRECTION;
+		config.channelMapTable[phy_chan_index] = phy_chan_index &
+            ESC_MASK_MAP_CHANNEL;
+        if (_reverse_mask & (1U<<phy_chan_index)) {
+            config.channelMapTable[phy_chan_index] |= 1U << 4;  // FIXME define
+        }
 	}
 
     config.maxChannelValue = RPMMAX;
@@ -108,7 +114,7 @@ int AP_CodevEsc::configure_esc()
 
         hal.scheduler->delay_microseconds(30000);
 
-        rpm[_device_mux_map[responding_esc]] |= RUN_FEEDBACK_ENABLE_MASK;
+        rpm[responding_esc] |= RUN_FEEDBACK_ENABLE_MASK;
 
         for (uint8_t i = 0; i < channels_count; i++) {
 		    unlock_packet.d.reqRun.rpm_flags[i] = rpm[i];
@@ -128,14 +134,25 @@ int AP_CodevEsc::configure_esc()
 		/* Min Packet to Packet time is 1 Ms so use 2 */
 		hal.scheduler->delay_microseconds(100);
 	}
-    return 0;
+    return true;
 }
 
-void AP_CodevEsc::execute_codev_esc()
+void AP_CodevEsc::update()
 {
-    if (uart != nullptr) {
-        send_esc_outputs();
+    if (uart == nullptr) {
+        init();
+        if (uart == nullptr) {
+            return;
+        }
     }
+    if (!configured) {
+        if (!configure_esc()) {
+            return;
+        }
+        configured = true;
+    }
+    send_esc_outputs();
+    receive_esc_status();
 }
 
 void AP_CodevEsc::receive_esc_status()
@@ -285,24 +302,27 @@ int AP_CodevEsc::parse_tap_esc_feedback(ESC_UART_BUF *const serial_buf, EscPacke
 	return -1;
 }
 
+#include <stdio.h>
+
 void AP_CodevEsc::send_esc_outputs()
 {
     uint16_t rpm[TAP_ESC_MAX_MOTOR_NUM] = {};
     for (uint8_t i = 0;i < channels_count; i++) {
+        // const ESC &esc = _escs[i];
+        // const SRV_Channel* c = SRV_Channels::srv_channel(esc.servo_ofs);
+        const SRV_Channel* c = SRV_Channels::srv_channel(i);
 
-        AP_Motors *motors = AP_Motors::get_singleton();
-        if (motors->armed()) {
-            motor_out[i]= constrain_int16(motor_out[i],RPMMIN,RPMMAX);
+        uint16_t pwm = c->get_output_pwm();
+        if ((hal.util->safety_switch_state() == AP_HAL::Util::SAFETY_DISARMED)
+            || (c == nullptr)) {  // this should never ever happen, but just in case ...
+            pwm = RPMSTOPPED;
+        } else {
+            pwm = c->get_output_pwm();
+            // rescale - FIXME: see if we can just use 1000 and 2000 for RPMMIN/RPMMAX
+            pwm = linear_interpolate(RPMMIN, RPMMAX, pwm, 1000, 2000);
         }
 
-        rpm[i] = motor_out[i];
-
-        if ((rpm[i] & RUN_CHANNEL_VALUE_MASK) > RPMMAX) {
-			rpm[i] = (rpm[i] & ~RUN_CHANNEL_VALUE_MASK) | RPMMAX;
-
-		} else if ((rpm[i] & RUN_CHANNEL_VALUE_MASK) < RPMSTOPPED) {
-			rpm[i] = (rpm[i] & ~RUN_CHANNEL_VALUE_MASK) | RPMSTOPPED;
-		}
+        rpm[i] = pwm;
 
         // apply the led color
         if (i < HAL_ESC_NUM) {
@@ -310,7 +330,7 @@ void AP_CodevEsc::send_esc_outputs()
 		}
     }
 
-    rpm[_device_mux_map[responding_esc]] |= RUN_FEEDBACK_ENABLE_MASK;
+    rpm[responding_esc] |= RUN_FEEDBACK_ENABLE_MASK;
 
     EscPacket packet = {PACKET_HEAD, channels_count, ESCBUS_MSG_ID_RUN};
 	packet.len *= sizeof(packet.d.reqRun.rpm_flags[0]);
@@ -333,12 +353,8 @@ void AP_CodevEsc::send_esc_outputs()
 
 void AP_CodevEsc::set_led_status(uint8_t id,uint8_t mode,uint16_t& led_status)
 {
-    unsigned long _esc_time_now_us = AP_HAL::micros64();
     uint16_t tail_left_led = 0;
     uint16_t tail_right_led = 0;
-    bool arm_state = false;
-    bool arm_checks_status = false;
-    AP_Arming &ap_arm = AP::arming();
 
     switch ((int8_t)mode)
     {
@@ -370,12 +386,9 @@ void AP_CodevEsc::set_led_status(uint8_t id,uint8_t mode,uint16_t& led_status)
         break;
     }
 
-    arm_state = ap_arm.is_armed();
-
-    if (!arm_state) {
-        arm_checks_status = ap_arm.get_pre_arm_passed();
-
-        if (!arm_checks_status) {
+    if (!AP::arming().is_armed()) {
+        // if (false && !AP::arming().get_pre_arm_passed()) {  // PBFIXME
+        if (false) {
             tail_left_led = RUN_BLUE_LED_ON_MASK;
             tail_right_led = RUN_BLUE_LED_ON_MASK;
         }
@@ -407,6 +420,7 @@ void AP_CodevEsc::set_led_status(uint8_t id,uint8_t mode,uint16_t& led_status)
             break;
         }
 
+        const uint64_t _esc_time_now_us = AP_HAL::micros64();
         if (_esc_time_now_us - _esc_led_on_time_us > LED_ON_TIME_MS * 1000) {
             led_on_off = 1;
             _esc_led_on_time_us = _esc_time_now_us;
@@ -433,6 +447,7 @@ void AP_CodevEsc::set_led_status(uint8_t id,uint8_t mode,uint16_t& led_status)
             break;
         }
 
+        const uint64_t _esc_time_now_us = AP_HAL::micros64();
         if (_esc_time_now_us - _esc_led_on_time_us > LED_OFF_TIME_MS * 1000) {
             led_on_off = 0;
             _esc_led_on_time_us = _esc_time_now_us;
@@ -443,11 +458,15 @@ void AP_CodevEsc::set_led_status(uint8_t id,uint8_t mode,uint16_t& led_status)
 
 void AP_CodevEsc::select_responder(uint8_t channel)
 {
-    #if defined(HAL_ESC_SELECT0_GPIO_PIN)
-		hal.gpio->write(HAL_ESC_SELECT0_GPIO_PIN, channel & 1);
-		hal.gpio->write(HAL_ESC_SELECT1_GPIO_PIN, channel & 2);
-		hal.gpio->write(HAL_ESC_SELECT2_GPIO_PIN, channel & 4);
-    #endif
+#if defined(HAL_ESC_SELECT0_GPIO_PIN)
+    hal.gpio->write(HAL_ESC_SELECT0_GPIO_PIN, channel & 1);
+#endif
+#if defined(HAL_ESC_SELECT1_GPIO_PIN)
+    hal.gpio->write(HAL_ESC_SELECT1_GPIO_PIN, channel & 2);
+#endif
+#if HAL_ESC_SELECT2_GPIO_PIN
+    hal.gpio->write(HAL_ESC_SELECT2_GPIO_PIN, channel & 4);
+#endif
 }
 
 
@@ -463,57 +482,10 @@ uint8_t AP_CodevEsc::crc8_esc(uint8_t *p, uint8_t len)
 	uint8_t crc = 0;
 
 	for (uint8_t i = 0; i < len; i++) {
-		crc = crc_table[crc^*p++];
+		crc = codev_crc_table[crc^*p++];
 	}
 
 	return crc;
 }
 
-
-void AP_CodevEsc::send_esc_telemetry_mavlink(uint8_t mav_chan)
-{
-    if (channels_count == 0) {
-        return;
-    }
-    uint16_t voltage[4] {};
-    uint16_t current[4] {};
-    uint16_t rpm[4] {};
-    uint8_t temperature[4] {};
-    uint16_t totalcurrent[4] {};
-    uint16_t count[4] {};
-    AP_BattMonitor &battery = AP::battery();
-    float bat_voltage = battery.voltage();
-
-    for (uint8_t i = 0; i < channels_count; i++) {
-        uint8_t idx = i % 4;
-        temperature[idx]  = _esc_status[i].temperature;
-        voltage[idx]      = bat_voltage * 1000;
-        current[idx]      = _esc_status[i].current * 10;
-        rpm[idx]          = _esc_status[i].rpm;
-
-        if (i % 4 == 3 || i == channels_count - 1) {
-            if (!HAVE_PAYLOAD_SPACE((mavlink_channel_t)mav_chan, ESC_TELEMETRY_1_TO_4)) {
-                return;
-            }
-            if (i < 4) {
-                mavlink_msg_esc_telemetry_1_to_4_send((mavlink_channel_t)mav_chan, temperature, voltage, current, totalcurrent, rpm, count);
-            } else {
-                mavlink_msg_esc_telemetry_5_to_8_send((mavlink_channel_t)mav_chan, temperature, voltage, current, totalcurrent, rpm, count);
-            }
-        }
-    }
-
-}
-
-
-// singleton instance
-AP_CodevEsc *AP_CodevEsc::_singleton;
-
-namespace AP {
-
-AP_CodevEsc *codevesc()
-{
-    return AP_CodevEsc::get_singleton();
-}
-
-}
+#endif // HAL_CODEVESC_ENABLED
