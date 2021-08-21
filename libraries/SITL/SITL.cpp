@@ -224,6 +224,9 @@ const AP_Param::GroupInfo SIM::var_info3[] = {
     // count of simulated IMUs
     AP_GROUPINFO("IMU_COUNT",    23, SIM,  imu_count,  2),
 
+    // @Path: ./SIM_CodevESC.cpp
+    AP_SUBGROUPINFO(codevesc_sim, "CDVESC_", 29, SIM, CodevESC),
+
     // @Path: ./SIM_FETtecOneWireESC.cpp
     AP_SUBGROUPINFO(fetteconewireesc_sim, "FTOWESC_", 30, SIM, FETtecOneWireESC),
 

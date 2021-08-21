@@ -30,6 +30,7 @@
 #include "SIM_Parachute.h"
 #include "SIM_Precland.h"
 #include "SIM_RichenPower.h"
+#include "SIM_CodevESC.h"
 #include "SIM_FETtecOneWireESC.h"
 #include "SIM_I2C.h"
 #include "SIM_Buzzer.h"
@@ -148,6 +149,7 @@ public:
     void set_parachute(Parachute *_parachute) { parachute = _parachute; }
     void set_richenpower(RichenPower *_richenpower) { richenpower = _richenpower; }
     void set_fetteconewireesc(FETtecOneWireESC *_fetteconewireesc) { fetteconewireesc = _fetteconewireesc; }
+    void set_codevesc(CodevESC *_codevesc) { codevesc = _codevesc; }
     void set_ie24(IntelligentEnergy24 *_ie24) { ie24 = _ie24; }
     void set_gripper_servo(Gripper_Servo *_gripper) { gripper = _gripper; }
     void set_gripper_epm(Gripper_EPM *_gripper_epm) { gripper_epm = _gripper_epm; }
@@ -338,6 +340,7 @@ private:
     Parachute *parachute;
     RichenPower *richenpower;
     FETtecOneWireESC *fetteconewireesc;
+    CodevESC *codevesc;
 
     IntelligentEnergy24 *ie24;
     SIM_Precland *precland;

@@ -1002,6 +1002,10 @@ void Aircraft::update_external_payload(const struct sitl_input &input)
         fetteconewireesc->update(*this);
     }
 
+    if (codevesc) {
+        codevesc->update(*this);
+    }
+
 #if AP_SIM_SHIP_ENABLED
     sitl->shipsim.update();
 #endif
