@@ -265,6 +265,11 @@ public:
     // and flashing LEDs as appropriate
     void reboot(bool hold_in_bootloader);
 
+#if HAL_POWEROFF_ENABLED
+    void poweroff_start();
+    void poweroff();
+#endif
+
     /*
       get the distance to next wp in meters
       return false if failed or n/a
@@ -456,6 +461,13 @@ private:
     uint32_t _last_internal_errors;  // backup of AP_InternalError::internal_errors bitmask
 
     AP_CustomRotations custom_rotations;
+
+#if HAL_POWEROFF_ENABLED
+    void poweroff_update();
+#if HAL_POWEROFF_DELAY_MS
+    uint32_t _poweroff_start_ms;
+#endif
+#endif
 };
 
 namespace AP {

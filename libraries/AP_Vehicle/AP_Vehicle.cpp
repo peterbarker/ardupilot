@@ -289,6 +289,10 @@ void AP_Vehicle::loop()
         gcs().send_text(MAV_SEVERITY_CRITICAL, "Internal Errors %x", (unsigned)new_internal_errors);
         _last_internal_errors = new_internal_errors;
     }
+
+#if HAL_POWEROFF_ENABLED
+    poweroff_update();
+#endif
 }
 
 /*
@@ -575,6 +579,49 @@ void AP_Vehicle::notify_no_such_mode(uint8_t mode_number)
     GCS_SEND_TEXT(MAV_SEVERITY_WARNING,"No such mode %u", mode_number);
     AP::logger().Write_Error(LogErrorSubsystem::FLIGHT_MODE, LogErrorCode(mode_number));
 }
+
+#if HAL_POWEROFF_ENABLED
+void AP_Vehicle::poweroff_update()
+{
+#if HAL_POWEROFF_DELAY_MS
+    if (_poweroff_start_ms == 0) {
+        return;
+    }
+    if (AP_HAL::millis() - _poweroff_start_ms < HAL_POWEROFF_DELAY_MS) {
+        return;
+    }
+    poweroff();
+#endif
+}
+
+void AP_Vehicle::poweroff()
+{
+#ifdef HAL_POWER_CONTROL_GPIO
+    hal.gpio->write(HAL_POWER_CONTROL_GPIO, HAL_POWER_CONTROL_GPIO_VALUE_OFF);
+#else
+#error HAL_POWEROFF_AVAILABLE but no mechanism to power off
+#endif
+}
+
+void AP_Vehicle::poweroff_start()
+{
+#if defined(HAL_POWEROFF_DELAY_MS) && HAL_POWEROFF_DELAY_MS != 0
+#ifndef HAL_BUILD_AP_PERIPH
+    // Set the AP_Notify flag, which plays the power off tones
+    AP_Notify::flags.powering_off = true;
+#endif
+
+#ifndef HAL_NO_GCS
+    gcs().poweroff_initiated(0, "Vehicle powering off");
+#endif
+
+    _poweroff_start_ms = AP_HAL::millis();
+
+#else // HAL_POWEROFF_DELAY_MS not set - power off immediately
+    poweroff();
+#endif
+}
+#endif
 
 // reboot the vehicle in an orderly manner, doing various cleanups and
 // flashing LEDs as appropriate
