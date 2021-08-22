@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/AP_HAL_Boards.h>
 extern const AP_HAL::HAL& hal;
 
 #include <AP_Math/AP_Math.h>
@@ -509,6 +510,7 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
     case AUX_FUNC::MOUNT2_ROLL:
     case AUX_FUNC::MOUNT2_PITCH:
     case AUX_FUNC::MOUNT2_YAW:
+    case AUX_FUNC::POWEROFF:
         break;
     case AUX_FUNC::AVOID_ADSB:
     case AUX_FUNC::AVOID_PROXIMITY:
@@ -939,6 +941,13 @@ void RC_Channel::do_aux_function_fft_notch_tune(const AuxSwitchPos ch_flag)
 #endif
 }
 
+#if HAL_POWEROFF_ENABLED
+void RC_Channel::do_aux_function_poweroff()
+{
+    AP::vehicle()->poweroff_start();  // may or may not return, even if vehicle will power off
+}
+#endif
+
 bool RC_Channel::run_aux_function(aux_func_t ch_option, AuxSwitchPos pos, AuxFuncTriggerSource source)
 {
     const bool ret = do_aux_function(ch_option, pos);
@@ -1005,6 +1014,12 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
     case AUX_FUNC::RELAY6:
         do_aux_function_relay(5, ch_flag == AuxSwitchPos::HIGH);
         break;
+
+#ifdef HAL_POWEROFF_ENABLED
+    case AUX_FUNC::POWEROFF:
+        do_aux_function_poweroff();
+        break;
+#endif
 
     case AUX_FUNC::RUNCAM_CONTROL:
         do_aux_function_runcam_control(ch_flag);

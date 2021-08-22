@@ -228,6 +228,7 @@ public:
         TURBINE_START =      161, // initialize turbine start sequence
         FFT_NOTCH_TUNE =     162, // FFT notch tuning function
         MOUNT_LOCK =         163, // Mount yaw lock vs follow
+        POWEROFF =           164,  // turn power to system off
         LOG_PAUSE =          164, // Pauses logging if under logging rate control
         ARM_EMERGENCY_STOP = 165, // ARM on high, MOTOR_ESTOP on low
 
@@ -330,6 +331,7 @@ protected:
     void do_aux_function_sprayer(const AuxSwitchPos ch_flag);
     void do_aux_function_generator(const AuxSwitchPos ch_flag);
     void do_aux_function_fft_notch_tune(const AuxSwitchPos ch_flag);
+    void do_aux_function_poweroff();
 
     typedef int8_t modeswitch_pos_t;
     virtual void mode_switch_changed(modeswitch_pos_t new_pos) {
