@@ -695,6 +695,8 @@ class sitl(Board):
         env.CXXFLAGS += ['-DHAL_ESC_SELECT0_GPIO_PIN=13']
         env.CXXFLAGS += ['-DHAL_ESC_SELECT1_GPIO_PIN=14']
         env.CXXFLAGS += ['-DHAL_ESC_SELECT2_GPIO_PIN=15']
+        env.CXXFLAGS += ['-DHAL_POWER_CONTROL_GPIO=12']
+        env.CXXFLAGS += ['-DHAL_POWER_CONTROL_GPIO_VALUE_OFF=1']
 
         if cfg.options.sitl_rgbled:
             env.CXXFLAGS += ['-DWITH_SITL_RGBLED']
