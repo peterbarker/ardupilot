@@ -38,6 +38,8 @@
 #include <AP_Scheduler/AP_Scheduler.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
 
+extern const AP_HAL::HAL& hal;
+
 using namespace SITL;
 
 extern const AP_HAL::HAL& hal;
@@ -589,6 +591,12 @@ void Aircraft::set_speedup(float speedup)
 
 void Aircraft::update_model(const struct sitl_input &input)
 {
+#ifdef HAL_POWER_CONTROL_GPIO
+    if (hal.gpio->read(HAL_POWER_CONTROL_GPIO) == HAL_POWER_CONTROL_GPIO_VALUE_OFF) {
+        exit(0);
+    }
+#endif
+
     if (!home_is_set) {
         if (sitl == nullptr) {
             return;
