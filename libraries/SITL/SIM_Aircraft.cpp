@@ -34,6 +34,8 @@
 #include <AP_HAL_SITL/HAL_SITL_Class.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 
+extern const AP_HAL::HAL& hal;
+
 using namespace SITL;
 
 extern const AP_HAL::HAL& hal;
@@ -709,6 +711,12 @@ void Aircraft::update_home()
 
 void Aircraft::update_model(const struct sitl_input &input)
 {
+#ifdef HAL_POWER_CONTROL_GPIO
+    if (hal.gpio->read(HAL_POWER_CONTROL_GPIO) == HAL_POWER_CONTROL_GPIO_VALUE_OFF) {
+        exit(0);
+    }
+#endif
+
     local_ground_level = 0.0f;
     if (sitl != nullptr) {
         update(input);
