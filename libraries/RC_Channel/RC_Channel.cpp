@@ -25,6 +25,7 @@
 #include <cmath>
 
 #include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/AP_HAL_Boards.h>
 extern const AP_HAL::HAL& hal;
 
 #include <AP_Math/AP_Math.h>
@@ -59,6 +60,7 @@ extern const AP_HAL::HAL& hal;
 #include <AP_VideoTX/AP_VideoTX.h>
 #include <AP_Torqeedo/AP_Torqeedo.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
+#include <AP_Vehicle/AP_Vehicle.h>
 #include <AP_Parachute/AP_Parachute_config.h>
 #include <AP_Scripting/AP_Scripting.h>
 #define SWITCH_DEBOUNCE_TIME_MS  200
@@ -251,6 +253,7 @@ const AP_Param::GroupInfo RC_Channel::var_info[] = {
     // @Values{Copter, Rover, Plane, Blimp, Sub}: 185:Mount Roll/Pitch Lock
     // @Values{Copter, Rover, Plane, Blimp, Sub}: 186:Mount POI Lock
     // @Values{Copter, Rover, Plane, Blimp, Sub}: 187:EKF Reset
+    // @Values{Copter, Rover, Plane, Blimp, Sub}: 188:Power Off
     // @Values{Rover}: 201:Roll
     // @Values{Rover}: 202:Pitch
     // @Values{Rover}: 207:MainSail
@@ -782,6 +785,7 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
 #if HAL_GENERATOR_ENABLED
     case AUX_FUNC::LOWEHEISER_THROTTLE:
 #endif
+    case AUX_FUNC::POWEROFF:
         break;
 
     // these functions require explicit initialization
@@ -1427,6 +1431,13 @@ void RC_Channel::do_aux_function_fft_notch_tune(const AuxSwitchPos ch_flag)
 #endif
 }
 
+#if HAL_POWEROFF_ENABLED
+void RC_Channel::do_aux_function_poweroff()
+{
+    AP::vehicle()->poweroff_start();  // may or may not return, even if vehicle will power off
+}
+#endif
+
 /**
  * Perform the RETRACT_MOUNT 1/2 process.
  * 
@@ -1547,6 +1558,14 @@ bool RC_Channel::do_aux_function(const AuxFuncTrigger &trigger)
         do_aux_function_relay(5, ch_flag == AuxSwitchPos::HIGH);
         break;
 #endif  // AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
+
+#if HAL_POWEROFF_ENABLED
+    case AUX_FUNC::POWEROFF:
+        if (ch_flag == AuxSwitchPos::HIGH) {
+            do_aux_function_poweroff();
+        }
+        break;
+#endif
 
 #if AP_CAMERA_RUNCAM_ENABLED
     case AUX_FUNC::RUNCAM_CONTROL:
