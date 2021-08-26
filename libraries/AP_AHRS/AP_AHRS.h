@@ -38,13 +38,12 @@
 #include <SITL/SITL.h>
 #endif
 
-#include <AP_ExternalAHRS/AP_ExternalAHRS.h>
-
 #include <AP_NavEKF2/AP_NavEKF2.h>
 #include <AP_NavEKF3/AP_NavEKF3.h>
 #include <AP_NavEKF/AP_Nav_Common.h>              // definitions shared by inertial and ekf nav filters
 
 #include "AP_AHRS_DCM.h"
+#include "AP_AHRS_External.h"
 
 // forward declare view class
 class AP_AHRS_View;
@@ -798,6 +797,11 @@ private:
      */
     AP_AHRS_DCM dcm{_kp_yaw, _kp, gps_gain, beta, _gps_use, _gps_minsats};
     struct AP_AHRS_Backend::Estimates dcm_estimates;
+
+#if HAL_EXTERNAL_AHRS_ENABLED
+    AP_AHRS_External external;
+    struct AP_AHRS_Backend::Estimates external_estimates;
+#endif
 
     /*
      * copy results from a backend over AP_AHRS canonical results.
