@@ -69,6 +69,9 @@ public:
     // return the index of the primary core or -1 if no primary core selected
     virtual int8_t get_primary_core_index() const { return -1; }
 
+    // return the index of the primary core's IMU or -1 if no primary core selected
+    virtual int8_t get_primary_core_IMU_index() const { return -1; }
+
     // get the index of the current primary accelerometer sensor
     virtual uint8_t get_primary_accel_index(void) const {
         return AP::ins().get_primary_accel();
@@ -88,9 +91,6 @@ public:
     // requires_position should be true if horizontal position configuration should be checked
     virtual bool pre_arm_check(bool requires_position, char *failure_msg, uint8_t failure_msg_len) const = 0;
 
-    // check all cores providing consistent attitudes for prearm checks
-    virtual bool attitudes_consistent(char *failure_msg, const uint8_t failure_msg_len) const { return true; }
-
     // see if EKF lane switching is possible to avoid EKF failsafe
     virtual void check_lane_switch(void) {}
 
@@ -102,9 +102,6 @@ public:
 
     // request EKF yaw reset to try and avoid the need for an EKF lane switch or failsafe
     virtual void request_yaw_reset(void) {}
-
-    // set position, velocity and yaw sources to either 0=primary, 1=secondary, 2=tertiary
-    virtual void set_posvelyaw_source_set(uint8_t source_set_idx) {}
 
     // reset the current gyro drift estimate
     //  should be called if gyro offsets are recalculated

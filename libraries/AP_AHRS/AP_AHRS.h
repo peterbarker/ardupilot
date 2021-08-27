@@ -23,33 +23,20 @@
 
 #include <AP_HAL/AP_HAL.h>
 
-#ifndef HAL_NAVEKF2_AVAILABLE
-// only default to EK2 enabled on boards with over 1M flash
-#define HAL_NAVEKF2_AVAILABLE (BOARD_FLASH_SIZE>1024)
-#endif
-
-#ifndef HAL_NAVEKF3_AVAILABLE
-#define HAL_NAVEKF3_AVAILABLE 1
-#endif
-
-#include "AP_AHRS.h"
-
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <SITL/SITL.h>
 #endif
 
-#include <AP_NavEKF2/AP_NavEKF2.h>
-#include <AP_NavEKF3/AP_NavEKF3.h>
 #include <AP_NavEKF/AP_Nav_Common.h>              // definitions shared by inertial and ekf nav filters
 
 #include "AP_AHRS_DCM.h"
 #include "AP_AHRS_External.h"
 #include "AP_AHRS_SIM.h"
+#include "AP_AHRS_NavEKF2.h"
+#include "AP_AHRS_NavEKF3.h"
 
 // forward declare view class
 class AP_AHRS_View;
-
-#define AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000     // time in milliseconds the ekf needs to settle after being started
 
 #include <AP_NMEA_Output/AP_NMEA_Output.h>
 
@@ -378,14 +365,6 @@ public:
         return _ekf_type;
     }
 
-    // these are only out here so vehicles can reference them for parameters
-#if HAL_NAVEKF2_AVAILABLE
-    NavEKF2 EKF2;
-#endif
-#if HAL_NAVEKF3_AVAILABLE
-    NavEKF3 EKF3;
-#endif
-
     // for holding parameters
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -594,6 +573,15 @@ public:
     // get the view's rotation, or ROTATION_NONE
     enum Rotation get_view_rotation(void) const;
 
+    // the EKF backends are only out here for parameter purposes - they
+    // should not be used directly.
+#if HAL_NAVEKF2_AVAILABLE
+    AP_AHRS_NavEKF2 EKF2;
+#endif
+#if HAL_NAVEKF3_AVAILABLE
+    AP_AHRS_NavEKF3 EKF3;
+#endif
+
 private:
 
     // optional view class
@@ -688,7 +676,6 @@ private:
 
 #if HAL_NAVEKF2_AVAILABLE
     void update_EKF2(void);
-    bool _ekf2_started;
 #endif
 #if HAL_NAVEKF3_AVAILABLE
     bool _ekf3_started;
@@ -702,8 +689,6 @@ private:
     Vector3f _gyro_estimate;
     Vector3f _accel_ef_ekf[INS_MAX_INSTANCES];
     Vector3f _accel_ef_ekf_blended;
-    const uint16_t startup_delay_ms = 1000;
-    uint32_t start_time_ms;
     uint8_t _ekf_flags; // bitmask from Flags enumeration
 
     EKFType ekf_type(void) const;
@@ -791,7 +776,7 @@ private:
     bool fly_forward; // true if we can assume the vehicle will be flying forward on its X axis
 
     // poke AP_Notify based on values from status
-    void update_notify_from_filter_status(const nav_filter_status &status);
+    void update_notify_from_filter_status();
 
     /*
      *  backends (and their results)
@@ -806,6 +791,12 @@ private:
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     struct AP_AHRS_Backend::Estimates sim_estimates;
     AP_AHRS_SIM sim;
+#endif
+#if HAL_NAVEKF2_AVAILABLE
+    struct AP_AHRS_Backend::Estimates ekf2_estimates;
+#endif
+#if HAL_NAVEKF3_AVAILABLE
+    struct AP_AHRS_Backend::Estimates ekf3_estimates;
 #endif
 
     /*
