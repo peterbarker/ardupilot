@@ -482,6 +482,7 @@ void AP_Airspeed::update_calibration(uint8_t i, float raw_pressure)
     }
     // we discard the first 5 samples
     if (state[i].healthy && state[i].cal.read_count > 5) {
+        gcs().send_text(MAV_SEVERITY_INFO, "%u: raw: %f", (unsigned)state[i].cal.count, raw_pressure);
         state[i].cal.sum += raw_pressure;
         state[i].cal.count++;
     }
