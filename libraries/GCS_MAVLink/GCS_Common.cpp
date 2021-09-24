@@ -49,6 +49,7 @@
 #include <AP_RCTelemetry/AP_CRSF_Telem.h>
 #include <AP_AIS/AP_AIS.h>
 #include <AP_Filesystem/AP_Filesystem.h>
+#include <AP_Generator/AP_Generator_Loweheiser.h>
 
 #include <stdio.h>
 
@@ -73,6 +74,10 @@
   #include <AP_ToshibaCAN/AP_ToshibaCAN.h>
   #include <AP_PiccoloCAN/AP_PiccoloCAN.h>
   #include <AP_UAVCAN/AP_UAVCAN.h>
+#endif
+
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+#include <AP_Generator/AP_Generator_Loweheiser.h>
 #endif
 
 #if !defined(HAL_BUILD_AP_PERIPH) || defined(HAL_PERIPH_ENABLE_BATTERY)
@@ -3322,6 +3327,10 @@ void GCS_MAVLINK::handle_command_ack(const mavlink_message_t &msg)
         accelcal->handle_command_ack(packet);
     }
 #endif
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+    // this might be an ACK from a loweheiser generator:
+    handle_generator_message(msg);
+#endif
 }
 
 // allow override of RC channel values for complete GCS
@@ -3728,8 +3737,31 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         AP::can().handle_can_filter_modify(msg);
 #endif
         break;
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+    case MAVLINK_MSG_ID_LOWEHEISER_GOV_EFI:
+        // message received from Loweheiser mavlink connection
+        handle_generator_message(msg);
+        break;
+#endif
     }
 
+}
+
+void GCS_MAVLINK::handle_generator_message(const mavlink_message_t &msg)
+{
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+    AP_Generator *generator = AP::generator();
+    if (generator == nullptr) {
+        return;
+    }
+
+    auto *backend = generator->get_loweheiser();
+    if (backend == nullptr) {
+        return;
+    }
+
+    backend->handle_mavlink_msg(*this, msg);
+#endif
 }
 
 void GCS_MAVLINK::handle_common_mission_message(const mavlink_message_t &msg)
