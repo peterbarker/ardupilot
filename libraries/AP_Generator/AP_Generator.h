@@ -6,6 +6,10 @@
 #define HAL_GENERATOR_ENABLED !HAL_MINIMIZE_FEATURES && !defined(HAL_BUILD_AP_PERIPH)
 #endif
 
+#ifndef AP_GENERATOR_LOWEHEISER_ENABLED
+#define AP_GENERATOR_LOWEHEISER_ENABLED HAL_GENERATOR_ENABLED
+#endif
+
 #if HAL_GENERATOR_ENABLED
 
 #include <AP_Param/AP_Param.h>
@@ -23,6 +27,7 @@ class AP_Generator
     friend class AP_Generator_IE_650_800;
     friend class AP_Generator_IE_2400;
     friend class AP_Generator_RichenPower;
+    friend class AP_Generator_Loweheiser;
 
 public:
     // Constructor
@@ -45,6 +50,7 @@ public:
     float get_voltage(void) const { return _voltage; }
     float get_current(void) const { return _current; }
     float get_fuel_remaining_pct(void) const { return _fuel_remain_pct; }
+    float get_fuel_remaining_l(void) const { return _fuel_remain_l; }
     float get_batt_consumed(void) const { return _consumed_mah; }
     uint16_t get_rpm(void) const { return _rpm; }
 
@@ -52,6 +58,7 @@ public:
     bool has_current() const { return _has_current; }
     bool has_consumed_energy() const { return _has_consumed_energy; }
     bool has_fuel_remaining_pct() const { return _has_fuel_remaining_pct; }
+    bool has_fuel_remaining_l() const { return _has_fuel_remaining_l; }
 
     // healthy() returns true if the generator is not present, or it is
     // present, providing telemetry and not indicating any errors.
@@ -64,24 +71,34 @@ public:
 
     void send_generator_status(const GCS_MAVLINK &channel);
 
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+    // a getter to explicitly get a Loweheiser backend if it exists.
+    // Used to pass mavlink messages directly to it until we need that
+    // on the generator interface itself, and for the
+    // AP_EFI_Loweheiser object to get the generator backend.
+    class AP_Generator_Loweheiser *get_loweheiser();
+#endif
+
     // Parameter block
     static const struct AP_Param::GroupInfo var_info[];
+    static const struct AP_Param::GroupInfo *backend_var_info;
 
 private:
-
-    // Pointer to chosen driver
-    AP_Generator_Backend* _driver_ptr;
-
-    // Parameters
-    AP_Int8 _type; // Select which generator to use
 
     enum class Type {
         GEN_DISABLED = 0,
         IE_650_800 = 1,
         IE_2400 = 2,
         RICHENPOWER = 3,
-        // LOWEHEISER = 4,
+        LOWEHEISER = 4,
     };
+
+    // Pointer to chosen driver
+    AP_Generator_Backend* _driver_ptr;
+    Type _driver_type;
+
+    // Parameters
+    AP_Int8 _type; // Select which generator to use
 
     // Helper to get param and cast to GenType
     Type type(void) const;
@@ -90,12 +107,14 @@ private:
     float _voltage;
     float _current;
     float _fuel_remain_pct;
+    float _fuel_remain_l;
     float _consumed_mah;
     uint16_t _rpm;
     bool _healthy;
     bool _has_current;
     bool _has_consumed_energy;
     bool _has_fuel_remaining_pct;
+    bool _has_fuel_remaining_l;
 
     static AP_Generator *_singleton;
 
