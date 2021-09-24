@@ -223,6 +223,12 @@ int SITL_State::sim_fd(const char *name, const char *arg)
         }
         vicon = new SITL::Vicon();
         return vicon->fd();
+    } else if (streq(name, "loweheiser")) {
+        if (loweheiser != nullptr) {
+            AP_HAL::panic("Only one loweheiser at a time");
+        }
+        loweheiser = new SITL::Loweheiser();
+        return loweheiser->fd();
     } else if (streq(name, "benewake_tf02")) {
         if (benewake_tf02 != nullptr) {
             AP_HAL::panic("Only one benewake_tf02 at a time");
@@ -413,6 +419,11 @@ int SITL_State::sim_fd_write(const char *name)
             AP_HAL::panic("No vicon created");
         }
         return vicon->write_fd();
+    } else if (streq(name, "loweheiser")) {
+        if (loweheiser == nullptr) {
+            AP_HAL::panic("No loweheiser created");
+        }
+        return loweheiser->write_fd();
     } else if (streq(name, "benewake_tf02")) {
         if (benewake_tf02 == nullptr) {
             AP_HAL::panic("No benewake_tf02 created");
@@ -692,6 +703,9 @@ void SITL_State::_fdm_input_local(void)
                       sitl_model->get_position_relhome(),
                       sitl_model->get_velocity_ef(),
                       attitude);
+    }
+    if (loweheiser != nullptr) {
+        loweheiser->update();
     }
     if (benewake_tf02 != nullptr) {
         benewake_tf02->update(sitl_model->rangefinder_range());
