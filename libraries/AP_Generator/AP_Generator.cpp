@@ -20,6 +20,9 @@
 #include "AP_Generator_IE_650_800.h"
 #include "AP_Generator_IE_2400.h"
 #include "AP_Generator_RichenPower.h"
+#include "AP_Generator_Loweheiser.h"
+
+const AP_Param::GroupInfo *AP_Generator::backend_var_info;
 
 const AP_Param::GroupInfo AP_Generator::var_info[] = {
 
@@ -30,6 +33,8 @@ const AP_Param::GroupInfo AP_Generator::var_info[] = {
     // @User: Standard
     // @RebootRequired: True
     AP_GROUPINFO_FLAGS("TYPE", 1, AP_Generator, _type, 0, AP_PARAM_FLAG_ENABLE),
+
+    AP_SUBGROUPVARPTR(_driver_ptr, "", 2, AP_Generator, backend_var_info),
 
     AP_GROUPEND
 };
@@ -67,10 +72,29 @@ void AP_Generator::init()
         case Type::RICHENPOWER:
             _driver_ptr = new AP_Generator_RichenPower(*this);
             break;
+
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+        case Type::LOWEHEISER:
+            _driver_ptr = new AP_Generator_Loweheiser(*this);
+            break;
+    }
+#endif
+
+    // if the backend has some local parameters then make those
+    // available in the tree
+    if (_driver_ptr) {
+        backend_var_info = _driver_ptr->get_var_info();
+        if (backend_var_info) {
+            AP_Param::load_object_from_eeprom(_driver_ptr, backend_var_info);
+
+            // param count could have changed
+            AP_Param::invalidate_count();
+        }
     }
 
     if (_driver_ptr != nullptr) {
         _driver_ptr->init();
+        _driver_type = type();
     }
 }
 
@@ -91,8 +115,18 @@ enum AP_Generator::Type AP_Generator::type() const
     return (Type)_type.get();
 }
 
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+AP_Generator_Loweheiser *AP_Generator::get_loweheiser()
+{
+    if (_driver_type != Type::LOWEHEISER) {
+        return nullptr;
+    }
+    return (AP_Generator_Loweheiser*)_driver_ptr;
+}
+#endif
+
 // Pass through to backend
-void AP_Generator::send_generator_status(const GCS_MAVLINK &channel)
+void AP_Generator::send_generator_status(const class GCS_MAVLINK &channel)
 {
     if (_driver_ptr == nullptr) {
         return;
