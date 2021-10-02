@@ -364,6 +364,12 @@ SITL::SerialDevice *SITL_State::create_serial_sim(const char *name, const char *
     } else if (streq(name, "ie24")) {
         sitl_model->set_ie24(&_sitl->ie24_sim);
         return &_sitl->ie24_sim;
+    } else if (streq(name, "WitMotion_HWT901B")) {
+        if (witmotion_hwt901b != nullptr) {
+            AP_HAL::panic("Only one witmotion_hwt901b at a time");
+        }
+        witmotion_hwt901b = new SITL::WitMotion_HWT901B();
+        return witmotion_hwt901b;
     } else if (streq(name, "gyus42v2")) {
         if (gyus42v2 != nullptr) {
             AP_HAL::panic("Only one gyus42v2 at a time");
@@ -605,6 +611,9 @@ void SITL_State::_fdm_input_local(void)
     }
     if (efi_ms != nullptr) {
         efi_ms->update();
+    }
+    if (witmotion_hwt901b != nullptr) {
+        witmotion_hwt901b->update();
     }
 
     if (frsky_d != nullptr) {

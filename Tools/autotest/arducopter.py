@@ -6727,6 +6727,13 @@ class AutoTestCopter(AutoTest):
 
         self.do_RTL()
 
+    def WitMotion(self):
+        self.set_parameter("SERIAL5_PROTOCOL", 43)
+        self.customise_SITL_commandline([
+            "--uartF=sim:WitMotion_HWT901B",
+        ])
+        self.delay_sim_time(60)
+
     def fly_ship_takeoff(self):
         # test ship takeoff
         self.wait_groundspeed(0, 2)
@@ -8321,6 +8328,10 @@ class AutoTestCopter(AutoTest):
             Test("GPSForYaw",
                  "Moving baseline GPS yaw",
                  self.GPSForYaw),
+
+            Test("WitMotion",
+                 "Test Witmotion serially-attached IMU",
+                 self.WitMotion),
 
             ("DefaultIntervalsFromFiles",
              "Test setting default mavlink message intervals from files",

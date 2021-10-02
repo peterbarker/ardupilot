@@ -43,6 +43,7 @@
 #include <SITL/SIM_RF_NMEA.h>
 #include <SITL/SIM_RF_MAVLink.h>
 #include <SITL/SIM_RF_GYUS42v2.h>
+#include <SITL/SIM_WitMotion_HWT901B.h>
 #include <SITL/SIM_VectorNav.h>
 #include <SITL/SIM_LORD.h>
 #include <SITL/SIM_AIS.h>
@@ -239,6 +240,9 @@ private:
     SITL::RF_MAVLink *rf_mavlink;
     // simulated GYUS42v2 rangefinder:
     SITL::RF_GYUS42v2 *gyus42v2;
+
+    // simulated WitMotion serially-attached IMU
+    SITL::WitMotion_HWT901B *witmotion_hwt901b;
 
     // simulated Frsky devices
     SITL::Frsky_D *frsky_d;

@@ -43,7 +43,6 @@ protected:
     AP_ExternalAHRS::state_t &state;
     uint16_t get_rate(void) const;
 
-private:
     AP_ExternalAHRS &frontend;
 };
 

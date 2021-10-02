@@ -48,6 +48,7 @@ public:
         None   = 0,
         VecNav = 1,
         LORD = 2,
+        WitMotion = 3,
     };
 
     static AP_ExternalAHRS *get_singleton(void) {
@@ -127,10 +128,18 @@ public:
         float  ned_vel_down;
     } gps_data_message_t;
 
+    // enumeration used to indicate which fields in ins_data_message_t
+    // are valid
+    enum ins_data_message_field {
+        ACCEL = 1,
+        GYRO = 2,
+        TEMPERATURE = 4,
+    };
     typedef struct {
         Vector3f accel;
         Vector3f gyro;
         float temperature;
+        uint8_t valid_fields;  // bitmask from INSDataFields
     } ins_data_message_t;
     
 private:

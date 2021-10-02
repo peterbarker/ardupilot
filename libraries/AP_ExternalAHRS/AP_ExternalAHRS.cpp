@@ -17,10 +17,12 @@
  */
 
 #include "AP_ExternalAHRS.h"
-#include "AP_ExternalAHRS_VectorNav.h"
-#include "AP_ExternalAHRS_LORD.h"
 
 #if HAL_EXTERNAL_AHRS_ENABLED
+
+#include "AP_ExternalAHRS_VectorNav.h"
+#include "AP_ExternalAHRS_LORD.h"
+#include "AP_ExternalAHRS_WitMotion.h"
 
 #include <GCS_MAVLink/GCS.h>
 
@@ -50,7 +52,7 @@ const AP_Param::GroupInfo AP_ExternalAHRS::var_info[] = {
     // @Param: _TYPE
     // @DisplayName: AHRS type
     // @Description: Type of AHRS device
-    // @Values: 0:None,1:VectorNav,2:LORD
+    // @Values: 0:None,1:VectorNav,2:LORD,3:WitMotion
     // @User: Standard
     AP_GROUPINFO_FLAGS("_TYPE", 1, AP_ExternalAHRS, devtype, HAL_EXTERNAL_AHRS_DEFAULT, AP_PARAM_FLAG_ENABLE),
 
@@ -81,6 +83,9 @@ void AP_ExternalAHRS::init(void)
         break;
     case DevType::LORD:
         backend = new AP_ExternalAHRS_LORD(this, state);
+        break;
+    case DevType::WitMotion:
+        backend = new AP_ExternalAHRS_WitMotion(this, state);
         break;
     default:
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Unsupported ExternalAHRS type %u", unsigned(devtype));
