@@ -54,6 +54,8 @@ void Sub::init_ardupilot()
 #endif
     celsius.init(barometer.external_bus());
 
+    mcp9600.init();
+
     // setup telem slots with serial ports
     gcs().setup_uarts();
 
