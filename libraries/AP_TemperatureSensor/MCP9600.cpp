@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <AP_HAL/I2CDevice.h>
 #include <AP_Math/AP_Math.h>
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -187,6 +188,7 @@ bool MCP9600::read_temperature(float &temperature)
 
     const uint8_t data_swapped[2] = {data[1], data[0]};
     temperature = (float)*((int16_t*) data_swapped) * 0.0625f;
+    gcs().send_text(MAV_SEVERITY_INFO, "got temp (%f)\n", temperature);
     return true;
 }
 #endif // HAL_TEMP_SENSOR_MCP9600_ENABLE
