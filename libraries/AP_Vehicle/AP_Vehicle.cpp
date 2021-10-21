@@ -61,6 +61,12 @@ const AP_Param::GroupInfo AP_Vehicle::var_info[] = {
     AP_SUBGROUPINFO(externalAHRS, "EAHRS", 8, AP_Vehicle, AP_ExternalAHRS),
 #endif
 
+#if HAL_EFI_ENABLED
+    // @Group: EFI
+    // @Path: ../AP_EFI/AP_EFI.cpp
+    AP_SUBGROUPINFO(efi, "EFI", 9, AP_Vehicle, AP_EFI),
+#endif
+
     AP_GROUPEND
 };
 
@@ -174,6 +180,12 @@ void AP_Vehicle::setup()
 #if GENERATOR_ENABLED
     generator.init();
 #endif
+
+// init EFI monitoring
+#if HAL_EFI_ENABLED
+    efi.init();
+#endif
+
     gcs().send_text(MAV_SEVERITY_INFO, "ArduPilot Ready");
 }
 
@@ -235,6 +247,9 @@ const AP_Scheduler::Task AP_Vehicle::scheduler_tasks[] = {
 #endif
 #if OSD_ENABLED
     SCHED_TASK(publish_osd_info, 1, 10),
+#endif
+#if HAL_EFI_ENABLED
+    SCHED_TASK_CLASS(AP_EFI,       &vehicle.efi,            update,                   10, 200),
 #endif
 };
 
