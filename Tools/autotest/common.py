@@ -3707,10 +3707,8 @@ class AutoTest(ABC):
             if self.get_sim_time_cached() - tstart > timeout:
                 return
 
-    def assert_receive_message(self, type, timeout=1, verbose=False, very_verbose=False, mav=None):
-        if mav is None:
-            mav = self.mav
-        m = mav.recv_match(type=type, blocking=True, timeout=timeout)
+    def assert_receive_message(self, type, timeout=1, verbose=False, very_verbose=False, condition=None):
+        m = self.mav.recv_match(type=type, blocking=True, timeout=timeout, condition=condition)
         if verbose:
             self.progress("Received (%s)" % str(m))
         if very_verbose:
