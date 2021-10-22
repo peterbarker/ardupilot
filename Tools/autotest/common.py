@@ -3138,8 +3138,12 @@ class AutoTest(ABC):
                 raise ValueError("count %u not handled" % count)
         self.progress("Files same")
 
-    def assert_receive_message(self, type, timeout=1):
-        m = self.mav.recv_match(type=type, blocking=True, timeout=timeout)
+    def assert_receive_message(self, type, timeout=1, verbose=False, very_verbose=False, condition=None):
+        m = self.mav.recv_match(type=type, blocking=True, timeout=timeout, condition=condition)
+        if verbose:
+            self.progress("Received (%s)" % str(m))
+        if very_verbose:
+            self.progress(self.dump_message_verbose(m))
         if m is None:
             raise NotAchievedException("Did not get %s" % type)
         return m
