@@ -121,13 +121,9 @@ bool AP_Logger_MAVLink::WritesOK() const
 // DM_write: 70734 events, 0 overruns, 167806us elapsed, 2us avg, min 1us max 34us 0.620us rms
 bool AP_Logger_MAVLink::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical)
 {
-    if (!semaphore.take_nonblocking()) {
-        _dropped++;
-        return false;
-    }
+    WITH_SEMAPHORE(semaphore);
 
     if (! WriteBlockCheckStartupMessages()) {
-        semaphore.give();
         return false;
     }
 
@@ -136,7 +132,6 @@ bool AP_Logger_MAVLink::_WritePrioritisedBlock(const void *pBuffer, uint16_t siz
             // do not count the startup packets as being dropped...
             _dropped++;
         }
-        semaphore.give();
         return false;
     }
 
@@ -148,7 +143,6 @@ bool AP_Logger_MAVLink::_WritePrioritisedBlock(const void *pBuffer, uint16_t siz
             if (_current_block == nullptr) {
                 // should not happen - there's a sanity check above
                 INTERNAL_ERROR(AP_InternalError::error_t::logger_bad_current_block);
-                semaphore.give();
                 return false;
             }
         }
@@ -164,8 +158,6 @@ bool AP_Logger_MAVLink::_WritePrioritisedBlock(const void *pBuffer, uint16_t siz
             _current_block = next_block();
         }
     }
-
-    semaphore.give();
 
     return true;
 }
