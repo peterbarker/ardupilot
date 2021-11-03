@@ -69,6 +69,8 @@ protected:
 
 private:
 
+    void _io_timer(void);
+
     struct dm_block {
         uint32_t seqno;
         uint8_t buf[MAVLINK_MSG_REMOTE_LOG_DATA_BLOCK_FIELD_DATA_LEN];

@@ -45,6 +45,13 @@ void AP_Logger_MAVLink::Init()
     stats_init();
 
     _initialised = true;
+
+    hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_Logger_MAVLink::_io_timer, void));
+}
+
+void AP_Logger_MAVLink::_io_timer(void)
+{
+    push_log_blocks();
 }
 
 bool AP_Logger_MAVLink::logging_failed() const
