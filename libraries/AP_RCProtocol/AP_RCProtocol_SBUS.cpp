@@ -72,9 +72,10 @@
 #define SBUS_SCALE_OFFSET (SBUS_TARGET_MIN - ((SBUS_TARGET_RANGE * SBUS_RANGE_MIN / SBUS_RANGE_RANGE)))
 
 // constructor
-AP_RCProtocol_SBUS::AP_RCProtocol_SBUS(AP_RCProtocol &_frontend, bool _inverted) :
+AP_RCProtocol_SBUS::AP_RCProtocol_SBUS(AP_RCProtocol &_frontend, bool _inverted, uint32_t configured_baud) :
     AP_RCProtocol_Backend(_frontend),
-    inverted(_inverted)
+    inverted(_inverted),
+    ss{configured_baud, SoftSerial::SERIAL_CONFIG_8E2I}
 {}
 
 // decode a full SBUS frame
@@ -163,13 +164,17 @@ void AP_RCProtocol_SBUS::process_pulse(uint32_t width_s0, uint32_t width_s1)
     }
     uint8_t b;
     if (ss.process_pulse(w0, w1, b)) {
-        _process_byte(ss.get_byte_timestamp_us(), b);
+        _process_byte(ss.get_byte_timestamp_us(), ss.baud(), b);
     }
 }
 
 // support byte input
-void AP_RCProtocol_SBUS::_process_byte(uint32_t timestamp_us, uint8_t b)
+void AP_RCProtocol_SBUS::_process_byte(uint32_t timestamp_us, uint32_t baud, uint8_t b)
 {
+    if (baud != ss.baud() && baud != 0) {
+        return;
+    }
+
     const bool have_frame_gap = (timestamp_us - byte_input.last_byte_us >= 2000U);
     byte_input.last_byte_us = timestamp_us;
 
@@ -207,8 +212,5 @@ void AP_RCProtocol_SBUS::_process_byte(uint32_t timestamp_us, uint8_t b)
 // support byte input
 void AP_RCProtocol_SBUS::process_byte(uint8_t b, uint32_t baudrate)
 {
-    if (baudrate != 100000) {
-        return;
-    }
-    _process_byte(AP_HAL::micros(), b);
+    _process_byte(AP_HAL::micros(), baudrate, b);
 }

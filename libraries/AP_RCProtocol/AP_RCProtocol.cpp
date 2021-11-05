@@ -39,7 +39,10 @@ void AP_RCProtocol::init()
 {
     backend[AP_RCProtocol::PPM] = new AP_RCProtocol_PPMSum(*this);
     backend[AP_RCProtocol::IBUS] = new AP_RCProtocol_IBUS(*this);
-    backend[AP_RCProtocol::SBUS] = new AP_RCProtocol_SBUS(*this, true);
+    backend[AP_RCProtocol::SBUS] = new AP_RCProtocol_SBUS(*this, true, 100000);
+#if AP_RCPROTOCOL_FASTSBUS_ENABLED
+    backend[AP_RCProtocol::FASTSBUS] = new AP_RCProtocol_SBUS(*this, true, 200000);
+#endif
     backend[AP_RCProtocol::DSM] = new AP_RCProtocol_DSM(*this);
     backend[AP_RCProtocol::SUMD] = new AP_RCProtocol_SUMD(*this);
     backend[AP_RCProtocol::SRXL] = new AP_RCProtocol_SRXL(*this);
@@ -271,6 +274,15 @@ void AP_RCProtocol::check_added_uart(void)
             added.uart->set_stop_bits(2);
             added.uart->set_options(added.uart->get_options() | AP_HAL::UARTDriver::OPTION_RXINV);
             break;
+#if AP_RCPROTOCOL_FASTSBUS_ENABLED
+        case CONFIG_200000_8E2I:
+            // assume SBUS settings, even parity, 2 stop bits
+            added.baudrate = 200000;
+            added.uart->configure_parity(2);
+            added.uart->set_stop_bits(2);
+            added.uart->set_options(added.uart->get_options() | AP_HAL::UARTDriver::OPTION_RXINV);
+            break;
+#endif
         case CONFIG_420000_8N1:
             added.baudrate = CRSF_BAUDRATE;
             added.uart->configure_parity(0);
@@ -279,6 +291,7 @@ void AP_RCProtocol::check_added_uart(void)
             added.uart->set_blocking_writes(false);
             added.uart->set_options(added.uart->get_options() & ~AP_HAL::UARTDriver::OPTION_RXINV);
             break;
+        // if you add something here then update the added.phase check below
         }
         added.uart->begin(added.baudrate, 128, 128);
         added.last_baud_change_ms = AP_HAL::millis();
@@ -387,6 +400,10 @@ const char *AP_RCProtocol::protocol_name_from_protocol(rcprotocol_t protocol)
     case SBUS:
     case SBUS_NI:
         return "SBUS";
+#if AP_RCPROTOCOL_FASTSBUS_ENABLED
+    case FASTSBUS:
+        return "FastSBUS";
+#endif
     case DSM:
         return "DSM";
     case SUMD:

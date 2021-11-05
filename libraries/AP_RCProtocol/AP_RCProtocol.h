@@ -21,6 +21,10 @@
 #define MAX_RCIN_CHANNELS 18
 #define MIN_RCIN_CHANNELS  5
 
+#ifndef AP_RCPROTOCOL_FASTSBUS_ENABLED
+#define AP_RCPROTOCOL_FASTSBUS_ENABLED 1
+#endif
+
 class AP_RCProtocol_Backend;
 
 class AP_RCProtocol {
@@ -42,6 +46,9 @@ public:
         ST24,
         FPORT,
         FPORT2,
+#if AP_RCPROTOCOL_FASTSBUS_ENABLED
+        FASTSBUS,
+#endif
         NONE    //last enum always is None
     };
     void init();
@@ -64,6 +71,9 @@ public:
     bool requires_3_frames(enum rcprotocol_t p) {
         switch (p) {
         case DSM:
+#if AP_RCPROTOCOL_FASTSBUS_ENABLED
+        case FASTSBUS:
+#endif
         case SBUS:
         case SBUS_NI:
         case PPM:
@@ -129,6 +139,9 @@ private:
         CONFIG_115200_8N1I = 1,
         CONFIG_100000_8E2I = 2,
         CONFIG_420000_8N1 = 3,
+#if AP_RCPROTOCOL_FASTSBUS_ENABLED
+        CONFIG_200000_8E2I = 4,
+#endif
     };
 
     // optional additional uart
