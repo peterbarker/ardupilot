@@ -35,19 +35,19 @@ public:
 
     enum rcprotocol_t {
         PPM = 0,
-        IBUS,
-        SBUS,
-        SBUS_NI,
-        DSM,
-        SUMD,
-        SRXL,
-        SRXL2,
-        CRSF,
-        ST24,
-        FPORT,
-        FPORT2,
+        IBUS = 1,
+        SBUS = 2,
+        SBUS_NI = 3,
+        DSM = 4,
+        SUMD = 5,
+        SRXL = 6,
+        SRXL2 = 7,
+        CRSF = 8,
+        ST24 = 9,
+        FPORT = 10,
+        FPORT2 = 11,
 #if AP_RCPROTOCOL_FASTSBUS_ENABLED
-        FASTSBUS,
+        FASTSBUS = 12,
 #endif
         NONE    //last enum always is None
     };
