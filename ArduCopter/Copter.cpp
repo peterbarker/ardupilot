@@ -547,6 +547,9 @@ void Copter::three_hz_loop()
 // one_hz_loop - runs at 1Hz
 void Copter::one_hz_loop()
 {
+    ::fprintf(stdout, "Hi this is a rather too-long string which we print out way too often, I hope you like it!");
+    ::fprintf(stderr, "Ho this is a rather too-long string which we print out way too often, I hope you like it!");
+
     if (should_log(MASK_LOG_ANY)) {
         Log_Write_Data(LogDataID::AP_STATE, ap.value);
     }

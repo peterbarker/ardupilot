@@ -3425,8 +3425,11 @@ class AutoTestCopter(AutoTest):
             if now - tstart > 200:
                 # timeout
                 break
-            m = self.mav.recv_match(type='MISSION_CURRENT', blocking=True)
+            print("idle hooks: %s" % str(self.mav.idle_hooks))
+            m = self.assert_receive_message('MISSION_CURRENT', timeout=10)
+            self.progress("A")
             now = self.get_sim_time_cached()
+            self.progress("B")
             self.progress("%s" % str(m))
             if m.seq > delay_item_seq:
                 if not took_off:

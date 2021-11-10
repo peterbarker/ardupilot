@@ -2336,9 +2336,15 @@ class AutoTest(ABC):
 
     def idle_hook(self, mav):
         """Called when waiting for a mavlink message."""
+        self.progress("Idle hook")
+#        if getattr(self, "last_fred", 0) - time.time() > 0.1:
+#            self.last_fred = time.time()
         if self.in_drain_mav:
+            self.progress("in drain mav")
+            self.progress(self.get_stacktrace())
             return
         self.drain_all_pexpects()
+        self.progress("Idle hook stop")
 
     def message_hook(self, mav, msg):
         """Called as each mavlink msg is received."""
@@ -5746,6 +5752,7 @@ Also, ignores heartbeats not from our target system'''
         x["timeout"] = 1
         tstart = time.time()
         while True:
+            self.drain_all_pexpects()
             if time.time() - tstart > orig_timeout and not self.gdb:
                 if not self.sitl_is_running():
                     self.progress("SITL is not running")
@@ -5999,6 +6006,9 @@ Also, ignores heartbeats not from our target system'''
         elif 'unicode' in str(type(text)):
             text = text.encode('ascii')
         self.mav.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_WARNING, text)
+
+    def get_stacktrace(self):
+        return traceback.format_stack()
 
     def get_exception_stacktrace(self, e):
         if sys.version_info[0] >= 3:
