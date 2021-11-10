@@ -313,10 +313,9 @@ void AP_RCProtocol::check_added_uart(void)
         if (now - added.last_baud_change_ms > 1000) {
             // flip baudrates if not detected once a second
             added.phase = (enum config_phase)(uint8_t(added.phase) + 1);
-            if (added.phase > CONFIG_420000_8N1) {
+            if (added.phase > CONFIG_200000_8E2I) {
                 added.phase = (enum config_phase)0;
             }
-            added.baudrate = (added.baudrate==100000)?115200:100000;
             added.opened = false;
         }
     }
