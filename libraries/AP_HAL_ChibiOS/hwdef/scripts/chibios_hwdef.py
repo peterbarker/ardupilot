@@ -2828,6 +2828,9 @@ def add_apperiph_defaults(f):
 #define HAL_SIM_GPS_ENABLED (AP_SIM_ENABLED && defined(HAL_PERIPH_ENABLE_GPS))
 #endif
 
+#ifndef AP_AHRS_ENABLED
+#define AP_AHRS_ENABLED 0
+#endif
 ''')
 
 
