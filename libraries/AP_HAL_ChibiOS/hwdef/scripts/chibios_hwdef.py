@@ -2835,6 +2835,10 @@ def add_apperiph_defaults(f):
 #ifndef AP_AIRSPEED_AUTOCAL_ENABLE
 #define AP_AIRSPEED_AUTOCAL_ENABLE 0
 #endif
+
+#ifndef NOTIFY_LED_OVERRIDE_DEFAULT
+#define NOTIFY_LED_OVERRIDE_DEFAULT 1       // rgb_source_t::mavlink
+#endif
 ''')
 
 
