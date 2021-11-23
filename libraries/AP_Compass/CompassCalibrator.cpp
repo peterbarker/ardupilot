@@ -839,6 +839,7 @@ void CompassCalibrator::CompassSample::set(const Vector3f &in)
     z = COMPASS_CAL_SAMPLE_SCALE_TO_FIXED(in.z);
 }
 
+#if AP_AHRS_ENABLED
 void CompassCalibrator::AttitudeSample::set_from_ahrs(void)
 {
     const Matrix3f &dcm = AP::ahrs().get_DCM_rotation_body_to_ned();
@@ -848,6 +849,7 @@ void CompassCalibrator::AttitudeSample::set_from_ahrs(void)
     pitch = constrain_int16(127 * (pitch_rad / M_PI_2), -127, 127);
     yaw = constrain_int16(127 * (yaw_rad / M_PI), -127, 127);
 }
+#endif
 
 Matrix3f CompassCalibrator::AttitudeSample::get_rotmat(void) const
 {
