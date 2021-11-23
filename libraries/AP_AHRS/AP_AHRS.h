@@ -22,7 +22,14 @@
  */
 
 #include <AP_HAL/AP_HAL_Boards.h>
-#include <AP_HAL/Semaphores.h>
+
+#ifndef AP_AHRS_ENABLED
+#define AP_AHRS_ENABLED 1
+#endif
+
+#if AP_AHRS_ENABLED
+
+#include <AP_HAL/AP_HAL.h>
 
 #ifndef HAL_NAVEKF2_AVAILABLE
 // only default to EK2 enabled on boards with over 1M flash
@@ -831,3 +838,5 @@ private:
 namespace AP {
     AP_AHRS &ahrs();
 };
+
+#endif  // AP_AHRS_ENABLED
