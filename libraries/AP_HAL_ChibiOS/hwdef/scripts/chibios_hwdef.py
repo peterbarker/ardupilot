@@ -2831,6 +2831,10 @@ def add_apperiph_defaults(f):
 #ifndef AP_AHRS_ENABLED
 #define AP_AHRS_ENABLED 0
 #endif
+
+#ifndef AP_AIRSPEED_AUTOCAL_ENABLE
+#define AP_AIRSPEED_AUTOCAL_ENABLE 0
+#endif
 ''')
 
 
