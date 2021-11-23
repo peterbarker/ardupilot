@@ -29,6 +29,7 @@
 #include <AP_RSSI/AP_RSSI.h>
 #include <AP_RTC/AP_RTC.h>
 #include <GCS_MAVLink/GCS.h>
+#include <AP_Compass/AP_Compass.h>
 
 #include "AP_MSP.h"
 #include "AP_MSP_Telem_Backend.h"
@@ -162,6 +163,7 @@ uint8_t AP_MSP_Telem_Backend::calc_cell_count(const float battery_voltage)
 
 float AP_MSP_Telem_Backend::get_vspeed_ms(void) const
 {
+#if AP_AHRS_ENABLED
     {
         // release semaphore as soon as possible
         AP_AHRS &_ahrs = AP::ahrs();
@@ -171,6 +173,7 @@ float AP_MSP_Telem_Backend::get_vspeed_ms(void) const
             return -v.z;
         }
     }
+#endif
     AP_Baro &_baro = AP::baro();
     WITH_SEMAPHORE(_baro.get_semaphore());
     return _baro.get_climb_rate();
@@ -178,6 +181,7 @@ float AP_MSP_Telem_Backend::get_vspeed_ms(void) const
 
 void AP_MSP_Telem_Backend::update_home_pos(home_state_t &home_state)
 {
+#if AP_AHRS_ENABLED
     AP_AHRS &_ahrs = AP::ahrs();
     WITH_SEMAPHORE(_ahrs.get_semaphore());
     Location loc;
@@ -193,6 +197,9 @@ void AP_MSP_Telem_Backend::update_home_pos(home_state_t &home_state)
     _ahrs.get_relative_position_D_home(alt);
     home_state.rel_altitude_cm = -alt * 100;
     home_state.home_is_set = _ahrs.home_is_set();
+#else
+    memset(&home_state, '\0', sizeof(home_state));
+#endif  // AP_AHRS_ENABLED
 }
 
 void AP_MSP_Telem_Backend::update_gps_state(gps_state_t &gps_state)
@@ -244,12 +251,14 @@ void AP_MSP_Telem_Backend::update_battery_state(battery_state_t &battery_state)
 
 void AP_MSP_Telem_Backend::update_airspeed(airspeed_state_t &airspeed_state)
 {
+#if AP_AHRS_ENABLED
     AP_AHRS &ahrs = AP::ahrs();
     WITH_SEMAPHORE(ahrs.get_semaphore());
     airspeed_state.airspeed_have_estimate = ahrs.airspeed_estimate(airspeed_state.airspeed_estimate_ms);
     if (!airspeed_state.airspeed_have_estimate) {
         airspeed_state.airspeed_estimate_ms = 0.0;
     }
+#endif
 }
 
 /*
@@ -276,12 +285,14 @@ void AP_MSP_Telem_Backend::update_flight_mode_str(char *flight_mode_str, uint8_t
           Wind is rendered next to the current flight mode, for the direction we use an UTF8 arrow (bytes 0xE286[nn])
           example: MANU 4m/s ↗
         */
-        AP_AHRS &ahrs = AP::ahrs();
         Vector3f v;
+#if AP_AHRS_ENABLED
+        AP_AHRS &ahrs = AP::ahrs();
         {
             WITH_SEMAPHORE(ahrs.get_semaphore());
             v = ahrs.wind_estimate();
         }
+#endif
         bool invert_wind = false;
 #if OSD_ENABLED
         AP_MSP *msp = AP::msp();
@@ -303,7 +314,11 @@ void AP_MSP_Telem_Backend::update_flight_mode_str(char *flight_mode_str, uint8_t
         const char* unit = (units == OSD_UNIT_METRIC) ? "m/s" : "f/s";
 
         if (v_length > 1.0f) {
+#if AP_AHRS_ENABLED
             const int32_t angle = wrap_360_cd(DEGX100 * atan2f(v.y, v.x) - ahrs.yaw_sensor);
+#else
+            const int32_t angle = 0;
+#endif
             const int32_t interval = 36000 / ARRAY_SIZE(arrows);
             uint8_t arrow = arrows[((angle + interval / 2) / interval) % ARRAY_SIZE(arrows)];
             snprintf(flight_mode_str, size, "%s %d%s%c%c%c", notify->get_flight_mode_str(),  (uint8_t)roundf(v_length), unit, 0xE2, 0x86, arrow);
@@ -859,6 +874,7 @@ MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_osd_config(sbuf_t *dst)
 
 MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_attitude(sbuf_t *dst)
 {
+#if AP_AHRS_ENABLED
     AP_AHRS &ahrs = AP::ahrs();
     WITH_SEMAPHORE(ahrs.get_semaphore());
 
@@ -874,6 +890,9 @@ MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_attitude(sbuf_t *dst)
 
     sbuf_write_data(dst, &attitude, sizeof(attitude));
     return MSP_RESULT_ACK;
+#else
+    return MSP_RESULT_NO_REPLY;
+#endif
 }
 
 MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_altitude(sbuf_t *dst)
