@@ -24,6 +24,7 @@
 #include <AP_Math/definitions.h>
 #include <AP_RTC/AP_RTC.h>
 #include <AP_SerialManager/AP_SerialManager.h>
+#include <AP_Logger/AP_Logger.h>
 
 #include <stdio.h>
 #include <time.h>
@@ -160,6 +161,14 @@ void AP_NMEA_Output::update()
     snprintf(rmc_end, sizeof(rmc_end), "*%02X\r\n", (unsigned) _nmea_checksum(rmc));
 
     const uint32_t space_required = strlen(gga) + strlen(gga_end) + strlen(rmc) + strlen(rmc_end);
+
+    // log to dataflash for diagnostic purposes
+    if (gga_res != -1) {
+        AP::logger().Write_MessageF("GGA: %s%s", gga, gga_end);
+    }
+    if (rmc_res != -1) {
+        AP::logger().Write_MessageF("RMC: %s%s", rmc, rmc_end);
+    }
 
     // send to all NMEA output ports
     for (uint8_t i = 0; i < _num_outputs; i++) {
