@@ -28,6 +28,7 @@ COMMON_VEHICLE_DEPENDENT_LIBRARIES = [
     'AP_BoardConfig',
     'AP_Camera',
     'AP_CANManager',
+    'AP_CharGen',
     'AP_Common',
     'AP_Compass',
     'AP_Declination',
