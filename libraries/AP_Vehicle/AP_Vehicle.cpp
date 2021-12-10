@@ -254,6 +254,9 @@ void AP_Vehicle::fast_loop()
 #if HAL_GYROFFT_ENABLED
     gyro_fft.sample_gyros();
 #endif
+#if AP_CHARGEN_ENABLED
+    chargen.update();
+#endif
 }
 
 /*

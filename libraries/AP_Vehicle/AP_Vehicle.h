@@ -49,6 +49,7 @@
 #include <AP_Frsky_Telem/AP_Frsky_Parameters.h>
 #include <AP_ExternalAHRS/AP_ExternalAHRS.h>
 #include <AP_VideoTX/AP_SmartAudio.h>
+#include <AP_CharGen/AP_CharGen.h>
 #include <SITL/SITL.h>
 #include <AP_CustomRotations/AP_CustomRotations.h>
 
@@ -396,6 +397,10 @@ protected:
 
 #if AP_SIM_ENABLED
     SITL::SIM sitl;
+#endif
+
+#if AP_CHARGEN_ENABLED
+    AP_CharGen chargen;
 #endif
 
 private:
