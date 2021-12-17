@@ -31,6 +31,8 @@ public:
     // Update the state structure
     virtual void update() = 0;
 
+    virtual bool healthy() const;
+
 protected:
     // Copies internal state to the frontend state
     void copy_to_frontend();
