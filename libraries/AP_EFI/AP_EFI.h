@@ -21,11 +21,18 @@
 #include <AP_Param/AP_Param.h>
 #include <GCS_MAVLink/GCS.h>
 
+#include <AP_HAL/AP_HAL_Boards.h>
+
 #ifndef HAL_EFI_ENABLED
 #define HAL_EFI_ENABLED !HAL_MINIMIZE_FEATURES && BOARD_FLASH_SIZE > 1024
 #endif
 
+#ifndef AP_EFI_LOWEHEISER_ENABLED
+#define AP_EFI_LOWEHEISER_ENABLED HAL_EFI_ENABLED && !defined(HAL_BUILD_AP_PERIPH)
+#endif
+
 #if HAL_EFI_ENABLED
+
 #include "AP_EFI_Backend.h"
 #include "AP_EFI_State.h"
 
@@ -74,6 +81,9 @@ public:
         NONE       = 0,
         MegaSquirt = 1,
         NWPMU     = 2,
+#if AP_EFI_LOWEHEISER_ENABLED
+        LOWEHEISER = 4,
+#endif
     };
 
     static AP_EFI *get_singleton(void) {

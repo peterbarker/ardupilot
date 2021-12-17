@@ -152,6 +152,9 @@ struct EFI_State {
     // Spark dwell time (milliseconds)
     float spark_dwell_time_ms;
 
+    // supply to sparking system:
+    float ignition_voltage = -1;  // -1 is "unknown"
+
     // Atmospheric (barometric) pressure (kilopascal)
     float atmospheric_pressure_kpa;
 
@@ -199,4 +202,6 @@ struct EFI_State {
     // Status for each cylinder in the engine
     Cylinder_Status cylinder_status[ENGINE_MAX_CYLINDERS];
 
+    // throttle output (%)
+    uint8_t throttle_output;
 };

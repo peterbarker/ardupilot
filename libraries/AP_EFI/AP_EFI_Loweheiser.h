@@ -13,37 +13,22 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include "AP_EFI.h"
-
-#if HAL_EFI_ENABLED
-
 #include "AP_EFI_Backend.h"
 
-extern const AP_HAL::HAL &hal;
+#if AP_EFI_LOWEHEISER_ENABLED
 
-AP_EFI_Backend::AP_EFI_Backend(AP_EFI &_frontend) :
-    frontend(_frontend)
-{
-}
+class AP_EFI_Loweheiser : public AP_EFI_Backend {
+public:
 
-void AP_EFI_Backend::copy_to_frontend() 
-{
-    WITH_SEMAPHORE(sem);
-    frontend.state = internal_state;
-}
+    using AP_EFI_Backend::AP_EFI_Backend;
 
-bool AP_EFI_Backend::healthy() const
-{
-    return (AP_HAL::millis() - frontend.state.last_updated_ms) < HEALTHY_LAST_RECEIVED_MS;
-}
+    void update() override;
 
-float AP_EFI_Backend::get_coef1(void) const
-{
-    return frontend.coef1;
-}
+    bool healthy() const override;
 
-float AP_EFI_Backend::get_coef2(void) const
-{
-    return frontend.coef2;
-}
-#endif // HAL_EFI_ENABLED
+};
+
+#endif // AP_EFI_LOWEHEISER_ENABLED
