@@ -74,6 +74,7 @@ public:
         SerialProtocol_FETtecOneWire = 38,
         SerialProtocol_Torqeedo = 39,
         SerialProtocol_AIS = 40,
+        SerialProtocol_PBWateringSystem = 123,
         SerialProtocol_CoDevESC = 41,
         SerialProtocol_MSP_DisplayPort = 42,
         SerialProtocol_MAVLinkHL = 43,
