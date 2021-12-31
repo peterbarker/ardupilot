@@ -428,6 +428,10 @@ void AP_Vehicle::setup()
     filters.init();
 #endif
 
+#if HAL_WATERINGSYSTEM_ENABLED
+    wateringsystem.init();
+#endif
+
 #if HAL_WITH_ESC_TELEM && HAL_GYROFFT_ENABLED
     for (uint8_t i = 0; i<ESC_TELEM_MAX_ESCS; i++) {
         esc_noise[i].set_cutoff_frequency(2);
@@ -558,6 +562,9 @@ const AP_Scheduler::Task AP_Vehicle::scheduler_tasks[] = {
 #endif
 #if AP_AIS_ENABLED
     SCHED_TASK_CLASS(AP_AIS,       &vehicle.ais,            update,                    5, 100, 249),
+#endif
+#if HAL_WATERINGSYSTEM_ENABLED
+    SCHED_TASK_CLASS(PB_WateringSystem,       &vehicle.wateringsystem,            update,                   LOOP_RATE, 200, 250),
 #endif
 #if HAL_EFI_ENABLED
     SCHED_TASK_CLASS(AP_EFI,       &vehicle.efi,            update,                   50, 200, 250),
