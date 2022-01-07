@@ -45,6 +45,7 @@ arm throttle (denied because generator not running)
 #include "SITL_Input.h"
 
 #include "SIM_SerialDevice.h"
+#include "SIM_GeneratorEngine.h"
 
 #include <stdio.h>
 
@@ -101,8 +102,6 @@ private:
 
     float _current_current;
 
-    uint32_t last_rpm_update_ms;
-
     // packet to send:
     struct PACKED RichenPacket {
         uint8_t magic1;
@@ -140,6 +139,8 @@ private:
 
     // time we were asked to stop; 
     uint32_t stop_start_ms;
+
+    SIM_GeneratorEngine generatorengine;
 };
 
 }
