@@ -23,68 +23,87 @@ void WitMotion_HWT901B::update()
 {
     // gcs().send_text(MAV_SEVERITY_WARNING, "sim update");
 
-    static uint32_t last_sent;
     const uint32_t now = AP_HAL::millis();
-    if (now - last_sent < 1000) {
+
+    const uint32_t desired_interval_ms = 1000/desired_rate_hz;
+
+    if (now - last_sent_ms < desired_interval_ms) {
         return;
     }
-    last_sent = now;
+    last_sent_ms = now;
 
-    PackedMessage<TimeOutput> msg {
-        TimeOutput{
-            11,
+    {  // send time output
+        PackedMessage<TimeOutput> msg {
+            TimeOutput{
+                11,
                 22,
-            33,
+                33,
                 44,
                 55,
                 66,
                 77,
                 88,
+             }
+        };
+
+        if (write_to_autopilot((char*)&msg, sizeof(msg)) != sizeof(msg)) {
+            AP_HAL::panic("short write");
         }
-    };
+    }
+
+    const struct sitl_fdm &state = AP::sitl()->state;
 
     static int16_t T;  // temperature
     const uint8_t TL = T & 0xff;
     const uint8_t TH = T >> 8;
     T++;
 
-    if (write_to_autopilot((char*)&msg, sizeof(msg)) != sizeof(msg)) {
-        AP_HAL::panic("short write");
+    {  // send angular velocity
+        static constexpr float SCALER = (32768.0/2000.0);
+
+        const int16_t scaled_rollRate = state.rollRate * SCALER;
+        const int16_t scaled_pitchRate = state.pitchRate * SCALER;
+        const int16_t scaled_yawRate = state.yawRate * SCALER;
+
+        PackedMessage<AngularVelocityOutput> msg {
+            AngularVelocityOutput{
+                LOWBYTE(scaled_rollRate),
+                HIGHBYTE(scaled_rollRate),
+                LOWBYTE(scaled_pitchRate),
+                HIGHBYTE(scaled_pitchRate),
+                LOWBYTE(scaled_yawRate),
+                HIGHBYTE(scaled_yawRate),
+                TL,
+                TH
+            }
+        };
+
+        if (write_to_autopilot((char*)&msg, sizeof(msg)) != sizeof(msg)) {
+            AP_HAL::panic("short write");
+        }
     }
 
+    {  // send acceleration
+        static constexpr float SCALER = (32768/(16*GRAVITY_MSS));
+        const int16_t xAccel = state.xAccel * SCALER;
+        const int16_t yAccel = state.yAccel * SCALER;
+        const int16_t zAccel = state.zAccel * SCALER;
 
-    const struct sitl_fdm &state = AP::sitl()->state;
+        PackedMessage<AccelerationOutput> msg {
+            AccelerationOutput{
+                LOWBYTE(xAccel),
+                HIGHBYTE(xAccel),
+                LOWBYTE(yAccel),
+                HIGHBYTE(yAccel),
+                LOWBYTE(zAccel),
+                HIGHBYTE(zAccel),
+                TL,
+                TH
+            }
+        };
 
-    static constexpr float SCALER = (32768.0/2000.0);
-
-    const int16_t scaled_rollRate = state.rollRate * SCALER;
-    const int16_t scaled_pitchRate = state.pitchRate * SCALER;
-    const int16_t scaled_yawRate = state.yawRate * SCALER;
-
-    // int16_t scaled_rollRate = state.rollRate;
-    // int16_t scaled_pitchRate = state.pitchRate;
-    // int16_t scaled_yawRate = state.yawRate;
-
-    // scaled_rollRate *= SCALER;
-    // scaled_pitchRate *= SCALER;
-    // scaled_yawRate *= SCALER;
-
-    // gcs().send_text(MAV_SEVERITY_INFO, "T=%u w rin=%0.2f pin=%0.2f yin=%0.2f", T, state.rollRate, state.pitchRate, state.yawRate); // FIXME
-
-    PackedMessage<AngularVelocityOutput> msg_av {
-        AngularVelocityOutput{
-            LOWBYTE(scaled_rollRate),
-            HIGHBYTE(scaled_rollRate),
-            LOWBYTE(scaled_pitchRate),
-            HIGHBYTE(scaled_pitchRate),
-            LOWBYTE(scaled_yawRate),
-            HIGHBYTE(scaled_yawRate),
-            TL,
-            TH
+        if (write_to_autopilot((char*)&msg, sizeof(msg)) != sizeof(msg)) {
+            AP_HAL::panic("short write");
         }
-    };
-
-    if (write_to_autopilot((char*)&msg_av, sizeof(msg_av)) != sizeof(msg_av)) {
-        AP_HAL::panic("short write");
     }
 }

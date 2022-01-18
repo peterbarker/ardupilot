@@ -51,6 +51,8 @@ public:
 
 private:
 
+    uint16_t desired_rate_hz = 100;  // start this off at a much lower rate
+
     static const uint8_t WITMOTION_MAGIC = 0x55;
 
     template <typename T>
@@ -165,6 +167,9 @@ private:
         bool message_checksum_valid() const;
     } u;
     uint8_t _receive_buf_used;
+
+
+    uint32_t last_sent_ms;
 };
 
 }

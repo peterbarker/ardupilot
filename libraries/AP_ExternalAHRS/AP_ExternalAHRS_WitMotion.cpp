@@ -32,6 +32,12 @@ AP_ExternalAHRS_WitMotion::AP_ExternalAHRS_WitMotion(AP_ExternalAHRS *_frontend,
     const AP_SerialManager &serial_manager = AP::serialmanager();
 
     uart = serial_manager.find_serial(AP_SerialManager::SerialProtocol_AHRS, 0);
+
+    if (!uart) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "ExternalAHRS no UART");
+        return;
+    }
+
     baudrate = serial_manager.find_baudrate(AP_SerialManager::SerialProtocol_AHRS, 0);
     port_num = serial_manager.find_portnum(AP_SerialManager::SerialProtocol_AHRS, 0);
 
@@ -197,7 +203,7 @@ void AP_ExternalAHRS_WitMotion::read_from_uart(void)
                 continue;
             }
 
-            gcs().send_text(MAV_SEVERITY_INFO, "Got type (%02x)", u.receive_buf[1]);
+            // gcs().send_text(MAV_SEVERITY_INFO, "Got type (%02x)", u.receive_buf[1]);
 
             // handle message content
             switch (type) {
@@ -214,7 +220,7 @@ void AP_ExternalAHRS_WitMotion::read_from_uart(void)
             move_magic_in_receive_buffer(msg_len);
         }
 
-        gcs().send_text(MAV_SEVERITY_INFO, "rcu=%u", _receive_buf_used);
+        // gcs().send_text(MAV_SEVERITY_INFO, "rcu=%u", _receive_buf_used);
     }
 }
 
@@ -225,7 +231,24 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<TimeOutput>
 
 void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<AccelerationOutput> p)
 {
-    gcs().send_text(MAV_SEVERITY_INFO, "Ax=%u", p.msg.AxL); // FIXME
+    static constexpr float SCALER = (16*GRAVITY_MSS) / 32768;
+
+    const float xAccel = int16_t((p.msg.AxH << 8) | p.msg.AxL) * SCALER;
+    const float yAccel = int16_t((p.msg.AyH << 8) | p.msg.AyL) * SCALER;
+    const float zAccel = int16_t((p.msg.AzH << 8) | p.msg.AzL) * SCALER;
+    const int16_t T = (p.msg.TH<<8 | p.msg.TL);
+
+    gcs().send_text(MAV_SEVERITY_INFO, "Ax=%f Ay=%f Az=%f", xAccel, yAccel, zAccel);
+    {
+        const AP_ExternalAHRS::ins_data_message_t ins {
+            accel: Vector3f{xAccel, yAccel, zAccel},
+            gyro: Vector3f{},
+            temperature: float(T),
+            valid_fields: AP_ExternalAHRS::ins_data_message_field::ACCEL|AP_ExternalAHRS::ins_data_message_field::TEMPERATURE
+        };
+        last_accel_ms = AP_HAL::millis();
+        AP::ins().handle_external(ins);
+    }
 }
 
 void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<AngularVelocityOutput> p)
