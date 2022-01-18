@@ -36,6 +36,9 @@ public:
     virtual void get_filter_status(nav_filter_status &status) const {}
     virtual void send_status_report(mavlink_channel_t chan) const {}
 
+    // callbacks to determine support
+    virtual bool has_baro() const { return true; }
+
     // check for new data
     virtual void update() = 0;
     

@@ -63,6 +63,8 @@ public:
     // get serial port number, -1 for not enabled
     int8_t get_port(void) const;
 
+    bool has_baro(uint8_t port);
+
     struct state_t {
         HAL_Semaphore sem;
 

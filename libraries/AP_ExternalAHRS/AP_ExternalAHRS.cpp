@@ -113,6 +113,13 @@ bool AP_ExternalAHRS::initialised(void) const
     return backend && backend->initialised();
 }
 
+bool AP_ExternalAHRS::has_baro(uint8_t port) {
+    if (backend == nullptr) {
+        return false;
+    }
+    return backend->has_baro();
+}
+
 bool AP_ExternalAHRS::get_quaternion(Quaternion &quat)
 {
     if (state.have_quaternion) {
