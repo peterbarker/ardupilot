@@ -31,8 +31,8 @@ AP_ExternalAHRS_WitMotion::AP_ExternalAHRS_WitMotion(AP_ExternalAHRS *_frontend,
 
     const AP_SerialManager &serial_manager = AP::serialmanager();
 
-    uart = serial_manager.find_serial(AP_SerialManager::SerialProtocol_WitMotion_HWT901B, 0);
-    baudrate = serial_manager.find_baudrate(AP_SerialManager::SerialProtocol_WitMotion_HWT901B, 0);
+    uart = serial_manager.find_serial(AP_SerialManager::SerialProtocol_AHRS, 0);
+    baudrate = serial_manager.find_baudrate(AP_SerialManager::SerialProtocol_AHRS, 0);
     port_num = serial_manager.find_portnum(AP_SerialManager::SerialProtocol_AHRS, 0);
 
     if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_ExternalAHRS_WitMotion::update_thread, void), "AHRS", 2048, AP_HAL::Scheduler::PRIORITY_SPI, 0)) {
