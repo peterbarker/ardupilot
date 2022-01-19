@@ -48,14 +48,7 @@ AP_ExternalAHRS_WitMotion::AP_ExternalAHRS_WitMotion(AP_ExternalAHRS *_frontend,
 
 bool AP_ExternalAHRS_WitMotion::healthy(void) const
 {
-    const uint32_t now_ms = AP_HAL::millis();
-    const uint32_t expected_interval_ms = 1000/frontend.get_IMU_rate() * 1.1;
-
-    if (now_ms - last_accel_ms > expected_interval_ms) {
-        return false;
-    }
-
-    if (now_ms - last_gyro_ms > expected_interval_ms) {
+    if (failing_rates) {
         return false;
     }
 
@@ -70,6 +63,11 @@ bool AP_ExternalAHRS_WitMotion::initialised(void) const
 
 bool AP_ExternalAHRS_WitMotion::pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const
 {
+    if (failing_rates) {
+        hal.util->snprintf(failure_msg, failure_msg_len, "Message rate failure; want=%f Hz got=%u Hz", frontend.get_IMU_rate(), achieved_rate_gyro_hz);
+        return false;
+    }
+
     if (!healthy()) {
         hal.util->snprintf(failure_msg, failure_msg_len, "WitMotion unhealthy");
         return false;
@@ -94,8 +92,127 @@ void AP_ExternalAHRS_WitMotion::update_thread(void)
 
     while (true) {
         read_from_uart();
+        check_config();
         hal.scheduler->delay_microseconds(100);
     }
+}
+
+// returns register value for user-indicated desired rate.  Returns 0
+// on failure
+uint8_t AP_ExternalAHRS_WitMotion::desired_rate_id() const
+{
+    // rate-setting
+    // 0x01 :0.2Hz
+    // 0x02:0.5Hz
+    // 0x03:1Hz
+    // 0x04:2Hz
+    // 0x05:5Hz
+    // 0x06:10Hz(default)
+    // 0x07:20Hz
+    // 0x08:50Hz
+    // 0x09:100Hz
+    // 0x0a:125Hz
+    // 0x0b:200Hz
+    const struct ValidRates {
+        uint8_t id;
+        uint8_t hz;
+    } valid_rates[] {
+        { 0x08,  50 },
+        { 0x09, 100 },
+        { 0x0a, 125 },
+        { 0x0b, 200 },
+    };
+
+    const uint32_t desired_rate = frontend.get_IMU_rate();
+    for (const auto rate : valid_rates) {
+        if (rate.hz == desired_rate) {
+            return rate.id;
+        }
+    }
+    return 0;
+}
+
+void AP_ExternalAHRS_WitMotion::check_config()
+{
+    check_baud();
+    check_rates();
+}
+
+void AP_ExternalAHRS_WitMotion::check_baud()
+{
+    if (last_gyro_ms != 0 || rate_count_gyro == 0) {
+        // we've seen a valid message, and we never change baud after
+        // we've seen a message - so call it good.  ms can wrap, but
+        // it and count begin zero is unlikely.
+        return;
+    }
+
+    const uint32_t now_ms = AP_HAL::millis();
+
+    if (now_ms - last_autobaud_begin_ms < 1000) {
+        return;
+    }
+    last_autobaud_begin_ms = now_ms;
+
+    // static const struct AutoBaudRate {
+    //     uint8_t id;
+    //     uint16_t rate;
+    // } auto_baud_rates[] {
+    //     { 0x01, 4 },  //  4800
+    //     { 0x02, 9 },  //  9600
+    //     { 0x03, 19 }, // 19200
+    //     { 0x04, 384 },// 38400
+    //     { 0x05, 576 },
+    //     { 0x06, 115 },
+    //     { 0x07, 230 },
+    //     { 0x08, 460 },
+    //     { 0x09, 921 },           
+    // };
+
+    static const uint16_t auto_baud_rates[] {
+        4, // 4800
+        9,  // 9600
+        19,  // 19200
+        384,  // 38400
+        576,  // 57600
+        115,
+        230,
+        460,
+        921,
+    };
+    const uint32_t mapped_rate = AP::serialmanager().map_baudrate(auto_baud_rates[last_autobaud_offset++]);
+    if (last_autobaud_offset >= ARRAY_SIZE(auto_baud_rates)) {
+        last_autobaud_offset = 0;
+    }
+    gcs().send_text(MAV_SEVERITY_INFO, "WitMotion: autobaud %u", mapped_rate);
+    uart->begin(mapped_rate);
+}
+
+void AP_ExternalAHRS_WitMotion::check_rates()
+{
+    const uint32_t now = AP_HAL::millis();
+    const uint32_t rate_check_interval = 10000;
+    if (now - rate_count_time_start_ms > rate_check_interval) {
+        achieved_rate_gyro_hz = (1000*rate_count_gyro) / rate_check_interval;
+        if (abs(achieved_rate_gyro_hz - frontend.get_IMU_rate()) < 5) {
+            failing_rates = false;
+            return;
+        }
+    }
+
+    failing_rates = true;
+
+    if (now - last_rate_fix_attempt_ms < 5000) {
+        return;
+    }
+
+    const uint8_t rate = desired_rate_id();
+    if (rate == 0) {
+        gcs().send_text(MAV_SEVERITY_INFO, "Bad EAHRS rate %f", frontend.get_IMU_rate());
+        return;
+    }
+
+    // send_set_register(Register::RATE, rate);
 }
 
 /// shifts data to start of buffer based on magic header bytes
@@ -249,6 +366,8 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<Acceleratio
         last_accel_ms = AP_HAL::millis();
         AP::ins().handle_external(ins);
     }
+
+    rate_count_gyro++;
 }
 
 void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<AngularVelocityOutput> p)

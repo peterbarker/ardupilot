@@ -42,6 +42,9 @@ public:
     void get_filter_status(nav_filter_status &status) const override;
     void send_status_report(mavlink_channel_t chan) const override;
 
+    // callbacks to determine support
+    bool has_baro() const override { return false; }
+
     // check for new data
     void update() override {
         read_from_uart();
@@ -181,6 +184,27 @@ private:
     void handle_message_content(PackedMessage<TimeOutput> p);
     void handle_message_content(PackedMessage<AngularVelocityOutput> p);
     void handle_message_content(PackedMessage<AccelerationOutput> p);
+
+    void check_config();
+    void check_baud();
+
+    // rate monitoring
+    void check_rates();
+    bool failing_rates;
+    uint16_t rate_count_gyro;
+    uint16_t achieved_rate_gyro_hz;
+    uint32_t rate_count_time_start_ms;
+    uint32_t last_rate_fix_attempt_ms;
+
+    uint8_t desired_rate_id() const;
+    enum class Register {
+        RATE = 0x03,
+        BAUD = 0x04,
+    };
+
+    // autobauding support:
+    uint8_t last_autobaud_offset;
+    uint32_t last_autobaud_begin_ms;
 
 };
 
