@@ -168,12 +168,13 @@ void AP_ExternalAHRS_WitMotion::send_config_request(Register reg, uint16_t value
         return;
     }
     gcs().send_text(MAV_SEVERITY_INFO, "WitMotion: setting reg=%u to %u", (unsigned)reg, (unsigned)value);
-    // uart->write(pkt, sizeof(pkt));
+    uart->write(pkt, sizeof(pkt));
 }
 
 uint16_t AP_ExternalAHRS_WitMotion::desired_content_regvalue() const
 {
     return (
+        Content::TIME |
         Content::ACCEL |
         Content::ANGVEL
     );
@@ -185,13 +186,14 @@ void AP_ExternalAHRS_WitMotion::send_config()
     // TODO: see if we really ought to stream these out more slowly?
     const uint16_t rate_regvalue = desired_rate_regvalue();
     if (rate_regvalue != 0) {
-        send_config_request(Register::RATE, rate_regvalue);
+        // send_config_request(Register::RATE, rate_regvalue);
     } else {
         gcs().send_text(MAV_SEVERITY_INFO, "Bad EAHRS rate %f", frontend.get_IMU_rate());
     }
 
-    send_config_request(Register::BAUD, desired_baud_regvalue());
-    send_config_request(Register::CONTENT, desired_content_regvalue());
+    // send_config_request(Register::BAUD, desired_baud_regvalue());
+    // send_config_request(Register::CONTENT, desired_content_regvalue());
+    send_config_request(Register::SAVE, 1);  // 0 is save, 1 is set-to-defaults
 
     state = State::NEED_REPOWER;
 }
@@ -214,11 +216,17 @@ void AP_ExternalAHRS_WitMotion::check_config()
         if (now_ms - check_config_start_ms < 5000) {
             return;
         }
-        if (check_rates() &&
-            check_message_types()) {
-            state = State::RUNNING;
+        if (!check_rates()) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Bad rates");
+            state = State::NEED_CONFIG;
+            return;
         }
-        state = State::NEED_CONFIG;
+        if (!check_message_types()) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Bad message types");
+            state = State::NEED_CONFIG;
+            return;
+        }
+        state = State::RUNNING;
         return;
     case State::NEED_REPOWER:
         if (now_ms - last_power_cycle_message_ms > 10000) {
@@ -281,13 +289,13 @@ void AP_ExternalAHRS_WitMotion::check_baud()
         460,
         921,
     };
-    const uint32_t mapped_rate = AP::serialmanager().map_baudrate(auto_baud_rates[last_autobaud_offset]);
-
     if (last_gyro_ms != 0 || rate_count_gyro != 0) {
         // we've seen a valid message, and we never change baud after
         // we've seen a message - so call it good.  ms can wrap, but
         // it and count begin zero is unlikely.
+        const uint32_t mapped_rate = AP::serialmanager().map_baudrate(auto_baud_rates[last_autobaud_offset]);
         if (mapped_rate != desired_baud()) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Bad baud (want=%u got=%u)", (unsigned)desired_baud(), (unsigned)mapped_rate);
             state = State::NEED_CONFIG;
             return;
         }
@@ -299,6 +307,7 @@ void AP_ExternalAHRS_WitMotion::check_baud()
     if (last_autobaud_offset >= ARRAY_SIZE(auto_baud_rates)) {
         last_autobaud_offset = 0;
     }
+    const uint32_t mapped_rate = AP::serialmanager().map_baudrate(auto_baud_rates[last_autobaud_offset]);
     gcs().send_text(MAV_SEVERITY_INFO, "WitMotion: autobaud %u", mapped_rate);
     uart->begin(mapped_rate);
 }
@@ -433,12 +442,13 @@ void AP_ExternalAHRS_WitMotion::read_from_uart(void)
             // validate checksum:
             if (!u.message_checksum_valid()) {
                 // throw away this magic and try again
-                AP_HAL::panic("Bad checksum");
+                // AP_HAL::panic("Bad checksum");
+                // bad_checksum++;
                 move_magic_in_receive_buffer(1);
                 continue;
             }
 
-            // gcs().send_text(MAV_SEVERITY_INFO, "Got type (%02x)", u.receive_buf[1]);
+            gcs().send_text(MAV_SEVERITY_INFO, "Got type (%02x)", u.receive_buf[1]);
             if (state != State::RUNNING) {
                 update_received_content_regvalue((uint8_t)type);
             }
@@ -475,7 +485,8 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<Acceleratio
 
     const float xAccel = int16_t((p.msg.AxH << 8) | p.msg.AxL) * SCALER;
     const float yAccel = int16_t((p.msg.AyH << 8) | p.msg.AyL) * SCALER;
-    const float zAccel = int16_t((p.msg.AzH << 8) | p.msg.AzL) * SCALER;
+    // device reports NEU, convert to NED:
+    const float zAccel = -int16_t((p.msg.AzH << 8) | p.msg.AzL) * SCALER;
     const int16_t T = (p.msg.TH<<8 | p.msg.TL);
 
     gcs().send_text(MAV_SEVERITY_INFO, "Ax=%f Ay=%f Az=%f", xAccel, yAccel, zAccel);
@@ -502,7 +513,7 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<AngularVelo
     const float yawRate = int16_t((p.msg.wzH << 8) | p.msg.wzL) * SCALER;
     const int16_t T = (p.msg.TH<<8 | p.msg.TL);
 
-    // gcs().send_text(MAV_SEVERITY_INFO, "T=%u w r=%0.2f p=%0.2f y=%0.2f", T, rollRate, pitchRate, yawRate); // FIXME
+    gcs().send_text(MAV_SEVERITY_INFO, "T=%u w r=%0.2f p=%0.2f y=%0.2f", T, rollRate, pitchRate, yawRate); // FIXME
 
     {
         const AP_ExternalAHRS::ins_data_message_t ins {

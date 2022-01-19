@@ -18,10 +18,8 @@ void AP_InertialSensor_ExternalAHRS::handle_external(const AP_ExternalAHRS::ins_
         return;
     }
 
-    Vector3f accel = pkt.accel;
-    Vector3f gyro = pkt.gyro;
-
     if ((pkt.valid_fields & AP_ExternalAHRS::ins_data_message_field::ACCEL) != 0) {
+        Vector3f accel = pkt.accel;
         _rotate_and_correct_accel(accel_instance, accel);
         _notify_new_accel_raw_sample(accel_instance, accel, AP_HAL::micros64());
     }
@@ -30,10 +28,14 @@ void AP_InertialSensor_ExternalAHRS::handle_external(const AP_ExternalAHRS::ins_
         _publish_temperature(accel_instance, pkt.temperature);
     }
 
-    
+
     if ((pkt.valid_fields & AP_ExternalAHRS::ins_data_message_field::GYRO) != 0) {
+        Vector3f gyro = pkt.gyro;
+        gcs().send_text(MAV_SEVERITY_INFO, "%f/%f/%f", gyro[0], gyro[1], gyro[2]);
         _notify_new_gyro_sensor_rate_sample(gyro_instance, gyro);
+        gcs().send_text(MAV_SEVERITY_INFO, "%fx%fx%f", gyro[0], gyro[1], gyro[2]);
         _rotate_and_correct_gyro(gyro_instance, gyro);
+        gcs().send_text(MAV_SEVERITY_INFO, "%fy%fy%f", gyro[0], gyro[1], gyro[2]);
         _notify_new_gyro_raw_sample(gyro_instance, gyro, AP_HAL::micros64());
     }
 }
