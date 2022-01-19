@@ -51,6 +51,9 @@ public:
 
 private:
 
+    void update_read();
+    void update_write();
+
     uint16_t desired_rate_hz = 100;  // start this off at a much lower rate
 
     static const uint8_t WITMOTION_MAGIC = 0x55;
@@ -168,6 +171,7 @@ private:
     } u;
     uint8_t _receive_buf_used;
 
+    uint16_t registers[16];
 
     uint32_t last_sent_ms;
 };

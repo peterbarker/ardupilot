@@ -24,6 +24,12 @@
 
 #if HAL_EXTERNAL_AHRS_WITMOTION_ENABLED
 
+// this define determines whether the device can be reconfigured by
+// ArduPilot into its desired configuration:
+#ifndef HAL_EXTERNAL_AHRS_WITMOTION_CONFIGURATION_ENABLED
+#define HAL_EXTERNAL_AHRS_WITMOTION_CONFIGURATION_ENABLED 1
+#endif
+
 #include <GCS_MAVLink/GCS_MAVLink.h>
 
 class AP_ExternalAHRS_WitMotion: public AP_ExternalAHRS_backend
@@ -185,28 +191,61 @@ private:
     void handle_message_content(PackedMessage<AngularVelocityOutput> p);
     void handle_message_content(PackedMessage<AccelerationOutput> p);
 
+#if HAL_EXTERNAL_AHRS_WITMOTION_CONFIGURATION_ENABLED
     void check_config();
     void check_baud();
 
     // rate monitoring
-    void check_rates();
-    bool failing_rates;
+    bool check_rates();
+    bool check_message_types();
+    void update_received_content_regvalue(uint8_t msgtype);
+
     uint16_t rate_count_gyro;
-    uint16_t achieved_rate_gyro_hz;
     uint32_t rate_count_time_start_ms;
     uint32_t last_rate_fix_attempt_ms;
 
-    uint8_t desired_rate_id() const;
+    uint16_t desired_rate_regvalue() const;
+    uint16_t desired_baud_regvalue() const;
+    uint16_t desired_content_regvalue() const;
+
     enum class Register {
-        RATE = 0x03,
-        BAUD = 0x04,
+        SAVE    = 0x00,
+        CONTENT = 0x02,
+        RATE    = 0x03,
+        BAUD    = 0x04,
     };
+    void send_config_request(Register reg, uint16_t value);
+    void send_config();
+    uint32_t check_config_start_ms;
 
     // autobauding support:
+    uint32_t desired_baud() const;
     uint8_t last_autobaud_offset;
     uint32_t last_autobaud_begin_ms;
 
+    enum class State {
+        AUTOBAUDING,
+        RUNNING,
+        CHECKING_CONFIG,
+        NEED_CONFIG,
+        NEED_REPOWER
+    };
+    State state = State::AUTOBAUDING;
+
+    uint32_t last_power_cycle_message_ms;
+
+    enum Content {
+        TIME          = (1U << 0),
+        ACCEL         = (1U << 1),
+        ANGVEL        = (1U << 2),
+        ANGLE         = (1U << 3),
+        MAGNETIC      = (1U << 4),
+        ATMO          = (1U << 6),
+        QUAT          = (1U << 9),
+    };
+    uint16_t msg_received;
+    bool bad_message_received = false;
+#endif  // HAL_EXTERNAL_AHRS_WITMOTION_CONFIGURATION_ENABLED
 };
 
 #endif // HAL_EXTERNAL_AHRS_ENABLED
-

@@ -21,6 +21,51 @@ using namespace SITL;
 
 void WitMotion_HWT901B::update()
 {
+    update_read();
+    update_write();
+}
+
+void WitMotion_HWT901B::update_read()
+{
+    union {
+        struct {
+            uint8_t header1;
+            uint8_t header2;
+            uint8_t reg;
+            uint8_t low;
+            uint8_t high;
+        };
+        uint8_t buffer[100];
+    } umm;
+
+    ssize_t bytes_read = read_from_autopilot((char*)umm.buffer, ARRAY_SIZE(umm.buffer));
+    if (bytes_read == 0) {
+        return;
+    }
+    if (bytes_read % 5 != 0) {
+        AP_HAL::panic("Unexpected read size %u", (unsigned)bytes_read);
+    }
+    while (bytes_read) {
+        if (umm.header1 != 0xFF) {
+            AP_HAL::panic("Unexpected header1");
+        }
+        if (umm.header2 != 0xAA) {
+            AP_HAL::panic("Unexpected header2");
+        }
+
+        if (umm.reg >= ARRAY_SIZE(registers)) {
+            AP_HAL::panic("Bad reg %u", umm.reg);
+        }
+        const uint16_t reg_value = (umm.high << 8) | umm.low;
+        registers[umm.reg] = reg_value;
+        gcs().send_text(MAV_SEVERITY_INFO, "SIM_WitMotion: set reg=%u to %u", umm.reg, reg_value);
+        bytes_read -= 5;
+        memmove(umm.buffer, &umm.buffer[5], bytes_read);
+    }
+}
+
+void WitMotion_HWT901B::update_write()
+{
     // gcs().send_text(MAV_SEVERITY_WARNING, "sim update");
 
     const uint32_t now = AP_HAL::millis();
