@@ -32,6 +32,7 @@ parser.add_argument("--zero-time-base", action='store_true', help="use Z time ba
 parser.add_argument("log", metavar="LOG")
 parser.add_argument("--debug", action='store_true', help="debug mode")
 parser.add_argument("--kml", action='store_true', help="emit kml")
+parser.add_argument("--tz-offset-minutes", type=int, help="minutes to add to each output timestamp", default=0)
 
 args = parser.parse_args()
 
@@ -230,7 +231,7 @@ def emit_row_kml(mlog):
            lux=lux,
            speed=gps.Spd,
            heading=gps.GCrs,
-           time=time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(gps._timestamp)),
+           time=time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(gps._timestamp + args.tz_offset_minutes*60)),
            timestamp=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(gps._timestamp)))
     pm = re.sub(r"^ +", "", pm, flags=re.M)
     print(pm)
@@ -266,8 +267,8 @@ def emit_row(mlog):
     lux = adcl.ADC1
     out = [
         "%u" % adcl.TimeUS,
-        time.strftime('%Y-%m-%d', time.gmtime(gps._timestamp)),
-        time.strftime('%H:%M:%S', time.gmtime(gps._timestamp)),
+        time.strftime('%Y-%m-%d', time.gmtime(gps._timestamp + args.tz_offset_minutes*60)),
+        time.strftime('%H:%M:%S', time.gmtime(gps._timestamp + args.tz_offset_minutes*60)),
         "%f" % gps.Lat,
         "%f" % gps.Lng,
         "%f" % lux,
