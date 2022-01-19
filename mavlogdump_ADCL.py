@@ -13,6 +13,9 @@ import re
 from pymavlink import mavextra
 from pymavlink import mavutil
 
+# "Also looks like lux needs to be x10000" Skype Jan 2021
+luxmul = 10000
+
 try:
     from pymavlink.mavextra import *  # noqa
 except Exception:
@@ -203,7 +206,7 @@ def emit_row_kml(mlog):
     att = mlog.messages["ATT"]
     adcl = mlog.messages["ADCL"]
 
-    lux = adcl.ADC1
+    lux = float(adcl.ADC1)
 
     pm = """<Placemark>
  <name>{name}</name>
@@ -228,7 +231,7 @@ def emit_row_kml(mlog):
            lat=gps.Lat,
            lon=gps.Lng,
            alt=lux * 10000,
-           lux=lux,
+           lux=(lux * luxmul),
            speed=gps.Spd,
            heading=gps.GCrs,
            time=time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(gps._timestamp + args.tz_offset_minutes*60)),
@@ -271,7 +274,7 @@ def emit_row(mlog):
         time.strftime('%H:%M:%S', time.gmtime(gps._timestamp + args.tz_offset_minutes*60)),
         "%f" % gps.Lat,
         "%f" % gps.Lng,
-        "%f" % lux,
+        "%f" % (lux * luxmul),
         "%f" % gps.Spd,
         "%f" % gpa.HAcc,
         "%u" % gps.Status,
