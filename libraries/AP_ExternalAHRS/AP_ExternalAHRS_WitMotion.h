@@ -12,6 +12,9 @@
  */
 /*
   suppport for serial connected AHRS systems
+
+  PDF for underlying module: http://wiki.wit-motion.com/english/lib/exe/fetch.php?media=module:wt901:docs:jy901usermanualv4.pdf
+
  */
 
 #pragma once
