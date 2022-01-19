@@ -88,6 +88,7 @@ void AP_ExternalAHRS_WitMotion::update_thread(void)
     if (!port_open) {
         port_open = true;
         uart->begin(baudrate);
+        gcs().send_text(MAV_SEVERITY_INFO, "WitMotion: begin %u", baudrate);
     }
 
     while (true) {
@@ -140,7 +141,7 @@ void AP_ExternalAHRS_WitMotion::check_config()
 
 void AP_ExternalAHRS_WitMotion::check_baud()
 {
-    if (last_gyro_ms != 0 || rate_count_gyro == 0) {
+    if (last_gyro_ms != 0 || rate_count_gyro != 0) {
         // we've seen a valid message, and we never change baud after
         // we've seen a message - so call it good.  ms can wrap, but
         // it and count begin zero is unlikely.
@@ -212,6 +213,7 @@ void AP_ExternalAHRS_WitMotion::check_rates()
         return;
     }
 
+    gcs().send_text(MAV_SEVERITY_INFO, "Setting rate to %u", (unsigned)rate);
     // send_set_register(Register::RATE, rate);
 }
 
