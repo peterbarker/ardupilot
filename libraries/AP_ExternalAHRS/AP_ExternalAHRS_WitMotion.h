@@ -106,6 +106,10 @@ private:
         TIME_OUTPUT                  = 0x50,
         ACCELERATION_OUTPUT          = 0x51,
         ANGULAR_VELOCITY_OUTPUT      = 0x52,
+        ANGLE_OUTPUT                 = 0x53,
+        MAGNETIC_OUTPUT              = 0x54,
+        PRESSURE_HEIGHT_OUTPUT       = 0x56,
+        QUATERNION                   = 0x59,
     };
 
     class PACKED TimeOutput {
@@ -170,11 +174,111 @@ private:
         uint8_t TH;
     };
 
+    class PACKED AngleOutput {
+    public:
+        AngleOutput(uint8_t _RollL, uint8_t _RollH, uint8_t _PitchL, uint8_t _PitchH, uint8_t _YawL, uint8_t _YawH,  uint8_t _VL, uint8_t _VH) :
+            RollL{_RollL},
+            RollH{_RollH},
+            PitchL{_PitchL},
+            PitchH{_PitchH},
+            yawL{_yawL},
+            yawH{_yawH},
+            VL{_VL},
+            VH{_VH} {}
+
+        uint8_t msgid { (uint8_t)MsgType::ANGLE_OUTPUT };
+
+        uint8_t RollL;
+        uint8_t RollH;
+        uint8_t PitchL;
+        uint8_t PitchH;
+        uint8_t yawL;
+        uint8_t yawH;
+        uint8_t VL;
+        uint8_t VH;
+    };
+
+    class PACKED MagneticOutput {
+    public:
+        MagneticOutput(uint8_t _HxL, uint8_t _HxH, uint8_t _HyL, uint8_t _HyH, uint8_t _HzL, uint8_t _HzH,  uint8_t _VL, uint8_t _VH) :
+            HxL{_HxL},
+            HxH{_HxH},
+            HyL{_HyL},
+            HyH{_HyH},
+            HzL{_HzL},
+            HzH{_HzH},
+            TL{_TL},
+            TH{_TH} {}
+
+        uint8_t msgid { (uint8_t)MsgType::MAGNETIC_OUTPUT };
+
+        uint8_t HxL;
+        uint8_t HxH;
+        uint8_t HyL;
+        uint8_t HyH;
+        uint8_t HzL;
+        uint8_t HzH;
+        uint8_t TL;
+        uint8_t TH;
+    };
+
+    class PACKED PressureHeightOutput {
+    public:
+        MagneticOutput(uint8_t _P0, uint8_t _P1, uint8_t _P2, uint8_t _P3, uint8_t _H0, uint8_t _H1,  uint8_t _H2, uint8_t _H3) :
+            P0{_P0},
+            P1{_P1},
+            P2{_P2},
+            P3{_P3},
+            H0{_H0},
+            H1{_H1},
+            H2{_H2},
+            H3{_H3} {}
+
+        uint8_t msgid { (uint8_t)MsgType::MAGNETIC_OUTPUT };
+
+        uint8_t H0;
+        uint8_t H1;
+        uint8_t H2;
+        uint8_t H3;
+        uint8_t P0;
+        uint8_t P1;
+        uint8_t P2;
+        uint8_t P3;
+    };
+
+    class PACKED XQuaternion {
+    public:
+        XQuaternion(uint8_t _Q0L, uint8_t _Q0H, uint8_t _Q1L, uint8_t _Q1H, uint8_t _Q2L, uint8_t _Q2H,  uint8_t _Q3L, uint8_t _Q3H) :
+            Q0L{_Q0L},
+            Q0H{_Q0H},
+            Q1L{_Q1L},
+            Q1H{_Q1H},
+            Q2L{_Q2L},
+            Q2H{_Q2H},
+            Q3L{_Q3L},
+            Q3H{_Q3H} {}
+
+        uint8_t msgid { (uint8_t)MsgType::MAGNETIC_OUTPUT };
+
+        uint8_t Q0L;
+        uint8_t Q0H;
+        uint8_t Q1L;
+        uint8_t Q1H;
+        uint8_t Q2L;
+        uint8_t Q2H;
+        uint8_t Q3L;
+        uint8_t Q3H;
+    };
+
     union MessageUnion {
         MessageUnion() { }
         PackedMessage<TimeOutput> packed_time_output;
         PackedMessage<AccelerationOutput> packed_acceleration_output;
         PackedMessage<AngularVelocityOutput> packed_angularvelocity_output;
+        PackedMessage<AngleOutput> packed_angle_output;
+        PackedMessage<MagneticOutput> packed_magnetic_output;
+        PackedMessage<PressureHeight> packed_pressureheight_output;
+        PackedMessage<XQuaternion> packed_quaternion;
 
         uint8_t receive_buf[128];  // FIXME: tighten this?
 

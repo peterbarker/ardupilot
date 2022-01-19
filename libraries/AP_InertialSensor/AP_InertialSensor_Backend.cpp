@@ -170,9 +170,9 @@ void AP_InertialSensor_Backend::_publish_gyro(uint8_t instance, const Vector3f &
     if ((1U<<instance) & _imu.imu_kill_mask) {
         return;
     }
-    if (instance == 0) {
-        gcs().send_text(MAV_SEVERITY_INFO, "%f:%f:%f", gyro[0], gyro[1], gyro[2]);
-    }
+    // if (instance == 0) {
+    //     gcs().send_text(MAV_SEVERITY_INFO, "%f:%f:%f", gyro[0], gyro[1], gyro[2]);
+    // }
     _imu._gyro[instance] = gyro;
     _imu._gyro_healthy[instance] = true;
 

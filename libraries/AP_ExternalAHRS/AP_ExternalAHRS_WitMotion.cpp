@@ -377,6 +377,14 @@ bool AP_ExternalAHRS_WitMotion::MessageUnion::message_checksum_valid() const
         return packed_acceleration_output.verify_checksum();
     case MsgType::ANGULAR_VELOCITY_OUTPUT:
         return packed_angularvelocity_output.verify_checksum();
+    case MsgType::ANGLE_OUTPUT:
+        return packed_angle_output.verify_checksum();
+    case MsgType::MAGNETIC_OUTPUT:
+        return packed_magnetic_output.verify_checksum();
+    case MsgType::PRESSURE_HEIGHT_OUTPUT:
+        return packed_pressure_height_output.verify_checksum();
+    case MsgType::QUATERNION_OUTPUT:
+        return packed_quaternion_output.verify_checksum();
     default:
         return false;
     }
@@ -419,12 +427,12 @@ void AP_ExternalAHRS_WitMotion::read_from_uart(void)
             uint8_t msg_len;
             switch (type) {
             case MsgType::TIME_OUTPUT:
-                msg_len = 11;
-                break;
             case MsgType::ACCELERATION_OUTPUT:
-                msg_len = 11;
-                break;
             case MsgType::ANGULAR_VELOCITY_OUTPUT:
+            case MsgType::ANGLE_OUTPUT:
+            case MsgType::MAGNETIC_OUTPUT:
+            case MsgType::PRESSURE_HEIGHT_OUTPUT:
+            case MsgType::QUATERNION:
                 msg_len = 11;
                 break;
             default:
