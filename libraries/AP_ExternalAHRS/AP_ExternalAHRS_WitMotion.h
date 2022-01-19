@@ -181,8 +181,8 @@ private:
             RollH{_RollH},
             PitchL{_PitchL},
             PitchH{_PitchH},
-            yawL{_yawL},
-            yawH{_yawH},
+            YawL{_YawL},
+            YawH{_YawH},
             VL{_VL},
             VH{_VH} {}
 
@@ -192,15 +192,15 @@ private:
         uint8_t RollH;
         uint8_t PitchL;
         uint8_t PitchH;
-        uint8_t yawL;
-        uint8_t yawH;
+        uint8_t YawL;
+        uint8_t YawH;
         uint8_t VL;
         uint8_t VH;
     };
 
     class PACKED MagneticOutput {
     public:
-        MagneticOutput(uint8_t _HxL, uint8_t _HxH, uint8_t _HyL, uint8_t _HyH, uint8_t _HzL, uint8_t _HzH,  uint8_t _VL, uint8_t _VH) :
+        MagneticOutput(uint8_t _HxL, uint8_t _HxH, uint8_t _HyL, uint8_t _HyH, uint8_t _HzL, uint8_t _HzH,  uint8_t _TL, uint8_t _TH) :
             HxL{_HxL},
             HxH{_HxH},
             HyL{_HyL},
@@ -224,7 +224,7 @@ private:
 
     class PACKED PressureHeightOutput {
     public:
-        MagneticOutput(uint8_t _P0, uint8_t _P1, uint8_t _P2, uint8_t _P3, uint8_t _H0, uint8_t _H1,  uint8_t _H2, uint8_t _H3) :
+        PressureHeightOutput(uint8_t _P0, uint8_t _P1, uint8_t _P2, uint8_t _P3, uint8_t _H0, uint8_t _H1,  uint8_t _H2, uint8_t _H3) :
             P0{_P0},
             P1{_P1},
             P2{_P2},
@@ -236,14 +236,14 @@ private:
 
         uint8_t msgid { (uint8_t)MsgType::MAGNETIC_OUTPUT };
 
-        uint8_t H0;
-        uint8_t H1;
-        uint8_t H2;
-        uint8_t H3;
         uint8_t P0;
         uint8_t P1;
         uint8_t P2;
         uint8_t P3;
+        uint8_t H0;
+        uint8_t H1;
+        uint8_t H2;
+        uint8_t H3;
     };
 
     class PACKED XQuaternion {
@@ -277,7 +277,7 @@ private:
         PackedMessage<AngularVelocityOutput> packed_angularvelocity_output;
         PackedMessage<AngleOutput> packed_angle_output;
         PackedMessage<MagneticOutput> packed_magnetic_output;
-        PackedMessage<PressureHeight> packed_pressureheight_output;
+        PackedMessage<PressureHeightOutput> packed_pressureheight_output;
         PackedMessage<XQuaternion> packed_quaternion;
 
         uint8_t receive_buf[128];  // FIXME: tighten this?

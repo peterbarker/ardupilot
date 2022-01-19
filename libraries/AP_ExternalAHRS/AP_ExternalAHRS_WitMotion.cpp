@@ -382,9 +382,9 @@ bool AP_ExternalAHRS_WitMotion::MessageUnion::message_checksum_valid() const
     case MsgType::MAGNETIC_OUTPUT:
         return packed_magnetic_output.verify_checksum();
     case MsgType::PRESSURE_HEIGHT_OUTPUT:
-        return packed_pressure_height_output.verify_checksum();
-    case MsgType::QUATERNION_OUTPUT:
-        return packed_quaternion_output.verify_checksum();
+        return packed_pressureheight_output.verify_checksum();
+    case MsgType::QUATERNION:
+        return packed_quaternion.verify_checksum();
     default:
         return false;
     }
