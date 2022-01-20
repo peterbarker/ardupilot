@@ -96,6 +96,7 @@ void AP_ExternalAHRS_WitMotion::update_thread(void)
         if (state != State::RUNNING) {
             check_config();
         }
+        update_gyro_message_rate();
         hal.scheduler->delay_microseconds(100);
     }
 }
@@ -140,18 +141,7 @@ uint16_t AP_ExternalAHRS_WitMotion::desired_rate_regvalue() const
 // update rate the user has specified
 uint32_t AP_ExternalAHRS_WitMotion::desired_baud() const
 {
-    // TODO: check the maths here:
-    const uint32_t rate = frontend.get_IMU_rate();
-    switch (rate) {
-    case 50:
-        return 115200;
-    case 100:
-        return 230400;
-    case 125:
-        return 460800;
-    default:
-        return 921600;
-    }
+    return 230400;
 }
 
 void AP_ExternalAHRS_WitMotion::send_config_request(Register reg, uint16_t value)
@@ -240,10 +230,14 @@ void AP_ExternalAHRS_WitMotion::check_config()
         return;
     case State::CHECKING_CONFIG:
         if (check_config_start_ms == 0) {
+            // initialise rate-count stuff:
             check_config_start_ms = now_ms;
+            rate_count_time_start_ms = now_ms;
+            rate_count_gyro = 0;
             return;
         }
-        if (now_ms - check_config_start_ms < 5000) {
+        if (now_ms - check_config_start_ms < 5000 ||
+            is_zero(achieved_gyro_rate_hz)) {
             return;
         }
         if (!check_rates()) {
@@ -346,12 +340,24 @@ void AP_ExternalAHRS_WitMotion::check_baud()
     uart->begin(mapped_rate);
 }
 
+void AP_ExternalAHRS_WitMotion::update_gyro_message_rate()
+{
+    const uint32_t now_ms = AP_HAL::millis();
+    const uint32_t delta_time_ms = now_ms - rate_count_time_start_ms;
+    if (delta_time_ms < 5000) {
+        return;
+    }
+
+    achieved_gyro_rate_hz = (1000.0*rate_count_gyro) / delta_time_ms;
+    gcs().send_text(MAV_SEVERITY_INFO, "achieved_gyro_rate_hz=%0.2f", achieved_gyro_rate_hz);
+    rate_count_time_start_ms = now_ms;
+    rate_count_gyro = 0;
+}
+
 bool AP_ExternalAHRS_WitMotion::check_rates()
 {
-    const uint32_t delta_time_ms = AP_HAL::millis() - check_config_start_ms;
-    const float achieved_rate_gyro_hz = (1000.0*rate_count_gyro) / delta_time_ms;
-    gcs().send_text(MAV_SEVERITY_INFO, "Want-rate=%u got-rate=%f count=%u", (uint32_t)frontend.get_IMU_rate(), achieved_rate_gyro_hz, rate_count_gyro);
-    if (abs(achieved_rate_gyro_hz - frontend.get_IMU_rate()) < 40) {
+    gcs().send_text(MAV_SEVERITY_INFO, "Want-rate=%u got-rate=%f count=%u", (uint32_t)frontend.get_IMU_rate(), achieved_gyro_rate_hz, rate_count_gyro);
+    if (abs(achieved_gyro_rate_hz - frontend.get_IMU_rate()) < 5) {
         return true;
     }
 
@@ -553,13 +559,15 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<Acceleratio
     const float xAccel = int16_t((p.msg.AxH << 8) | p.msg.AxL) * SCALER;
     const float yAccel = int16_t((p.msg.AyH << 8) | p.msg.AyL) * SCALER;
     // device reports NEU, convert to NED:
-    const float zAccel = -int16_t((p.msg.AzH << 8) | p.msg.AzL) * SCALER;
+    const float zAccel = int16_t((p.msg.AzH << 8) | p.msg.AzL) * SCALER;
     const int16_t T = (p.msg.TH<<8 | p.msg.TL);
 
     // gcs().send_text(MAV_SEVERITY_INFO, "Ax=%f Ay=%f Az=%f", xAccel, yAccel, zAccel);
     {
+        // accel vector is rotated here:
+        const Vector3f accel{yAccel, xAccel, -zAccel};
         const AP_ExternalAHRS::ins_data_message_t ins {
-            accel: Vector3f{xAccel, yAccel, zAccel},
+            accel: accel,
             gyro: Vector3f{},
             temperature: float(T),
             valid_fields: AP_ExternalAHRS::ins_data_message_field::ACCEL|AP_ExternalAHRS::ins_data_message_field::TEMPERATURE
@@ -573,7 +581,7 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<Acceleratio
 
 void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<AngularVelocityOutput> p)
 {
-    static constexpr float SCALER = 2000.0/32768.0;
+    static constexpr float SCALER = radians(2000.0/32768.0);
 
     const float rollRate = int16_t((p.msg.wxH << 8) | p.msg.wxL) * SCALER;
     const float pitchRate = int16_t((p.msg.wyH << 8) | p.msg.wyL) * SCALER;
@@ -583,9 +591,11 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<AngularVelo
     // gcs().send_text(MAV_SEVERITY_INFO, "T=%u w rr=%0.2f pr=%0.2f yr=%0.2f", T, rollRate, pitchRate, yawRate); // FIXME
 
     {
+        // gyro vector is rotated here:
+        const Vector3f gyro{pitchRate, rollRate, -yawRate};
         const AP_ExternalAHRS::ins_data_message_t ins {
             accel: Vector3f{},
-            gyro: Vector3f{rollRate, pitchRate, yawRate},
+            gyro: gyro,
             temperature: float(T),
             valid_fields: AP_ExternalAHRS::ins_data_message_field::GYRO|AP_ExternalAHRS::ins_data_message_field::TEMPERATURE
         };

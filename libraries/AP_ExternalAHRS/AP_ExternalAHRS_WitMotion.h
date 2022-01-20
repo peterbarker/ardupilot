@@ -15,6 +15,11 @@
 
   PDF for underlying module: http://wiki.wit-motion.com/english/lib/exe/fetch.php?media=module:wt901:docs:jy901usermanualv4.pdf
 
+TODO:
+ - fix numeric issues
+ - calculate baud rate based on required messages and user-stpulated rate
+ - check orientations
+
  */
 
 #pragma once
@@ -309,7 +314,11 @@ private:
 
     uint16_t rate_count_gyro;
     uint32_t rate_count_time_start_ms;
+    float achieved_gyro_rate_hz;
+    void update_gyro_message_rate();
+
     uint32_t last_rate_fix_attempt_ms;
+
 
     uint16_t desired_rate_regvalue() const;
     uint16_t desired_baud_regvalue() const;
