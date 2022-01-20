@@ -181,21 +181,51 @@ uint16_t AP_ExternalAHRS_WitMotion::desired_content_regvalue() const
 }
 
 
+void AP_ExternalAHRS_WitMotion::sending_config()
+{
+    const uint32_t now = AP_HAL::millis();
+    if (now - last_config_sent_ms < 2500) {
+        // yes, that really is a quarter of a second
+        return;
+    }
+    last_config_sent_ms = now;
+
+    switch (config_state) {
+    case ConfigState::UNLOCK: {
+        const int16_t magic_unlock_value = (0xB5 << 8) | 0x88;
+        send_config_request(Register::UNLOCK, magic_unlock_value);
+        config_state = ConfigState::CONTENT;
+        break;
+    }
+    case ConfigState::CONTENT:
+        send_config_request(Register::CONTENT, desired_content_regvalue());
+        config_state = ConfigState::BAUD;
+        break;
+    case ConfigState::BAUD:
+        send_config_request(Register::BAUD, desired_baud_regvalue());
+        // baud changes take effect immediately:
+        uart->begin(desired_baud());
+        config_state = ConfigState::RATE;
+        break;
+    case ConfigState::RATE:
+        send_config_request(Register::RATE, desired_rate_regvalue());
+        config_state = ConfigState::SAVE;
+        break;
+    case ConfigState::SAVE:
+        send_config_request(Register::SAVE, 0);  // 0 is save, 1 is set-to-defaults
+        config_state = ConfigState::DONE;
+        break;
+    case ConfigState::DONE:
+        state = State::NEED_REPOWER;
+        return;
+    };
+}
+
 void AP_ExternalAHRS_WitMotion::send_config()
 {
-    // TODO: see if we really ought to stream these out more slowly?
-    const uint16_t rate_regvalue = desired_rate_regvalue();
-    if (rate_regvalue != 0) {
-        // send_config_request(Register::RATE, rate_regvalue);
-    } else {
-        gcs().send_text(MAV_SEVERITY_INFO, "Bad EAHRS rate %f", frontend.get_IMU_rate());
-    }
+    config_state = ConfigState::UNLOCK;
 
-    // send_config_request(Register::BAUD, desired_baud_regvalue());
-    // send_config_request(Register::CONTENT, desired_content_regvalue());
-    send_config_request(Register::SAVE, 1);  // 0 is save, 1 is set-to-defaults
-
-    state = State::NEED_REPOWER;
+    state = State::SENDING_CONFIG;
 }
 
 void AP_ExternalAHRS_WitMotion::check_config()
@@ -226,6 +256,7 @@ void AP_ExternalAHRS_WitMotion::check_config()
             state = State::NEED_CONFIG;
             return;
         }
+        gcs().send_text(MAV_SEVERITY_INFO, "WitMotion: config valid");
         state = State::RUNNING;
         return;
     case State::NEED_REPOWER:
@@ -236,6 +267,9 @@ void AP_ExternalAHRS_WitMotion::check_config()
         return;
     case State::NEED_CONFIG:
         send_config();
+        return;
+    case State::SENDING_CONFIG:
+        sending_config();
         return;
     }
 }
@@ -315,9 +349,9 @@ void AP_ExternalAHRS_WitMotion::check_baud()
 bool AP_ExternalAHRS_WitMotion::check_rates()
 {
     const uint32_t delta_time_ms = AP_HAL::millis() - check_config_start_ms;
-    const uint32_t achieved_rate_gyro_hz = (1000*rate_count_gyro) / delta_time_ms;
-    gcs().send_text(MAV_SEVERITY_INFO, "Want rate=%u got rate=%u\n", achieved_rate_gyro_hz, (uint32_t)frontend.get_IMU_rate());
-    if (abs(achieved_rate_gyro_hz - frontend.get_IMU_rate()) < 5) {
+    const float achieved_rate_gyro_hz = (1000.0*rate_count_gyro) / delta_time_ms;
+    gcs().send_text(MAV_SEVERITY_INFO, "Want-rate=%u got-rate=%f count=%u", (uint32_t)frontend.get_IMU_rate(), achieved_rate_gyro_hz, rate_count_gyro);
+    if (abs(achieved_rate_gyro_hz - frontend.get_IMU_rate()) < 40) {
         return true;
     }
 
@@ -326,19 +360,44 @@ bool AP_ExternalAHRS_WitMotion::check_rates()
 
 void AP_ExternalAHRS_WitMotion::update_received_content_regvalue(uint8_t msgtype)
 {
-    if (msgtype > 16) {
-        bad_message_received = true;
+    uint16_t bit;
+    switch ((MsgType)msgtype) {
+    case MsgType::TIME_OUTPUT:
+        bit = Content::TIME;
+        break;
+    case MsgType::ACCELERATION_OUTPUT:
+        bit = Content::ACCEL;
+        break;
+    case MsgType::ANGULAR_VELOCITY_OUTPUT:
+        bit = Content::ANGVEL;
+        break;
+    case MsgType::ANGLE_OUTPUT:
+        bit = Content::ANGLE;
+        break;
+    case MsgType::MAGNETIC_OUTPUT:
+        bit = Content::MAGNETIC;
+        break;
+    case MsgType::PRESSURE_HEIGHT_OUTPUT:
+        bit = Content::ATMO;
+        break;
+    case MsgType::QUATERNION:
+         bit = Content::QUAT;
+        break;
+   default:
+        bad_message_received = msgtype;
         return;
     }
 
-    msg_received |= (1U << msgtype);
+    msg_received |= bit;
 }
 
 bool AP_ExternalAHRS_WitMotion::check_message_types()
 {
-    if (bad_message_received) {
+    if (bad_message_received != 0) {
+        gcs().send_text(MAV_SEVERITY_INFO, "WitMotion: bad message received: 0x%02x", bad_message_received);
         return false;
     }
+    gcs().send_text(MAV_SEVERITY_INFO, "msg_receved=0x%02x want=0x%02x", msg_received, desired_content_regvalue());
     return msg_received == desired_content_regvalue();
 }
 
@@ -456,7 +515,7 @@ void AP_ExternalAHRS_WitMotion::read_from_uart(void)
                 continue;
             }
 
-            // gcs().send_text(MAV_SEVERITY_INFO, "Got type (%02x)", u.receive_buf[1]);
+            // gcs().send_text(MAV_SEVERITY_INFO, "Got type (0x%02x)", u.receive_buf[1]);
             if (state != State::RUNNING) {
                 update_received_content_regvalue((uint8_t)type);
             }

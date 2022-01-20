@@ -320,8 +320,10 @@ private:
         CONTENT = 0x02,
         RATE    = 0x03,
         BAUD    = 0x04,
+        UNLOCK  = 0x69,
     };
     void send_config_request(Register reg, uint16_t value);
+    void sending_config();  // processes the "SENDING_CONFIG" stage
     void send_config();
     uint32_t check_config_start_ms;
 
@@ -330,14 +332,26 @@ private:
     uint8_t last_autobaud_offset;
     uint32_t last_autobaud_begin_ms;
 
-    enum class State {
+    enum class State : uint8_t {
         AUTOBAUDING,
         RUNNING,
         CHECKING_CONFIG,
         NEED_CONFIG,
+        SENDING_CONFIG,
         NEED_REPOWER
     };
     State state = State::AUTOBAUDING;
+
+    enum class ConfigState : uint8_t {
+        UNLOCK = 0,
+        CONTENT,
+        BAUD,
+        RATE,
+        SAVE,
+        DONE,
+    };
+    ConfigState config_state = ConfigState::UNLOCK;
+    uint32_t last_config_sent_ms;
 
     uint32_t last_power_cycle_message_ms;
 
@@ -351,7 +365,7 @@ private:
         QUAT          = (1U << 9),
     };
     uint16_t msg_received;
-    bool bad_message_received = false;
+    uint8_t bad_message_received = 0;
 #endif  // HAL_EXTERNAL_AHRS_WITMOTION_CONFIGURATION_ENABLED
 };
 
