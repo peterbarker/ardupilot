@@ -170,9 +170,6 @@ void AP_InertialSensor_Backend::_publish_gyro(uint8_t instance, const Vector3f &
     if ((1U<<instance) & _imu.imu_kill_mask) {
         return;
     }
-    // if (instance == 0) {
-    //     gcs().send_text(MAV_SEVERITY_INFO, "%f:%f:%f", gyro[0], gyro[1], gyro[2]);
-    // }
     _imu._gyro[instance] = gyro;
     _imu._gyro_healthy[instance] = true;
 
@@ -230,7 +227,7 @@ void AP_InertialSensor_Backend::_notify_new_gyro_raw_sample(uint8_t instance,
     if (hal.opticalflow) {
         hal.opticalflow->push_gyro(gyro.x, gyro.y, dt);
     }
-    
+
     // compute delta angle
     Vector3f delta_angle = (gyro + _imu._last_raw_gyro[instance]) * 0.5f * dt;
 
@@ -295,6 +292,7 @@ void AP_InertialSensor_Backend::_notify_new_gyro_raw_sample(uint8_t instance,
             _imu._gyro_filter[instance].reset();
             _imu._gyro_notch_filter[instance].reset();
             _imu._gyro_harmonic_notch_filter[instance].reset();
+            abort();
         } else {
             _imu._gyro_filtered[instance] = gyro_filtered;
         }

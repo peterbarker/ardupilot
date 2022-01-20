@@ -456,7 +456,7 @@ void AP_ExternalAHRS_WitMotion::read_from_uart(void)
                 continue;
             }
 
-            gcs().send_text(MAV_SEVERITY_INFO, "Got type (%02x)", u.receive_buf[1]);
+            // gcs().send_text(MAV_SEVERITY_INFO, "Got type (%02x)", u.receive_buf[1]);
             if (state != State::RUNNING) {
                 update_received_content_regvalue((uint8_t)type);
             }
@@ -497,7 +497,7 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<Acceleratio
     const float zAccel = -int16_t((p.msg.AzH << 8) | p.msg.AzL) * SCALER;
     const int16_t T = (p.msg.TH<<8 | p.msg.TL);
 
-    gcs().send_text(MAV_SEVERITY_INFO, "Ax=%f Ay=%f Az=%f", xAccel, yAccel, zAccel);
+    // gcs().send_text(MAV_SEVERITY_INFO, "Ax=%f Ay=%f Az=%f", xAccel, yAccel, zAccel);
     {
         const AP_ExternalAHRS::ins_data_message_t ins {
             accel: Vector3f{xAccel, yAccel, zAccel},
@@ -521,7 +521,7 @@ void AP_ExternalAHRS_WitMotion::handle_message_content(PackedMessage<AngularVelo
     const float yawRate = int16_t((p.msg.wzH << 8) | p.msg.wzL) * SCALER;
     const int16_t T = (p.msg.TH<<8 | p.msg.TL);
 
-    gcs().send_text(MAV_SEVERITY_INFO, "T=%u w r=%0.2f p=%0.2f y=%0.2f", T, rollRate, pitchRate, yawRate); // FIXME
+    // gcs().send_text(MAV_SEVERITY_INFO, "T=%u w rr=%0.2f pr=%0.2f yr=%0.2f", T, rollRate, pitchRate, yawRate); // FIXME
 
     {
         const AP_ExternalAHRS::ins_data_message_t ins {

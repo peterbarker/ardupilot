@@ -31,11 +31,8 @@ void AP_InertialSensor_ExternalAHRS::handle_external(const AP_ExternalAHRS::ins_
 
     if ((pkt.valid_fields & AP_ExternalAHRS::ins_data_message_field::GYRO) != 0) {
         Vector3f gyro = pkt.gyro;
-        gcs().send_text(MAV_SEVERITY_INFO, "%f/%f/%f", gyro[0], gyro[1], gyro[2]);
         _notify_new_gyro_sensor_rate_sample(gyro_instance, gyro);
-        gcs().send_text(MAV_SEVERITY_INFO, "%fx%fx%f", gyro[0], gyro[1], gyro[2]);
         _rotate_and_correct_gyro(gyro_instance, gyro);
-        gcs().send_text(MAV_SEVERITY_INFO, "%fy%fy%f", gyro[0], gyro[1], gyro[2]);
         _notify_new_gyro_raw_sample(gyro_instance, gyro, AP_HAL::micros64());
     }
 }
