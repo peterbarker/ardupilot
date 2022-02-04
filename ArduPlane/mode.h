@@ -452,26 +452,13 @@ protected:
 };
 
 #if HAL_ADSB_ENABLED
-class ModeAvoidADSB : public Mode
+class ModeAvoidADSB : public ModeGuided
 {
 public:
 
     Number mode_number() const override { return Number::AVOID_ADSB; }
     const char *name() const override { return "AVOID_ADSB"; }
     const char *name4() const override { return "AVOI"; }
-
-    // methods that affect movement of the vehicle in this mode
-    void update() override;
-
-    void navigate() override;
-
-    virtual bool is_guided_mode() const override { return true; }
-
-    bool does_auto_throttle() const override { return true; }
-
-protected:
-
-    bool _enter() override;
 };
 #endif
 
