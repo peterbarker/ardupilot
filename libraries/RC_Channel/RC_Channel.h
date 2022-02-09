@@ -211,6 +211,8 @@ public:
         DISABLE_AIRSPEED_USE = 106, // equivalent to AIRSPEED_USE 0
         FW_AUTOTUNE =          107, // fixed wing auto tune
         QRTL =               108, // QRTL mode
+        LOWEHEISER_STARTER = 109,  // allows for manually running starter
+
         // if you add something here, make sure to update the documentation of the parameter in RC_Channel.cpp!
         // also, if you add an option >255, you will need to fix duplicate_options_exist
 
@@ -224,6 +226,7 @@ public:
         FWD_THR =            209, // VTOL manual forward throttle
         AIRBRAKE =           210, // manual airbrake control
         WALKING_HEIGHT =     211, // walking robot height input
+        LOWEHEISER_THROTTLE = 212,  // allows for throttle on slider
 
         // inputs for the use of onboard lua scripting
         SCRIPTING_1 =        300,
