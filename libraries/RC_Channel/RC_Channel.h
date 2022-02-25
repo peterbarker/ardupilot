@@ -20,6 +20,7 @@ public:
     enum class ControlType {
         ANGLE = 0,
         RANGE = 1,
+        AUXFUNC = 2,
     };
 
     // setup the control preferences

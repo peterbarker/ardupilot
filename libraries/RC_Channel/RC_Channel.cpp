@@ -147,11 +147,16 @@ bool RC_Channel::update(void)
         return false;
     }
 
-    if (type_in == ControlType::RANGE) {
+    switch (type_in) {
+    case ControlType::RANGE:
         control_in = pwm_to_range();
-    } else {
-        // ControlType::ANGLE
+        break;
+    case ControlType::ANGLE:
         control_in = pwm_to_angle();
+        break;
+    case ControlType::AUXFUNC:
+        // auxillary functions are updated on a separate clock - see read_aux()
+        break;
     }
 
     return true;
@@ -1231,11 +1236,19 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
 
 void RC_Channel::init_aux()
 {
+    // set the control type - but not for things which aren't really aux funcs:
+    const aux_func_t ch_option = (aux_func_t)option.get();
+    if (ch_option != AUX_FUNC::DO_NOTHING &&
+        ((uint16_t)ch_option < 200 ||
+         (uint16_t)ch_option > 299)) {
+        type_in = ControlType::AUXFUNC;
+    }
+
     AuxSwitchPos position;
     if (!read_3pos_switch(position)) {
         position = AuxSwitchPos::LOW;
     }
-    init_aux_function((aux_func_t)option.get(), position);
+    init_aux_function(ch_option, position);
 }
 
 // read_3pos_switch
