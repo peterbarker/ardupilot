@@ -243,7 +243,7 @@ const AP_Scheduler::Task AP_Vehicle::scheduler_tasks[] = {
     SCHED_TASK_CLASS(AP_ESC_Telem, &vehicle.esc_telem,      update,                   10,  50),
 #endif
 #if GENERATOR_ENABLED
-    SCHED_TASK_CLASS(AP_Generator, &vehicle.generator,      update,                   10,  50),
+    SCHED_TASK_CLASS(AP_Generator, &vehicle.generator,      update,                   50,  50),
 #endif
 #if OSD_ENABLED
     SCHED_TASK(publish_osd_info, 1, 10),
