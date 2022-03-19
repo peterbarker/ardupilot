@@ -1056,10 +1056,17 @@ void AP_GPS::update_primary(void)
 #if defined(GPS_BLENDED_INSTANCE)
     // if blending is requested, attempt to calculate weighting for each GPS
     if ((GPSAutoSwitch)_auto_switch.get() == GPSAutoSwitch::BLEND) {
+        blend_problem = "unknown";
         _output_is_blended = calc_blend_weights();
         // adjust blend health counter
         if (!_output_is_blended) {
             _blend_health_counter = MIN(_blend_health_counter+BLEND_COUNTER_FAILURE_INCREMENT, 100);
+            static uint32_t last_blend_debug_ms;
+            const uint32_t now_ms = AP_HAL::millis();
+            if (now_ms - last_blend_debug_ms > 2000) {
+                last_blend_debug_ms = now_ms;
+                gcs().send_text(MAV_SEVERITY_INFO, "blend: counter=%u reason=%s", _blend_health_counter, blend_problem);
+            }
         } else if (_blend_health_counter > 0) {
             _blend_health_counter--;
         }
@@ -1605,6 +1612,7 @@ bool AP_GPS::calc_blend_weights(void)
 
     // exit immediately if not enough receivers to do blending
     if (state[0].status <= NO_FIX || state[1].status <= NO_FIX) {
+        blend_problem = "bad fix";
         return false;
     }
 
@@ -1624,6 +1632,7 @@ bool AP_GPS::calc_blend_weights(void)
         if (isinf(state[i].speed_accuracy) ||
             isinf(state[i].horizontal_accuracy) ||
             isinf(state[i].vertical_accuracy)) {
+            blend_problem = "infinite errors";
             return false;
         }
     }
@@ -1632,6 +1641,7 @@ bool AP_GPS::calc_blend_weights(void)
         state[GPS_BLENDED_INSTANCE].last_gps_time_ms = min_ms;
     } else {
         // receiver data has timed out so fail out of blending
+        blend_problem = "timeout";
         return false;
     }
 
@@ -1687,6 +1697,7 @@ bool AP_GPS::calc_blend_weights(void)
 
     // if we can't do blending using reported accuracy, return false and hard switch logic will be used instead
     if (!can_do_blending) {
+        blend_problem = "zero-sum-squares";
         return false;
     }
 
@@ -1753,6 +1764,7 @@ bool AP_GPS::calc_blend_weights(void)
     }
 
     if (!is_positive(sum_of_all_weights)) {
+        blend_problem = "zero-weights";
         return false;
     }
 
@@ -1760,6 +1772,8 @@ bool AP_GPS::calc_blend_weights(void)
     for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
         _blend_weights[i] = (hpos_blend_weights[i] + vpos_blend_weights[i] + spd_blend_weights[i]) / sum_of_all_weights;
     }
+
+    blend_problem = "no problem";
 
     return true;
 }

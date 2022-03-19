@@ -102,7 +102,7 @@ public:
     HAL_Semaphore &get_semaphore(void) {
         return rsem;
     }
-    
+
     // GPS driver types
     enum GPS_Type {
         GPS_TYPE_NONE  = 0,
@@ -688,6 +688,7 @@ private:
     float _omega_lpf; // cutoff frequency in rad/sec of LPF applied to position offsets
     bool _output_is_blended; // true when a blended GPS solution being output
     uint8_t _blend_health_counter;  // 0 = perfectly health, 100 = very unhealthy
+    const char *blend_problem = "unknown";
 
     // calculate the blend weight.  Returns true if blend could be calculated, false if not
     bool calc_blend_weights(void);
