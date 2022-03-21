@@ -1642,6 +1642,19 @@ bool AP_GPS::calc_blend_weights(void)
     } else {
         // receiver data has timed out so fail out of blending
         blend_problem = "timeout";
+        static uint32_t last_timeout_debug_ms;
+        const uint32_t now_ms = AP_HAL::millis();
+        if (last_timeout_debug_ms - now_ms > 1000) {
+            last_timeout_debug_ms = now_ms;
+            gcs().send_text(
+                MAV_SEVERITY_INFO,
+                "to: lgtm0=%u lgtm1=%u twms0=%u twms1=%u",
+                state[0].last_gps_time_ms,
+                state[1].last_gps_time_ms,
+                state[0].time_week_ms,
+                state[1].time_week_ms
+                );
+        }
         return false;
     }
 
