@@ -1,0 +1,8 @@
+include ../mRoX21-777/hwdef.dat
+
+define AP_GENERATOR_LOWEHEISER_ENABLED 1
+define AP_EFI_LOWEHEISER_ENABLED 1
+
+ROMFS message-intervals-chan0.txt libraries/AP_HAL_ChibiOS/hwdef/mRoX21-777-Harris/message-intervals-chan0.txt
+ROMFS message-intervals-chan1.txt libraries/AP_HAL_ChibiOS/hwdef/mRoX21-777-Harris/message-intervals-chan1.txt
+ROMFS message-intervals-chan2.txt libraries/AP_HAL_ChibiOS/hwdef/mRoX21-777-Harris/message-intervals-chan2.txt
