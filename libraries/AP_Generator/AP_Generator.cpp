@@ -77,8 +77,8 @@ void AP_Generator::init()
         case Type::LOWEHEISER:
             _driver_ptr = new AP_Generator_Loweheiser(*this);
             break;
-    }
 #endif
+    }
 
     // if the backend has some local parameters then make those
     // available in the tree

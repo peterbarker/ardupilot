@@ -7,7 +7,7 @@
 #endif
 
 #ifndef AP_GENERATOR_LOWEHEISER_ENABLED
-#define AP_GENERATOR_LOWEHEISER_ENABLED GENERATOR_ENABLED
+#define AP_GENERATOR_LOWEHEISER_ENABLED 0
 #endif
 
 #if GENERATOR_ENABLED
@@ -90,7 +90,9 @@ private:
         IE_650_800 = 1,
         IE_2400 = 2,
         RICHENPOWER = 3,
+#if AP_GENERATOR_LOWEHEISER_ENABLED
         LOWEHEISER = 4,
+#endif
     };
 
     // Pointer to chosen driver
