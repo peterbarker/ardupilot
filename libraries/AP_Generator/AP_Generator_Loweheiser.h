@@ -168,10 +168,6 @@ private:
     // immediately
     bool should_emergency_stop();
 
-    // last time we sent the NAMED_VALUE_FLOAT message containing the
-    // total current the generator is producing:
-    uint32_t last_curr_rot_send_ms;
-
     // periodically checks parameters related to rc input and updates
     // some data sources appropriately:
     void check_rc_input_channels();

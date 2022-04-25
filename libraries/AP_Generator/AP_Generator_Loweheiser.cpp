@@ -733,17 +733,6 @@ void AP_Generator_Loweheiser::send_generator_status(const GCS_MAVLINK &channel)
         runtime,  // runtime / time since boot,
         maint_time
         );
-
-    // this is the total current being produced by the generator -
-    // both going into the batteries and powering the vehicle.  At
-    // time of writing this is simply the sum of
-    // GENERATOR_STATUS.battery_current and
-    // GENERATOR_STATUS.load_current
-    const uint32_t now_ms = AP_HAL::millis();
-    if (now_ms - last_curr_rot_send_ms > 1000) {
-        last_curr_rot_send_ms = now_ms;
-        gcs().send_named_float("L_CURR_ROT", packet.curr_rot);
-    }
 }
 
 // methods to control the generator state:
