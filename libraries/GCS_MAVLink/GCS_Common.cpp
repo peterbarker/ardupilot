@@ -74,6 +74,10 @@
   #include <AP_UAVCAN/AP_UAVCAN.h>
 #endif
 
+#if AP_GENERATOR_LOWEHEISER_ENABLED
+#include <AP_Generator/AP_Generator_Loweheiser.h>
+#endif
+
 #include <AP_BattMonitor/AP_BattMonitor.h>
 #include <AP_GPS/AP_GPS.h>
 
