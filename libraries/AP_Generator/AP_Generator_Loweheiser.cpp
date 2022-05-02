@@ -545,7 +545,11 @@ void AP_Generator_Loweheiser::update_stats()
     runtime_delta_ms -= seconds * 1000;
 
     total_runtime.set_and_save_ifchanged(total_runtime + seconds);
-    time_until_maintenance.set_and_save_ifchanged(time_until_maintenance - seconds);
+    if (seconds < time_until_maintenance) {
+        time_until_maintenance.set_and_save_ifchanged(time_until_maintenance - seconds);
+    } else {
+        time_until_maintenance.set_and_save_ifchanged(0);
+    }
 }
 
 // ensure the generator is running and generally working before
