@@ -24,13 +24,13 @@ const AP_Param::GroupInfo AP_Generator_Loweheiser::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("RUNTIME", 11, AP_Generator_Loweheiser, total_runtime, 0),
 
-    // @Param: IDLE_HIGH
+    // @Param: IDLE_TH_H
     // @DisplayName: High Idle throttle
     // @Description: throttle value to use when warming up or cooling down
     // @User: Advanced
     AP_GROUPINFO("IDLE_TH_H", 12, AP_Generator_Loweheiser, high_idle_throttle, 30),
 
-    // @Param: IDLE
+    // @Param: IDLE_TH
     // @DisplayName: Idle throttle
     // @Description: throttle value to use when idling
     // @User: Advanced
