@@ -541,15 +541,15 @@ void AP_Generator_Loweheiser::update_stats()
     }
     last_stats_saved_ms = now_ms;
 
-    const uint32_t seconds = runtime_delta_ms / 1000;
+    uint32_t seconds = runtime_delta_ms / 1000;
     runtime_delta_ms -= seconds * 1000;
 
     total_runtime.set_and_save_ifchanged(total_runtime + seconds);
-    if (seconds < time_until_maintenance) {
-        time_until_maintenance.set_and_save_ifchanged(time_until_maintenance - seconds);
-    } else {
-        time_until_maintenance.set_and_save_ifchanged(0);
+        // avoid resetting time until maintenance to initial value:
+    if (seconds > 0 && (signed)seconds == time_until_maintenance) {
+        seconds--;
     }
+    time_until_maintenance.set_and_save_ifchanged(time_until_maintenance - seconds);
 }
 
 // ensure the generator is running and generally working before
