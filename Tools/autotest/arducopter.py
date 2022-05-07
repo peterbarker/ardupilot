@@ -6054,8 +6054,6 @@ class AutoTestCopter(AutoTest):
             "time_until_maintenance": 300*60*60,
         })
 
-        self.assert_receive_named_value_float('L_CURR_ROT', 4.0)
-
         self.context_collect('STATUSTEXT')
 
         self.start_subtest("Generator to idle")
