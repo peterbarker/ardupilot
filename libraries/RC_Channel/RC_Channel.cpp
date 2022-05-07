@@ -1201,6 +1201,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         break;
 
     case AUX_FUNC::LOWEHEISER_THROTTLE:
+    case AUX_FUNC::LOWEHEISER_STARTER:
         // monitored by the library itself
         break;
 
