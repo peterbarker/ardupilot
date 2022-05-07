@@ -28,25 +28,25 @@ const AP_Param::GroupInfo AP_Generator_Loweheiser::var_info[] = {
     // @DisplayName: High Idle throttle
     // @Description: throttle value to use when warming up or cooling down
     // @User: Advanced
-    AP_GROUPINFO("IDLE_TH_H", 12, AP_Generator_Loweheiser, high_idle_throttle, 30),
+    AP_GROUPINFO("IDLE_TH_H", 12, AP_Generator_Loweheiser, high_idle_throttle, 20),
 
     // @Param: IDLE_TH
     // @DisplayName: Idle throttle
     // @Description: throttle value to use when idling
     // @User: Advanced
-    AP_GROUPINFO("IDLE_TH", 13, AP_Generator_Loweheiser, idle_throttle, 25),
+    AP_GROUPINFO("IDLE_TH", 13, AP_Generator_Loweheiser, idle_throttle, 20),
 
     // @Param: RUN_TEMP
     // @DisplayName: Run Temperature
     // @Description: temperature required for generator to start producing power in deg celsius
     // @User: Advanced
-    AP_GROUPINFO("RUN_TEMP", 14, AP_Generator_Loweheiser, temp_required_for_run, 90),
+    AP_GROUPINFO("RUN_TEMP", 14, AP_Generator_Loweheiser, temp_required_for_run, 60),
 
     // @Param: IDLE_TEMP
     // @DisplayName: Idle Temperature
     // @Description: temperature required for generator to return to idle after having run
     // @User: Advanced
-    AP_GROUPINFO("IDLE_TEMP", 15, AP_Generator_Loweheiser, temp_required_for_idle, 100),
+    AP_GROUPINFO("IDLE_TEMP", 15, AP_Generator_Loweheiser, temp_required_for_idle, 110),
 
     // Param indexes must be between 10 and 19 to avoid conflict with other generator param tables loaded by pointer
 
