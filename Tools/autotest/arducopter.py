@@ -6137,6 +6137,21 @@ class AutoTestCopter(AutoTest):
         if bs2.current_consumed <= bs.current_consumed:
             raise NotAchievedException("Expected energy consumed to rise")
 
+        self.progress("Checking battery reset")
+        self.run_cmd(mavutil.mavlink.MAV_CMD_BATTERY_RESET,
+                     (1<<2), # param1 - bitmask of batteries to reset
+                     100, # level to reset to
+                     0, # param3
+                     0, # param4
+                     0, # param5
+                     0, # param6
+                     0 # param7
+                     )
+        self.wait_message_field_values("BATTERY_STATUS", {
+            "id": 2,
+            "battery_remaining": 99,
+        }, timeout=5)
+
         self.progress("Moving *back* to idle")
         self.set_rc(gen_ctrl_ch, 1500) # remember this is a switch position - idle
         self.wait_generator_speed_and_state(3000, 10000, mavutil.mavlink.MAV_GENERATOR_STATUS_FLAG_IDLE)
