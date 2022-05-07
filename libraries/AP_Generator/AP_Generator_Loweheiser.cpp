@@ -255,17 +255,8 @@ void AP_Generator_Loweheiser::update_common_backend_variables()
     _voltage = packet.volt_batt;
     _current = packet.curr_batt;
 
-    // packet.efi_fuel_consumed goes to NaN while the EFI is off
-    // (which is the case when the generator is in the "off" state).
-    // In that case we continue to report the pre-existing number.
-    if (!isnan(packet.efi_fuel_consumed)) {
-        _consumed_mah = packet.efi_fuel_consumed * 1000 - last_consumed_mah_reset_value;
-        seen_real_efi_fuel_consumed = true;
-    }
-    if (!seen_real_efi_fuel_consumed) {
-        // provide our own aggregate data:
-        _consumed_mah = accumulated_consumed_fuel_litres * 1000 - last_consumed_mah_reset_value;
-    }
+    // provide our own aggregate data:
+    _consumed_mah = accumulated_consumed_fuel_litres * 1000 - last_consumed_mah_reset_value;
 
     // packet.efi_rpm_consumed goes to NaN while the EFI is off
     // (which is the case when the generator is in the "off" state).

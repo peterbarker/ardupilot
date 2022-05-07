@@ -170,7 +170,6 @@ private:
     void update_common_backend_variables();
 
     float accumulated_consumed_fuel_litres;
-    bool seen_real_efi_fuel_consumed;  // true if the packet ever contained an integrated fuel consumed value
 
     // if we have been told that the fuel tank has been topped up
     // (e.g. via mavlink command, see reset_consumed_energy), this is
