@@ -360,15 +360,13 @@ bool AP_AccelCal::client_active(uint8_t client_num)
     return (bool)_clients[client_num]->_acal_get_calibrator(0);
 }
 
-void AP_AccelCal::handleMessage(const mavlink_message_t &msg)
+void AP_AccelCal::handle_command_ack(const mavlink_command_ack_t &packet)
 {
     if (!_waiting_for_mavlink_ack) {
         return;
     }
     _waiting_for_mavlink_ack = false;
-    if (msg.msgid == MAVLINK_MSG_ID_COMMAND_ACK) {
-        _start_collect_sample = true;
-    }
+    _start_collect_sample = true;
 }
 
 bool AP_AccelCal::gcs_vehicle_position(float position)

@@ -34,7 +34,7 @@ public:
     // interface to the clients for registration
     static void register_client(AP_AccelCal_Client* client);
 
-    void handleMessage(const mavlink_message_t &msg);
+    void handle_command_ack(const mavlink_command_ack_t &packet);
 
     // true if we are in a calibration process
     bool running(void) const;
