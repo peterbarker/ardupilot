@@ -1,6 +1,6 @@
 [submodule "modules/uavcan"]
 	path = modules/uavcan
-	url = https://github.com/ArduPilot/uavcan.git
+	url = https://github.com/peterbarker/uavcan.git
 [submodule "modules/waf"]
 	path = modules/waf
 	url = https://github.com/ArduPilot/waf.git
