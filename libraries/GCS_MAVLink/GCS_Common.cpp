@@ -3313,10 +3313,13 @@ void GCS_MAVLINK::handle_vision_speed_estimate(const mavlink_message_t &msg)
 
 void GCS_MAVLINK::handle_command_ack(const mavlink_message_t &msg)
 {
+    mavlink_command_ack_t packet;
+    mavlink_msg_command_ack_decode(&msg, &packet);
+
 #if HAL_INS_ENABLED
     AP_AccelCal *accelcal = AP::ins().get_acal();
     if (accelcal != nullptr) {
-        accelcal->handleMessage(msg);
+        accelcal->handle_command_ack(packet);
     }
 #endif
 }
