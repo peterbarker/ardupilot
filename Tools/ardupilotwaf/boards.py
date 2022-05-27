@@ -735,6 +735,8 @@ class sitl(Board):
             pass
         env.CXXFLAGS += ['-DHAL_NAVEKF2_AVAILABLE=1']
 
+        cfg.define('HAL_SOLO_GIMBAL_ENABLED', 1)
+
         if self.with_can:
             cfg.define('HAL_NUM_CAN_IFACES', 2)
             env.DEFINES.update(CANARD_MULTI_IFACE=1,

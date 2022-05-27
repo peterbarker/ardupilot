@@ -43,6 +43,109 @@ SITL_START_LOCATION = mavutil.location(-35.362938, 149.165085, 584, 270)
 #   switch 6 = Stabilize
 
 
+class MAVLinkGimbal(object):
+    def __init__(self, mav, progress=None):
+        self.mav = mav
+        self.progress = progress
+        if progress is None:
+            self.progress = print
+
+        self.seen_heartbeat = False
+
+        self.last_heartbeat_sent = 0
+
+    def send_heartbeat(self):
+        self.mav.mav.heartbeat_send(
+            mavutil.mavlink.MAV_TYPE_GIMBAL,
+            mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+            0,
+            0,
+            0)
+
+    def update(self):
+        while True:
+            now = time.time()
+            m = self.mav.recv_match(blocking=False)
+            self.progress("gimbal m=%s" % str(m))
+            if m is None:
+                break
+            m_type = m.get_type()
+
+            if m_type == "HEARTBEAT":
+                if not self.seen_heartbeat:
+                    self.mav.source_system = m.get_srcSystem()
+                    self.mav.source_component = 7
+                    self.target_component = m.get_srcComponent()
+                    self.seen_heartbeat = True
+
+            if not self.seen_heartbeat:
+                return
+
+            if now - self.last_heartbeat_sent > 0.2:
+                self.send_heartbeat()
+                self.last_heartbeat_sent = now
+            if now - self.last_gimbal_report_sent > 0.2:
+                self.send_gimbal_report()
+                self.last_gimbal_report_sent = now
+
+
+class SoloGimbal(MAVLinkGimbal):
+    def __init__(self, mav, progress=None):
+        super(SoloGimbal, self).__init__(mav, progress=progress)
+        self.last_gimbal_report_sent = 0
+
+    def send_gimbal_report(self):
+        delta_time = 0
+        delta_angle_x = 0
+        delta_angle_y = 0
+        delta_angle_z = 0
+        delta_velocity_x = 0
+        delta_velocity_y = 0
+        delta_velocity_z = 0
+        joint_roll = 0
+        joint_el = 0
+        joint_az = 0
+        self.mav.mav.gimbal_report_send(
+            self.mav.source_system,
+            self.target_component,
+            delta_time,
+            delta_angle_x,
+            delta_angle_y,
+            delta_angle_z,
+            delta_velocity_x,
+            delta_velocity_y,
+            delta_velocity_z,
+            joint_roll,
+            joint_el,
+            joint_az)
+
+    def update(self):
+        while True:
+            now = time.time()
+            m = self.mav.recv_match(blocking=False)
+            self.progress("gimbal m=%s" % str(m))
+            if m is None:
+                break
+            m_type = m.get_type()
+
+            if m_type == "HEARTBEAT":
+                if not self.seen_heartbeat:
+                    self.mav.source_system = m.get_srcSystem()
+                    self.mav.source_component = 7
+                    self.target_component = m.get_srcComponent()
+                    self.seen_heartbeat = True
+
+            if not self.seen_heartbeat:
+                return
+
+            if now - self.last_heartbeat_sent > 0.2:
+                self.send_heartbeat()
+                self.last_heartbeat_sent = now
+            if now - self.last_gimbal_report_sent > 0.2:
+                self.send_gimbal_report()
+                self.last_gimbal_report_sent = now
+
+
 class AutoTestCopter(vehicle_test_suite.TestSuite):
     @staticmethod
     def get_not_armable_mode_list():
@@ -5588,6 +5691,23 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             "SERVO%u_FUNCTION" % pitch_servo: 7, # pitch
             "SERVO%u_FUNCTION" % yaw_servo: 6, # yaw
         })
+
+    def MAVLinkMount(self):
+        '''Test Camera/Antenna MAVLinkMount'''
+        self.set_parameters({
+            "MNT1_TYPE": 2,  # Solo Gimbal
+            # "SERIAL2_OPTIONS": 1024,
+        })
+        self.reboot_sitl()
+        mav = mavutil.mavlink_connection(
+            "tcp:localhost:5762",
+            robust_parsing=True,
+            source_system=7,
+            source_component=7)
+        gimbal = SoloGimbal(mav)
+        while True:
+            gimbal.update()
+            self.delay_sim_time(0.1)
 
     def get_mount_roll_pitch_yaw_deg(self):
         '''return mount (aka gimbal) roll, pitch and yaw angles in degrees'''
@@ -11992,6 +12112,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
              self.MAV_CMD_NAV_VTOL_LAND,
              self.clear_roi,
              self.ReadOnlyDefaults,
+             self.MAVLinkMount,
         ])
         return ret
 
