@@ -650,6 +650,20 @@ is bob we will attempt to checkout bob-AVR'''
                 "SITL_x86_64_linux_gnu",
                 "SITL_arm_linux_gnueabihf",
                 ]
+    def get_exception_stacktrace(self, e):
+        if sys.version_info[0] >= 3:
+            ret = "%s\n" % e
+            ret += ''.join(traceback.format_exception(type(e),
+                                                      e,
+                                                      tb=e.__traceback__))
+            return ret
+
+        # Python2:
+        return traceback.format_exc(e)
+
+    def print_exception_caught(self, e, send_statustext=True):
+        self.progress("Exception caught: %s" %
+                      self.get_exception_stacktrace(e))
 
     def AP_Periph_boards(self):
         '''returns list of boards for AP_Periph'''
