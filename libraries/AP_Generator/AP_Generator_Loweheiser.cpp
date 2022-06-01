@@ -112,6 +112,9 @@ void AP_Generator_Loweheiser::set_pilot_desired_runstate(PilotDesiredRunState ne
 // "run" (high-RPM) state:
 bool AP_Generator_Loweheiser::generator_ok_to_run() const
 {
+    if (isnan(packet.efi_clt)) {
+        return false;
+    }
     return packet.efi_clt >= temp_required_for_run;
 }
 
