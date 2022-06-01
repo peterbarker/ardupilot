@@ -226,7 +226,9 @@ void AP_EFI::send_mavlink_status(mavlink_channel_t chan)
     }
 
     float ignition_voltage;
-    if (is_zero(state.ignition_voltage)) {
+    if (isnan(state.ignition_voltage)) {
+        ignition_voltage = state.ignition_voltage;
+    } else if (is_zero(state.ignition_voltage)) {
         // zero means "unknown" in mavlink, -1.0 means 0 volts
         ignition_voltage = -1;
     } else if (is_equal(state.ignition_voltage, -1.0f)) {
