@@ -646,8 +646,21 @@ private:
     bool _calibrating_gyro;
 
     // true if we have attempted to initialise the gyros after
-    // reaching temperature:
-    bool gyro_cal_warm_init_attempted;
+    // reaching temperature, or if we were directed to do so at boot
+    bool automatic_gyrocal_attempted;
+
+    // structure containing all data required for doing gyro calibration:
+    struct GyroCalData {
+        uint8_t num_gyros;
+        Vector3f last_average[INS_MAX_INSTANCES], best_avg[INS_MAX_INSTANCES];
+        Vector3f new_gyro_offset[INS_MAX_INSTANCES];
+        float best_diff[INS_MAX_INSTANCES];
+        bool converged[INS_MAX_INSTANCES];
+#if HAL_INS_TEMPERATURE_CAL_ENABLE
+        float start_temperature[INS_MAX_INSTANCES] {};
+#endif
+    };
+    struct GyroCalData gyro_cal_data;
 
     // the delta time in seconds for the last sample
     float _delta_time;
