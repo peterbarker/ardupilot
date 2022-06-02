@@ -94,7 +94,8 @@ public:
 
     enum Gyro_Calibration_Timing {
         GYRO_CAL_NEVER = 0,
-        GYRO_CAL_STARTUP_ONLY = 1
+        GYRO_CAL_STARTUP_ONLY = 1,
+        GYRO_CAL_WAIT_IMU_TEMPERATURE = 2,
     };
 
     /// Perform startup initialisation.
@@ -643,6 +644,10 @@ private:
     // are gyros or accels currently being calibrated
     bool _calibrating_accel;
     bool _calibrating_gyro;
+
+    // true if we have attempted to initialise the gyros after
+    // reaching temperature:
+    bool gyro_cal_warm_init_attempted;
 
     // the delta time in seconds for the last sample
     float _delta_time;

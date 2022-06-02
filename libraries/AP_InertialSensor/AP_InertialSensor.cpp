@@ -387,7 +387,7 @@ const AP_Param::GroupInfo AP_InertialSensor::var_info[] = {
     // @Param: GYR_CAL
     // @DisplayName: Gyro Calibration scheme
     // @Description: Conrols when automatic gyro calibration is performed
-    // @Values: 0:Never, 1:Start-up only
+    // @Values: 0:Never, 1:Start-up only, 2:Wait For IMU Temperature
     // @User: Advanced
     AP_GROUPINFO("GYR_CAL", 24, AP_InertialSensor, _gyro_cal_timing, 1),
 
@@ -877,6 +877,7 @@ AP_InertialSensor::init(uint16_t loop_rate)
     // calibrate gyros unless gyro calibration has been disabled
     switch (gyro_calibration_timing()) {
     case GYRO_CAL_NEVER:
+    case GYRO_CAL_WAIT_IMU_TEMPERATURE:
         break;
     case GYRO_CAL_STARTUP_ONLY:
         init_gyro();
@@ -1687,6 +1688,13 @@ void AP_InertialSensor::HarmonicNotch::update_params(uint8_t instance, bool conv
  */
 void AP_InertialSensor::update(void)
 {
+    if (gyro_calibration_timing() == Gyro_Calibration_Timing::GYRO_CAL_WAIT_IMU_TEMPERATURE &&
+        !gyro_cal_warm_init_attempted &&
+        imu_up_to_temperature()) {
+        init_gyro();
+        gyro_cal_warm_init_attempted = true;
+    }
+
     // during initialisation update() may be called without
     // wait_for_sample(), and a wait is implied
     wait_for_sample();
