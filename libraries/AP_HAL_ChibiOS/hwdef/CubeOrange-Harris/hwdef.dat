@@ -2,6 +2,7 @@ include ../CubeOrange/hwdef.dat
 
 define AP_GENERATOR_LOWEHEISER_ENABLED 1
 define AP_EFI_LOWEHEISER_ENABLED 1
+USB_STRING_PRODUCT "CubeOrange"
 
 ROMFS message-intervals-chan0.txt libraries/AP_HAL_ChibiOS/hwdef/CubeOrange-Harris/message-intervals-chan0.txt
 ROMFS message-intervals-chan1.txt libraries/AP_HAL_ChibiOS/hwdef/CubeOrange-Harris/message-intervals-chan1.txt
