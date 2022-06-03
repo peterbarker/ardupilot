@@ -6534,6 +6534,9 @@ class AutoTestCopter(AutoTest):
 
         self.context_collect('STATUSTEXT')
 
+        # check prearms - should bounce due to generator not in correct state
+        self.try_arm(result=False, expect_msg="requested state is not RUN")
+
         self.start_subtest("Generator to idle")
         self.set_rc(gen_ctrl_ch, 1500) # remember this is a switch position - idle
         self.wait_statustext("Generator MIDDLE", check_context=True)
@@ -6567,6 +6570,9 @@ class AutoTestCopter(AutoTest):
         self.start_subtest("Move generator to run")
         self.set_rc(gen_ctrl_ch, 2000) # remember this is a switch position - run
         self.wait_statustext("Generator HIGH", check_context=True)
+
+        # check prearms - should bounce due to generator too cold
+        self.try_arm(result=False, expect_msg="Generator warming up")
 
         self.set_rc(gen_ctrl_ch, 1000) # remember this is a switch position - stop
         self.wait_statustext("requested state is not RUN", timeout=200)
