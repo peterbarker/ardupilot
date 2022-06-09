@@ -784,6 +784,7 @@ void AP_Generator_Loweheiser::Log_Write()
 // @Field: RPM: generator RPM
 // @Field: PW: EFI pulse-width
 // @Field: FF: fuel flow
+// @Field: FC: fuel consumed
 // @Field: EP: EFI pressure
 // @Field: EMT: EFI manifold air temperature
 // @Field: CHT: cylinder head temperature
