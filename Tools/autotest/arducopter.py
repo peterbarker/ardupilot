@@ -6623,7 +6623,7 @@ class AutoTestCopter(AutoTest):
 
         self.progress("Checking battery reset")
         self.run_cmd(mavutil.mavlink.MAV_CMD_BATTERY_RESET,
-                     (1<<2), # param1 - bitmask of batteries to reset
+                     (1 << 2), # param1 - bitmask of batteries to reset
                      100, # level to reset to
                      0, # param3
                      0, # param4
