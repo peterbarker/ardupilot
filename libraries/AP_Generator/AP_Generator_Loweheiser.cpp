@@ -62,6 +62,8 @@ const AP_Param::GroupInfo AP_Generator_Loweheiser::var_info[] = {
 
 void AP_Generator_Loweheiser::init()
 {
+    AP_Param::setup_object_defaults(this, var_info);
+
     _frontend._has_consumed_energy = true;
 
     if (time_until_maintenance == 0) {
