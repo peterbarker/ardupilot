@@ -170,6 +170,13 @@ const AP_Param::GroupInfo AC_PrecLand::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("OPTIONS", 17, AC_PrecLand, _options, 0),
 
+    // @Param: ORIENT
+    // @DisplayName: Camera Orientation
+    // @Description: Orientation of camera/sensor on body
+    // @Values: 0:Forward, 4:Back, 25:Down
+    // @User: Advanced
+    AP_GROUPINFO("ORIENT", 18, AC_PrecLand, _orient, ROTATION_PITCH_270),
+
     AP_GROUPEND
 };
 
@@ -242,6 +249,9 @@ void AC_PrecLand::init(uint16_t update_rate_hz)
     if (_backend != nullptr) {
         _backend->init();
     }
+
+    _direction_of_approach.x = 1;
+    _direction_of_approach.rotate(_orient);
 }
 
 // update - give chance to driver to get updates from sensor
@@ -319,10 +329,19 @@ void AC_PrecLand::check_target_status(float rangefinder_alt_m, bool rangefinder_
 
     if (_current_target_state == TargetState::TARGET_RECENTLY_LOST) {
         // check if it's nearby/found recently, else the status will be demoted to "TARGET_LOST"
-        Vector2f curr_pos;
-        if (AP::ahrs().get_relative_position_NE_origin(curr_pos)) {
-            const float dist_to_last_target_loc_xy = (curr_pos - Vector2f{_last_target_pos_rel_origin_NED.x, _last_target_pos_rel_origin_NED.y}).length();
-            const float dist_to_last_loc_xy = (curr_pos - Vector2f{_last_vehicle_pos_NED.x, _last_vehicle_pos_NED.y}).length();
+        Vector3f curr_pos;
+        if (AP::ahrs().get_relative_position_NED_origin(curr_pos)) {
+            const Vector3f _last_target_pos_rel_vehicle_NED = _last_target_pos_rel_origin_NED - curr_pos;
+            // squared distance towards last target position along direction of approach
+            const float dist_to_last_target_pos_along_doa_sq = _last_target_pos_rel_vehicle_NED.projected(_direction_of_approach).length_squared();
+            // horizontal distance (i.e., perpendicular to the direction of approach) towards last target position
+            const float dist_to_last_target_pos_hor_sq = _last_target_pos_rel_vehicle_NED.length_squared() - dist_to_last_target_pos_along_doa_sq;
+
+            const Vector3f _del_vehicle_pos = curr_pos - _last_vehicle_pos_NED;
+            // distance between current vehicle position and last vehicle position along the direction of approach
+            const float dist_to_last_pos_along_doa_sq = _del_vehicle_pos.projected(_direction_of_approach).length_squared();
+            // horizontal distance (i.e., perpendicular to the direction of approach) between current and last vehicle position
+            const float dist_to_last_pos_hor_sq = _del_vehicle_pos.length_squared() - dist_to_last_pos_along_doa_sq;
             if ((AP_HAL::millis() - _last_valid_target_ms) > LANDING_TARGET_LOST_TIMEOUT_MS) {
                 // the target has not been seen for a long time
                 // might as well consider it as "never seen"
@@ -330,7 +349,7 @@ void AC_PrecLand::check_target_status(float rangefinder_alt_m, bool rangefinder_
                 return;
             }
 
-            if ((dist_to_last_target_loc_xy > LANDING_TARGET_LOST_DIST_THRESH_M) || (dist_to_last_loc_xy > LANDING_TARGET_LOST_DIST_THRESH_M)) {
+            if (dist_to_last_target_pos_hor_sq > sq(LANDING_TARGET_LOST_DIST_THRESH_M) || dist_to_last_pos_hor_sq > sq(LANDING_TARGET_LOST_DIST_THRESH_M)) {
                 // the last known location of target is too far away
                 _current_target_state = TargetState::TARGET_NEVER_SEEN;
                 return;
@@ -591,6 +610,11 @@ bool AC_PrecLand::retrieve_los_meas(Vector3f& target_vec_unit_body)
             // Apply sensor yaw alignment rotation
             target_vec_unit_body.rotate_xy(radians(_yaw_align*0.01f));
         }
+
+        // rotate vector based on sensor oriention to get correct body frame vector
+        target_vec_unit_body.rotate(ROTATION_PITCH_90);         // bring vector to front
+        target_vec_unit_body.rotate(_orient);   // rotate it to desired orientation
+
         return true;
     } else {
         return false;
@@ -603,11 +627,12 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
     if (retrieve_los_meas(target_vec_unit_body)) {
         const struct inertial_data_frame_s *inertial_data_delayed = (*_inertial_history)[0];
 
+        const bool target_vec_valid = target_vec_unit_body.projected(_direction_of_approach).dot(_direction_of_approach) > 0.0f;
         const Vector3f target_vec_unit_ned = inertial_data_delayed->Tbn * target_vec_unit_body;
-        const bool target_vec_valid = target_vec_unit_ned.z > 0.0f;
         const bool alt_valid = (rangefinder_alt_valid && rangefinder_alt_m > 0.0f) || (_backend->distance_to_target() > 0.0f);
         if (target_vec_valid && alt_valid) {
-            float dist, alt;
+            // distance to target and distance to target along direction of approach
+            float dist, dist_along_doa;
             // figure out ned camera orientation w.r.t its offset
             Vector3f cam_pos_ned;
             if (!_cam_offset.get().is_zero()) {
@@ -618,12 +643,11 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
             if (_backend->distance_to_target() > 0.0f) {
                 // sensor has provided distance to landing target
                 dist = _backend->distance_to_target();
-                alt = dist * target_vec_unit_ned.z;
             } else {
                 // sensor only knows the horizontal location of the landing target
                 // rely on rangefinder for the vertical target
-                alt = MAX(rangefinder_alt_m - cam_pos_ned.z, 0.0f);
-                dist = alt / target_vec_unit_ned.z;
+                dist_along_doa = MAX(rangefinder_alt_m - cam_pos_ned.projected(_direction_of_approach).length(), 0.0f);
+                dist = dist_along_doa / target_vec_unit_ned.projected(_direction_of_approach).length();
             }
 
             // Compute camera position relative to IMU
@@ -631,7 +655,7 @@ bool AC_PrecLand::construct_pos_meas_using_rangefinder(float rangefinder_alt_m, 
             const Vector3f cam_pos_ned_rel_imu = cam_pos_ned - accel_pos_ned;
 
             // Compute target position relative to IMU
-            _target_pos_rel_meas_NED = Vector3f{target_vec_unit_ned.x*dist, target_vec_unit_ned.y*dist, alt} + cam_pos_ned_rel_imu;
+            _target_pos_rel_meas_NED = (target_vec_unit_ned * dist) + cam_pos_ned_rel_imu;
 
             // store the current relative down position so that if we need to retry landing, we know at this height landing target can be found
             const AP_AHRS &_ahrs = AP::ahrs();
