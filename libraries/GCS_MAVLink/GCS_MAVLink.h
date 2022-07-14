@@ -2,6 +2,10 @@
 /// @brief	One size fits all header for MAVLink integration.
 #pragma once
 
+#include "GCS_config.h"
+
+#if HAL_GCS_ENABLED
+
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_Networking/AP_Networking_Config.h>
 
@@ -78,3 +82,5 @@ void comm_send_unlock(mavlink_channel_t chan);
 HAL_Semaphore &comm_chan_lock(mavlink_channel_t chan);
 
 #pragma GCC diagnostic pop
+
+#endif  // HAL_GCS_ENABLED

@@ -2,6 +2,10 @@
 /// @brief	handle routing of MAVLink packets by ID
 #pragma once
 
+#include "GCS_config.h"
+
+#if HAL_GCS_ENABLED
+
 #include <AP_Common/AP_Common.h>
 #include "GCS_MAVLink.h"
 
@@ -77,3 +81,5 @@ private:
     // check for Gopro in Solo gimbal status
     bool gopro_status_check; // default is none
 };
+
+#endif   // HAL_GCS_ENABLED
