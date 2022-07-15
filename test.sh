@@ -1,0 +1,69 @@
+#!/bin/sh
+
+EXTRA_HWDEF="test-extra.hwdef"
+BOARD=MatekF405
+BOARD=revo-mini
+
+cat >"$EXTRA_HWDEF" <<EOF
+define AP_GPS_BACKEND_DEFAULT_ENABLED 0
+undef AP_GPS_UBLOX_ENABLED
+define AP_GPS_UBLOX_ENABLED 1
+
+undef HAL_PROBE_EXTERNAL_I2C_BAROS
+define HAL_PROBE_EXTERNAL_I2C_BAROS 0
+
+#undef AP_BARO_BMP085_ENABLED
+#define AP_BARO_BMP085_ENABLED 1
+#undef AP_BARO_BMP280_ENABLED
+#define AP_BARO_BMP280_ENABLED 1
+
+undef AP_BARO_MS56XX_ENABLED
+define AP_BARO_MS6XX_ENABLED 1
+
+# only allow for SBUS RC:
+undef AP_RCPROTOCOL_ENABLED
+define AP_RCPROTOCOL_ENABLED 1
+undef AP_RCPROTOCOL_BACKEND_DEFAULT_ENABLED
+define AP_RCPROTOCOL_BACKEND_DEFAULT_ENABLED 0
+undef AP_RCPROTOCOL_SBUS_ENABLED
+define AP_RCPROTOCOL_SBUS_ENABLED 1
+
+define GPS_MAX_RECEIVERS 1
+
+define HAL_BUTTON_ENABLED 0
+
+define AP_RPM_ENABLED 0
+define AP_ICENGINE_ENABLED 0
+
+BOOTLOADER_EMBED 0
+define AP_BOOTLOADER_FLASHING_ENABLED 0
+
+define AP_ADVANCEDFAILSAFE_ENABLED 0
+
+define HAL_MAVLINK_INTERVALS_FROM_FILES_ENABLED 0
+
+define HAL_SUPPORT_RCOUT_SERIAL 0
+
+undef HAL_NAVEKF3_AVAILABLE
+define HAL_NAVEKF3_AVAILABLE 1
+define EK3_FEATURE_BEACON_FUSION 0
+define EK3_FEATURE_EXTERNAL_NAV 0
+define EK3_FEATURE_BODY_ODOM 0
+
+define HAL_WITH_EKF_DOUBLE 0
+
+undef AP_COMPASS_HMC5843_ENABLED
+define AP_COMPASS_HMC5843_ENABLED 1
+
+EOF
+
+./Tools/autotest/test_build_options.py \
+    --no-run-with-defaults \
+    --no-disable-none \
+    --no-disable-in-turn \
+    --no-enable-in-turn \
+    --board="$BOARD" \
+    --extra-hwdef="$EXTRA_HWDEF" 2>&1 | tee /tmp/tbo-output.txt
+
+
+grep --after-context=2 '^Target' /tmp/tbo-output.txt | grep -v -- '--'
