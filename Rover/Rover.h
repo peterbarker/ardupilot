@@ -304,6 +304,7 @@ private:
     void Log_Write_Depth();
     void Log_Write_GuidedTarget(uint8_t target_type, const Vector3f& pos_target, const Vector3f& vel_target);
     void Log_Write_Nav_Tuning();
+    void Log_Write_Dock_Target(const Vector2f& dock_pos_cm, const Vector2f& target_pos_cm, const float dock_dist_m, const float desired_speed_ms, const float desired_turn_rate_rads);
     void Log_Write_Sail();
     void Log_Write_Steering();
     void Log_Write_Throttle();

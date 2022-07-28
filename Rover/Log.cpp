@@ -137,6 +137,35 @@ void Rover::Log_Write_Nav_Tuning()
     logger.WriteBlock(&pkt, sizeof(pkt));
 }
 
+struct PACKED log_DockTarget {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    float dock_pos_x;
+    float dock_pos_y;
+    float dock_dist;
+    float target_pos_x;
+    float target_pos_y;
+    float desired_speed;
+    float desired_turn_rate;
+};
+
+// Write a dock mode target
+void Rover::Log_Write_Dock_Target(const Vector2f& dock_pos_cm, const Vector2f& target_pos_cm, const float dock_dist_m, const float desired_speed_ms, const float desired_turn_rate_rads)
+{
+    struct log_DockTarget pkt = {
+        LOG_PACKET_HEADER_INIT(LOG_DOCKTARGET_MSG),
+        time_us             : AP_HAL::micros64(),
+        dock_pos_x          : dock_pos_cm.x,
+        dock_pos_y          : dock_pos_cm.y,
+        dock_dist           : dock_dist_m,
+        target_pos_x        : target_pos_cm.x,
+        target_pos_y        : target_pos_cm.y,
+        desired_speed       : desired_speed_ms,
+        desired_turn_rate   : desired_turn_rate_rads
+    };
+    logger.WriteBlock(&pkt, sizeof(pkt));
+}
+
 void Rover::Log_Write_Sail()
 {
     // only log sail if present
@@ -278,6 +307,20 @@ const LogStructure Rover::log_structure[] = {
     { LOG_NTUN_MSG, sizeof(log_Nav_Tuning),
       "NTUN", "QfffHf", "TimeUS,WpDist,WpBrg,DesYaw,Yaw,XTrack", "smhhhm", "F000B0" },
     
+// @LoggerMessage: DOCK
+// @Description: Dock mode target information
+// @Field: TimeUS: Time since system startup
+// @Field: DockX: Docking Station position, X-Axis
+// @Field: DockY: Docking Station position, Y-Axis
+// @Field: DockDist: Distance to docking station
+// @Field: TgtPosX: Current Position Target, X-Axis
+// @Field: TgtPosY: Current Position Target, Y-Axis
+// @Field: DesSpd: Desired speed
+// @Field: DesTrnRt: Desired Turn Rate
+    
+    { LOG_DOCKTARGET_MSG, sizeof(log_DockTarget),
+      "DOCK", "Qfffffff", "TimeUS,DocX,DockY,DockDist,TgtPosX,TgtPosY,DesSpd,DesTrnRt", "smmmmmnE", "FBB0BB00" },
+    
 // @LoggerMessage: STER
 // @Description: Steering related messages
 // @Field: TimeUS: Time since system startup
@@ -287,7 +330,7 @@ const LogStructure Rover::log_structure[] = {
 // @Field: LatAcc: Actual lateral acceleration
 // @Field: DesTurnRate: Desired turn rate
 // @Field: TurnRate: Actual turn rate
-    
+
     { LOG_STEERING_MSG, sizeof(log_Steering),
       "STER", "Qhfffff",   "TimeUS,SteerIn,SteerOut,DesLatAcc,LatAcc,DesTurnRate,TurnRate", "s--ookk", "F--0000" },
 

@@ -175,6 +175,9 @@ void ModeDock::update()
     // run steering and throttle controllers
     calc_steering_from_turn_rate(desired_turn_rate);
     calc_throttle(desired_speed, true);
+    
+    // write a log message
+    rover.Log_Write_Dock_Target(_dock_pos_rel_origin_cm, target_cm, _distance_to_destination, desired_speed, desired_turn_rate);
 #endif
 }
 
