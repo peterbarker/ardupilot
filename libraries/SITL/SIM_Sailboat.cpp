@@ -298,6 +298,8 @@ void Sailboat::update(const struct sitl_input &input)
     // new position vector
     position += (velocity_ef * delta_time).todouble();
 
+    update_external_payload(input);
+
     // update lat/lon/altitude
     update_position();
     time_advance();
