@@ -94,6 +94,9 @@ static void apply_event(NavEKF2 &ekf2, AP_DAL::Event event)
         break;
     case AP_DAL::Event::setSourceSet0 ... AP_DAL::Event::setSourceSet2:
         break;
+    case AP_DAL::Event::EK3GPSDisable:
+    case AP_DAL::Event::EK3GPSEnable:
+        break;
     }
 }
 
@@ -122,6 +125,12 @@ static void apply_event(NavEKF3 &ekf3, AP_DAL::Event event)
         break;
     case AP_DAL::Event::setSourceSet0 ... AP_DAL::Event::setSourceSet2:
         ekf3.setPosVelYawSourceSet(uint8_t(event)-uint8_t(AP_DAL::Event::setSourceSet0));
+        break;
+    case AP_DAL::Event::EK3GPSDisable:
+        ekf3.force_gps_disable(true);
+        break;
+    case AP_DAL::Event::EK3GPSEnable:
+        ekf3.force_gps_disable(false);
         break;
     }
 }
