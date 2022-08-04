@@ -375,6 +375,7 @@ public:
 #if AP_AHRS_EKF_RESET_ENABLED
         EKF_RESET =          187, // trigger full EKF bootstrap reset
 #endif  // AP_AHRS_EKF_RESET_ENABLED
+        GPS_DISABLE_EK3 =    190, // disable GPS only for EKF3
         // inputs from 200 will eventually used to replace RCMAP
         ROLL =               201, // roll input
         PITCH =              202, // pitch input
