@@ -947,10 +947,12 @@ void NavEKF2_core::selectHeightForFusion()
     // This data is used by both height and optical flow fusion processing
     readRangeFinder();
     rangeDataToFuse = storedRange.recall(rangeDataDelayed,imuDataDelayed.time_ms);
+#endif
 
     // correct range data for the body frame position offset relative to the IMU
     // the corrected reading is the reading that would have been taken if the sensor was
     // co-located with the IMU
+#if AP_RANGEFINDER_ENABLED
     const auto *_rng = dal.rangefinder();
     if (_rng && rangeDataToFuse) {
         const auto *sensor = _rng->get_backend(rangeDataDelayed.sensor_idx);
