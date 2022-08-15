@@ -76,7 +76,7 @@ void stm32_timer_set_channel_input(stm32_tim_t *tim, uint8_t channel, uint8_t in
     }
 }
 
-#if CH_DBG_ENABLE_STACK_CHECK == TRUE && !defined(HAL_BOOTLOADER_BUILD)
+#if CH_DBG_ENABLE_STACK_CHECK == TRUE
 void show_stack_usage(void)
 {
   thread_t *tp;
@@ -89,7 +89,12 @@ void show_stack_usage(void)
           p++;
       }
       uint32_t stack_left = ((uint32_t)p) - stklimit;
-      printf("%s %u\n", tp->name, (unsigned)stack_left);
+#if CH_CFG_USE_REGISTRY
+      const char *thread_name = tp->name;
+#else
+      const char *thread_name = "???";
+#endif
+      printf("%s %u\n", thread_name, (unsigned)stack_left);
       tp = chRegNextThread(tp);
   } while (tp != NULL);
 }
@@ -464,7 +469,7 @@ void system_halt_hook(void)
 // hook for stack overflow
 void stack_overflow(thread_t *tp)
 {
-#if !defined(HAL_BOOTLOADER_BUILD) && !defined(IOMCU_FW)
+#if CH_CFG_USE_REGISTRY
     extern void AP_stack_overflow(const char *thread_name);
     AP_stack_overflow(tp->name);
     // if we get here then we are armed and got a stack overflow. We
