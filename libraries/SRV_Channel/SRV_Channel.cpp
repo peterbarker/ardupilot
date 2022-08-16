@@ -86,6 +86,11 @@ SRV_Channel::SRV_Channel(void)
 // convert a 0..range_max to a pwm
 uint16_t SRV_Channel::pwm_from_range(float scaled_value) const
 {
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    if (type != Type::RANGE) {
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+    }
+#endif
     if (servo_max <= servo_min || high_out == 0) {
         return servo_min;
     }
@@ -99,6 +104,11 @@ uint16_t SRV_Channel::pwm_from_range(float scaled_value) const
 // convert a -angle_max..angle_max to a pwm
 uint16_t SRV_Channel::pwm_from_angle(float scaled_value) const
 {
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    if (type != Type::ANGLE) {
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+    }
+#endif
     if (reversed) {
         scaled_value = -scaled_value;
     }
@@ -156,6 +166,9 @@ void SRV_Channel::set_output_norm(float value)
     // convert normalised value to pwm
     switch (type) {
     case Type::AUX:
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+#endif
         return;
     case Type::ANGLE:
         set_output_pwm(pwm_from_angle(value * high_out));
