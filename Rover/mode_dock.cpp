@@ -1,6 +1,8 @@
 #include "mode.h"
 #include "Rover.h"
 
+#if MODE_DOCK_ENABLED == ENABLED
+
 const AP_Param::GroupInfo ModeDock::var_info[] = {
     // @Param: _SPEED
     // @DisplayName: Dock mode speed
@@ -57,7 +59,6 @@ ModeDock::ModeDock(void) : Mode()
 // initialize dock mode
 bool ModeDock::_enter()
 {
-#if PRECISION_LANDING == ENABLED
     // refuse to enter the mode if dock is not in sight
     if (!rover.precland.enabled() || !rover.precland.target_acquired()) {
         return false;
@@ -92,14 +93,10 @@ bool ModeDock::_enter()
     _docking_complete = false;
 
     return true;
-#else
-    return false;
-#endif
 }
 
 void ModeDock::update()
 {
-#if PRECISION_LANDING == ENABLED
     // if docking is complete, rovers stop and boats loiter
     if (_docking_complete) {
         // rovers stop, boats loiter 
@@ -178,7 +175,6 @@ void ModeDock::update()
     
     // write a log message
     rover.Log_Write_Dock_Target(_dock_pos_rel_origin_cm, target_cm, _distance_to_destination, desired_speed, desired_turn_rate);
-#endif
 }
 
 float ModeDock::apply_slowdown(float desired_speed) {
@@ -232,3 +228,4 @@ bool ModeDock::calc_dock_pos_rel_vehicle_NE(Vector2f &dock_pos_rel_vehicle) {
     dock_pos_rel_vehicle = _dock_pos_rel_origin_cm - current_pos_m * 100.0f;
     return true;
 }
+#endif // MODE_DOCK_ENABLED

@@ -9,6 +9,7 @@
 #include <AR_WPNav/AR_WPNav_OA.h>
 
 #include "defines.h"
+#include "config.h"
 
 // pre-define ModeRTL so Auto can appear higher in this file
 class ModeRTL;
@@ -27,10 +28,12 @@ public:
         LOITER       = 5,
         FOLLOW       = 6,
         SIMPLE       = 7,
+#if MODE_DOCK_ENABLED == ENABLED
+        DOCK         = 8,
+#endif
         AUTO         = 10,
         RTL          = 11,
         SMART_RTL    = 12,
-        DOCK         = 13,
         GUIDED       = 15,
         INITIALISING = 16,
     };
@@ -753,6 +756,7 @@ private:
     float _desired_heading_cd;  // latest desired heading (in centi-degrees) from pilot
 };
 
+#if MODE_DOCK_ENABLED == ENABLED
 class ModeDock : public Mode
 {
 public:
@@ -795,3 +799,4 @@ protected:
     bool _reversed = false;
     bool _loiter_after_docking = false;
 };
+#endif

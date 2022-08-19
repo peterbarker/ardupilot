@@ -341,7 +341,7 @@ public:
     AP_Proximity proximity;
 #endif
 
-#if PRECISION_LANDING == ENABLED
+#if MODE_DOCK_ENABLED == ENABLED
     // we need a pointer to the mode for the G2 table
     void *mode_dock_ptr;
 #endif
