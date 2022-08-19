@@ -1,4 +1,3 @@
-#include "mode.h"
 #include "Rover.h"
 
 #if MODE_DOCK_ENABLED == ENABLED

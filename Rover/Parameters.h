@@ -15,6 +15,8 @@
 #include <AP_Stats/AP_Stats.h>
 #include "AP_Torqeedo/AP_Torqeedo.h"
 #include <AP_WindVane/AP_WindVane.h>
+#include <APM_Control/AR_AttitudeControl.h>
+#include <AR_WPNav/AR_WPNav_OA.h>
 
 // Global parameter class.
 //

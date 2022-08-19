@@ -19,7 +19,7 @@ protected:
 
 private:
 
-    void do_aux_function_change_mode(Mode &mode,
+    void do_aux_function_change_mode(class Mode &mode,
                                      const AuxSwitchPos ch_flag);
 
     void add_waypoint_for_current_loc();

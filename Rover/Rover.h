@@ -42,13 +42,13 @@
 #include <AP_Scripting/AP_Scripting.h>
 #endif
 
-// Local modules
-#include "mode.h"
-#include "AP_Arming.h"
-#include "sailboat.h"
 // Configuration
 #include "config.h"
 #include "defines.h"
+
+// Local modules
+#include "AP_Arming.h"
+#include "sailboat.h"
 #if ADVANCED_FAILSAFE == ENABLED
 #include "afs_rover.h"
 #endif
@@ -61,6 +61,10 @@
 #include <AC_PrecLand/AC_PrecLand.h>
 #include <AC_PrecLand/AC_PrecLand_StateMachine.h>
 #endif
+
+#include "mode.h"
+
+#include "mode.h"
 
 class Rover : public AP_Vehicle {
 public:

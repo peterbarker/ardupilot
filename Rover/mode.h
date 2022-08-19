@@ -2,14 +2,11 @@
 
 #include <stdint.h>
 
-#include <GCS_MAVLink/GCS_MAVLink.h>
-#include <AP_Math/AP_Math.h>
+#include "Rover.h"
+
 #include <AP_Mission/AP_Mission.h>
 #include <AP_Mission/AP_Mission_ChangeDetector.h>
 #include <AR_WPNav/AR_WPNav_OA.h>
-
-#include "defines.h"
-#include "config.h"
 
 // pre-define ModeRTL so Auto can appear higher in this file
 class ModeRTL;
