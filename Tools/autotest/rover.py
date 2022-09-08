@@ -18,6 +18,7 @@ import vehicle_test_suite
 
 from pysim import util
 
+from vehicle_test_suite import autotest_test
 from vehicle_test_suite import AutoTestTimeoutException
 from vehicle_test_suite import NotAchievedException
 from vehicle_test_suite import PreconditionFailedException
@@ -225,6 +226,7 @@ class AutoTestRover(vehicle_test_suite.TestSuite):
     #         "timed out after %u seconds" % timeout)
     #         return False
 
+    @autotest_test()
     def Sprayer(self):
         """Test sprayer functionality."""
         rc_ch = 5
@@ -6831,7 +6833,6 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             self.RCOverrides,
             self.RCOverridesCancel,
             self.MANUAL_CONTROL,
-            self.Sprayer,
             self.AC_Avoidance,
             self.CameraMission,
             self.Gripper,
@@ -6901,6 +6902,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             self.MissionPolyEnabledPreArm,
             self.OpticalFlow,
         ])
+        ret.extend(self.gather_decorated())
         return ret
 
     def disabled_tests(self):

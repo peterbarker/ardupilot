@@ -55,6 +55,52 @@ except ImportError:
     import Queue
 
 
+global gathered_tests
+gathered_tests = []
+
+
+def autotest_test(speedup=None, vehicles=None, disabled=None, attempts=1):
+    global gathered_tests
+
+    known_suites = frozenset([
+        'TestSuite',
+        'AutoTestPlane',
+        'AutoTestCopter',
+        'AutoTestRover',
+        'AutoTestTracker',
+        'AutoTestQuadPlane',
+        'AutoTestBlimp',
+        'AutoTestSub',
+        'AutoTestBalanceBot',
+    ])
+
+    def wrap(f):
+        # print("############## Called: %s" % (str(f),))
+        # print("############## Called: %s" % (str(f.__name__),))
+        # print("############## Called: %s" % (dir(f),))
+        # print("############## Called: %s" % (f.__qualname__,))
+
+        def f_foo(self, *args, **kwargs):
+            return f(self, *args, **kwargs)
+        if f.__doc__ is None:
+            raise ValueError("No docstring for %s" % str(f.__qualname__))
+        suite = f.__qualname__.split(".")[0]
+        if suite not in known_suites:
+            raise ValueError("Unknown suite (%s)" % suite)
+        gathered_tests.append(BaseTest(
+            f.__name__,
+            f.__doc__,
+            f,
+            speedup=speedup,
+            vehicles=vehicles,
+            autotest_suite=suite,
+            disabled=disabled,
+            attempts=attempts,
+        ))
+        return f_foo
+    return wrap
+
+
 # Enumeration convenience class for mavlink POSITION_TARGET_TYPEMASK
 class MAV_POS_TARGET_TYPE_MASK(enum.IntEnum):
     POS_IGNORE = (mavutil.mavlink.POSITION_TARGET_TYPEMASK_X_IGNORE |
@@ -400,6 +446,7 @@ class WaitAndMaintain(object):
         text = self.progress_text(value)
         if self.achieving_duration_start is not None:
             delta = now - self.achieving_duration_start
+
             text += f" (maintain={delta:.1f}/{self.minimum_duration})"
         self.progress(text)
 
@@ -1664,17 +1711,41 @@ class LocationInt(object):
         self.yaw = yaw
 
 
-class Test(object):
-    '''a test definition - information about a test'''
-    def __init__(self, function, kwargs={}, attempts=1, speedup=None):
-        self.name = function.__name__
-        self.description = function.__doc__
-        if self.description is None:
-            raise ValueError("%s is missing a docstring" % self.name)
+class BaseTest(object):
+    def __init__(self,
+                 name,
+                 description,
+                 function,
+                 kwargs={},
+                 attempts=None,
+                 speedup=None,
+                 vehicles=None,
+                 autotest_suite=None,
+                 disabled=None,
+                 ):
+        if attempts is None:
+            attempts = 1
+        self.name = name
+        self.description = description
         self.function = function
         self.kwargs = kwargs
         self.attempts = attempts
         self.speedup = speedup
+        self.vehicles = vehicles
+        self.autotest_suite = autotest_suite
+        self.disabled = disabled
+
+
+class Test(BaseTest):
+    '''a test definition - information about a test'''
+    def __init__(self, function, **kwargs):
+        # print(f"self:{self=} {function=}")
+        name = function.__name__
+        description = function.__doc__
+        if description is None:
+            raise ValueError("%s is missing a docstring" % function)
+        x = dict(**kwargs)
+        super(Test, self).__init__(name, description, function, kwargs=x)
 
 
 class Result(object):
@@ -8694,7 +8765,10 @@ Also, ignores heartbeats not from our target system'''
                 orig_speedup = self.get_parameter("SIM_SPEEDUP")
                 self.set_parameter("SIM_SPEEDUP", test.speedup)
 
-            test_function(**test_kwargs)
+            if str(type(test_function)) == "<class 'method'>":
+                test_function(**test_kwargs)
+            else:
+                test_function(self, **test_kwargs)
         except Exception as e:
             self.print_exception_caught(e)
             ex = e
@@ -12044,6 +12118,8 @@ switch value'''
                 self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_ALL)
 
             for test in tests:
+                if not self.test_is_applicable_to_suite(test, self.log_name()):
+                    continue
                 self.drain_mav_unparsed()
                 result_list.append(self.run_one_test(test))
 
@@ -14319,6 +14395,37 @@ SERIAL5_BAUD 128
         self._MotorTest(self.run_cmd, **kwargs)
         self._MotorTest(self.run_cmd_int, **kwargs)
 
+    def gather_decorated(self):
+        global gathered_tests
+        log_name = self.log_name()
+        return filter(lambda test : self.test_is_applicable_to_suite(test, log_name), gathered_tests)
+
+    def tests_for_suite(self, suite_name):
+        '''returns a list of tests for a suite (e.g. 'ArduCopter')'''
+        ret = []
+        for test in gathered_tests:
+            if not self.test_is_applicable_to_suite(test, suite_name):
+                continue
+            ret.append(test)
+        return ret
+
+    def test_is_applicable_to_suite(self, test, suite_name):
+        if test.vehicles is None:
+            # e.g. AutoTestRover or AutoTest or AutoTestCopter:
+            if test.autotest_suite is None:
+                return True
+            m = re.match(r"AutoTest(.*)", str(test.autotest_suite))
+            if m is None:
+                raise ValueError("Bad suite name (%s)" % str(test.autotest_suite))
+            if (len(m.group(1)) and
+                    m.group(1) != suite_name and
+                    ("Ardu%s" % m.group(1)) != suite_name):
+                return False
+            return True
+        if suite_name not in test.vehicles:
+            return False
+        return True
+
     def tests(self):
         return [
             self.PIDTuning,
@@ -14354,13 +14461,14 @@ SERIAL5_BAUD 128
             tests = self.tests()
         all_tests = []
         for test in tests:
-            if not isinstance(test, Test):
+            if not isinstance(test, BaseTest):
                 test = Test(test)
             all_tests.append(test)
 
         disabled = self.disabled_tests()
         if not allow_skips:
             disabled = {}
+
         skip_list = []
         tests = []
         seen_test_name = set()
@@ -14368,9 +14476,14 @@ SERIAL5_BAUD 128
             if test.name in seen_test_name:
                 raise ValueError("Duplicate test name %s" % test.name)
             seen_test_name.add(test.name)
-            if test.name in disabled:
-                self.progress("##### %s is skipped: %s" % (test, disabled[test.name]))
-                skip_list.append((test, disabled[test.name]))
+            disable_reason = None
+            if self.log_name() in disabled:
+                disable_reason = test.disabled
+            elif test.disabled is not None:
+                disable_reason = test.disabled
+            if disable_reason is not None:
+                self.progress("##### %s is skipped: %s" % (test, disable_reason))
+                skip_list.append((test, disable_reason))
                 continue
             tests.append(test)
 

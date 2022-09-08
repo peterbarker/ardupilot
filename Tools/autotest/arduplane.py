@@ -16,6 +16,7 @@ from pymavlink.rotmat import Vector3
 
 import vehicle_test_suite
 
+from vehicle_test_suite import autotest_test
 from vehicle_test_suite import AutoTestTimeoutException
 from vehicle_test_suite import NotAchievedException
 from vehicle_test_suite import OldpymavlinkException
@@ -5822,6 +5823,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.reboot_sitl()
 
+    @autotest_test()
     def GPSPreArms(self):
         '''ensure GPS prearm checks work'''
         self.wait_ready_to_arm()
@@ -5954,8 +5956,8 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.ClimbThrottleSaturation,
             self.GuidedAttitudeNoGPS,
             self.ScriptStats,
-            self.GPSPreArms,
         ])
+        ret.extend(self.gather_decorated())
         return ret
 
     def disabled_tests(self):

@@ -36,6 +36,7 @@ import examples
 from pysim import util
 from pymavlink.generator import mavtemplate
 
+from vehicle_test_suite import BaseTest
 from vehicle_test_suite import Test
 
 tester = None
@@ -385,7 +386,7 @@ def run_specific_test(step, *args, **kwargs):
 
     # print("Got %s" % str(tester))
     for a in tester.tests():
-        if not isinstance(a, Test):
+        if not isinstance(a, BaseTest):
             a = Test(a)
         print("Got %s" % (a.name))
         if a.name == test:
@@ -812,7 +813,7 @@ def list_subtests_for_vehicle(vehicle_type):
         subtests = tester.tests()
         sorted_list = []
         for subtest in subtests:
-            if not isinstance(subtest, Test):
+            if not isinstance(subtest, BaseTest):
                 subtest = Test(subtest)
             sorted_list.append([subtest.name, subtest.description])
         sorted_list.sort()
