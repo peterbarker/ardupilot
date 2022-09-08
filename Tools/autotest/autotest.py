@@ -36,6 +36,8 @@ import rover
 import sailboat
 
 from pysim import util
+
+from vehicle_test_suite import BaseTest
 from vehicle_test_suite import Test
 
 tester = None
@@ -392,7 +394,7 @@ def run_specific_test(step, *args, **kwargs):
     # print("Got %s" % str(tester))
     run = []
     for a in tester.tests():
-        if not isinstance(a, Test):
+        if not isinstance(a, BaseTest):
             a = Test(a)
         # print("Got %s" % (a.name))
         if a.name in tests:
@@ -820,7 +822,7 @@ def list_subtests_for_vehicle(vehicle_type):
         subtests = tester.tests()
         sorted_list = []
         for subtest in subtests:
-            if not isinstance(subtest, Test):
+            if not isinstance(subtest, BaseTest):
                 subtest = Test(subtest)
             sorted_list.append([subtest.name, subtest.description])
         sorted_list.sort()

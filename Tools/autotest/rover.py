@@ -20,9 +20,11 @@ import vehicle_test_suite
 
 from pysim import util
 from pysim import vehicleinfo
+
 from vehicle_test_suite import AutoTestTimeoutException
 from vehicle_test_suite import NotAchievedException
 from vehicle_test_suite import PreconditionFailedException
+from vehicle_test_suite import autotest_test
 
 # get location of scripts
 testdir = os.path.dirname(os.path.realpath(__file__))
@@ -201,6 +203,7 @@ class AutoTestRover(vehicle_test_suite.TestSuite):
         self.disarm_vehicle()
         self.progress("Loiter or Hold as throttle failsafe OK")
 
+    @autotest_test()
     def PARAM_ERROR(self):
         '''test PARAM_ERROR mavlink message'''
         self.start_subtest("Non-existent parameter (get)")
@@ -263,6 +266,7 @@ class AutoTestRover(vehicle_test_suite.TestSuite):
         }, check_context=True, very_verbose=True)
         self.context_pop()
 
+    @autotest_test()
     def Sprayer(self):
         """Test sprayer functionality."""
         rc_ch = 5
@@ -7463,7 +7467,6 @@ return update()
             self.RCOverrides,
             self.RCOverridesCancel,
             self.MANUAL_CONTROL,
-            self.Sprayer,
             self.AC_Avoidance,
             self.CameraMission,
             self.Gripper,
@@ -7558,6 +7561,7 @@ return update()
             self.UTMGlobalPosition,
             self.UTMGlobalPositionWaypoint,
         ])
+        ret.extend(self.gather_decorated())
         return ret
 
     def disabled_tests(self):
