@@ -5,6 +5,8 @@
 -- Scripting messaging is used to feed information to the script, messages are defined below
 -- script is only active when vehicle is heading towards most recently configured waypoint
 
+-- this script created for Rotors and Cams
+
 -- scripting message 1:
 
 local update_interval_ms = 100    -- script updates at 10hz
