@@ -115,6 +115,7 @@ private:
     // last pilot desired runstate we acted on; forced to an invalid
     // value so that we action at least once.
     RunState commanded_runstate = RunState::STOP;  // output is based on this
+    uint32_t commanded_runstate_change_ms;  // last time commanded_runstate changed
     void set_pilot_desired_runstate(PilotDesiredRunState newstate);
     void update_runstate();
     const char *runstate_string(PilotDesiredRunState runstate);

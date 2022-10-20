@@ -126,6 +126,10 @@ bool AP_Generator_Loweheiser::generator_ok_to_run() const
 // "stop" state:
 bool AP_Generator_Loweheiser::generator_ok_to_stop() const
 {
+    if (AP_HAL::millis() - commanded_runstate_change_ms > 120*1000) {
+        gcs().send_text(MAV_SEVERITY_WARNING, "LH: generator did not cool down; forcing stop");
+        return true;
+    }
     return packet.efi_clt <= temp_required_for_idle;
 }
 
@@ -221,6 +225,7 @@ void AP_Generator_Loweheiser::update_runstate()
 
     // consider changing the commanded runstate to the pilot desired
     // runstate:
+    RunState previous_commanded_runstate = commanded_runstate;
     commanded_runstate = RunState::IDLE;
     switch (pilot_desired_runstate) {
     case PilotDesiredRunState::STOP:
@@ -244,6 +249,10 @@ void AP_Generator_Loweheiser::update_runstate()
         }
         commanded_runstate = RunState::RUN;
         break;
+    }
+
+    if (commanded_runstate != previous_commanded_runstate) {
+        commanded_runstate_change_ms = AP_HAL::millis();
     }
 }
 
