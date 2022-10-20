@@ -224,6 +224,27 @@ void Loweheiser::update_send()
         }
     }
 
+    // a simulation for a stuck throttle - once the egine starts it
+    // won't stop based on servo position,, only engine run state
+    const bool stuck_throttle_failure_simulation = false;
+    static bool throttle_is_stuck;
+    if (stuck_throttle_failure_simulation) {
+        if (generatorengine.desired_rpm > 7000) {
+            throttle_is_stuck = true;
+        }
+        // if the throttle is stuck then the engine runs - except if
+        // the autopilot is saying the desired runstate is off,
+        // because that just shuts down the spark entirely, so the
+        // engine will not run
+        if (throttle_is_stuck &&
+            autopilot_desired_engine_run_state == EngineRunState::ON) {
+            // same numbers as "on" case, above
+            throttle = 80;
+            throttle_output = 80;
+            generatorengine.desired_rpm = 8000;
+        }
+    }
+
     _current_current = AP::sitl()->state.battery_current;
     _current_current = MIN(_current_current, max_current);
 
