@@ -33,7 +33,9 @@ namespace SITL {
 class SerialProximitySensor : public SerialDevice {
 public:
 
-    SerialProximitySensor() {};
+    SerialProximitySensor(SIM::ProximitySensorParm &_params) :
+        params{_params}
+        {}
 
     // update state
     virtual void update(const Location &location);
@@ -44,17 +46,19 @@ public:
                                          uint8_t *data,
                                          uint8_t buflen) = 0;
 
-    // return distance to nearest object at angle
-    float measure_distance_at_angle_bf(const Location &location, float angle) const {
-        return AP::sitl()->measure_distance_at_angle_bf(location, angle);
+    // return distance to nearest object at sensor-frame angle
+    float measure_distance_at_angle_bf(const Location &location, float angle, float angle_elevation=0) const {
+        return AP::sitl()->measure_distance_at_angle_bf(location, (Rotation)params.orientation.get(), angle, angle_elevation);
     }
 
 private:
 
     uint32_t last_sent_ms;
+    SIM::ProximitySensorParm &params;
 
 };
 
 }
 
 #endif
+

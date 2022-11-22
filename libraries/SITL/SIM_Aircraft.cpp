@@ -532,11 +532,11 @@ void Aircraft::fill_fdm(struct sitl_fdm &fdm)
 // returns perpendicular height to surface rangefinder is bouncing off
 float Aircraft::perpendicular_distance_to_rangefinder_surface() const
 {
-#if SITL_RANGEFINDER_AS_OBJECT_SENSOR
-    const auto orientation = (Rotation)sitl->sonar_rot.get();
-    if (SITL_RANGEFINDER_IS_YAW_ONLY(orientation)) {
-        // assume these are avoidance sensors
-        return sitl->measure_distance_at_angle_bf(location, sitl->sonar_rot.get()*45);
+    switch ((Rotation)sitl->sonar_rot.get()) {
+    case Rotation::ROTATION_PITCH_270:
+        return sitl->state.height_agl;
+    default:
+        return sitl->measure_distance_at_angle_bf(location, Rotation(sitl->sonar_rot.get()), 0);
     }
 #endif
 

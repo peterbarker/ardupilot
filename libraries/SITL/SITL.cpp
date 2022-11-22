@@ -28,6 +28,7 @@
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_InertialSensor/AP_InertialSensor.h>
+#include <AP_Terrain/AP_Terrain.h>
 
 #ifdef SFML_JOYSTICK
   #ifdef HAVE_SFML_GRAPHICS_HPP
@@ -40,6 +41,12 @@
 #include "SIM_StratoBlimp.h"
 #include "SIM_Glider.h"
 #include "SIM_FlightAxis.h"
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 extern const AP_HAL::HAL& hal;
 
@@ -648,6 +655,13 @@ const AP_Param::GroupInfo SIM::var_info3[] = {
     // @Path: ./SIM_Vicon.cpp
     AP_SUBGROUPINFO(vicon, "VICON_", 56, SIM, ViconParms),
 #endif  // AP_SIM_VICON_ENABLED
+
+    // @Param: PS_ORIENT
+    // @DisplayName: Proximity sensor orientation
+    // @Description: Orientation of proximity sensor, from standard list of rotations
+    // @User: Advanced
+
+    AP_SUBGROUPINFO(proximity_sensor_parameters, "PS_", 62, SIM, SIM::ProximitySensorParm),
 
 #ifdef SFML_JOYSTICK
     AP_SUBGROUPEXTENSION("",      63, SIM,  var_sfml_joystick),
@@ -1322,7 +1336,13 @@ const AP_Param::GroupInfo SIM::ModelParm::var_info[] = {
     // @Path: ./SIM_AIS.cpp
     AP_SUBGROUPPTR(ais_ptr, "AIS_", 7, SIM::ModelParm, AIS),
 #endif  // AP_SIM_AIS_ENABLED
+    AP_GROUPEND
+};
 
+// user settable parameters for airspeed sensors
+const AP_Param::GroupInfo SIM::ProximitySensorParm::var_info[] = {
+        // user settable parameters for the 1st airspeed sensor
+    AP_GROUPINFO("ORIENT",  1, SIM::ProximitySensorParm,  orientation, 0),
     AP_GROUPEND
 };
 
@@ -1487,9 +1507,103 @@ float SIM::get_rangefinder(uint8_t instance) {
     return nanf("");
 };
 
-float SIM::measure_distance_at_angle_bf(const Location &location, float angle) const
+/*
+  return height AMSL given location, attitude and a downward
+  facing rangefinder reading
+
+  This is a copy of AP_Terrain::projected_height_amsl which is modified to
+ -  return the location the distance is measured to
+ - not apply a rotation to the rangefinder - i.e. assume Tnb has already been rotated
+*/
+bool SIM::projected_height_amsl(const Location &loc,
+                                const Matrix3f &Tnb, // Matrix that rotates a vector from body to rangefinder-pointing-direction
+                                float range,
+                                Location &hest_location,
+                                float &hest_amsl) const
+{
+    // project vector out 1000m
+    Vector3f v{range,0,0};
+
+    // rotate into earth frame
+    v = Tnb * v;
+
+    // are we underground?
+    if (v.z <= 0) {
+        return false;
+    }
+
+    // calculate ground position where rangefinder hits the ground
+    Location loc2 = loc;
+    loc2.offset(v.x,v.y);
+
+    // get height of terrain above sea level at that location
+    float ter_height;
+    if (!AP::terrain()->height_amsl(loc2, ter_height, false)) {
+        return false;
+    }
+
+    // calculate height of aircraft AMSL
+    hest_amsl = ter_height + v.z;
+    hest_location = loc2;
+
+    return true;
+}
+
+/*
+  return expected rangefinder reading given a downward facing rangefinder
+
+  This is a copy of AP_Terrain::projected_rangefinder which is modified to
+ - not keep max_error around
+
+*/
+bool SIM::projected_rangefinder(const Location &loc,
+                                const Matrix3f &Tnb,
+                                float h_amsl,
+                                Location &range_loc,
+                                float &range) const
+{
+    // get height of terrain above sea level at current location
+    float ter_height;
+    if (!AP::terrain()->height_amsl(loc, ter_height, false)) {
+        return false;
+    }
+
+    // initial estimate
+    const float range_scale = Tnb.c.z;
+    if (!is_positive(range_scale)) {
+        return false;
+    }
+    range = (h_amsl - ter_height) / range_scale;
+
+    // max 8 iterations to find rangefinder
+    const uint8_t max_iterations = 32;
+    for (uint8_t i=0; i<max_iterations; i++) {
+        float hest_amsl1, hest_amsl2;
+        const float range_delta = 1.0;
+        Location this_range_loc1;
+        Location this_range_loc2;
+        if (!projected_height_amsl(loc, Tnb, range-0.5*range_delta, this_range_loc1, hest_amsl1) ||
+            !projected_height_amsl(loc, Tnb, range+0.5*range_delta, this_range_loc2, hest_amsl2)) {
+            return false;
+        }
+        range_loc = this_range_loc1;  // should this be a mid-point?
+        float slope = (hest_amsl2 - hest_amsl1) / range_delta;
+        float err = h_amsl - 0.5*(hest_amsl2 + hest_amsl1);
+        if (fabsf(err) < 0.2) {
+            break;
+        }
+        if (fabsf(slope) < FLT_EPSILON) {
+            return false;
+        }
+        range += err / slope;
+    }
+    return true;
+}
+
+float SIM::measure_distance_at_angle_bf(const Location &location, Rotation orientation, float angle, float elevation_angle) const
 {
     // should we populate state.rangefinder_m[...] from this?
+    // convert from a Location (lat/lng) to a vector-from-origin:
     Vector2f vehicle_pos_cm;
     if (!location.get_vector_xy_from_origin_NE_cm(vehicle_pos_cm)) {
         // should probably use SITL variables...
@@ -1499,15 +1613,22 @@ float SIM::measure_distance_at_angle_bf(const Location &location, float angle) c
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     static uint64_t count = 0;
 
+    struct stat statbuf;
+    if (::stat("/tmp/reset-debug-files", &statbuf) == 0) {
+        count = 0;
+    }
+
     if (count == 0) {
+        unlink("/tmp/reset-debug-files");
         unlink("/tmp/rayfile.scr");
         unlink("/tmp/intersectionsfile.scr");
+        unlink("/tmp/ground-intersections.scr");
     }
 
     count++;
 
     // the 1000 here is so the files don't grow unbounded
-    const bool write_debug_files = count < 1000;
+    bool write_debug_files = count < 1000;
 
     FILE *rayfile = nullptr;
     if (write_debug_files) {
@@ -1515,23 +1636,34 @@ float SIM::measure_distance_at_angle_bf(const Location &location, float angle) c
     }
 #endif
 
-    // cast a ray from location out 200m...
-    Location location2 = location;
-    location2.offset_bearing(wrap_180(angle + state.yawDeg), 200);
-    Vector2f ray_endpos_cm;
-    if (!location2.get_vector_xy_from_origin_NE_cm(ray_endpos_cm)) {
-        // should probably use SITL variables...
-        return 0.0f;
-    }
+    const uint16_t projection_length = 200;
+
+    // this should be passed in:
+    const Vector3f _angle {
+        float(radians(elevation_angle)),
+        0,
+        float(radians(angle)),
+    };
+    Quaternion q2 = state.quaternion;
+    q2.rotate(orientation);  // rotate to sensor orientation
+    q2.rotate(_angle);  // further rotate to passed-in angle
+
+    Matrix3f dcm;
+    q2.rotation_matrix(dcm);
+    const Vector3f projected = dcm * Vector3f{ projection_length, 0, 0 };
+
+    Vector2f ray_endpos_cm = vehicle_pos_cm + projected.xy() * 100;
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     if (rayfile != nullptr) {
-        ::fprintf(rayfile, "map icon %f %f barrell\n", location2.lat*1e-7, location2.lng*1e-7);
+        // ::fprintf(rayfile, "map icon %f %f barrell\n", location2.lat*1e-7, location2.lng*1e-7);
         fclose(rayfile);
     }
 
     // setup a grid of posts
     FILE *postfile = nullptr;
     FILE *intersectionsfile = nullptr;
+    FILE * ground_intersections_fh = nullptr;
     if (write_debug_files) {
         static bool postfile_written;
         if (!postfile_written) {
@@ -1540,6 +1672,7 @@ float SIM::measure_distance_at_angle_bf(const Location &location, float angle) c
             postfile = fopen("/tmp/post-locations.scr", "w");
         }
         intersectionsfile = fopen("/tmp/intersections.scr", "a");
+        ground_intersections_fh = fopen("/tmp/ground-intersections.scr", "a");
     }
 #endif
 
@@ -1592,8 +1725,38 @@ OUT:
     }
 #endif
 
-    // ::fprintf(stderr, "Distance @%f = %fm\n", angle, min_dist_cm*0.01f);
-    return min_dist_cm * 0.01f;
+    // check for intersection with the ground
+    int32_t loc_abs_alt_cm;
+    if (!location.get_alt_cm(Location::AltFrame::ABSOLUTE, loc_abs_alt_cm)) {
+        AP_HAL::panic("weird");
+    }
+    const float loc_abs_alt = loc_abs_alt_cm * 0.01f;  // cm -> m
+    float range;
+    Location range_loc;
+    if (projected_rangefinder(
+        location,
+        dcm,
+        loc_abs_alt,
+        range_loc,
+        range)) {
+        uint32_t range_cm = range * 100;
+        if (range_cm < min_dist_cm) {
+            min_dist_cm = range;
+        }
+        // gcs().send_text(MAV_SEVERITY_WARNING, "Range: %fm (%f,%f)", range, range_loc.lat * 1.0e-7, range_loc.lng * 1.0e-7);
+        if (ground_intersections_fh != nullptr) {
+            ::fprintf(ground_intersections_fh,
+                      "map icon %f %f barrell\n",
+                      range_loc.lat * 1e-7,
+                      range_loc.lng * 1e-7);
+        }
+    }
+    if (ground_intersections_fh != nullptr) {
+        fclose(ground_intersections_fh);
+    }
+
+    // ::fprintf(stderr, "Distance @%f = %fm\n", angle, min_dist_cm/100.0f);
+    return min_dist_cm / 100.0f;
 }
 
 } // namespace SITL

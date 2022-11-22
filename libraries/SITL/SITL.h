@@ -377,6 +377,14 @@ public:
     };
     ModelParm models;
     
+
+    // proximity sensor parameters
+    class ProximitySensorParm {
+    public:
+        static const struct AP_Param::GroupInfo var_info[];
+        AP_Int8 orientation;   // from Rotation enum
+    } proximity_sensor_parameters;
+
     // EFI type
     enum EFIType {
         EFI_TYPE_NONE = 0,
@@ -568,7 +576,7 @@ public:
     // get the rangefinder reading for the desired instance, returns -1 for no data
     float get_rangefinder(uint8_t instance);
 
-    float measure_distance_at_angle_bf(const Location &location, float angle) const;
+    float measure_distance_at_angle_bf(const Location &location, Rotation orientation, float angle, float elevation_angle=0) const;
 
     // get the apparent wind speed and direction as set by external physics backend
     float get_apparent_wind_dir() const{return state.wind_vane_apparent.direction;}
@@ -631,6 +639,17 @@ public:
      */
     bool set_pose(uint8_t instance, const Location &loc, const Quaternion &quat,
                   const Vector3f &velocity_ef, const Vector3f &gyro_rads);
+
+    bool projected_height_amsl(const Location &loc,
+                               const Matrix3f &Tnb, // Matrix that rotates a vector from body to rangefinder-pointing-direction
+                               float range,
+                               Location &hest_location,
+                               float &hest_amsl) const;
+    bool projected_rangefinder(const Location &loc,
+                               const Matrix3f &Tnb,
+                               float h_amsl,
+                               Location &range_loc,
+                               float &range) const;
 };
 
 } // namespace SITL
