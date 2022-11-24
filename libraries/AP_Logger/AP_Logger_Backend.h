@@ -106,10 +106,12 @@ public:
     virtual void flush(void) { }
 #endif
 
+#if HAL_GCS_ENABLED
      // for Logger_MAVlink
     virtual void remote_log_block_status_msg(const class GCS_MAVLINK &link,
                                              const mavlink_message_t &msg) { }
     // end for Logger_MAVlink
+#endif
 
    virtual void periodic_tasks();
 
@@ -134,8 +136,10 @@ public:
     bool Write_Format(const struct LogStructure *structure);
     bool Write_Message(const char *message);
     bool Write_MessageF(const char *fmt, ...);
+#if HAL_GCS_ENABLED
     bool Write_Mission_Cmd(const AP_Mission &mission,
                                const AP_Mission::Mission_Command &cmd);
+#endif
     bool Write_Mode(uint8_t mode, const ModeReason reason);
     bool Write_Parameter(const char *name, float value, float default_val);
     bool Write_Parameter(const AP_Param *ap,

@@ -245,7 +245,9 @@ public:
     void update(void);
 
     // Pass mavlink data to message handlers (for MAV type)
+#if HAL_GCS_ENABLED
     void handle_msg(const mavlink_message_t &msg);
+#endif
 #if HAL_MSP_GPS_ENABLED
     void handle_msp(const MSP::msp_gps_data_message_t &pkt);
 #endif
@@ -488,10 +490,12 @@ public:
     void lock_port(uint8_t instance, bool locked);
 
     //MAVLink Status Sending
+#if HAL_GCS_ENABLED
     void send_mavlink_gps_raw(mavlink_channel_t chan);
     void send_mavlink_gps2_raw(mavlink_channel_t chan);
 
     void send_mavlink_gps_rtk(mavlink_channel_t chan, uint8_t inst);
+#endif
 
     // Returns true if there is an unconfigured GPS, and provides the instance number of the first non configured GPS
     bool first_unconfigured_gps(uint8_t &instance) const WARN_IF_UNUSED;
@@ -714,6 +718,7 @@ private:
       backends. This assumes we don't want more than 4*180=720 bytes
       in a RTCM data block
      */
+#if HAL_GCS_ENABLED
     struct rtcm_buffer {
         uint8_t fragments_received;
         uint8_t sequence;
@@ -730,6 +735,7 @@ private:
     // re-assemble GPS_RTCM_DATA message
     void handle_gps_rtcm_data(const mavlink_message_t &msg);
     void handle_gps_inject(const mavlink_message_t &msg);
+#endif
 
     //Inject a packet of raw binary to a GPS
     void inject_data(const uint8_t *data, uint16_t len);

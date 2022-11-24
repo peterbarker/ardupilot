@@ -252,7 +252,9 @@ public:
 #endif
     void Write_NamedValueFloat(const char *name, float value);
     void Write_Power(void);
+#if HAL_GCS_ENABLED
     void Write_Radio(const mavlink_radio_t &packet);
+#endif
     void Write_Message(const char *message);
     void Write_MessageF(const char *fmt, ...);
     void Write_ServoStatus(uint64_t time_us, uint8_t id, float position, float force, float speed, uint8_t power_pct,
@@ -260,6 +262,7 @@ public:
     void Write_Compass();
     void Write_Mode(uint8_t mode, const ModeReason reason);
 
+#if AP_MISSION_ENABLED
     void Write_EntireMission();
     void Write_Command(const mavlink_command_int_t &packet,
                        uint8_t source_system,
@@ -268,6 +271,7 @@ public:
                        bool was_command_long=false);
     void Write_Mission_Cmd(const AP_Mission &mission,
                                const AP_Mission::Mission_Command &cmd);
+#endif  // AP_MISSION_ENABLED
     void Write_RallyPoint(uint8_t total,
                           uint8_t sequence,
                           const class RallyLocation &rally_point);
@@ -297,7 +301,9 @@ public:
     void flush(void);
 #endif
 
+#if HAL_GCS_ENABLED
     void handle_mavlink_msg(class GCS_MAVLINK &, const mavlink_message_t &msg);
+#endif
 
     void periodic_tasks(); // may want to split this into GCS/non-GCS duties
 
@@ -582,6 +588,7 @@ private:
     // can be used by other subsystems to detect if they should log data
     uint8_t _log_start_count;
 
+#if HAL_GCS_ENABLED
     void handle_log_message(class GCS_MAVLINK &, const mavlink_message_t &msg);
 
     void handle_log_request_list(class GCS_MAVLINK &, const mavlink_message_t &msg);
@@ -595,6 +602,7 @@ private:
     void get_log_info(uint16_t log_num, uint32_t &size, uint32_t &time_utc);
 
     int16_t get_log_data(uint16_t log_num, uint16_t page, uint32_t offset, uint16_t len, uint8_t *data);
+#endif
 
     /* end support for retrieving logs via mavlink: */
 
