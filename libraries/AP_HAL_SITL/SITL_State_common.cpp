@@ -142,7 +142,6 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         }
         nmea = new SITL::RF_NMEA();
         return nmea;
-
 #if !defined(HAL_BUILD_AP_PERIPH)
     } else if (streq(name, "rf_mavlink")) {
         if (rf_mavlink != nullptr) {
@@ -201,6 +200,14 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         }
         terarangertower = new SITL::PS_TeraRangerTower(_sitl->proximity_sensor_parameters);
         return terarangertower;
+#endif
+#if HAL_SIM_PS_NRA24_ENABLED
+    } else if (streq(name, "nra24")) {
+        if (sf45b != nullptr) {
+            AP_HAL::panic("Only one nra24 at a time");
+        }
+        nra24 = new SITL::PS_NRA24(_sitl->proximity_sensor_parameters);
+        return nra24;
 #endif
 #if HAL_SIM_PS_LIGHTWARE_SF45B_ENABLED
     } else if (streq(name, "sf45b")) {
@@ -444,6 +451,12 @@ void SITL_State_Common::sim_update(void)
 #if AP_SIM_ADSB_SAGETECH_MXS_ENABLED
     if (sagetech_mxs != nullptr) {
         sagetech_mxs->update(sitl_model);
+    }
+#endif
+
+#if HAL_SIM_PS_NRA24_ENABLED
+    if (nra24 != nullptr) {
+        nra24->update(sitl_model->get_location());
     }
 #endif
 
