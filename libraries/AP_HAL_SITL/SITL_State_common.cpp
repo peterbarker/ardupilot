@@ -149,7 +149,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         if (rplidara2 != nullptr) {
             AP_HAL::panic("Only one rplidara2 at a time");
         }
-        rplidara2 = NEW_NOTHROW SITL::PS_RPLidarA2();
+        rplidara2 = NEW_NOTHROW SITL::PS_RPLidarA2(_sitl->proximity_sensor_parameters);
         return rplidara2;
 #endif
 #if AP_SIM_PS_RPLIDARA1_ENABLED
@@ -157,7 +157,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         if (rplidara1 != nullptr) {
             AP_HAL::panic("Only one rplidara1 at a time");
         }
-        rplidara1 = NEW_NOTHROW SITL::PS_RPLidarA1();
+        rplidara1 = NEW_NOTHROW SITL::PS_RPLidarA1(_sitl->proximity_sensor_parameters);
         return rplidara1;
 #endif
 #if AP_SIM_PS_TERARANGERTOWER_ENABLED
@@ -165,7 +165,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         if (terarangertower != nullptr) {
             AP_HAL::panic("Only one terarangertower at a time");
         }
-        terarangertower = NEW_NOTHROW SITL::PS_TeraRangerTower();
+        terarangertower = NEW_NOTHROW SITL::PS_TeraRangerTower(_sitl->proximity_sensor_parameters);
         return terarangertower;
 #endif
 #if AP_SIM_PS_LIGHTWARE_SF45B_ENABLED
@@ -173,7 +173,7 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         if (sf45b != nullptr) {
             AP_HAL::panic("Only one sf45b at a time");
         }
-        sf45b = NEW_NOTHROW SITL::PS_LightWare_SF45B();
+        sf45b = NEW_NOTHROW SITL::PS_LightWare_SF45B(_sitl->proximity_sensor_parameters);
         return sf45b;
 #endif
 #if AP_SIM_ADSB_SAGETECH_MXS_ENABLED
