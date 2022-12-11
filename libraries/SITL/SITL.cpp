@@ -1621,7 +1621,7 @@ float SIM::measure_distance_at_angle_bf(const Location &location, Rotation orien
     if (count == 0) {
         unlink("/tmp/reset-debug-files");
         unlink("/tmp/rayfile.scr");
-        unlink("/tmp/intersectionsfile.scr");
+        unlink("/tmp/intersections.scr");
         unlink("/tmp/ground-intersections.scr");
     }
 
@@ -1656,7 +1656,9 @@ float SIM::measure_distance_at_angle_bf(const Location &location, Rotation orien
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     if (rayfile != nullptr) {
-        // ::fprintf(rayfile, "map icon %f %f barrell\n", location2.lat*1e-7, location2.lng*1e-7);
+        Location location2 = location;
+        location2.offset(ray_endpos_cm.y * 0.01f, ray_endpos_cm.x * 0.01f);
+        ::fprintf(rayfile, "map icon %f %f barrell\n", location2.lat*1e-7, location2.lng*1e-7);
         fclose(rayfile);
     }
 
@@ -1745,10 +1747,10 @@ OUT:
         }
         // gcs().send_text(MAV_SEVERITY_WARNING, "Range: %fm (%f,%f)", range, range_loc.lat * 1.0e-7, range_loc.lng * 1.0e-7);
         if (ground_intersections_fh != nullptr) {
-            ::fprintf(ground_intersections_fh,
-                      "map icon %f %f barrell\n",
-                      range_loc.lat * 1e-7,
-                      range_loc.lng * 1e-7);
+            // ::fprintf(ground_intersections_fh,
+            //           "map icon %f %f barrell\n",
+            //           range_loc.lat * 1e-7,
+            //           range_loc.lng * 1e-7);
         }
     }
     if (ground_intersections_fh != nullptr) {
