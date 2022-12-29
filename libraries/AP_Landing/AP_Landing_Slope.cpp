@@ -60,12 +60,15 @@ bool AP_Landing::type_slope_verify_land(const Location &prev_WP_loc, Location &n
     // so we don't verify command completion. Instead we use this to
     // adjust final landing parameters
 
+    auto *mission = AP::mission();
+
     // determine stage
     if (type_slope_stage == SlopeStage::NORMAL) {
         const bool heading_lined_up = abs(nav_controller->bearing_error_cd()) < 1000 && !nav_controller->data_is_stale();
         const bool on_flight_line = fabsf(nav_controller->crosstrack_error()) < 5.0f && !nav_controller->data_is_stale();
         const bool below_prev_WP = current_loc.alt < prev_WP_loc.alt;
-        if ((mission.get_prev_nav_cmd_id() == MAV_CMD_NAV_LOITER_TO_ALT) ||
+        if ((mission != nullptr &&
+             mission->get_prev_nav_cmd_id() == MAV_CMD_NAV_LOITER_TO_ALT) ||
             (wp_proportion >= 0 && heading_lined_up && on_flight_line) ||
             (wp_proportion > 0.15f && heading_lined_up && below_prev_WP) ||
             (wp_proportion > 0.5f)) {
@@ -166,7 +169,8 @@ bool AP_Landing::type_slope_verify_land(const Location &prev_WP_loc, Location &n
         disarm_if_autoland_complete_fn();
     }
 
-    if (mission.continue_after_land() &&
+    if (mission != nullptr &&
+        mission->continue_after_land() &&
         type_slope_stage == SlopeStage::FINAL &&
         gps.status() >= AP_GPS::GPS_OK_FIX_3D &&
         gps.ground_speed() < 1) {

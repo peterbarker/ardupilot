@@ -173,15 +173,14 @@ const AP_Param::GroupInfo AP_Landing::var_info[] = {
 };
 
     // constructor
-AP_Landing::AP_Landing(AP_Mission &_mission, AP_AHRS &_ahrs, AP_TECS *_tecs_Controller, AP_Navigation *_nav_controller, AP_FixedWing &_aparm,
+AP_Landing::AP_Landing(AP_AHRS &_ahrs, AP_TECS *_tecs_Controller, AP_Navigation *_nav_controller, AP_FixedWing &_aparm,
                        set_target_altitude_proportion_fn_t _set_target_altitude_proportion_fn,
                        constrain_target_altitude_location_fn_t _constrain_target_altitude_location_fn,
                        adjusted_altitude_cm_fn_t _adjusted_altitude_cm_fn,
                        adjusted_relative_altitude_cm_fn_t _adjusted_relative_altitude_cm_fn,
                        disarm_if_autoland_complete_fn_t _disarm_if_autoland_complete_fn,
                        update_flight_stage_fn_t _update_flight_stage_fn) :
-    mission(_mission)
-    ,ahrs(_ahrs)
+    ahrs(_ahrs)
     ,tecs_Controller(_tecs_Controller)
     ,nav_controller(_nav_controller)
     ,aparm(_aparm)
@@ -271,9 +270,12 @@ bool AP_Landing::verify_abort_landing(const Location &prev_WP_loc, Location &nex
     // see if we have reached abort altitude
      if (adjusted_relative_altitude_cm_fn() > auto_state_takeoff_altitude_rel_cm) {
          next_WP_loc = current_loc;
-         mission.stop();
-         if (restart_landing_sequence()) {
-             mission.resume();
+         auto *mission = AP::mission();
+         if (mission != nullptr) {
+             mission->stop();
+             if (restart_landing_sequence()) {
+                 mission->resume();
+             }
          }
          // else we're in AUTO with a stopped mission and handle_auto_mode() will set RTL
 #if AP_FENCE_ENABLED
@@ -461,6 +463,12 @@ void AP_Landing::setup_landing_glide_slope(const Location &prev_WP_loc, const Lo
  */
 bool AP_Landing::restart_landing_sequence()
 {
+    auto *_mission = AP::mission();
+    if (_mission == nullptr) {
+        return false;
+    }
+    auto &mission = *_mission;
+
     if (mission.get_current_nav_cmd().id != MAV_CMD_NAV_LAND) {
         return false;
     }

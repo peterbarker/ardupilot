@@ -36,7 +36,7 @@ public:
     FUNCTOR_TYPEDEF(disarm_if_autoland_complete_fn_t, void);
     FUNCTOR_TYPEDEF(update_flight_stage_fn_t, void);
 
-    AP_Landing(AP_Mission &_mission, AP_AHRS &_ahrs, AP_TECS *_tecs_Controller, AP_Navigation *_nav_controller, AP_FixedWing &_aparm,
+    AP_Landing(AP_AHRS &_ahrs, AP_TECS *_tecs_Controller, AP_Navigation *_nav_controller, AP_FixedWing &_aparm,
                set_target_altitude_proportion_fn_t _set_target_altitude_proportion_fn,
                constrain_target_altitude_location_fn_t _constrain_target_altitude_location_fn,
                adjusted_altitude_cm_fn_t _adjusted_altitude_cm_fn,
@@ -132,7 +132,6 @@ private:
 
     float height_flare_log;
 
-    AP_Mission &mission;
     AP_AHRS &ahrs;
     AP_TECS *tecs_Controller;
     AP_Navigation *nav_controller;
