@@ -173,15 +173,14 @@ const AP_Param::GroupInfo AP_Landing::var_info[] = {
 };
 
     // constructor
-AP_Landing::AP_Landing(AP_AHRS &_ahrs, AP_TECS *_tecs_Controller, AP_Navigation *_nav_controller, AP_FixedWing &_aparm,
+AP_Landing::AP_Landing(AP_TECS *_tecs_Controller, AP_Navigation *_nav_controller, AP_FixedWing &_aparm,
                        set_target_altitude_proportion_fn_t _set_target_altitude_proportion_fn,
                        constrain_target_altitude_location_fn_t _constrain_target_altitude_location_fn,
                        adjusted_altitude_cm_fn_t _adjusted_altitude_cm_fn,
                        adjusted_relative_altitude_cm_fn_t _adjusted_relative_altitude_cm_fn,
                        disarm_if_autoland_complete_fn_t _disarm_if_autoland_complete_fn,
                        update_flight_stage_fn_t _update_flight_stage_fn) :
-    ahrs(_ahrs)
-    ,tecs_Controller(_tecs_Controller)
+    tecs_Controller(_tecs_Controller)
     ,nav_controller(_nav_controller)
     ,aparm(_aparm)
     ,set_target_altitude_proportion_fn(_set_target_altitude_proportion_fn)
@@ -555,7 +554,7 @@ bool AP_Landing::get_target_altitude_location(Location &location)
  */
 float AP_Landing::wind_alignment(const float heading_deg)
 {
-    const Vector3f wind = ahrs.wind_estimate();
+    const Vector3f wind = AP::ahrs().wind_estimate();
     const float wind_heading_rad = atan2f(-wind.y, -wind.x);
     return cosf(wind_heading_rad - radians(heading_deg));
 }
@@ -565,13 +564,13 @@ float AP_Landing::wind_alignment(const float heading_deg)
  */
 float AP_Landing::head_wind(void)
 {
-    const float alignment = wind_alignment(ahrs.yaw_sensor*0.01f);
+    const float alignment = wind_alignment(AP::ahrs().yaw_sensor*0.01f);
 
     if (alignment <= 0) {
         return 0;
     }
 
-    return alignment * ahrs.wind_estimate().length();
+    return alignment * AP::ahrs().wind_estimate().length();
 }
 
 /*

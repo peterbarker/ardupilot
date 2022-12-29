@@ -268,7 +268,7 @@ void AP_Landing::type_slope_setup_landing_glide_slope(const Location &prev_WP_lo
     float sink_height = (prev_WP_loc.alt - next_WP_loc.alt)*0.01f;
 
     // current ground speed
-    float groundspeed = ahrs.groundspeed();
+    float groundspeed = AP::ahrs().groundspeed();
     if (groundspeed < 0.5f) {
         groundspeed = 0.5f;
     }

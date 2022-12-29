@@ -208,6 +208,8 @@ bool AP_Landing_Deepstall::verify_land(const Location &prev_WP_loc, Location &ne
         const float height, const float sink_rate, const float wp_proportion, const uint32_t last_flying_ms,
         const bool is_armed, const bool is_flying, const bool rangefinder_state_in_range)
 {
+    auto &ahrs = AP::ahrs();
+
     switch (stage) {
     case DEEPSTALL_STAGE_FLY_TO_LANDING:
         if (current_loc.get_distance(landing_point) > abs(2 * landing.aparm.loiter_radius)) {
@@ -270,7 +272,7 @@ bool AP_Landing_Deepstall::verify_land(const Location &prev_WP_loc, Location &ne
         FALLTHROUGH;
     case DEEPSTALL_STAGE_ARC:
         {
-        Vector2f groundspeed = landing.ahrs.groundspeed_vector();
+        Vector2f groundspeed = ahrs.groundspeed_vector();
         if (!landing.nav_controller->reached_loiter_target() ||
             (fabsf(wrap_180(target_heading_deg -
                             degrees(atan2f(-groundspeed.y, -groundspeed.x) + M_PI))) >= 10.0f)) {
@@ -287,18 +289,18 @@ bool AP_Landing_Deepstall::verify_land(const Location &prev_WP_loc, Location &ne
 
         float height_above_target;
         if (is_zero(approach_alt_offset)) {
-            landing.ahrs.get_relative_position_D_home(height_above_target);
+            ahrs.get_relative_position_D_home(height_above_target);
             height_above_target = -height_above_target;
         } else {
             Location position;
-            if (landing.ahrs.get_location(position)) {
+            if (ahrs.get_location(position)) {
                 height_above_target = (position.alt - landing_point.alt + approach_alt_offset * 100) * 1e-2f;
             } else {
                 height_above_target = approach_alt_offset;
             }
         }
 
-        const float travel_distance = predict_travel_distance(landing.ahrs.wind_estimate(), height_above_target, false);
+        const float travel_distance = predict_travel_distance(ahrs.wind_estimate(), height_above_target, false);
 
         memcpy(&entry_point, &landing_point, sizeof(Location));
         entry_point.offset_bearing(target_heading_deg + 180.0, travel_distance);
@@ -310,7 +312,7 @@ bool AP_Landing_Deepstall::verify_land(const Location &prev_WP_loc, Location &ne
             }
             return false;
         }
-        predict_travel_distance(landing.ahrs.wind_estimate(), height_above_target, true);
+        predict_travel_distance(ahrs.wind_estimate(), height_above_target, true);
         stage = DEEPSTALL_STAGE_LAND;
         stall_entry_time = AP_HAL::millis();
 
@@ -360,7 +362,7 @@ bool AP_Landing_Deepstall::override_servos(void)
 
     // use the current airspeed to dictate the travel limits
     float airspeed;
-    if (!landing.ahrs.airspeed_estimate(airspeed)) {
+    if (!AP::ahrs().airspeed_estimate(airspeed)) {
         airspeed = 0; // safely forces control to the deepstall steering since we don't have an estimate
     }
 
@@ -390,7 +392,7 @@ bool AP_Landing_Deepstall::override_servos(void)
 bool AP_Landing_Deepstall::request_go_around(void)
 {
     float current_altitude_d;
-    landing.ahrs.get_relative_position_D_home(current_altitude_d);
+    AP::ahrs().get_relative_position_D_home(current_altitude_d);
 
     if (is_zero(min_abort_alt) || -current_altitude_d > min_abort_alt) {
         landing.flags.commanded_go_around = true;
@@ -488,7 +490,7 @@ bool AP_Landing_Deepstall::terminate(void) {
         landing.flags.in_progress = true;
         stage = DEEPSTALL_STAGE_LAND;
 
-        if(landing.ahrs.get_location(landing_point)) {
+        if(AP::ahrs().get_location(landing_point)) {
             build_approach_path(true);
         } else {
             hold_level = true;
@@ -503,9 +505,11 @@ void AP_Landing_Deepstall::build_approach_path(bool use_current_heading)
 {
     float loiter_radius = landing.nav_controller->loiter_radius(landing.aparm.loiter_radius);
 
-    Vector3f wind = landing.ahrs.wind_estimate();
+    const auto &ahrs = AP::ahrs();
+
+    Vector3f wind = ahrs.wind_estimate();
     // TODO: Support a user defined approach heading
-    target_heading_deg = use_current_heading ? landing.ahrs.yaw_sensor * 1e-2 : (degrees(atan2f(-wind.y, -wind.x)));
+    target_heading_deg = use_current_heading ? ahrs.yaw_sensor * 1e-2 : (degrees(atan2f(-wind.y, -wind.x)));
 
     memcpy(&extended_approach, &landing_point, sizeof(Location));
     memcpy(&arc_exit, &landing_point, sizeof(Location));
@@ -599,7 +603,7 @@ bool AP_Landing_Deepstall::verify_breakout(const Location &current_loc, const Lo
                                                const float height_error) const
 {
     const Vector2f location_delta = current_loc.get_distance_NE(target_loc);
-    const float heading_error = degrees(landing.ahrs.groundspeed_vector().angle(location_delta));
+    const float heading_error = degrees(AP::ahrs().groundspeed_vector().angle(location_delta));
 
     // Check to see if the plane is heading toward the land waypoint. We use 20 degrees (+/-10 deg)
     // of margin so that the altitude to be within 5 meters of desired
@@ -613,8 +617,10 @@ bool AP_Landing_Deepstall::verify_breakout(const Location &current_loc, const Lo
 
 float AP_Landing_Deepstall::update_steering()
 {
+    const auto &ahrs = AP::ahrs();
+
     Location current_loc;
-    if ((!landing.ahrs.get_location(current_loc) || !landing.ahrs.healthy()) && !hold_level) {
+    if ((!ahrs.get_location(current_loc) || !ahrs.healthy()) && !hold_level) {
         // panic if no position source is available
         // continue the stall but target just holding the wings held level as deepstall should be a minimal
         // energy configuration on the aircraft, and if a position isn't available aborting would be worse
@@ -642,10 +648,10 @@ float AP_Landing_Deepstall::update_steering()
             L1_xtrack_i = constrain_float(L1_xtrack_i, -0.5f, 0.5f);
             nu1 += L1_xtrack_i;
         }
-        desired_change = wrap_PI(radians(target_heading_deg) + nu1 - landing.ahrs.yaw) / time_constant;
+        desired_change = wrap_PI(radians(target_heading_deg) + nu1 - ahrs.yaw) / time_constant;
     }
 
-    float yaw_rate = landing.ahrs.get_gyro().z;
+    float yaw_rate = ahrs.get_gyro().z;
     float yaw_rate_limit_rps = radians(yaw_rate_limit);
     float error = wrap_PI(constrain_float(desired_change, -yaw_rate_limit_rps, yaw_rate_limit_rps) - yaw_rate);
 
