@@ -639,7 +639,7 @@ private:
     AP_Terrain terrain;
 #endif
 
-    AP_Landing landing{mission,ahrs,&TECS_controller,nav_controller,aparm,
+    AP_Landing landing{ahrs,&TECS_controller,nav_controller,aparm,
             FUNCTOR_BIND_MEMBER(&Plane::set_target_altitude_proportion, void, const Location&, float),
             FUNCTOR_BIND_MEMBER(&Plane::constrain_target_altitude_location, void, const Location&, const Location&),
             FUNCTOR_BIND_MEMBER(&Plane::adjusted_altitude_cm, int32_t),
