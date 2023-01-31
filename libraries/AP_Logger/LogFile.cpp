@@ -13,6 +13,7 @@
 #include <RC_Channel/RC_Channel.h>
 #include <SRV_Channel/SRV_Channel.h>
 #include <AC_PID/AP_PIDInfo.h>
+#include <AP_Mission/AP_Mission.h>
 
 #include "AP_Logger.h"
 #include "AP_Logger_File.h"
@@ -267,6 +268,7 @@ void AP_Logger::Write_RSSI()
 }
 #endif
 
+#if HAL_GCS_ENABLED
 void AP_Logger::Write_Command(const mavlink_command_int_t &packet,
                               uint8_t source_system,
                               uint8_t source_component,
@@ -294,6 +296,7 @@ void AP_Logger::Write_Command(const mavlink_command_int_t &packet,
     };
     return WriteBlock(&pkt, sizeof(pkt));
 }
+#endif  // HAL_GCS_ENABLED
 
 bool AP_Logger_Backend::Write_Mission_Cmd(const AP_Mission &mission,
                                               const AP_Mission::Mission_Command &cmd)

@@ -1453,6 +1453,7 @@ uint16_t AP_GPS::gps_yaw_cdeg(uint8_t instance) const
     return yaw_cd;
 }
 
+#if HAL_GCS_ENABLED
 void AP_GPS::send_mavlink_gps_raw(mavlink_channel_t chan)
 {
     const Location &loc = location(0);
@@ -1540,7 +1541,7 @@ void AP_GPS::send_mavlink_gps_rtk(mavlink_channel_t chan, uint8_t inst)
         drivers[inst]->send_mavlink_gps_rtk(chan);
     }
 }
-#endif
+#endif  // HAL_GCS_ENABLED
 
 bool AP_GPS::first_unconfigured_gps(uint8_t &instance) const
 {
