@@ -204,7 +204,7 @@ void PB_WateringSystem::handle_readbuffer_version_request(char *gpio_arguments)
 
 void PB_WateringSystem::handle_readbuffer_serial_number_request(char *gpio_arguments)
 {
-    send_message('S', "%u", 2);  // parameter?
+    send_message('S', "%u", 3);  // parameter?
 }
 
 void PB_WateringSystem::handle_readbuffer_reset_request(char *gpio_arguments)
