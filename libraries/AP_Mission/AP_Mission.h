@@ -589,6 +589,14 @@ public:
         return _last_change_time_ms;
     }
 
+    // Set the mission index to the first JUMP_TAG with this tag.
+    // Returns true on success, else false if no appropriate JUMP_TAG match can be found or if setting the index failed
+    bool jump_to_tag(const uint16_t tag);
+
+    // find the first JUMP_TAG with this tag and return its index.
+    // Returns 0 if no appropriate JUMP_TAG match can be found.
+    uint16_t get_index_of_jump_tag(const uint16_t tag) const;
+
     // find the nearest landing sequence starting point (DO_LAND_START) and
     // return its index.  Returns 0 if no appropriate DO_LAND_START point can
     // be found.
