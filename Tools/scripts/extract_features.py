@@ -208,7 +208,7 @@ class ExtractFeatures(object):
         while True:
             # read all of stderr:
             while True:
-                (rin, _, _) = select.select([p.stderr.fileno()], [], [], 1)
+                (rin, _, _) = select.select([p.stderr.fileno()], [], [], 0)
                 if p.stderr.fileno() not in rin:
                     break
                 new = p.stderr.read()
@@ -218,6 +218,10 @@ class ExtractFeatures(object):
 
             x = p.stdout.readline()
             if len(x) == 0:
+                (rin, _, _) = select.select([p.stderr.fileno()], [], [], 0)
+                if p.stderr.fileno() in rin:
+                    stderr += p.stderr.read()
+
                 returncode = os.waitpid(p.pid, 0)
                 if returncode:
                     break
