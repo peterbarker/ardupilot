@@ -444,6 +444,7 @@ void NavEKF3_core::setTerrainHgtStable(bool val)
     terrainHgtStable = val;
 }
 
+#if EK3_FEATURE_OPTFLOW_FUSION
 // Detect takeoff for optical flow navigation
 void NavEKF3_core::detectOptFlowTakeoff(void)
 {
@@ -461,4 +462,4 @@ void NavEKF3_core::detectOptFlowTakeoff(void)
         takeOffDetected = false;
     }
 }
-
+#endif  // EK3_FEATURE_OPTFLOW_FUSION

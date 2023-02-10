@@ -8,6 +8,7 @@
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_Beacon/AP_Beacon_config.h>
 #include <AP_AHRS/AP_AHRS_config.h>
+#include <AP_OpticalFlow/AP_OpticalFlow_config.h>
 
 // define for when to include all features
 #define EK3_FEATURE_ALL APM_BUILD_TYPE(APM_BUILD_AP_DAL_Standalone) || APM_BUILD_TYPE(APM_BUILD_Replay)
@@ -34,6 +35,11 @@
 
 #ifndef EK3_FEATURE_POSITION_RESET
 #define EK3_FEATURE_POSITION_RESET EK3_FEATURE_ALL || AP_AHRS_POSITION_RESET_ENABLED
+#endif
+
+// Flow Fusion if Flow data available
+#ifndef EK3_FEATURE_OPTFLOW_FUSION
+#define EK3_FEATURE_OPTFLOW_FUSION AP_OPTICALFLOW_ENABLED
 #endif
 
 // rangefinder measurements if available

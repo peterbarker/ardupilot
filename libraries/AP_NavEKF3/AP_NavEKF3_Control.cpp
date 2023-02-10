@@ -268,7 +268,11 @@ void NavEKF3_core::setAidingMode()
             // GPS aiding is the preferred option unless excluded by the user
             if (readyToUseGPS() || readyToUseRangeBeacon() || readyToUseExtNav()) {
                 PV_AidingMode = AID_ABSOLUTE;
-            } else if (readyToUseOptFlow() || readyToUseBodyOdm()) {
+            } else if (
+#if EK3_FEATURE_OPTFLOW_FUSION
+                readyToUseOptFlow() ||
+#endif
+                readyToUseBodyOdm()) {
                 PV_AidingMode = AID_RELATIVE;
             }
             break;
@@ -402,11 +406,14 @@ void NavEKF3_core::setAidingMode()
         case AID_RELATIVE:
             // We are doing relative position navigation where velocity errors are constrained, but position drift will occur
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 IMU%u started relative aiding",(unsigned)imu_index);
+#if EK3_FEATURE_OPTFLOW_FUSION
             if (readyToUseOptFlow()) {
                 // Reset time stamps
                 flowValidMeaTime_ms = imuSampleTime_ms;
                 prevFlowFuseTime_ms = imuSampleTime_ms;
-            } else if (readyToUseBodyOdm()) {
+            } else
+#endif
+                if (readyToUseBodyOdm()) {
                  // Reset time stamps
                 lastbodyVelPassTime_ms = imuSampleTime_ms;
                 prevBodyVelFuseTime_ms = imuSampleTime_ms;
@@ -500,6 +507,7 @@ bool NavEKF3_core::useRngFinder(void) const
     return true;
 }
 
+#if EK3_FEATURE_OPTFLOW_FUSION
 // return true if the filter is ready to start using optical flow measurements
 bool NavEKF3_core::readyToUseOptFlow(void) const
 {
@@ -515,6 +523,7 @@ bool NavEKF3_core::readyToUseOptFlow(void) const
     // We need stable roll/pitch angles and gyro bias estimates but do not need the yaw angle aligned to use optical flow
     return (imuSampleTime_ms - flowMeaTime_ms < 200) && tiltAlignComplete && delAngBiasLearned;
 }
+#endif  // EK3_FEATURE_OPTFLOW_FUSION
 
 // return true if the filter is ready to start using body frame odometry measurements
 bool NavEKF3_core::readyToUseBodyOdm(void) const
