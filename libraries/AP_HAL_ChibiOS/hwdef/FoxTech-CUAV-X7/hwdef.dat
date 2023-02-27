@@ -1,0 +1,3 @@
+include ../CUAV-X7/hwdef.dat
+
+define AP_GENERATOR_RICHENPOWER_ENABLED 1
