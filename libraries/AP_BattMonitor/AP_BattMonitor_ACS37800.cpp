@@ -31,7 +31,7 @@ typedef struct
   } data;
 } acs378002a_t;
 
-#define RESIST_MULT 203.5
+#define RESIST_MULT 202.5
 
 #define REG_ACCESS_CODE 0x2F // access_code
 #define CUSTOMER_CODE 0x4F70656E
