@@ -10,7 +10,7 @@ FLASH_BOOTLOADER_LOAD_KB 26
 APP_START_OFFSET_KB 4
 
 # board ID for firmware load
-APJ_BOARD_ID 1101
+APJ_BOARD_ID 1099
 
 # setup build for a peripheral firmware
 env AP_PERIPH 1
