@@ -24,6 +24,7 @@
 #include "AP_NavEKF/EKFGSF_yaw.h"
 #include <AP_AHRS/AP_AHRS.h>
 #include <GCS_MAVLink/GCS.h>
+#include <AP_Logger/AP_Logger.h>
 
 EKFGSF_yaw::EKFGSF_yaw() {};
 
@@ -231,6 +232,10 @@ void EKFGSF_yaw::predictAHRS(const uint8_t mdl_idx)
 
         // sanity check
         if (AHRS[mdl_idx].gyro_bias.is_nan()) {
+#if HAL_LOGGING_ENABLED
+            AP::logger().Write_Error(LogErrorSubsystem::EKF,
+                                     LogErrorCode::GSFYAW_NAN_GYRO_BIAS_RESET);
+#endif
             AHRS[mdl_idx].gyro_bias.zero();
         }
 
