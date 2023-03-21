@@ -131,7 +131,8 @@ enum class LogErrorSubsystem : uint8_t {
     PILOT_INPUT = 28,
     FAILSAFE_VIBE = 29,
     INTERNAL_ERROR = 30,
-    FAILSAFE_DEADRECKON = 31
+    FAILSAFE_DEADRECKON = 31,
+    EKF = 32,
 };
 
 // bizarrely this enumeration has lots of duplicate values, offering
@@ -175,6 +176,8 @@ enum class LogErrorCode : uint8_t {
     BAD_DEPTH = 3, // sub-only
 // GPS specific error codes
     GPS_GLITCH = 2,
+// EKF specific error codes
+    GSFYAW_NAN_GYRO_BIAS_RESET,
 };
 
 class AP_Logger
