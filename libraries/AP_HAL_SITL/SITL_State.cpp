@@ -417,6 +417,12 @@ SITL::SerialDevice *SITL_State::create_serial_sim(const char *name, const char *
         }
         lord = new SITL::LORD();
         return lord;
+    } else if (streq(name, "AdNav")) {
+        if (adnav != nullptr) {
+            AP_HAL::panic("Only one AdNav at a time");
+        }
+        adnav = new SITL::AdNav();
+        return adnav; 
 #if HAL_SIM_AIS_ENABLED
     } else if (streq(name, "AIS")) {
         if (ais != nullptr) {
@@ -687,6 +693,10 @@ void SITL_State::_fdm_input_local(void)
 
     if (lord != nullptr) {
         lord->update();
+    }
+
+    if (adnav != nullptr) {
+        adnav->update();
     }
 
 #if HAL_SIM_AIS_ENABLED

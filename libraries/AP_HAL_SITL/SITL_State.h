@@ -46,6 +46,7 @@
 #include <SITL/SIM_RF_GYUS42v2.h>
 #include <SITL/SIM_VectorNav.h>
 #include <SITL/SIM_LORD.h>
+#include <SITL/SIM_AdNav.h>
 #include <SITL/SIM_AIS.h>
 #include <SITL/SIM_GPS.h>
 
@@ -273,6 +274,9 @@ private:
 
     // simulated LORD Microstrain system
     SITL::LORD *lord;
+
+    // simulated Advanced Navigation system
+    SITL::AdNav *adnav;
 
 #if HAL_SIM_JSON_MASTER_ENABLED
     // Ride along instances via JSON SITL backend
