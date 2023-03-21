@@ -19,6 +19,7 @@
 #include "AP_ExternalAHRS.h"
 #include "AP_ExternalAHRS_VectorNav.h"
 #include "AP_ExternalAHRS_LORD.h"
+#include "AP_ExternalAHRS_AdvancedNavigation.h"
 
 #if HAL_EXTERNAL_AHRS_ENABLED
 
@@ -95,6 +96,9 @@ void AP_ExternalAHRS::init(void)
         break;
     case DevType::LORD:
         backend = new AP_ExternalAHRS_LORD(this, state);
+        break;
+    case DevType::AdNav:
+        backend = new AP_ExternalAHRS_AdvancedNavigation(this, state);
         break;
     default:
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Unsupported ExternalAHRS type %u", unsigned(devtype));
