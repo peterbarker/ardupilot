@@ -266,6 +266,11 @@
 #define AP_BATT_MONITOR_BATTERY_CAPACITY 0
 #endif
 
+// rangefinder is disabled by default:
+#ifndef AP_RANGEFINDER_ENABLED
+#define AP_RANGEFINDER_ENABLED 0
+#endif
+
 #ifndef RANGEFINDER_MAX_INSTANCES
 #define RANGEFINDER_MAX_INSTANCES 1
 #endif
