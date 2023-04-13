@@ -218,7 +218,7 @@ void AP_Periph_FW::init()
 
 #endif
 
-#ifdef HAL_PERIPH_ENABLE_RANGEFINDER
+#if AP_RANGEFINDER_ENABLED
     if (rangefinder.get_type(0) != RangeFinder::Type::NONE) {
         if (g.rangefinder_port >= 0) {
             // init uart for serial rangefinders
@@ -410,7 +410,7 @@ void AP_Periph_FW::update()
 #ifdef HAL_PERIPH_ENABLE_BARO
         hal.serial(0)->printf("BARO H=%u P=%.2f T=%.2f\n", baro.healthy(), baro.get_pressure(), baro.get_temperature());
 #endif
-#ifdef HAL_PERIPH_ENABLE_RANGEFINDER
+#if AP_RANGEFINDER_ENABLED
         hal.serial(0)->printf("RNG %u %ucm\n", rangefinder.num_sensors(), rangefinder.distance_cm_orient(ROTATION_NONE));
 #endif
         hal.scheduler->delay(1);

@@ -118,7 +118,7 @@ public:
     AP_Int8 flash_bootloader;
 #endif
 
-#ifdef HAL_PERIPH_ENABLE_RANGEFINDER
+#if AP_RANGEFINDER_ENABLED
     AP_Int32 rangefinder_baud;
     AP_Int8 rangefinder_port;
     AP_Int16 rangefinder_max_rate;

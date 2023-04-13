@@ -277,7 +277,7 @@ public:
     AP_Airspeed airspeed;
 #endif
 
-#ifdef HAL_PERIPH_ENABLE_RANGEFINDER
+#if AP_RANGEFINDER_ENABLED
     RangeFinder rangefinder;
     uint32_t last_sample_ms;
 #endif
