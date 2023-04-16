@@ -883,6 +883,7 @@ class sitl_periph(sitl):
             HAL_RALLY_ENABLED = 0,
             HAL_SUPPORT_RCOUT_SERIAL = 0,
             AP_TERRAIN_AVAILABLE = 0,
+            AP_RANGEFINDER_ENABLED = 0,
         )
 
         try:
