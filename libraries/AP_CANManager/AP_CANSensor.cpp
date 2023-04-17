@@ -33,7 +33,7 @@ CANSensor::CANSensor(const char *driver_name, uint16_t stack_size) :
 
 void CANSensor::register_driver(AP_CAN::Protocol dtype)
 {
-#if HAL_CANMANAGER_ENABLED
+#if AP_CANMANAGER_ENABLED
     if (!AP::can().register_driver(dtype, this)) {
         if (AP::can().register_11bit_driver(dtype, this, _driver_index)) {
             is_aux_11bit_driver = true;

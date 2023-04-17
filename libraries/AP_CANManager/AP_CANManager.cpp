@@ -20,7 +20,7 @@
 #include <AP_Common/AP_Common.h>
 #include "AP_CANManager.h"
 
-#if HAL_CANMANAGER_ENABLED
+#if AP_CANMANAGER_ENABLED
 
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>

@@ -6,7 +6,7 @@
 #include <AP_Math/AP_Math.h>
 #include <AP_Notify/AP_Notify.h>
 
-#if HAL_CANMANAGER_ENABLED
+#if AP_CANMANAGER_ENABLED
 #include <AP_DroneCAN/AP_DroneCAN.h>
 #include <AP_CANManager/AP_CANManager.h>
 #endif

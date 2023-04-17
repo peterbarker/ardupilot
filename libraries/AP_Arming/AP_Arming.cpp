@@ -1309,7 +1309,7 @@ bool AP_Arming::proximity_checks(bool report) const
 }
 #endif  // HAL_PROXIMITY_ENABLED
 
-#if HAL_MAX_CAN_PROTOCOL_DRIVERS && HAL_CANMANAGER_ENABLED
+#if HAL_MAX_CAN_PROTOCOL_DRIVERS && AP_CANMANAGER_ENABLED
 bool AP_Arming::can_checks(bool report)
 {
     if (check_enabled(Check::SYSTEM)) {

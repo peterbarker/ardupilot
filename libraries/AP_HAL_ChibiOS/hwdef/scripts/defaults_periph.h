@@ -491,7 +491,7 @@
 #endif
 
 // no CAN manager in AP_Periph:
-#define HAL_CANMANAGER_ENABLED 0
+#define AP_CANMANAGER_ENABLED 0
 
 // SLCAN is off by default:
 #ifndef AP_CAN_SLCAN_ENABLED

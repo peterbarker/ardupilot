@@ -31,7 +31,7 @@
 #include <AP_InternalError/AP_InternalError.h>
 #include "sdcard.h"
 #include "shared_dma.h"
-#if defined(HAL_PWM_ALARM) || HAL_DSHOT_ALARM_ENABLED || HAL_CANMANAGER_ENABLED || HAL_USE_PWM == TRUE
+#if defined(HAL_PWM_ALARM) || HAL_DSHOT_ALARM_ENABLED || AP_CANMANAGER_ENABLED || HAL_USE_PWM == TRUE
 #include <AP_Notify/AP_Notify.h>
 #endif
 #if HAL_ENABLE_SAVE_PERSISTENT_PARAMS
@@ -126,7 +126,7 @@ bool Util::toneAlarm_init(uint8_t types)
 #endif
     _toneAlarm_types = types;
 
-#if HAL_USE_PWM != TRUE && !HAL_DSHOT_ALARM_ENABLED && !HAL_CANMANAGER_ENABLED
+#if HAL_USE_PWM != TRUE && !HAL_DSHOT_ALARM_ENABLED && !AP_CANMANAGER_ENABLED
     // Nothing to do
     return false;
 #else
