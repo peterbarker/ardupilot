@@ -3,6 +3,10 @@
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_Logger/AP_Logger_config.h>
 
+#ifndef AP_CANMANAGER_ENABLED
+#define AP_CANMANAGER_ENABLED (HAL_MAX_CAN_PROTOCOL_DRIVERS > 0)
+#endif
+
 #ifndef AP_CAN_SLCAN_ENABLED
 #define AP_CAN_SLCAN_ENABLED HAL_MAX_CAN_PROTOCOL_DRIVERS
 #endif
