@@ -2955,6 +2955,34 @@ class AutoTestPlane(AutoTest):
         '''Test LORD Microstrain EAHRS support'''
         self.fly_external_AHRS("LORD", 2, "ap1.txt")
 
+    def AdvancedNavigationEAHRS(self):
+        '''Test AdvancedNavigation EAHRS support'''
+        sim = "AdNav"
+        eahrs_type = 3
+        mission = "ap1.txt"
+
+        # this body swiped from fly_external_AHRS; factor back in at some stage
+        self.customise_SITL_commandline(["--uartE=sim:%s" % sim])
+
+        self.set_parameters({
+            "EAHRS_TYPE": eahrs_type,
+            "SERIAL4_PROTOCOL": 36,
+            "SERIAL4_BAUD": 230400,
+            #            "GPS_TYPE": 21,
+            "AHRS_EKF_TYPE": 11,
+            #            "INS_GYR_CAL": 1,
+        })
+        self.reboot_sitl()
+        self.delay_sim_time(5)
+        #        self.progress("Running accelcal")
+        #        self.run_cmd(mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+        #                     0, 0, 0, 0, 4, 0, 0,
+        #                     timeout=5)
+
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.fly_mission(mission)
+
     def get_accelvec(self, m):
         return Vector3(m.xacc, m.yacc, m.zacc) * 0.001 * 9.81
 
@@ -4568,6 +4596,7 @@ class AutoTestPlane(AutoTest):
             self.TerrainLoiter,
             self.VectorNavEAHRS,
             self.LordEAHRS,
+            self.AdvancedNavigationEAHRS,
             self.Deadreckoning,
             self.DeadreckoningNoAirSpeed,
             self.EKFlaneswitch,
