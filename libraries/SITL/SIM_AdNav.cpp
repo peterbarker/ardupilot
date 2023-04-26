@@ -202,7 +202,10 @@ void AdNav::send_raw_sensors_pkt(){
     raw_sensors.magnetometers[1] = fdm.bodyMagField[1];
     raw_sensors.magnetometers[2] = fdm.bodyMagField[2];
     raw_sensors.imu_temperature = 25; //fixed
-    raw_sensors.pressure = 99500; // 500 ft fixed
+
+    float sigma, delta, theta;
+    AP_Baro::SimpleAtmosphere(fdm.altitude * 0.001f, sigma, delta, theta);
+    raw_sensors.pressure = SSL_AIR_PRESSURE * delta * 0.001 + rand_float() * 0.01; // 500 ft fixed
     raw_sensors.pressure_temperature = 25; // fixed
 
     send_packet(encode_raw_sensors_packet(&raw_sensors));
