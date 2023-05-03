@@ -59,6 +59,7 @@
 #include "AP_RangeFinder_NRA24_CAN.h"
 #include "AP_RangeFinder_TOFSenseF_I2C.h"
 #include "AP_RangeFinder_JRE_Serial.h"
+#include "AP_RangeFinder_Ainstein_LR_D1.h"
 
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_Logger/AP_Logger.h>
@@ -560,6 +561,11 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
 #if AP_RANGEFINDER_NRA24_CAN_ENABLED
     case Type::NRA24_CAN:
         _add_backend(new AP_RangeFinder_NRA24_CAN(state[instance], params[instance]), instance);
+        break;
+#endif
+#if AP_RANGEFINDER_AINSTEIN_LR_D1_ENABLED
+    case Type::Ainstein_LR_D1:
+        serial_create_fn = AP_RangeFinder_Ainstein_LR_D1::create;
         break;
 #endif
 #if AP_RANGEFINDER_TOFSENSEF_I2C_ENABLED
