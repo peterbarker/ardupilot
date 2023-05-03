@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AP_HAL_SITL_config.h"
+
 #include <AP_HAL/AP_HAL.h>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -13,6 +15,7 @@
 #include <SITL/SIM_ADSB_Sagetech_MXS.h>
 #include <SITL/SIM_EFI_Hirth.h>
 #include <SITL/SIM_Vicon.h>
+#include <SITL/SIM_RF_Ainstein_LR_D1.h>
 #include <SITL/SIM_RF_Benewake_TF02.h>
 #include <SITL/SIM_RF_Benewake_TF03.h>
 #include <SITL/SIM_RF_Benewake_TFmini.h>
@@ -124,6 +127,10 @@ public:
     SITL::Vicon *vicon;
 #endif
 
+#if AP_SIM_RF_AINSTEIN_LR_D1_ENABLED
+    // simulated Ainstein LR-D1 rangefinder:
+    SITL::RF_Ainstein_LR_D1 *ainsteinlrd1;
+#endif
     // simulated Benewake tf02 rangefinder:
     SITL::RF_Benewake_TF02 *benewake_tf02;
     // simulated Benewake tf03 rangefinder:
