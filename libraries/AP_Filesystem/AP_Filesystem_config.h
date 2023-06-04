@@ -80,3 +80,8 @@
 // last, for HAL_LOGGING_FILESYSTEM_ENABLED: AP_Logger_config.h includes this
 // header, so nothing above may test that value, only name it
 #include <AP_Logger/AP_Logger_config.h>
+
+#ifndef AP_FILESYSTEM_LOCATIONDB_ENABLED
+#include <AP_LocationDB/AP_LocationDB_config.h>
+#define AP_FILESYSTEM_LOCATIONDB_ENABLED AP_LOCATIONDB_ENABLED
+#endif  // AP_FILESYSTEM_LOCATIONDB_ENABLED

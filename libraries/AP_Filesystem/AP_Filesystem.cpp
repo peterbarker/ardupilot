@@ -81,6 +81,11 @@ static_assert(sizeof(HAL_BOARD_LOG_DIRECTORY) + 1 + 238 + 1 + 255 <= AP_FILESYST
               "AP_FILESYSTEM_ALIAS_PATH_MAX is too small for this board's log directory");
 #endif  // AP_FILESYSTEM_MAVLOG_ENABLED
 
+#if AP_FILESYSTEM_LOCATIONDB_ENABLED
+#include "AP_Filesystem_LocationDB.h"
+static AP_Filesystem_LocationDB fs_locationdb;
+#endif  // AP_FILESYSTEM_LOCATIONDB_ENABLED
+
 /*
   mapping from filesystem prefix to backend
  */
@@ -101,6 +106,9 @@ const AP_Filesystem::Backend AP_Filesystem::backends[] = {
 #if AP_FILESYSTEM_MAVLOG_ENABLED
     // an alias for the log directory on the local filesystem
     { "@MAV_LOG", fs_local, mavlog_root },
+#endif
+#if AP_FILESYSTEM_LOCATIONDB_ENABLED
+    { "@LOCATIONDB/", fs_locationdb},
 #endif
 };
 
