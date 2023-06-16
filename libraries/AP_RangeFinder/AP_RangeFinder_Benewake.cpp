@@ -63,6 +63,31 @@ extern const AP_HAL::HAL& hal;
 // TF350: 0 ~ 3500, reliable if >=40 ~ 1200.  if high reflectivity object will be 1500
 
 // distance returned in reading_m, signal_ok is set to true if sensor reports a strong signal
+
+void AP_RangeFinder_Benewake::move_preamble_in_buffer(uint8_t search_start_pos)
+{
+    uint8_t i;
+    for (i=search_start_pos; i<linebuf_len; i++) {
+        if ((uint8_t)u.linebuf[i] == BENEWAKE_FRAME_HEADER) {
+            break;
+        }
+    }
+    if (i == 0) {
+        return;
+    }
+    memmove(u.linebuf, &u.linebuf[i], linebuf_len-i);
+    linebuf_len -= i;
+}
+
+bool AP_RangeFinder_Benewake::MsgUnion::valid_checksum() const
+{
+    uint8_t ret = 0;
+    for (uint8_t i=0; i<8; i++) {
+        ret += linebuf[i];
+    }
+    return ret;
+}
+
 bool AP_RangeFinder_Benewake::get_reading(float &reading_m)
 {
     if (uart == nullptr) {
@@ -73,66 +98,59 @@ bool AP_RangeFinder_Benewake::get_reading(float &reading_m)
     uint16_t count = 0;
     uint16_t count_out_of_range = 0;
 
-    // read any available lines from the lidar
-    for (auto j=0; j<8192; j++) {
-        uint8_t c;
-        if (!uart->read(c)) {
+    uint32_t nbytes = MIN(uart->available(), 4096);
+
+    while (nbytes > 0) {
+        const auto bytes_to_read = MIN(nbytes, ARRAY_SIZE(u.linebuf)-linebuf_len);
+        const uint32_t nread = uart->read(&u.linebuf[linebuf_len], bytes_to_read);
+        if (nread == 0) {
             break;
         }
-        // if buffer is empty and this byte is 0x59, add to buffer
-        if (linebuf_len == 0) {
-            if (c == BENEWAKE_FRAME_HEADER) {
-                linebuf[linebuf_len++] = c;
-            }
-        } else if (linebuf_len == 1) {
-            // if buffer has 1 element and this byte is 0x59, add it to buffer
-            // if not clear the buffer
-            if (c == BENEWAKE_FRAME_HEADER) {
-                linebuf[linebuf_len++] = c;
-            } else {
-                linebuf_len = 0;
-            }
-        } else {
-            // add character to buffer
-            linebuf[linebuf_len++] = c;
-            // if buffer now has 9 items try to decode it
-            if (linebuf_len == BENEWAKE_FRAME_LENGTH) {
-                // calculate checksum
-                uint8_t checksum = 0;
-                for (uint8_t i=0; i<BENEWAKE_FRAME_LENGTH-1; i++) {
-                    checksum += linebuf[i];
-                }
-                // if checksum matches extract contents
-                if (checksum == linebuf[BENEWAKE_FRAME_LENGTH-1]) {
-                    // calculate distance
-                    uint16_t dist = ((uint16_t)linebuf[3] << 8) | linebuf[2];
-                    if (dist >= BENEWAKE_DIST_MAX_CM || dist == uint16_t(model_dist_max_cm())) {
-                        // this reading is out of range. Note that we
-                        // consider getting exactly the model dist max
-                        // is out of range. This fixes an issue with
-                        // the TF03 which can give exactly 18000 cm
-                        // when out of range
-                        count_out_of_range++;
-                    } else if (!has_signal_byte()) {
-                        // no signal byte so can immediately add distance to sum
-                        sum_cm += dist;
-                        count++;
-                    } else {
-                        // TF02 provides signal reliability (good = 7 or 8)
-                        if (linebuf[6] >= 7) {
-                            // add distance to sum
-                            sum_cm += dist;
-                            count++;
-                        } else {
-                            // this reading is out of range
-                            count_out_of_range++;
-                        }
-                    }
-                }
-                // clear buffer
-                linebuf_len = 0;
+        nbytes -= nread;
+        linebuf_len += nread;
+
+        move_preamble_in_buffer(0);
+
+        if (linebuf_len < BENEWAKE_FRAME_LENGTH) {
+            continue;
+        }
+
+        if (u.linebuf[1] != BENEWAKE_FRAME_HEADER) {
+            move_preamble_in_buffer(1);
+            continue;
+        }
+
+        if (!u.valid_checksum()) {
+            move_preamble_in_buffer(1);
+            continue;
+        }
+
+        // calculate distance
+        const uint16_t dist = u.dist_h << 8 | u.dist_l;
+        if (dist >= BENEWAKE_DIST_MAX_CM || dist == uint16_t(model_dist_max_cm())) {
+            // this reading is out of range. Note that we
+            // consider getting exactly the model dist max
+            // is out of range. This fixes an issue with
+            // the TF03 which can give exactly 18000 cm
+            // when out of range
+            count_out_of_range++;
+            continue;
+        }
+        if (has_signal_byte()) {
+            // TF02 provides signal reliability (good = 7 or 8)
+            if (u.sig_or_mode < 7) {
+                // this reading is out of range
+                count_out_of_range++;
+                continue;
             }
         }
+        // add distance to sum
+        sum_cm += dist;
+        count++;
+
+        // clear buffer - this only works because
+        // ARRAY_SIZE(LINEBUF_LEN) is the length of a frame
+        linebuf_len = 0;
     }
 
     if (count > 0) {
