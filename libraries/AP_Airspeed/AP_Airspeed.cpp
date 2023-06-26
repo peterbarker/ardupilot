@@ -44,6 +44,7 @@
 #include <utility>
 #include "AP_Airspeed_MS4525.h"
 #include "AP_Airspeed_MS5525.h"
+#include "AP_Airspeed_ND.h"
 #include "AP_Airspeed_SDP3X.h"
 #include "AP_Airspeed_DLVR.h"
 #include "AP_Airspeed_analog.h"
@@ -383,6 +384,11 @@ void AP_Airspeed::allocate()
             sensor[i] = new AP_Airspeed_MS5525(*this, i, AP_Airspeed_MS5525::MS5525_ADDR_2);
 #endif
             break;
+#if AP_AIRSPEED_ND_ENABLED
+        case TYPE_I2C_ND:
+            sensor[i] = new AP_Airspeed_ND(*this, i); //PENDING
+            break;
+#endif
         case TYPE_I2C_SDP3X:
 #if AP_AIRSPEED_SDP3X_ENABLED
             sensor[i] = new AP_Airspeed_SDP3X(*this, i);
