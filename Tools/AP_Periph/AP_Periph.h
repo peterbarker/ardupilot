@@ -365,6 +365,11 @@ public:
 #if HAL_GCS_ENABLED
     GCS_Periph _gcs;
 #endif
+
+#if AP_INERTIALSENSOR_ENABLED
+    AP_InertialSensor ins;
+#endif
+
     // setup the var_info table
     AP_Param param_loader{var_info};
 
