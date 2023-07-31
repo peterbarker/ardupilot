@@ -142,7 +142,70 @@ void Copter::set_throttle_and_failsafe(uint16_t throttle_pwm)
     }
 
     //check for low throttle value
-    if (throttle_pwm < (uint16_t)g.failsafe_throttle_value) {
+    bool rc_input_has_failsafe_values = throttle_pwm < (uint16_t)g.failsafe_throttle_value;
+
+    // Try to account for HereLink getting stuck passing bad inputs
+    // into ArduPilot.  If both roll and pitch go to a min/max
+    // then assume something is wrong:
+    if (channel_roll != nullptr && channel_pitch != nullptr) {
+        const auto roll_in = channel_roll->get_radio_in();
+        const auto pitch_in = channel_pitch->get_radio_in();
+        if ((roll_in <= channel_roll->get_radio_min() ||
+             roll_in >= channel_roll->get_radio_max()) &&
+            (pitch_in <= channel_pitch->get_radio_min() ||
+             pitch_in >= channel_pitch->get_radio_max())) {
+            rc_input_has_failsafe_values = true;
+        }
+    }
+    // if any of roll/pitch goes to extreme for more than <n> milliseconds
+    // then assume something has gone wrong:
+    const struct {
+        RC_Channel *channel;
+    } channels_to_check[] {
+        { channel_roll },
+        { channel_pitch }
+    };
+    static uint32_t extreme_seen_ms[ARRAY_SIZE(channels_to_check)];
+    static uint32_t last_setting_failsafe_report_ms;
+    uint8_t ch_offset = 0;
+    const uint32_t now_ms = AP_HAL::millis();
+    for (const auto &to_check : channels_to_check) {
+        const auto channel = to_check.channel;
+        if (channel == nullptr) {
+            ch_offset++;
+            continue;
+        }
+        if (channel->get_radio_in() > channel->get_radio_min() &&
+            channel->get_radio_in() < channel->get_radio_max()) {
+            // good value seen, reset timer:
+            extreme_seen_ms[ch_offset] = 0;
+            ch_offset++;
+            continue;
+        }
+        if (extreme_seen_ms[ch_offset] == 0) {
+            // first time zero seen; start timer:
+            extreme_seen_ms[ch_offset] = now_ms;
+            ch_offset++;
+            continue;
+        }
+        const uint32_t timeout_ms = 1000;
+        if (now_ms - extreme_seen_ms[ch_offset] < timeout_ms) {
+            // timer has not yet expired
+            ch_offset++;
+            continue;
+        }
+        // we've seen a bad input on a channel for more than <n> ms.
+        // Assume RC is bad:
+        rc_input_has_failsafe_values = true;
+        ch_offset++;
+
+        if (now_ms - last_setting_failsafe_report_ms > 5000) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "HereLink failsafe");
+            last_setting_failsafe_report_ms = now_ms;
+        }
+    }
+
+    if (rc_input_has_failsafe_values) {
 
         // if we are already in failsafe or motors not armed pass through throttle and exit
         if (failsafe.radio || !(ap.rc_receiver_present || motors->armed())) {
