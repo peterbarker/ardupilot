@@ -43,106 +43,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # and this is the default box that will be booted if no name is specified
   config.vm.box = "ubuntu/bionic64"
 
-  # LTS, EOL April, 2019:
-  config.vm.define "trusty32", autostart: false do |trusty32|
-    config.vm.box = "ubuntu/trusty32"
-    config.vm.provision "trusty32", type: "shell", path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (trusty32)"
-    end
-  end
-
-  # 14.04.5 LTS, EOL April, 2019:
-  config.vm.define "trusty64", autostart: false do |trusty64|
-    config.vm.box = "ubuntu/trusty64"
-    config.vm.provision "trusty64", type: "shell", path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (trusty64)"
-    end
-  end
-
-  # LTS, EOL April 2021
-  # this VM is useful for running valgrind on!
-  config.vm.define "xenial32", autostart: false do |xenial32|
-    config.vm.box = "ubuntu/xenial32"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (xenial32)"
-    end
-  end
-  config.vm.define "xenial64", autostart: false do |xenial64|
-    config.vm.box = "ubuntu/xenial64"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (xenial64)"
-    end
-  end
-
-  # NO LONGER AVAILABLE FOR DOWNLOAD, EOL January 2018
-  # EOL January 2018
-  # Only kept around for those few dev's who have already got this image and continue to use it.
-  config.vm.define "zesty32", autostart: false do |zesty32|
-    config.vm.box = "ubuntu/zesty32"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (zesty32)"
-    end
-  end
-
-  # 17.10, EOL July 2018
-  # Only kept around for those few dev's who have already got this image and continue to use it; not available for download
-  config.vm.define "artful32", autostart: false do |artful32|
-    config.vm.box = "ubuntu/artful32"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (artful32)"
-    end
-  end
-
-  # 18.04 LTS
-  config.vm.define "bionic32", autostart: false do |bionic32|
-    config.vm.box = "ubuntu/bionic32"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (bionic32)"
-    end
-  end
-
   # 18.04 LTS
   config.vm.define "bionic64", primary: true do |bionic64|
     config.vm.box = "ubuntu/bionic64"
     config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
     config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (bionic64)"
-    end
-  end
-
-
-  # 18.10
-  config.vm.define "cosmic32", autostart: false do |cosmic32|
-    config.vm.box = "ubuntu/cosmic32"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (cosmic32)"
-    end
-  end
-
-  # 18.10
-  config.vm.define "cosmic64", autostart: false do |cosmic64|
-    config.vm.box = "ubuntu/cosmic64"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (cosmic64)"
-    end
-  end
-
-  # 19.04 bleeding edge
-  config.vm.define "disco64", autostart: false do |disco64|
-    config.vm.box = "ubuntu/disco64"
-    config.vm.provision :shell, path: "Tools/vagrant/initvagrant.sh"
-    config.vm.provider "virtualbox" do |vb|
-      vb.name = "ArduPilot (disco64)"
-      vb.gui = true
+      vb.name = "Harris ArduPilot (bionic64)"
     end
   end
 
