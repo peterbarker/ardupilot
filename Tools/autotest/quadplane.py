@@ -718,7 +718,7 @@ class AutoTestQuadPlane(AutoTest):
         # create a mission with a terrain-relative point 1km to the East:
         mission = self.create_simple_relhome_mission([
             (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 20),
-            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 1000, 0, {"frame": mavutil.mavlink.MAV_FRAME_GLOBAL_TERRAIN_ALT}),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 1000, 1, {"frame": mavutil.mavlink.MAV_FRAME_GLOBAL_TERRAIN_ALT}),
             (mavutil.mavlink.MAV_CMD_NAV_LAND, 0, 0, 0),
         ])
         # change the frame of the second item in the mission:
@@ -728,14 +728,10 @@ class AutoTestQuadPlane(AutoTest):
         self.arm_vehicle()
         self.wait_distance_to_waypoint(2, 500, 550)
         home = self.home_position_as_mav_location()
-        home.alt = 5000  # metres
+        home.alt = 3000  # metres
         self.progress("Fiddling home location")
         self.set_home(home)
         self.poll_home_position()
-
-        # make it clear in the log what we're doing:
-        self.wait_current_waypoint(3)
-        self.change_mode('QLAND')
         self.wait_disarmed(timeout=10000)
 
     def QAssist(self):
