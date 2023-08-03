@@ -708,6 +708,36 @@ class AutoTestQuadPlane(AutoTest):
         '''In lockup Plane should copy RC inputs to RC outputs'''
         self.plane_CPUFailsafe()
 
+    def HomeAltChangeInTerrainMission(self):
+        '''ensure that if home is changed while we are heading towardsa
+        terrain-relative-waypoint alt is unaffected'''
+        self.install_terrain_handlers_context()
+        self.customise_SITL_commandline(
+            ["--home", "KalaupapaCliffs"]
+        )
+        # create a mission with a terrain-relative point 1km to the East:
+        mission = self.create_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 20),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 1000, 0, {"frame": mavutil.mavlink.MAV_FRAME_GLOBAL_TERRAIN_ALT}),
+            (mavutil.mavlink.MAV_CMD_NAV_LAND, 0, 0, 0),
+        ])
+        # change the frame of the second item in the mission:
+        self.check_mission_upload_download(mission)
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm(timeout=6000)
+        self.arm_vehicle()
+        self.wait_distance_to_waypoint(2, 500, 550)
+        home = self.home_position_as_mav_location()
+        home.alt = 5000  # metres
+        self.progress("Fiddling home location")
+        self.set_home(home)
+        self.poll_home_position()
+
+        # make it clear in the log what we're doing:
+        self.wait_current_waypoint(3)
+        self.change_mode('QLAND')
+        self.wait_disarmed(timeout=10000)
+
     def QAssist(self):
         '''QuadPlane Assist tests'''
         # find a motor peak
@@ -1231,6 +1261,7 @@ class AutoTestQuadPlane(AutoTest):
             self.Ship,
             self.MAV_CMD_NAV_LOITER_TO_ALT,
             self.LoiterAltQLand,
+            self.HomeAltChangeInTerrainMission,
             self.VTOLLandSpiral,
             self.VTOLQuicktune,
             self.RCDisableAirspeedUse,
