@@ -3827,7 +3827,12 @@ class AutoTest(ABC):
         items.extend(items_in)
         seq = 0
         ret = []
-        for (t, n, e, alt) in items:
+        for item in items:
+            opts = {}
+            try:
+                (t, n, e, alt, opts) = item
+            except ValueError:
+                (t, n, e, alt) = item
             lat = 0
             lng = 0
             if n != 0 or e != 0:
@@ -3838,6 +3843,8 @@ class AutoTest(ABC):
             frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
             if not self.ardupilot_stores_frame_for_cmd(t):
                 frame = mavutil.mavlink.MAV_FRAME_GLOBAL
+            if opts.get('frame', None) is not None:
+                frame = opts.get('frame')
             ret.append(self.mav.mav.mission_item_int_encode(
                 target_system,
                 target_component,
