@@ -965,6 +965,7 @@ class sitl_periph_universal(sitl_periph):
             AP_EXTENDED_ESC_TELEM_ENABLED = 1,
             AP_TERRAIN_AVAILABLE = 1,
             HAL_GYROFFT_ENABLED = 0,
+            AP_LOCATIONDB_ENABLED = 0,
         )
 
 class sitl_periph_gps(sitl_periph):
