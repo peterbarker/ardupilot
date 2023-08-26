@@ -100,6 +100,10 @@ void AP_Periph_FW::init()
 
     can_start();
 
+#ifdef HAL_PERIPH_ENABLE_EXTERNAL_AHRS
+    external_ahrs.init();
+#endif
+
 #ifdef HAL_PERIPH_ENABLE_NETWORKING
     networking.init();
 #endif
@@ -416,6 +420,10 @@ void AP_Periph_FW::update()
 
 #ifdef HAL_PERIPH_LISTEN_FOR_SERIAL_UART_REBOOT_CMD_PORT
         check_for_serial_reboot_cmd(HAL_PERIPH_LISTEN_FOR_SERIAL_UART_REBOOT_CMD_PORT);
+#endif
+
+#ifdef HAL_PERIPH_ENABLE_EXTERNAL_AHRS
+    external_ahrs.update();
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_RC_OUT

@@ -50,6 +50,9 @@ public:
 #if AP_EXTERNAL_AHRS_MICROSTRAIN_ENABLED
         MicroStrain = 2,
 #endif
+#if AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED
+        DroneCANSensorInjection = 17,
+#endif
     };
 
     static AP_ExternalAHRS *get_singleton(void) {
@@ -106,6 +109,10 @@ public:
     Vector3f get_accel(void);
 #if HAL_GCS_ENABLED
     void send_status_report(class GCS_MAVLINK &link) const;
+#endif
+
+#if AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED
+    void handle_dronecan_message(const class uavcan_equipment_gnss_Fix2 &req);
 #endif
 
     // update backend

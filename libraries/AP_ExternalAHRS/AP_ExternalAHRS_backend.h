@@ -45,7 +45,11 @@ public:
 
     // check for new data
     virtual void update() = 0;
-    
+
+#if AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED
+    virtual void handle_dronecan_message(const class uavcan_equipment_gnss_Fix2 &req) {}
+#endif
+
 protected:
     AP_ExternalAHRS::state_t &state;
     uint16_t get_rate(void) const;

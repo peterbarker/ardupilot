@@ -80,6 +80,7 @@ def build(bld):
                      'AP_SBusOut',
                      'AP_RobotisServo',
                      'AP_FETtecOneWire',
+                     'AP_ExternalAHRS',
                      ]
     bld.ap_stlib(
         name= 'AP_Periph_libs',

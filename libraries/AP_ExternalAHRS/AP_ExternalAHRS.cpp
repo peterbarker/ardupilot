@@ -24,6 +24,9 @@
 #include "AP_ExternalAHRS_backend.h"
 #include "AP_ExternalAHRS_VectorNav.h"
 #include "AP_ExternalAHRS_MicroStrain.h"
+#if AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED
+#include "AP_ExternalAHRS_DroneCANSensorInjection.h"
+#endif
 
 #include <GCS_MAVLink/GCS.h>
 
@@ -53,7 +56,7 @@ const AP_Param::GroupInfo AP_ExternalAHRS::var_info[] = {
     // @Param: _TYPE
     // @DisplayName: AHRS type
     // @Description: Type of AHRS device
-    // @Values: 0:None,1:VectorNav,2:MicroStrain
+    // @Values: 0:None,1:VectorNav,2:MicroStrain,17:DroneCANSensorInjection
     // @User: Standard
     AP_GROUPINFO_FLAGS("_TYPE", 1, AP_ExternalAHRS, devtype, HAL_EXTERNAL_AHRS_DEFAULT, AP_PARAM_FLAG_ENABLE),
 
@@ -101,6 +104,12 @@ void AP_ExternalAHRS::init(void)
 #if AP_EXTERNAL_AHRS_MICROSTRAIN_ENABLED
     case DevType::MicroStrain:
         backend = new AP_ExternalAHRS_MicroStrain(this, state);
+        break;
+    default:
+#endif
+#if AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED
+    case DevType::DroneCANSensorInjection:
+        backend = new AP_ExternalAHRS_DroneCANSensorInjection(this, state);
         break;
     default:
 #endif
@@ -244,6 +253,17 @@ const char* AP_ExternalAHRS::get_name() const
     }
     return nullptr;
 }
+
+#if AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED
+// handle incoming DroneCAN message
+void AP_ExternalAHRS::handle_dronecan_message(const class uavcan_equipment_gnss_Fix2 &req)
+{
+    if (backend == nullptr) {
+        return;
+    }
+    return backend->handle_dronecan_message(req);
+}
+#endif
 
 namespace AP {
 

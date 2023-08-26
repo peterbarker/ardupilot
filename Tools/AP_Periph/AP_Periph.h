@@ -12,6 +12,7 @@
 #include <AP_Airspeed/AP_Airspeed.h>
 #include <AP_RangeFinder/AP_RangeFinder.h>
 #include <AP_Proximity/AP_Proximity.h>
+#include <AP_ExternalAHRS/AP_ExternalAHRS.h>
 #include <AP_EFI/AP_EFI.h>
 #include <AP_KDECAN/AP_KDECAN.h>
 #include <AP_MSP/AP_MSP.h>
@@ -140,6 +141,10 @@ public:
 
     AP_SerialManager serial_manager;
 
+#ifdef HAL_PERIPH_ENABLE_EXTERNAL_AHRS
+    AP_ExternalAHRS external_ahrs;
+#endif
+
 #if AP_STATS_ENABLED
     AP_Stats node_stats;
 #endif
@@ -202,7 +207,12 @@ public:
     void send_msp_baro(void);
     void send_msp_airspeed(void);
 #endif
-    
+
+#ifdef HAL_PERIPH_ENABLE_GPS_FROM_GNSS_FIX2
+    struct {
+    } gnss_fix2_handling;
+#endif
+
 #ifdef HAL_PERIPH_ENABLE_ADSB
     void adsb_init();
     void adsb_update();

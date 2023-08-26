@@ -17,3 +17,10 @@
 #ifndef AP_EXTERNAL_AHRS_VECTORNAV_ENABLED
 #define AP_EXTERNAL_AHRS_VECTORNAV_ENABLED AP_EXTERNAL_AHRS_BACKEND_DEFAULT_ENABLED
 #endif
+
+// this is not really an ExternalAHRS backend, it's just a way to get
+// DroneCAN sensor data into our libraries to be processed by our
+// libraries as sensor data.
+#ifndef AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED
+#define AP_EXTERNAL_AHRS_DRONECAN_SENSOR_INJECTION_ENABLED 0
+#endif
