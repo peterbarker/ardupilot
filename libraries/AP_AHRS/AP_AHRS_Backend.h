@@ -302,7 +302,9 @@ public:
         return false;
     }
 
+#if HAL_GCS_ENABLED
     virtual void send_ekf_status_report(class GCS_MAVLINK &link) const = 0;
+#endif
 
     // Retrieves the corrected NED delta velocity in use by the inertial navigation
     virtual void getCorrectedDeltaVelocityNED(Vector3f& ret, float& dt) const {

@@ -25,6 +25,8 @@
 
 #if HAL_EXTERNAL_AHRS_ENABLED
 
+#include <GCS_MAVLink/GCS_config.h>
+
 class AP_AHRS_External : public AP_AHRS_Backend {
 public:
 
@@ -85,7 +87,9 @@ public:
     bool get_relative_position_D_origin(float &posD) const override;
 
     bool get_filter_status(nav_filter_status &status) const override;
+#if HAL_GCS_ENABLED
     void send_ekf_status_report(class GCS_MAVLINK &link) const override;
+#endif
 
     void get_control_limits(float &ekfGndSpdLimit, float &controlScaleXY) const override;
 };

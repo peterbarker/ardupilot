@@ -111,7 +111,9 @@ public:
     bool get_relative_position_NE_origin(Vector2f &posNE) const override;
     bool get_relative_position_D_origin(float &posD) const override;
 
+#if HAL_GCS_ENABLED
     void send_ekf_status_report(class GCS_MAVLINK &link) const override;
+#endif
 
     void get_control_limits(float &ekfGndSpdLimit, float &controlScaleXY) const override;
     bool get_innovations(Vector3f &velInnov, Vector3f &posInnov, Vector3f &magInnov, float &tasInnov, float &yawInnov) const override;

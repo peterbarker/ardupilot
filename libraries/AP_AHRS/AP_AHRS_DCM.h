@@ -23,6 +23,8 @@
 
 #include "AP_AHRS_Backend.h"
 
+#include <GCS_MAVLink/GCS_config.h>
+
 class AP_AHRS_DCM : public AP_AHRS_Backend {
 public:
 
@@ -123,7 +125,9 @@ public:
     bool get_relative_position_NE_origin(Vector2f &posNE) const override;
     bool get_relative_position_D_origin(float &posD) const override;
 
+#if HAL_GCS_ENABLED
     void send_ekf_status_report(class GCS_MAVLINK &link) const override;
+#endif
 
     // return true if DCM has a yaw source
     bool yaw_source_available(void) const;

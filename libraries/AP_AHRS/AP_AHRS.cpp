@@ -2555,6 +2555,7 @@ bool AP_AHRS::resetHeightDatum(void)
     return false;
 }
 
+#if HAL_GCS_ENABLED
 // send a EKF_STATUS_REPORT for current EKF
 void AP_AHRS::send_ekf_status_report(GCS_MAVLINK &link) const
 {
@@ -2589,6 +2590,7 @@ void AP_AHRS::send_ekf_status_report(GCS_MAVLINK &link) const
 
     }
 }
+#endif
 
 // return origin for a specified EKF type
 bool AP_AHRS::_get_origin(EKFType type, Location &ret) const

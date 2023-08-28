@@ -116,10 +116,12 @@ bool AP_AHRS_External::get_filter_status(nav_filter_status &status) const
     return true;
 }
 
+#if HAL_GCS_ENABLED
 void AP_AHRS_External::send_ekf_status_report(GCS_MAVLINK &link) const
 {
     AP::externalAHRS().send_status_report(link);
 }
+#endif
 
 bool AP_AHRS_External::get_origin(Location &ret) const
 {
