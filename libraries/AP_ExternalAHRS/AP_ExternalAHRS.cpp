@@ -219,6 +219,7 @@ Vector3f AP_ExternalAHRS::get_accel(void)
     return state.accel;
 }
 
+#if HAL_GCS_ENABLED
 // send an EKF_STATUS message to GCS
 void AP_ExternalAHRS::send_status_report(GCS_MAVLINK &link) const
 {
@@ -226,6 +227,7 @@ void AP_ExternalAHRS::send_status_report(GCS_MAVLINK &link) const
         backend->send_status_report(link);
     }
 }
+#endif
 
 void AP_ExternalAHRS::update(void)
 {

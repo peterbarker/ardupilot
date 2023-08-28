@@ -24,6 +24,8 @@
 
 #include "AP_ExternalAHRS_backend.h"
 
+#include <GCS_MAVLink/GCS_config.h>
+
 class AP_ExternalAHRS_VectorNav : public AP_ExternalAHRS_backend {
 
 public:
@@ -37,7 +39,9 @@ public:
     bool initialised(void) const override;
     bool pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const override;
     void get_filter_status(nav_filter_status &status) const override;
+#if HAL_GCS_ENABLED
     void send_status_report(class GCS_MAVLINK &link) const override;
+#endif
 
     // check for new data
     void update() override {

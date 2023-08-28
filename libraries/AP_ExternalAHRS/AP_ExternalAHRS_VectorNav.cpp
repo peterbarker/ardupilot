@@ -768,6 +768,7 @@ void AP_ExternalAHRS_VectorNav::get_filter_status(nav_filter_status &status) con
     }
 }
 
+#if HAL_GCS_ENABLED
 // send an EKF_STATUS message to GCS
 void AP_ExternalAHRS_VectorNav::send_status_report(GCS_MAVLINK &link) const
 {
@@ -822,5 +823,6 @@ void AP_ExternalAHRS_VectorNav::send_status_report(GCS_MAVLINK &link) const
                                        pkt1.velU/vel_gate, pkt1.posU/pos_gate, pkt1.posU/hgt_gate,
                                        mag_var, 0, 0);
 }
+#endif  // HAL_GCS_ENABLED
 
 #endif  // AP_EXTERNAL_AHRS_VECTORNAV_ENABLED

@@ -26,6 +26,7 @@
 #include <AP_Param/AP_Param.h>
 #include <AP_Common/Location.h>
 #include <AP_NavEKF/AP_Nav_Common.h>
+#include <GCS_MAVLink/GCS_config.h>
 
 class AP_ExternalAHRS_backend;
 
@@ -103,7 +104,9 @@ public:
     void get_filter_status(nav_filter_status &status) const;
     Vector3f get_gyro(void);
     Vector3f get_accel(void);
+#if HAL_GCS_ENABLED
     void send_status_report(class GCS_MAVLINK &link) const;
+#endif
 
     // update backend
     void update();

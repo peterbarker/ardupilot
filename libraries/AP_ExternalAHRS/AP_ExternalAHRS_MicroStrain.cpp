@@ -505,6 +505,7 @@ void AP_ExternalAHRS_MicroStrain::get_filter_status(nav_filter_status &status) c
     }
 }
 
+#if HAL_GCS_ENABLED
 void AP_ExternalAHRS_MicroStrain::send_status_report(GCS_MAVLINK &link) const
 {
     // prepare flags
@@ -555,6 +556,7 @@ void AP_ExternalAHRS_MicroStrain::send_status_report(GCS_MAVLINK &link) const
                                        mag_var, 0, 0);
 
 }
+#endif  // HAL_GCS_ENABLED
 
 Vector3f AP_ExternalAHRS_MicroStrain::populate_vector3f(const uint8_t *data, uint8_t offset) const
 {

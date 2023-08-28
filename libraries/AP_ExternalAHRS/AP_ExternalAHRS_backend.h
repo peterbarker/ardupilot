@@ -22,6 +22,8 @@
 
 #if HAL_EXTERNAL_AHRS_ENABLED
 
+#include <GCS_MAVLink/GCS_config.h>
+
 class AP_ExternalAHRS_backend {
 public:
     AP_ExternalAHRS_backend(AP_ExternalAHRS *frontend, AP_ExternalAHRS::state_t &state);
@@ -37,7 +39,9 @@ public:
     virtual bool initialised(void) const = 0;
     virtual bool pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const = 0;
     virtual void get_filter_status(nav_filter_status &status) const {}
+#if HAL_GCS_ENABLED
     virtual void send_status_report(class GCS_MAVLINK &link) const {}
+#endif
 
     // check for new data
     virtual void update() = 0;
