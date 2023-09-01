@@ -1,0 +1,5 @@
+# hw definition file for processing by chibios_pins.py
+
+include ../f103-periph/hwdef.inc
+
+include ../include/custom.inc
