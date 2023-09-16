@@ -111,7 +111,9 @@ SCHED_TASK_CLASS arguments:
  */
 const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     // update INS immediately to get current gyro data populated
+#if AP_INERTIALSENSOR_ENABLED
     FAST_TASK_CLASS(AP_InertialSensor, &copter.ins, update),
+#endif
     // run low level rate controllers that only require IMU data
     FAST_TASK(run_rate_controller),
 #if AC_CUSTOMCONTROL_MULTI_ENABLED == ENABLED
@@ -214,8 +216,9 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(twentyfive_hz_logging, 25,    110, 117),
     SCHED_TASK_CLASS(AP_Logger,            &copter.logger,              periodic_tasks, 400, 300, 120),
 #endif
+#if AP_INERTIALSENSOR_ENABLED
     SCHED_TASK_CLASS(AP_InertialSensor,    &copter.ins,                 periodic,       400,  50, 123),
-
+#endif
     SCHED_TASK_CLASS(AP_Scheduler,         &copter.scheduler,           update_logging, 0.1,  75, 126),
 #if AP_RPM_ENABLED
     SCHED_TASK_CLASS(AP_RPM,               &copter.rpm_sensor,          update,          40, 200, 129),

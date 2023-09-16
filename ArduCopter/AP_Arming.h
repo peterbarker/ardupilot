@@ -34,7 +34,9 @@ protected:
     bool mandatory_checks(bool display_failure) override;
 
     // NOTE! the following check functions *DO* call into AP_Arming:
+#if AP_INERTIALSENSOR_ENABLED
     bool ins_checks(bool display_failure) override;
+#endif
     bool gps_checks(bool display_failure) override;
     bool barometer_checks(bool display_failure) override;
     bool board_voltage_checks(bool display_failure) override;

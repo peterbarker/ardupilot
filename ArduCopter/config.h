@@ -238,13 +238,14 @@
 //////////////////////////////////////////////////////////////////////////////
 // System ID - conduct system identification tests on vehicle
 #ifndef MODE_SYSTEMID_ENABLED
-# define MODE_SYSTEMID_ENABLED ENABLED
+# define MODE_SYSTEMID_ENABLED AP_INERTIALSENSOR_ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Throw - fly vehicle after throwing it in the air
 #ifndef MODE_THROW_ENABLED
-# define MODE_THROW_ENABLED ENABLED
+// Throw gets accels from Ins; should get from AHRS?
+# define MODE_THROW_ENABLED AP_INERTIALSENSOR_ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -262,7 +263,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // Flowhold - use optical flow to hover in place
 #ifndef MODE_FLOWHOLD_ENABLED
-# define MODE_FLOWHOLD_ENABLED AP_OPTICALFLOW_ENABLED
+# define MODE_FLOWHOLD_ENABLED AP_OPTICALFLOW_ENABLED && AP_INERTIALSENSOR_ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

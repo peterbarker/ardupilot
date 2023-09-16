@@ -203,7 +203,9 @@ void Copter::init_ardupilot()
     // enable CPU failsafe
     failsafe_enable();
 
+#if AP_INERTIALSENSOR_ENABLED
     ins.set_log_raw_bit(MASK_LOG_IMU_RAW);
+#endif
 
     motors->output_min();  // output lowest possible value to motors
 
@@ -227,8 +229,10 @@ void Copter::startup_INS_ground()
     ahrs.init();
     ahrs.set_vehicle_class(AP_AHRS::VehicleClass::COPTER);
 
+#if AP_INERTIALSENSOR_ENABLED
     // Warm up and calibrate gyro offsets
     ins.init(scheduler.get_loop_rate_hz());
+#endif
 
     // reset ahrs including gyro bias
     ahrs.reset();

@@ -477,9 +477,11 @@ const AP_Param::Info Copter::var_info[] = {
     // @Path: ../libraries/AP_Compass/AP_Compass.cpp
     GOBJECT(compass,        "COMPASS_", Compass),
 
+#if AP_INERTIALSENSOR_ENABLED
     // @Group: INS
     // @Path: ../libraries/AP_InertialSensor/AP_InertialSensor.cpp
     GOBJECT(ins,            "INS", AP_InertialSensor),
+#endif
 
     // @Group: WPNAV_
     // @Path: ../libraries/AC_WPNav/AC_WPNav.cpp
@@ -1475,7 +1477,7 @@ void Copter::convert_pid_parameters(void)
     };
     AP_Param::convert_old_parameters(&ff_and_filt_conversion_info[0], ARRAY_SIZE(ff_and_filt_conversion_info));
 
-#if HAL_INS_NUM_HARMONIC_NOTCH_FILTERS > 1
+#if AP_INERTIALSENSOR_ENABLED && HAL_INS_NUM_HARMONIC_NOTCH_FILTERS > 1
     if (!ins.harmonic_notches[1].params.enabled()) {
         // notch filter parameter conversions (moved to INS_HNTC2) for 4.2.x, converted from fixed notch
         const AP_Param::ConversionInfo notchfilt_conversion_info[] {

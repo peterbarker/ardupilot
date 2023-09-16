@@ -135,6 +135,7 @@ bool AP_Arming_Copter::barometer_checks(bool display_failure)
     return ret;
 }
 
+#if AP_INERTIALSENSOR_ENABLED
 bool AP_Arming_Copter::ins_checks(bool display_failure)
 {
     bool ret = AP_Arming::ins_checks(display_failure);
@@ -150,6 +151,7 @@ bool AP_Arming_Copter::ins_checks(bool display_failure)
 
     return ret;
 }
+#endif
 
 bool AP_Arming_Copter::board_voltage_checks(bool display_failure)
 {

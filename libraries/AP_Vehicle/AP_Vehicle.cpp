@@ -619,6 +619,7 @@ bool AP_Vehicle::is_crashed() const
     return AP::arming().last_disarm_method() == AP_Arming::Method::CRASH;
 }
 
+#if AP_INERTIALSENSOR_ENABLED
 // update the harmonic notch filter for throttle based notch
 void AP_Vehicle::update_throttle_notch(AP_InertialSensor::HarmonicNotch &notch)
 {
@@ -759,6 +760,7 @@ void AP_Vehicle::update_dynamic_notch_at_specified_rate()
         }
     }
 }
+#endif  // AP_INERTIALSENSOR_ENABLED
 
 void AP_Vehicle::notify_no_such_mode(uint8_t mode_number)
 {
@@ -907,7 +909,7 @@ void AP_Vehicle::one_Hz_update(void)
 
 void AP_Vehicle::check_motor_noise()
 {
-#if HAL_GYROFFT_ENABLED && HAL_WITH_ESC_TELEM
+#if AP_INERTIALSENSOR_ENABLED && HAL_GYROFFT_ENABLED && HAL_WITH_ESC_TELEM
     if (!hal.util->get_soft_armed() || !gyro_fft.check_esc_noise() || !gyro_fft.using_post_filter_samples() || ins.has_fft_notch()) {
         return;
     }

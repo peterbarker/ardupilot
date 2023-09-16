@@ -294,7 +294,9 @@ protected:
 #endif
     AP_Baro barometer;
     Compass compass;
+#if AP_INERTIALSENSOR_ENABLED
     AP_InertialSensor ins;
+#endif
 #if HAL_BUTTON_ENABLED
     AP_Button button;
 #endif
