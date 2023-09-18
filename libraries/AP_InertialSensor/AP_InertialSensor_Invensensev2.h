@@ -1,4 +1,9 @@
 #pragma once
+
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_INVENSENSEV2_ENABLED
+
 /*
   driver for the invensensev2 range of IMUs
  */
@@ -205,3 +210,4 @@ private:
     uint8_t _ext_sens_data = 0;
 };
 
+#endif  // AP_INERTIALSENSOR_INVENSENSEV2_ENABLED

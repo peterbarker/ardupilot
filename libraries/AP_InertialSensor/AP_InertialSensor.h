@@ -24,14 +24,6 @@
 #include "AP_InertialSensor_Params.h"
 #include "AP_InertialSensor_tempcal.h"
 
-#ifndef AP_SIM_INS_ENABLED
-#define AP_SIM_INS_ENABLED AP_SIM_ENABLED
-#endif
-
-#ifndef AP_SIM_INS_FILE_ENABLED
-#define AP_SIM_INS_FILE_ENABLED AP_SIM_ENABLED
-#endif
-
 class AP_InertialSensor_Backend;
 class AuxiliaryBus;
 class AP_AHRS;
@@ -399,7 +391,7 @@ public:
     BatchSampler batchsampler{*this};
 #endif
 
-#if HAL_EXTERNAL_AHRS_ENABLED
+#if AP_INERTIALSENSOR_EXTERNALAHRS_ENABLED
     // handle external AHRS data
     void handle_external(const AP_ExternalAHRS::ins_data_message_t &pkt);
 #endif

@@ -1,4 +1,9 @@
 #pragma once
+
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_INVENSENSEV3_ENABLED
+
 /*
   driver for the invensensev3 range of IMUs
   These are the ICM-4 series of IMUs
@@ -118,3 +123,5 @@ private:
     float temp_filtered;
     LowPassFilter2pFloat temp_filter;
 };
+
+#endif //AP_INERTIALSENSOR_INVENSENSEV3_ENABLED

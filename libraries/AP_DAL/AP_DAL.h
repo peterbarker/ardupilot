@@ -127,7 +127,9 @@ public:
     };
     void *malloc_type(size_t size, enum Memory_Type mem_type) const;
 
+#if AP_INERTIALSENSOR_ENABLED
     AP_DAL_InertialSensor &ins() { return _ins; }
+#endif
     AP_DAL_Baro &baro() { return _baro; }
     AP_DAL_GPS &gps() { return _gps; }
 
@@ -234,10 +236,14 @@ public:
     void handle_message(const log_RFRF &msg, NavEKF2 &ekf2, NavEKF3 &ekf3);
 
     void handle_message(const log_RISH &msg) {
+#if AP_INERTIALSENSOR_ENABLED
         _ins.handle_message(msg);
+#endif
     }
     void handle_message(const log_RISI &msg) {
+#if AP_INERTIALSENSOR_ENABLED
         _ins.handle_message(msg);
+#endif
     }
 
     void handle_message(const log_RASH &msg) {
@@ -353,7 +359,9 @@ private:
     Location _home;
     uint32_t _last_imu_time_us;
 
+#if AP_INERTIALSENSOR_ENABLED
     AP_DAL_InertialSensor _ins;
+#endif
     AP_DAL_Baro _baro;
     AP_DAL_GPS _gps;
     AP_DAL_RangeFinder *_rangefinder;

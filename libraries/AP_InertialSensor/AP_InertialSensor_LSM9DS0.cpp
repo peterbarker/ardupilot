@@ -13,6 +13,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_LSM9DS0_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_InertialSensor_LSM9DS0.h"
@@ -813,3 +817,4 @@ void AP_InertialSensor_LSM9DS0::_dump_registers(void)
 }
 #endif
 
+#endif  // AP_INERTIALSENSOR_LSM9DS0_ENABLED

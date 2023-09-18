@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AP_InertialSensor.h"
+#include "AP_InertialSensor_config.h"
 
 #if AP_SIM_INS_ENABLED
 

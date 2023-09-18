@@ -18,6 +18,10 @@
  */
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_BMI088_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_InertialSensor.h"
@@ -89,3 +93,5 @@ private:
     bool done_accel_config;
     uint32_t accel_config_count;
 };
+
+#endif  // AP_INERTIALSENSOR_BMI088_ENABLED

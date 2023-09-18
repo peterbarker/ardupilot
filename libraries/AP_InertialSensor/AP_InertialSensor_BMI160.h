@@ -16,6 +16,10 @@
  */
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_BMI160_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/SPIDevice.h>
 #include <AP_HAL/I2CDevice.h>
@@ -128,3 +132,5 @@ private:
 
     AP_HAL::DigitalSource *_int1_pin;
 };
+
+#endif  // AP_INERTIALSENSOR_BMI160_ENABLED

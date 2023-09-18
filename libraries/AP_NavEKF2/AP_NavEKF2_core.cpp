@@ -1,3 +1,7 @@
+#include <AP_AHRS/AP_AHRS_config.h>
+
+#if HAL_NAVEKF2_AVAILABLE
+
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_NavEKF2.h"
@@ -1676,3 +1680,4 @@ void NavEKF2_core::zeroAttCovOnly()
     }
 }
 
+#endif  // HAL_NAVEKF2_AVAILABLE

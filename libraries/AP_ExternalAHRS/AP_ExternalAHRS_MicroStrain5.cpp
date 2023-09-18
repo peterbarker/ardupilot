@@ -119,6 +119,7 @@ void AP_ExternalAHRS_MicroStrain5::post_imu() const
         state.have_quaternion = true;
     }
 
+#if AP_INERTIALSENSOR_EXTERNALAHRS_ENABLED
     {
         AP_ExternalAHRS::ins_data_message_t ins {
             accel: imu_data.accel,
@@ -127,6 +128,7 @@ void AP_ExternalAHRS_MicroStrain5::post_imu() const
         };
         AP::ins().handle_external(ins);
     }
+#endif
 
 #if AP_COMPASS_EXTERNALAHRS_ENABLED
     {

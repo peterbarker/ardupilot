@@ -17,6 +17,10 @@
   ICM20948, ICM20648 and ICM20649
  */
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_INVENSENSEV2_ENABLED
+
 #include <assert.h>
 #include <utility>
 #include <stdio.h>
@@ -914,3 +918,5 @@ AP_HAL::Device::PeriodicHandle AP_Invensensev2_AuxiliaryBus::register_periodic_c
     auto &backend = AP_InertialSensor_Invensensev2::from(_ins_backend);
     return backend._dev->register_periodic_callback(period_usec, cb);
 }
+
+#endif  // AP_INERTIALSENSOR_INVENSENSEV2_ENABLED

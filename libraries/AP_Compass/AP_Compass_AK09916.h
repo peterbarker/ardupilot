@@ -168,6 +168,7 @@ private:
     AP_HAL::OwnPtr<AP_HAL::I2CDevice> _dev;
 };
 
+#if AP_COMPASS_AK09916_INERTIALSENSOR_AUXILIARY_ENABLED
 class AP_AK09916_BusDriver_Auxiliary : public AP_AK09916_BusDriver
 {
 public:
@@ -197,5 +198,6 @@ private:
     AuxiliaryBusSlave *_slave;
     bool _started;
 };
+#endif  // AP_COMPASS_AK09916_INERTIALSENSOR_AUXILIARY_ENABLED
 
 #endif  // AP_COMPASS_AK09916_ENABLED

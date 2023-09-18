@@ -88,18 +88,17 @@ AP_Compass_Backend *AP_Compass_AK8963::probe(AP_HAL::OwnPtr<AP_HAL::I2CDevice> d
     return sensor;
 }
 
+#if AP_COMPASS_AK8963_VIA_MPU9250_AUXILIARY_ENABLED
 AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev,
                                                      enum Rotation rotation)
 {
     if (!dev) {
         return nullptr;
     }
-#if AP_INERTIALSENSOR_ENABLED
     AP_InertialSensor &ins = *AP_InertialSensor::get_singleton();
 
     /* Allow MPU9250 to shortcut auxiliary bus and host bus */
     ins.detect_backends();
-#endif
 
     return probe(std::move(dev), rotation);
 }
@@ -107,7 +106,6 @@ AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(AP_HAL::OwnPtr<AP_HAL::I2CD
 AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(uint8_t mpu9250_instance,
                                                      enum Rotation rotation)
 {
-#if AP_INERTIALSENSOR_ENABLED
     AP_InertialSensor &ins = *AP_InertialSensor::get_singleton();
 
     AP_AK8963_BusDriver *bus =
@@ -123,11 +121,8 @@ AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(uint8_t mpu9250_instance,
     }
 
     return sensor;
-#else
-    return nullptr;
-#endif
-
 }
+#endif  // AP_COMPASS_AK8963_VIA_MPU9250_AUXILIARY_ENABLED
 
 bool AP_Compass_AK8963::init()
 {
@@ -308,6 +303,7 @@ AP_HAL::Device::PeriodicHandle AP_AK8963_BusDriver_HALDevice::register_periodic_
     return _dev->register_periodic_callback(period_usec, cb);
 }
 
+#if AP_COMPASS_AK8963_INERTIALSENSOR_AUXILIARY_ENABLED
 /* AK8963 on an auxiliary bus of IMU driver */
 AP_AK8963_BusDriver_Auxiliary::AP_AK8963_BusDriver_Auxiliary(AP_InertialSensor &ins, uint8_t backend_id,
                                                              uint8_t backend_instance, uint8_t addr)
@@ -316,14 +312,12 @@ AP_AK8963_BusDriver_Auxiliary::AP_AK8963_BusDriver_Auxiliary(AP_InertialSensor &
      * Only initialize members. Fails are handled by configure or while
      * getting the semaphore
      */
-#if AP_INERTIALSENSOR_ENABLED
     _bus = ins.get_auxiliary_bus(backend_id, backend_instance);
     if (!_bus) {
         return;
     }
 
     _slave = _bus->request_next_slave(addr);
-#endif
 }
 
 AP_AK8963_BusDriver_Auxiliary::~AP_AK8963_BusDriver_Auxiliary()
@@ -404,5 +398,6 @@ uint32_t AP_AK8963_BusDriver_Auxiliary::get_bus_id(void) const
 {
     return _bus->get_bus_id();
 }
+#endif  // AP_COMPASS_AK8963_INERTIALSENSOR_AUXILIARY_ENABLED
 
 #endif  // AP_COMPASS_AK8963_ENABLED

@@ -12,6 +12,10 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_BMI270_ENABLED
+
 #include <utility>
 
 #include <AP_HAL/AP_HAL.h>
@@ -583,3 +587,5 @@ bool AP_InertialSensor_BMI270::init()
 
     return hardware_init();
 }
+
+#endif  // AP_INERTIALSENSOR_BMI270_ENABLED

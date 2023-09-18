@@ -14,7 +14,10 @@
  */
 #pragma once
 
-#include <AP_HAL/AP_HAL.h>
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_BMI270_ENABLED
+
 #include <AP_HAL/SPIDevice.h>
 #include <AP_HAL/I2CDevice.h>
 
@@ -121,3 +124,5 @@ private:
 
     static const uint8_t maximum_fifo_config_file[];
 };
+
+#endif   // AP_INERTIALSENSOR_BMI270_ENABLED

@@ -3,7 +3,7 @@
 #include <AP_ExternalAHRS/AP_ExternalAHRS.h>
 #include <stdio.h>
 
-#if HAL_EXTERNAL_AHRS_ENABLED
+#if AP_INERTIALSENSOR_EXTERNALAHRS_ENABLED
 
 const extern AP_HAL::HAL& hal;
 

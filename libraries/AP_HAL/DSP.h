@@ -19,6 +19,15 @@
  */
 #pragma once
 
+// enable DSP only if we are going to use it; this is a layering
+// violation, really:
+#include <AP_InertialSensor/AP_InertialSensor_config.h>
+
+// enable AP_GyroFFT library only if required:
+#ifndef HAL_WITH_DSP
+#define HAL_WITH_DSP HAL_GYROFFT_ENABLED
+#endif
+
 #include <stdint.h>
 #include "AP_HAL_Namespace.h"
 #include <AP_HAL/utility/RingBuffer.h>

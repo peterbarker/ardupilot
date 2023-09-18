@@ -499,6 +499,7 @@ void AP_ExternalAHRS_VectorNav::process_packet1(const uint8_t *b)
     }
 #endif
 
+#if AP_INERTIALSENSOR_EXTERNALAHRS_ENABLED
     {
         AP_ExternalAHRS::ins_data_message_t ins;
 
@@ -508,7 +509,7 @@ void AP_ExternalAHRS_VectorNav::process_packet1(const uint8_t *b)
 
         AP::ins().handle_external(ins);
     }
-
+#endif
 
     // @LoggerMessage: EAH1
     // @Description: External AHRS data
@@ -638,6 +639,7 @@ void AP_ExternalAHRS_VectorNav::process_packet_VN_100(const uint8_t *b)
     }
 #endif
 
+#if AP_INERTIALSENSOR_EXTERNALAHRS_ENABLED
     {
         AP_ExternalAHRS::ins_data_message_t ins;
 
@@ -647,6 +649,7 @@ void AP_ExternalAHRS_VectorNav::process_packet_VN_100(const uint8_t *b)
 
         AP::ins().handle_external(ins);
     }
+#endif
 
     // @LoggerMessage: EAH3
     // @Description: External AHRS data

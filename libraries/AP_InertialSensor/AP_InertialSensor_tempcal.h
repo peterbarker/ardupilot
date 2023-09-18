@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_TCAL_ENABLED
+
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_Math/polyfit.h>
@@ -79,3 +83,5 @@ private:
     // get instance number
     uint8_t instance(void) const;
 };
+
+#endif  // AP_INERTIALSENSOR_TCAL_ENABLED

@@ -21,9 +21,11 @@
  *
  */
 
-#include "AP_AHRS_Backend.h"
+#include <AP_ExternalAHRS/AP_ExternalAHRS_config.h>
 
 #if HAL_EXTERNAL_AHRS_ENABLED
+
+#include "AP_AHRS_Backend.h"
 
 class AP_AHRS_External : public AP_AHRS_Backend {
 public:
@@ -87,4 +89,4 @@ public:
     void get_control_limits(float &ekfGndSpdLimit, float &controlScaleXY) const override;
 };
 
-#endif
+#endif  // HAL_EXTERNAL_AHRS_ENABLED

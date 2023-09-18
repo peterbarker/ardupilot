@@ -18,6 +18,10 @@
  */
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_SCHA63T_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_InertialSensor.h"
@@ -88,3 +92,5 @@ private:
     uint8_t gyro_instance;
     enum Rotation rotation;
 };
+
+#endif  // AP_INERTIALSENSOR_SCHA63T_ENABLED

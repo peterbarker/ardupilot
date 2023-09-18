@@ -1,5 +1,9 @@
 #pragma once
 
+#include <AP_InertialSensor/AP_InertialSensor_config.h>
+
+#if AP_INERTIALSENSOR_ENABLED
+
 #include <AP_InertialSensor/AP_InertialSensor.h>
 
 #include <AP_Logger/LogStructure.h>
@@ -73,3 +77,5 @@ private:
 
     void update_filtered(uint8_t i);
 };
+
+#endif

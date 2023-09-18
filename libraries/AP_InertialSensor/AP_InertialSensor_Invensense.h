@@ -1,4 +1,9 @@
 #pragma once
+
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_INVENSENSE_ENABLED
+
 /*
   driver for the invensense range of IMUs, including:
 
@@ -238,3 +243,5 @@ private:
 #ifndef INS_INVENSENSE_20789_I2C_ADDR
 #define INS_INVENSENSE_20789_I2C_ADDR 0x68
 #endif
+
+#endif  // AP_INERTIALSENSOR_INVENSENSE_ENABLED

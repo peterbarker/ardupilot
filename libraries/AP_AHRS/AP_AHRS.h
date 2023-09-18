@@ -23,6 +23,8 @@
 
 #include "AP_AHRS_config.h"
 
+#if AP_AHRS_ENABLED
+
 #include <AP_HAL/Semaphores.h>
 
 #include <AP_NavEKF2/AP_NavEKF2.h>
@@ -566,10 +568,12 @@ public:
     // return current vibration vector for primary IMU
     Vector3f get_vibration(void) const;
 
+#if AP_INERTIALSENSOR_ENABLED
     // return primary accels, for lua
     const Vector3f &get_accel(void) const {
         return AP::ins().get_accel();
     }
+#endif
 
     // return primary accel bias. This should be subtracted from
     // get_accel() vector to get best current body frame accel
@@ -976,3 +980,5 @@ private:
 namespace AP {
     AP_AHRS &ahrs();
 };
+
+#endif  // AP_AHRS_ENABLED

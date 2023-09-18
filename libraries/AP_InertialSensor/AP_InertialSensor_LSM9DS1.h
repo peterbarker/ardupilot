@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_LSM9DS1_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/SPIDevice.h>
 
@@ -72,3 +76,5 @@ private:
     uint8_t _accel_instance;
     enum Rotation _rotation;
 };
+
+#endif  // AP_INERTIALSENSOR_LSM9DS1_ENABLED

@@ -13,6 +13,10 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_ADIS1647X_ENABLED
+
 #include <utility>
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
@@ -620,3 +624,5 @@ bool AP_InertialSensor_ADIS1647x::update()
     update_gyro(gyro_instance);
     return true;
 }
+
+#endif  // AP_INERTIALSENSOR_ADIS1647X_ENABLED

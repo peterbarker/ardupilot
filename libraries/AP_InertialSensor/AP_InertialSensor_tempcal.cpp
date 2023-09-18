@@ -16,12 +16,15 @@
   IMU temperature calibration handling
  */
 
+#include "AP_InertialSensor_config.h"
+
+#if HAL_INS_TEMPERATURE_CAL_ENABLE
+
 #define AP_INLINE_VECTOR_OPS
 
 #include "AP_InertialSensor_tempcal.h"
 #include "AP_InertialSensor_config.h"
 
-#if HAL_INS_TEMPERATURE_CAL_ENABLE
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Common/ExpandingString.h>
@@ -548,6 +551,5 @@ void AP_InertialSensor::get_persistent_params(ExpandingString &str) const
         str.printf("INS_TCAL_OPTIONS=%u\n", unsigned(tcal_options.get()));
     }
 }
-
 
 #endif // HAL_INS_TEMPERATURE_CAL_ENABLE

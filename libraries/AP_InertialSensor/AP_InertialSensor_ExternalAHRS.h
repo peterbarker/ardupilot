@@ -1,8 +1,8 @@
 #pragma once
 
-#include <AP_ExternalAHRS/AP_ExternalAHRS.h>
+#include "AP_InertialSensor_config.h"
 
-#if HAL_EXTERNAL_AHRS_ENABLED
+#if AP_INERTIALSENSOR_EXTERNALAHRS_ENABLED
 
 #include "AP_InertialSensor.h"
 #include "AP_InertialSensor_Backend.h"
@@ -26,5 +26,4 @@ private:
     const uint8_t serial_port;
     bool started;
 };
-#endif // HAL_EXTERNAL_AHRS_ENABLED
-
+#endif // AP_INERTIALSENSOR_EXTERNALAHRS_ENABLED

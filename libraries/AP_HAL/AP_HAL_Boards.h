@@ -184,15 +184,6 @@
 #define BOARD_FLASH_SIZE 2048
 #endif
 
-#ifndef HAL_GYROFFT_ENABLED
-#define HAL_GYROFFT_ENABLED (BOARD_FLASH_SIZE > 1024)
-#endif
-
-// enable AP_GyroFFT library only if required:
-#ifndef HAL_WITH_DSP
-#define HAL_WITH_DSP HAL_GYROFFT_ENABLED
-#endif
-
 #ifndef HAL_OS_FATFS_IO
 #define HAL_OS_FATFS_IO 0
 #endif

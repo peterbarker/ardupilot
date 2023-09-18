@@ -3,6 +3,10 @@
 */
 #include <AP_HAL/AP_HAL.h>
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_LSM9DS1_ENABLED
+
 #include "AP_InertialSensor_LSM9DS1.h"
 
 #include <utility>
@@ -533,3 +537,5 @@ void AP_InertialSensor_LSM9DS1::_dump_registers(void)
     hal.console->println();
 }
 #endif
+
+#endif  // AP_INERTIALSENSOR_LSM9DS1_ENABLED

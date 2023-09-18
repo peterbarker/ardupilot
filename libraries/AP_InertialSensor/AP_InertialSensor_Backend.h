@@ -22,6 +22,10 @@
  */
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_ENABLED
+
 #include <inttypes.h>
 
 #include <AP_Math/AP_Math.h>
@@ -322,3 +326,5 @@ private:
     void Write_GYR(const uint8_t instance, const uint64_t sample_us, const Vector3f &gyro) const __RAMFUNC__;  // Write GYR data packet: raw gyro data
 
 };
+
+#endif  // AP_INERTIALSENSOR_ENABLED

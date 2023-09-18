@@ -266,7 +266,11 @@ void AP_NMEA_Output::update()
         // 1 = All SPAN Post-Alignment INS Status
         const bool ins_status_flag = ahrs.initialised() &&
                                         ahrs.healthy() &&
-                                        (!ahrs.have_inertial_nav() || AP::ins().accel_calibrated_ok_all());
+                                        (!ahrs.have_inertial_nav()
+#if AP_INERTIALSENSOR_ENABLED
+                                         || AP::ins().accel_calibrated_ok_all()
+#endif
+                                            );
 
         // format PASHR message
         pashr_length = nmea_printf_buffer(pashr, sizeof(pashr),

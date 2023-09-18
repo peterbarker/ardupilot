@@ -18,6 +18,10 @@
  */
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_BMI055_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_InertialSensor.h"
@@ -67,3 +71,5 @@ private:
     enum Rotation rotation;
     uint8_t temperature_counter;
 };
+
+#endif  // AP_INERTIALSENSOR_BMI055_ENABLED

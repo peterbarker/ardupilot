@@ -1,3 +1,7 @@
+#include "AP_InertialSensor/AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_ENABLED
+
 #include "AP_DAL_InertialSensor.h"
 
 #include <AP_Logger/AP_Logger.h>
@@ -66,3 +70,5 @@ void AP_DAL_InertialSensor::update_filtered(uint8_t i)
         accel_filtered[i] += ((_RISI[i].delta_velocity/_RISI[i].delta_velocity_dt) - accel_filtered[i]) * alpha;
     }
 }
+
+#endif  // AP_INERTIALSENSOR_ENABLED

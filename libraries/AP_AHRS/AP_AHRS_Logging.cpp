@@ -102,7 +102,10 @@ void AP_AHRS::write_video_stabilisation() const
 {
     Quaternion current_attitude;
     get_quat_body_to_ned(current_attitude);
-    Vector3f accel = get_accel() - get_accel_bias();
+    Vector3f accel;
+#if AP_INERTIALSENSOR_ENABLED
+    accel = get_accel() - get_accel_bias();
+#endif
     const struct log_Video_Stabilisation pkt {
         LOG_PACKET_HEADER_INIT(LOG_VIDEO_STABILISATION_MSG),
         time_us         : AP_HAL::micros64(),

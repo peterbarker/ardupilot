@@ -18,6 +18,10 @@
  */
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_ADIS1647X_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_InertialSensor.h"
@@ -82,3 +86,5 @@ private:
     double dangle_scale;
     double dvel_scale;
 };
+
+#endif  // AP_INERTIALSENSOR_ADIS1647X_ENABLED

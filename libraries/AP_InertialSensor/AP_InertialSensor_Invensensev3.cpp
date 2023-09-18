@@ -12,6 +12,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_INVENSENSEV3_ENABLED
+
 /*
   driver for Invensensev3 IMUs
 
@@ -913,3 +918,5 @@ bool AP_InertialSensor_Invensensev3::hardware_init(void)
 
     return true;
 }
+
+#endif  // AP_INERTIALSENSOR_INVENSENSEV3_ENABLED

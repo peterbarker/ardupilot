@@ -1,3 +1,7 @@
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_ENABLED
+
 #define AP_INLINE_VECTOR_OPS
 
 #include <AP_HAL/AP_HAL.h>
@@ -831,3 +835,5 @@ void AP_InertialSensor_Backend::log_register_change(uint32_t bus_id, const AP_HA
                        reg.value);
 #endif
 }
+
+#endif  // AP_INERTIALSENSOR_ENABLED

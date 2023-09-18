@@ -1,3 +1,7 @@
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_ENABLED
+
 #include "AP_InertialSensor_Params.h"
 
 const AP_Param::GroupInfo AP_InertialSensor_Params::var_info[] = {
@@ -150,3 +154,6 @@ const AP_Param::GroupInfo AP_InertialSensor_Params::var_info[] = {
 AP_InertialSensor_Params::AP_InertialSensor_Params(void) {
     AP_Param::setup_object_defaults(this, var_info);
 }
+
+#endif  // AP_INERTIALSENSOR_ENABLED
+

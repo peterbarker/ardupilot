@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_ENABLED
+
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
 #include "AP_InertialSensor_tempcal.h"
@@ -30,3 +34,5 @@ public:
     AP_InertialSensor_TCal tcal;
 #endif
 };
+
+#endif  // AP_INERTIALSENSOR_ENABLED

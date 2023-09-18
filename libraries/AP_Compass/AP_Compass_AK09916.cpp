@@ -398,6 +398,7 @@ AP_HAL::Device::PeriodicHandle AP_AK09916_BusDriver_HALDevice::register_periodic
     return _dev->register_periodic_callback(period_usec, cb);
 }
 
+#if AP_COMPASS_AK09916_INERTIALSENSOR_AUXILIARY_ENABLED
 /* AK09916 on an auxiliary bus of IMU driver */
 AP_AK09916_BusDriver_Auxiliary::AP_AK09916_BusDriver_Auxiliary(AP_InertialSensor &ins, uint8_t backend_id,
                                                              uint8_t backend_instance, uint8_t addr)
@@ -406,14 +407,12 @@ AP_AK09916_BusDriver_Auxiliary::AP_AK09916_BusDriver_Auxiliary(AP_InertialSensor
      * Only initialize members. Fails are handled by configure or while
      * getting the semaphore
      */
-#if AP_INERTIALSENSOR_ENABLED
     _bus = ins.get_auxiliary_bus(backend_id, backend_instance);
     if (!_bus) {
         return;
     }
 
     _slave = _bus->request_next_slave(addr);
-#endif
 }
 
 AP_AK09916_BusDriver_Auxiliary::~AP_AK09916_BusDriver_Auxiliary()
@@ -495,5 +494,6 @@ uint32_t AP_AK09916_BusDriver_Auxiliary::get_bus_id(void) const
 {
     return _bus->get_bus_id();
 }
+#endif  // AP_COMPASS_AK09916_INERTIALSENSOR_AUXILIARY_ENABLED
 
 #endif  // AP_COMPASS_AK09916_ENABLED

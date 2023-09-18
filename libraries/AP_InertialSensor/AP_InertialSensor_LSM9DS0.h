@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AP_InertialSensor_config.h"
+
+#if AP_INERTIALSENSOR_LSM9DS0_ENABLED
+
 #define LSM9DS0_DEBUG 0
 
 #include <AP_HAL/AP_HAL.h>
@@ -114,3 +118,5 @@ private:
     enum Rotation _rotation_g;  // for L3GD20
     enum Rotation _rotation_gH; // for L3GD20H
 };
+
+#endif  // AP_INERTIALSENSOR_LSM9DS0_ENABLED
