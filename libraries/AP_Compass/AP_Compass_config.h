@@ -6,6 +6,7 @@
 #include <AP_AHRS/AP_AHRS_config.h>
 #include <AP_GPS/AP_GPS_config.h>
 #include <AP_InertialSensor/AP_InertialSensor_config.h>
+#include <AP_AHRS/AP_AHRS_config.h>
 
 #ifndef AP_COMPASS_ENABLED
 #define AP_COMPASS_ENABLED 1
