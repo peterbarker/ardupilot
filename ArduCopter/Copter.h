@@ -226,6 +226,8 @@ public:
     friend class ModeAutorotate;
     friend class ModeTurtle;
 
+    friend class PayloadPlace;
+
     Copter(void);
 
 private:
