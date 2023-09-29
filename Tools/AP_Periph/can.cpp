@@ -1444,7 +1444,7 @@ void AP_Periph_FW::process1HzTasks(uint64_t timestamp_usec)
             break;
 #endif
         default:
-            can_printf("Flash bootloader FAILED\n");
+            can_printf("Flash bootloader FAILED (%u)\n", (unsigned)res);
             break;
         }
     }
