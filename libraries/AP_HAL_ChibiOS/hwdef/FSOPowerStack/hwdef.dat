@@ -1,5 +1,4 @@
 # hw definition file for processing by chibios_pins.py
-# MCU class and specific type
 
 # MCU class and specific type
 MCU STM32G4xx STM32G474xx
@@ -30,30 +29,16 @@ STDOUT_BAUDRATE 57600
 # order of UARTs
 SERIAL_ORDER USART2
 
-# sensor power control
-PC11 VDD_3V3_SENSORS_EN OUTPUT HIGH
-
 # LEDs
-PC10 LED OUTPUT HIGH GPIO(2) # blue
-PB15 LED_R OUTPUT HIGH GPIO(0)
-PC6  LED_G OUTPUT HIGH GPIO(1)
-
-define HAL_GPIO_A_LED_PIN 0
-define HAL_GPIO_B_LED_PIN 1
-define HAL_GPIO_C_LED_PIN 2
-
-define HAL_GPIO_LED_ON  0
-define HAL_GPIO_LED_OFF 1
-
-define HAL_HAVE_PIXRACER_LED
+PA5 LED OUTPUT HIGH  # blue
 
 # USART2, debug
-PA2 USART2_TX USART2
-PA3 USART2_RX USART2
+PA14 USART2_TX USART2
+PA15 USART2_RX USART2
 
 # SWD debugging
-PA13 JTMS-SWDIO SWD
-PA14 JTCK-SWCLK SWD
+# PA13 JTMS-SWDIO SWD
+# PA14 JTCK-SWCLK SWD
 
 define HAL_NO_GPIO_IRQ
 
@@ -77,6 +62,72 @@ PB4 CAN3_TX CAN3
 PB9 GPIO_CAN3_SILENT OUTPUT PUSHPULL SPEED_LOW LOW
 
 define CAN_APP_NODE_NAME "org.ardupilot.FSO_Power_Stack"
+
+# I2C buses
+define  AP_TEMPERATURE_SENSOR_ENABLED 1
+
+# I2C2 is PDB temperature sensor
+PC4 I2C2_SCL I2C2
+PA8 I2C2_SDA I2C2
+
+# I2C3 is BEC temperature sensor
+PC8 I2C3_SCL I2C3
+PC9 I2C3_SDA I2C3
+
+# order of I2C buses
+I2C_ORDER I2C2 I2C3
+
+# BATTERY
+define HAL_PERIPH_ENABLE_BATTERY
+
+define HAL_USE_ADC TRUE
+define STM32_ADC_USE_ADC1 TRUE
+
+# analog in
+PA0 SPARE1_ADC1 ADC1 SCALE(1) # ADC Ouptut Voltage
+PA1 SPARE2_ADC1 ADC1 SCALE(1) # ADC Payload High Voltage
+PA2 SPARE3_ADC1 ADC1 SCALE(1) # ADC Payload High Current
+PA3 SPARE4_ADC1 ADC1 SCALE(1) # ADC Not Used
+PB0 SPARE5_ADC1 ADC1 SCALE(1) # ADC Payload 1 Voltage
+PB1 SPARE6_ADC1 ADC1 SCALE(1) # ADC Payload 2 Voltage
+PB11 SPARE7_ADC1 ADC1 SCALE(1) # ADC VCC 1 Voltage
+PB12 SPARE8_ADC1 ADC1 SCALE(1) # ADC VCC 2 Voltage
+PB14 SPARE9_ADC1 ADC1 SCALE(1) # ADC VCC 3 Voltage
+PC0 SPARE10_ADC1 ADC1 SCALE(1) # ADC Bat 1 Voltage
+PC1 SPARE11_ADC1 ADC1 SCALE(1) # ADC Bat 1 Current
+PC2 SPARE12_ADC1 ADC1 SCALE(1) # ADC Bat 2 Voltage
+PC3 SPARE13_ADC1 ADC1 SCALE(1) # ADC Bat 2 Current
+# VBat channel should be here somewhere too
+
+# PWM - BIDIR config pending
+PA6     TIM3_CH1    TIM3    GPIO(50) # Payload 1 Enable
+PA7     TIM3_CH2    TIM3    GPIO(51) # Payload 2 Enable
+PA9     TIM1_CH2    TIM1    GPIO(52) # Output Payload FET
+PA10    TIM1_CH3    TIM1    GPIO(53) # Output Payload Pre-charge
+PB15    TIM15_CH2   TIM15   GPIO(54) # Output Main Pre Charge
+PC6     TIM3_CH1    TIM3    GPIO(55) # Output Bat 1 FET
+PC7     TIM3_CH2    TIM3    GPIO(56) # Output Bat 2 FET
+PB2     TIM5_CH1    TIM5    GPIO(57) # Input Main Power On/Off
+# PB10    TIM2_CH3    TIM2    GPIO(58) # Input Payload Power On/Off
+PC10    TIM8_CH1N   TIM8    GPIO(59) # Input Fan1 Tach
+PC11    TIM8_CH2N   TIM8    GPIO(60) # Input Fan2 Tach
+PC12    TIM8_CH3N   TIM8    GPIO(61) # Input Fan3 Tach
+
+PC13    TIM8_CH4N   TIM8    PWM(12) GPIO(62) # Ouput Status RGB LED
+PC14    LED_MAIN OUTPUT    GPIO(63) # Output Main LED
+PC15    LED_PAYLOAD OUTPUT    GPIO(64) # Output Payload LED
+PD2     LED_BOOT OUTPUT    GPIO(65) # Led Bootloader
+
+PA11    TIM4_CH1    TIM4    GPIO(66) # Not Used
+PA12    TIM4_CH2    TIM4    GPIO(67) # Not Used
+PB13    TIM1_CH1N   TIM1    GPIO(68) # Not Used
+PC5    TIM1_CH4N   TIM1    GPIO(69) # Not Used
+
+# What does the N in TIMX_CHXN meaning
+# We need NeoPixel RGB led output control. Can we use PC13
+# Timer 2 looked like it was used in the core code and can't be used here
+# Can we drive a 3 channel LED using HAL_HAVE_PIXRACER_LED and 3 IOs?
+# For the FanX Tach pins, do we have the reqiured timers to make this easy?
 
 define HAL_NO_LOGGING
 define HAL_NO_MONITOR_THREAD
