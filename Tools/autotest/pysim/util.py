@@ -423,7 +423,10 @@ def start_SITL(binary,
                lldb=False,
                enable_fgview=False,
                supplementary=False,
-               stdout_prefix=None):
+               stdout_prefix=None,
+               instance=0,
+               sitl_rcin_port=None
+               ):
 
     if model is None and not supplementary:
         raise ValueError("model must not be None")
@@ -505,6 +508,11 @@ def start_SITL(binary,
     if not isinstance(defaults_filepath, list):
         defaults_filepath = [defaults_filepath]
     defaults = [reltopdir(path) for path in defaults_filepath]
+
+    cmd.extend(['-I', str(instance)])
+
+    if sitl_rcin_port is not None:
+        cmd.extend(["--rc-in-port", str(sitl_rcin_port)])
 
     if not supplementary:
         if wipe:
