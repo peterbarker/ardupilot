@@ -27,6 +27,7 @@ import importlib.util
 import pexpect
 import fnmatch
 import operator
+import queue
 import numpy
 import socket
 import struct
@@ -35,6 +36,7 @@ import tempfile
 import threading
 import enum
 from pathlib import Path
+import multiprocessing
 
 from MAVProxy.modules.lib import mp_util
 from MAVProxy.modules.lib import mp_elevation
@@ -1464,6 +1466,7 @@ class Test(object):
         self.kwargs = kwargs
         self.attempts = attempts
         self.speedup = speedup
+        self.instance = 0
 
 
 class Result(object):
@@ -1612,6 +1615,7 @@ class TestSuite(ABC):
         self.terrain_data_messages_sent = 0  # count of messages back
         self.dronecan_tests = dronecan_tests
         self.statustext_id = 1
+        self.instance = 0
 
     def __del__(self):
         if self.rc_thread is not None:
@@ -1684,13 +1688,13 @@ class TestSuite(ABC):
 
     def adjust_ardupilot_port(self, port):
         '''adjust port in case we do not wish to use the default range (5760 and 5501 etc)'''
-        return port
+        return port + self.instance * 10
 
     def spare_network_port(self, offset=0):
         '''returns a network port which should be able to be bound'''
         if offset > 2:
             raise ValueError("offset too large")
-        return 8000 + offset
+        return 8000 + (3 * self.instance) + offset
 
     def autotest_connection_string_to_ardupilot(self):
         return "tcp:127.0.0.1:%u" % self.adjust_ardupilot_port(5760)
@@ -1698,7 +1702,7 @@ class TestSuite(ABC):
     def sitl_rcin_port(self, offset=0):
         if offset > 2:
             raise ValueError("offset too large")
-        return 5501 + offset
+        return 5501 + (3 * self.instance) + offset
 
     def mavproxy_options(self):
         """Returns options to be passed to MAVProxy."""
@@ -3931,7 +3935,10 @@ class TestSuite(ABC):
 
     def log_list(self):
         '''return a list of log files present in POSIX-style loging dir'''
-        ret = sorted(glob.glob("logs/00*.BIN"))
+        if self.instance != 0:
+            ret = sorted(glob.glob("logs-%u/00*.BIN" % self.instance))
+        else:
+            ret = sorted(glob.glob("logs/00*.BIN"))
         self.progress("log list: %s" % str(ret))
         return ret
 
@@ -8434,8 +8441,19 @@ Also, ignores heartbeats not from our target system'''
             self.reset_SITL_commandline()
 
         if not self.is_tracker(): # FIXME - more to the point, fix Tracker's mission handling
-            self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_ALL)
-            self.set_current_waypoint(0, check_afterwards=False)
+            try:
+                self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_ALL)
+                self.set_current_waypoint(0, check_afterwards=False)
+            except Exception as ex:
+                self.progress("Exception clearing mission")
+                self.print_exception_caught(ex)
+                try:
+                    self.wait_heartbeat()
+                except AutoTestTimeoutException:
+                    self.progress("No heartbeat received")
+                self.dump_process_status(result)
+                passed = False
+                self.reset_SITL_commandline()
 
         tee.close()
 
@@ -8511,6 +8529,8 @@ Also, ignores heartbeats not from our target system'''
             "valgrind": self.valgrind,
             "callgrind": self.callgrind,
             "wipe": True,
+            "sitl_rcin_port": self.sitl_rcin_port(),
+            "instance": self.instance,
         }
         start_sitl_args.update(**sitl_args)
         if ("defaults_filepath" not in start_sitl_args or
@@ -11620,7 +11640,103 @@ switch value'''
         if not self.current_onboard_log_contains_message(messagetype):
             raise NotAchievedException("Current onboard log does not contain message %s" % messagetype)
 
-    def run_tests(self, tests) -> List[Result]:
+    def run_tests_parallel(self, tests, parallel=1) -> List[Result]:
+
+        # prepare tests queue
+        test_queue = multiprocessing.Queue()
+        result_queue = multiprocessing.Queue()
+
+        # tests = tests[:4]
+        for test in tests:
+            print("name=%s" % str(test.name))
+            print("Putting (%s)" % str(test))
+            delattr(test, "function")
+            test_queue.put(test)
+
+        # start processes
+        self.threads = []
+        for i in range(min([parallel, len(tests)])):
+            t = multiprocessing.Process(
+                target=self.test_runner_thread_main,
+                name='TestRunner-%u' % i,
+                args=(
+                    test_queue,
+                    result_queue,
+                    i
+                )
+            )
+            if t is None:
+                raise NotAchievedException("Could not create thread %u" % i)
+            t.start()
+
+        outstanding_results = set([x.name for x in tests])
+        results = []
+        while len(results) != len(tests):
+            while True:
+                try:
+                    result = result_queue.get(block=False)
+                    self.progress("Received result (%s)" % str(result))
+                    results.append(result)
+                    outstanding_results.remove(result.test.name)
+                except queue.Empty:
+                    break
+            time.sleep(1)
+            self.progress("run_tests_parallel waiting for final results (want=%u) (got=%u) (queued=%u" %
+                          (len(tests), len(results), test_queue.qsize()))
+            if len(outstanding_results) < 5:
+                for t in outstanding_results:
+                    self.progress("   Where are you %s?" % t)
+
+        self.progress("run_tests_parallel returning success")
+
+        return results
+
+    def test_runner_thread_main(self, test_queue, result_queue, instance):
+        self.instance = instance
+
+        try:
+            self.init()
+
+            self.progress("Waiting for a heartbeat with mavlink protocol %s"
+                          % self.mav.WIRE_PROTOCOL_VERSION)
+            self.wait_heartbeat()
+            self.wait_for_initial_mode()
+            self.progress("Setting up RC parameters")
+            self.set_rc_default()
+            self.wait_for_mode_switch_poll()
+            if not self.is_tracker(): # FIXME - more to the point, fix Tracker's mission handling
+                self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_ALL)
+
+            while True:
+                try:
+                    test = test_queue.get(block=False)
+                except queue.Empty:
+                    break
+                self.drain_mav_unparsed()
+                self.progress("TestRunner-%u: running test (%s)" %
+                              (instance, test.name))
+                result = self.run_one_test(test, suppress_stdout=True)
+                result_queue.put(result)
+#                result_queue.put((desc, "Fred", debug_filename))
+
+        except pexpect.TIMEOUT:
+            self.progress("Failed with timeout")
+            result = Result(test)
+            result.passed = False
+            result.reason = "Failed with timeout"
+            result_queue.add(result)
+            if self.logs_dir:
+                if glob.glob("core*") or glob.glob("ap-*.core"):
+                    self.check_logs("FRAMEWORK")
+
+        if self.rc_thread is not None:
+            self.progress("Joining RC thread")
+            self.rc_thread_should_quit = True
+            self.rc_thread.join()
+            self.rc_thread = None
+        self.close()
+
+    def run_tests(self, tests):
         """Autotest vehicle in SITL."""
         if self.run_tests_called:
             raise ValueError("run_tests called twice")
@@ -13846,7 +13962,7 @@ SERIAL5_BAUD 128
             print("Had to force-reset SITL %u times" %
                   (self.forced_post_test_sitl_reboots,))
 
-    def autotest(self, tests=None, allow_skips=True, step_name=None):
+    def autotest(self, parallel=1, tests=None, allow_skips=True, step_name=None):
         """Autotest used by ArduPilot autotest CI."""
         if tests is None:
             tests = self.tests()
@@ -13854,6 +13970,7 @@ SERIAL5_BAUD 128
         for test in tests:
             if not isinstance(test, Test):
                 test = Test(test)
+                test.instance = self.instance
             all_tests.append(test)
 
         disabled = self.disabled_tests()
@@ -13872,7 +13989,12 @@ SERIAL5_BAUD 128
                 continue
             tests.append(test)
 
-        results = self.run_tests(tests)
+        if parallel != 1:
+            # we preserve non-parallel behaviour to avoid fighting on
+            # e.g. Windows and MacOSX:
+            results = self.run_tests_parallel(tests, parallel=parallel)
+        else:
+            results = self.run_tests(tests)
 
         if len(skip_list):
             self.progress("Skipped tests:")
