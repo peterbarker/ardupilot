@@ -96,6 +96,10 @@ void AP_Periph_FW::init()
 
     load_parameters();
 
+#ifdef HAL_PERIPH_ENABLE_ADSB_LIBRARY
+    adsb_library.init();
+#endif
+
     stm32_watchdog_pat();
 
     can_start();
@@ -183,7 +187,7 @@ void AP_Periph_FW::init()
     rcout_init();
 #endif
 
-#ifdef HAL_PERIPH_ENABLE_ADSB
+#if defined(HAL_PERIPH_ENABLE_ADSB) && !defined(HAL_PERIPH_ENABLE_ADSB_LIBRARY)
     adsb_init();
 #endif
 
@@ -516,7 +520,10 @@ void AP_Periph_FW::update()
 #if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 8) || defined(HAL_PERIPH_ENABLE_NOTIFY)
     update_rainbow();
 #endif
-#ifdef HAL_PERIPH_ENABLE_ADSB
+#ifdef HAL_PERIPH_ENABLE_ADSB_LIBRARY
+    // this will call adsb_update if ADSB_TYPE is 1 (uavionux mavlink)
+    adsb_library.update();
+#elif HAL_PERIPH_ENABLE_ADSB
     adsb_update();
 #endif
 }

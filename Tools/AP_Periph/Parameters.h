@@ -90,6 +90,7 @@ public:
         k_param_can_terminate2,
         k_param_serial_options,
         k_param_relay,
+        k_param_adsb_library_adsb,
     };
 
     AP_Int16 format_version;

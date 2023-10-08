@@ -93,7 +93,7 @@ void AP_Periph_FW::adsb_update(void)
 /*
   map an ADSB_VEHICLE MAVLink message to a UAVCAN TrafficReport message
  */
-void AP_Periph_FW::can_send_ADSB(struct __mavlink_adsb_vehicle_t &msg)
+void AP_Periph_FW::can_send_ADSB(const struct __mavlink_adsb_vehicle_t &msg)
 {
     ardupilot_equipment_trafficmonitor_TrafficReport pkt {};
     pkt.timestamp.usec = 0;
@@ -146,6 +146,14 @@ void AP_Periph_FW::can_send_ADSB(struct __mavlink_adsb_vehicle_t &msg)
                     CANARD_TRANSFER_PRIORITY_LOWEST,
                     &buffer[0],
                     total_size);
+}
+
+// method made available to ADSB library so it can send CAN packets
+// when being compiled with Periph:
+void AP_Periph_send_TrafficReport(const struct __mavlink_adsb_vehicle_t &msg);
+void AP_Periph_send_TrafficReport(const struct __mavlink_adsb_vehicle_t &msg)
+{
+    periph.can_send_ADSB(msg);
 }
 
 #endif // HAL_PERIPH_ENABLE_ADSB
