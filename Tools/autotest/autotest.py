@@ -420,6 +420,7 @@ def run_step(step):
     build_opts = build_opts
 
     vehicle_binary = None
+    board = "sitl"
     if step == 'build.Plane':
         vehicle_binary = 'bin/arduplane'
 
@@ -442,7 +443,8 @@ def run_step(step):
         vehicle_binary = 'bin/ardusub'
 
     if step == 'build.SITLPeriphGPS':
-        vehicle_binary = 'sitl_periph_gps.bin/AP_Periph'
+        vehicle_binary = 'bin/AP_Periph'
+        board = 'sitl_periph_gps'
 
     if step == 'build.Replay':
         return util.build_replay(board='SITL')
@@ -453,14 +455,11 @@ def run_step(step):
             os.unlink(binary)
         except (FileNotFoundError, ValueError):
             pass
-        if len(vehicle_binary.split(".")) == 1:
-            return util.build_SITL(vehicle_binary, **build_opts)
-        else:
-            return util.build_SITL(
-                vehicle_binary.split(".")[1],
-                board=vehicle_binary.split(".")[0],
-                **build_opts
-            )
+        return util.build_SITL(
+            vehicle_binary,
+            board=board,
+            **build_opts
+        )
 
     binary = binary_path(step, debug=opts.debug)
 
