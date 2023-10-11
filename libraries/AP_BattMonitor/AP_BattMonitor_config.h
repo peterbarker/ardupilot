@@ -86,6 +86,11 @@
 #define AP_BATTERY_TORQEEDO_ENABLED HAL_TORQEEDO_ENABLED
 #endif
 
+#ifndef AP_BATTERY_AD7091R5_ENABLED 
+#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+#define AP_BATTERY_AD7091R5_ENABLED 0  // turned on in hwdefs
+#endif
+#endif
 
 // SMBus-subclass backends:
 #ifndef AP_BATTERY_SMBUS_GENERIC_ENABLED
