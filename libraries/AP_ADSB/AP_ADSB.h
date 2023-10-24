@@ -58,6 +58,9 @@ public:
         return _singleton;
     }
 
+    // initialize parameters etc:
+    void init();
+
     // ADSB driver types
     enum class Type {
         None                = 0,
@@ -224,11 +227,11 @@ public:
 
     AP_ADSB::Type get_type(uint8_t instance) const;
 
+    // methods for AP_ADSB peripheral to use to send CAN messages:
+    void send_ADSB_Vehicles_via_CAN();
+
 private:
     static AP_ADSB *_singleton;
-
-    // initialize vehicle_list
-    void init();
 
     // check to see if we are initialized (and possibly do initialization)
     bool check_startup();
@@ -340,6 +343,9 @@ private:
 
     static const uint8_t _max_samples = 30;
     ObjectBuffer<adsb_vehicle_t> _samples{_max_samples};
+
+    // methods for AP_ADSB peripheral to use to send CAN messages:
+    void send_CAN_TrafficReport(const mavlink_adsb_vehicle_t &vehicle);
 
     void push_sample(const adsb_vehicle_t &vehicle);
 

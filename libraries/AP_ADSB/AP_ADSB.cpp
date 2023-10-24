@@ -39,6 +39,10 @@
 #include <GCS_MAVLink/GCS.h>
 #include <AP_RTC/AP_RTC.h>
 
+#if defined(HAL_BUILD_AP_PERIPH)
+#include <dronecan_msgs.h>
+#endif
+
 #define VEHICLE_TIMEOUT_MS              5000   // if no updates in this time, drop it from the list
 #define ADSB_SQUAWK_OCTAL_DEFAULT       1200
 
@@ -958,6 +962,43 @@ bool AP_ADSB::Loc::vertical_accuracy(float &vacc) const
     vacc = vertical_pos_accuracy;
     return true;
 }
+
+#ifdef HAL_BUILD_AP_PERIPH
+// stream vehicle list out at 100ms/entry:
+void AP_ADSB::send_ADSB_Vehicles_via_CAN()
+{
+    static uint32_t last_send_ms;
+    const uint32_t now_ms = AP_HAL::millis();
+
+    if (now_ms - last_send_ms < 100) {
+        return;
+    }
+    last_send_ms = now_ms;
+
+    if (in_state.vehicle_count == 0) {
+        return;
+    }
+
+    static uint32_t last_send_index;
+    if (last_send_index >= in_state.vehicle_count) {
+        last_send_index = 0;
+    }
+
+    const auto info = in_state.vehicle_list[last_send_index].info;
+    last_send_index++;
+
+    // and the same message via CAN:
+    send_CAN_TrafficReport(info);
+}
+
+// send a CAN packet when compiled under AP_Periph:
+extern void AP_Periph_send_TrafficReport(const struct __mavlink_adsb_vehicle_t &msg);
+void AP_ADSB::send_CAN_TrafficReport(const mavlink_adsb_vehicle_t &msg)
+{
+    // call static function which can then call onto the periph singleton:
+    AP_Periph_send_TrafficReport(msg);
+}
+#endif  // defined(HAL_BUILD_AP_PERIPH)
 
 AP_ADSB *AP::ADSB()
 {
