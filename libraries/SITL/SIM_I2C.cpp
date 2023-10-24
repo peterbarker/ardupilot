@@ -36,6 +36,7 @@
 #include "SIM_LM2755.h"
 #include "SIM_MS5525.h"
 #include "SIM_MS5611.h"
+#include "SIM_BattMonitor_AD7091R5.h"
 
 #include <signal.h>
 
@@ -81,6 +82,10 @@ static LM2755 lm2755;
 static IS31FL3195 is31fl3195;
 #define SIM_IS31FL3195_ADDR 0x54
 #endif
+#if AP_SIM_AD7091R5_ENABLED
+static AD7091R5 ad7091r5;
+#define AD7091R5_I2C_ADDR 0x2F //A0 and A1 tied to ground
+#endif
 
 struct i2c_device_at_address {
     uint8_t bus;
@@ -116,6 +121,9 @@ struct i2c_device_at_address {
     { 2, 0x40, tsys03 },
 #endif
     { 2, 0x77, ms5611 },        // MS5611: BARO_PROBE_EXT = 2
+#if AP_SIM_AD7091R5_ENABLED
+    {0, AD7091R5_I2C_ADDR, ad7091r5 }, 
+#endif
 };
 
 void I2C::init()
