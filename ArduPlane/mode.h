@@ -127,8 +127,10 @@ public:
     // method for mode specific target altitude profiles
     virtual void update_target_altitude();
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
     // handle a guided target request from GCS
     virtual bool handle_guided_request(Location target_loc) { return false; }
+#endif
 
     // true if is landing 
     virtual bool is_landing() const { return false; }
@@ -311,8 +313,10 @@ public:
 
     bool does_auto_throttle() const override { return true; }
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
     // handle a guided target request from GCS
     bool handle_guided_request(Location target_loc) override;
+#endif
 
     void set_radius_and_direction(const float radius, const bool direction_is_ccw);
 
@@ -390,8 +394,10 @@ public:
     const char *name() const override { return "Loiter to QLAND"; }
     const char *name4() const override { return "L2QL"; }
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
     // handle a guided target request from GCS
     bool handle_guided_request(Location target_loc) override;
+#endif
 
 protected:
     bool _enter() override;
