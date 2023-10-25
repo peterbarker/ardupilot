@@ -42,6 +42,7 @@ void ModeLoiterAltQLand::switch_qland()
     }
 }
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
 bool ModeLoiterAltQLand::handle_guided_request(Location target_loc)
 {
     // setup altitude
@@ -59,5 +60,6 @@ bool ModeLoiterAltQLand::handle_guided_request(Location target_loc)
 
     return true;
 }
+#endif
 
 #endif

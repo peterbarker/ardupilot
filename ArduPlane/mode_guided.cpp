@@ -98,6 +98,7 @@ void ModeGuided::navigate()
     plane.update_loiter(active_radius_m);
 }
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
 bool ModeGuided::handle_guided_request(Location target_loc)
 {
     // add home alt if needed
@@ -110,6 +111,7 @@ bool ModeGuided::handle_guided_request(Location target_loc)
 
     return true;
 }
+#endif
 
 void ModeGuided::set_radius_and_direction(const float radius, const bool direction_is_ccw)
 {
