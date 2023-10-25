@@ -216,7 +216,10 @@ bool AP_BattMonitor_AD7091R5::_initialize()
 
     if(_dev->transfer(data, sizeof(data), nullptr, 0)){
         //command mode, use external 3.3 reference, all channels enabled, set address pointer register to read the adc results
-        uint8_t data_2[6] = {AD7091R5_CONF_ADDR, AD7091R5_CONF_CMD, AD7091R5_CONF_PDOWN0, AD7091R5_CHAN_ADDR, AD7091R5_CHAN_ALL, AD7091R5_RESULT_ADDR};
+        
+        //uint16_t data_2 = {AD7091R5_CONF_ADDR,}
+        uint8_t data_2[6] = {AD7091R5_CONF_ADDR, AD7091R5_CONF_CMD, AD7091R5_CONF_PDOWN0, 
+        AD7091R5_CHAN_ADDR, AD7091R5_CHAN_ALL, AD7091R5_RESULT_ADDR};
         return _dev->transfer(data_2, sizeof(data_2), nullptr, 0);
     }
     return false;

@@ -30,6 +30,13 @@ class AD7091R5DevReg : public I2CRegEnum
         static constexpr uint8_t RESULT { 0x00 };
         static constexpr uint8_t CHANNEL { 0x01 };
         static constexpr uint8_t CONF { 0x02 };
+        static constexpr uint8_t ALERT_INDICATION { 0x03 };
+        static constexpr uint8_t CHANNEL_0_LOW_LIMIT { 0x04 };
+        static constexpr uint8_t CHANNEL_0_HIGH_LIMIT { 0x05 };
+        static constexpr uint8_t CHANNEL_0_HYSTER { 0x06 };
+
+        // TODO
+
 
 }
 
@@ -61,6 +68,8 @@ private:
     static struct AnalogData {
         uint32_t data;
     } _analog_data[AD7091R5_NO_OF_CHANNELS];
+
+    void reset();
 
 };
 

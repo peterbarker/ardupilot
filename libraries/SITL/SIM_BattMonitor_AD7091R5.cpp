@@ -24,58 +24,69 @@ SITL::SIM_BattMonitor_AD7091R5::init()
     add_register("CHANNEL", AD7091R5DevReg::CHANNEL, 1, I2CRegisters::RegMode::RDWR); //8 bit register
     add_register("CONFIG", AD7091R5DevReg::CONFIG, 2, I2CRegisters::RegMode::RDWR); //16 bit register
 
-    // i) set up conversion type and reset IC
-    // CMD (B10) is HIGH: since AUTO is 0, command mode is activated
-    // SRST (B9) is HIGH: enable soft reset (for correct operation as per Page 16 of datasheet)
-    uint8_t data[3] = {AD7091R5_CONF_ADDR, AD7091R5_CONF_CMD | AD7091R5_RESET, AD7091R5_CONF_PDOWN0};
-    set_register(AD7091R5DevReg::CONFIG,data);
-
-    // ii) re-send conversion type after reset is complete
-    data_2[3] = {AD7091R5_CONF_ADDR, AD7091R5_CONF_CMD, AD7091R5_CONF_PDOWN0};
-    set_register(AD7091R5DevReg::CONFIG,data_2);
-
-    // iii) set up channel register
-    // all channels enabled, set address pointer register to read the adc results
-    data_3[3] = {AD7091R5_CHAN_ADDR, AD7091R5_CHAN_ALL, AD7091R5_RESULT_ADDR};
-    set_register(AD7091R5DevReg::CHANNEL,data_3);
-
+    // initial reset after power on required for correct operation
+    reset();    
 }
 
-// Get ADC conversion from all three channels by reading the CONVERSION RESULT Register
 int SITL::SIM_BattMonitor_AD7091R5::rdwr(I2C::i2c_rdwr_ioctl_data *&data)
-{
-   
-   /* TODO - this is from the C++ driver for reference
-    uint8_t data[AD7091R5_NO_OF_CHANNELS*2];
-
-    for (int i=0; i<AD7091R5_NO_OF_CHANNELS; i++) {
-            uint8_t chan = AD7091R5_CH_ID(data[2*i]);
-            _analog_data[chan].data = ((uint16_t)(data[2*i]&AD7091R5_RES_MASK)<<8) | data[2*i+1];
-        }
-    */
-
+{   
+    // TODO
+    return I2CRegisters_ConfigurableLength::rdwr(data);    
 }
 
 // Update the SITL aircraft battery voltage and current states
 // Voltage Pin is 50
 // Current Pin is 51 and 52 (two channel option) set in parameters
+// Get ADC conversion from all three channels by reading the CONVERSION RESULT Register
+
+// Look at configuration register to obtain the 'fake' ADC readings to process
 void SITL::SIM_BattMonitor_AD7091R5::update(const class Aircraft &aircraft)
 {
     const uint32_t now_ms = AP_HAL::millis();
     if (now_ms - last_update_ms < 100) { // 10Hz
         return;
     }
+
     last_update_ms = now_ms;
 
-    //voltage conversion (calculated using battery monitor parameters)
-    sitl->state.batt_voltage = (_data_to_volt(_analog_data[volt_pin.get() - AD7091R5_BASE_PIN ].data) - _volt_offset.get()) * _volt_multiplier.get();
+    //apply calibration to obtain actual voltage and current from the converted results from IC
+    if ((get_register(AD7091R5DevReg::CONFIG) != ((AD7091R5_CONF_CMD << 8) | AD7091R5_CONF_PDOWN0))) {
 
-    //current amps conversion (calculated using battery monitor parameters)
-    sitl->state.battery_current = (_data_to_volt(_analog_data[_curr_pin.get() - AD7091R5_BASE_PIN].data) - _curr_amp_offset.get()) * _curr_amp_per_volt.get();
+        return;
+    }
+
+    if (!(get_register(AD7091R5DevReg::CHANNEL) == AD7091R5_CHAN_ALL))
+    {
+        return;
+    }
+
+        //voltage conversion (calculated using battery monitor parameters)
+        sitl->state.batt_voltage = (_data_to_volt(_analog_data[volt_pin.get() - AD7091R5_BASE_PIN ].data) - _volt_offset.get()) * _volt_multiplier.get();
+
+        //current amps conversion (calculated using battery monitor parameters)
+        sitl->state.battery_current = (_data_to_volt(_analog_data[_curr_pin.get() - AD7091R5_BASE_PIN].data) - _curr_amp_offset.get()) * _curr_amp_per_volt.get();
+
+    
 
 }
 
+// Convert ADC to Voltage
 float SITL::AP_BattMonitor_AD7091R5::_data_to_volt(uint32_t data)
 {
     return (AD7091R5_REF/AD7091R5_RESOLUTION)*data;
+}
+
+// Register initialisation 
+void SITL::AP_BattMonitor_AD7091R5::reset()
+{
+
+    // Set all registers to default as per Page 19 of datasheet
+    set_register(RESULT, (uint8_t)0);
+    set_register(CHANNEL, (uint8_t)0);
+    set_register(CONF, (uint8_t)0xC0);
+    set_register(ALERT_INDICATION, (uint8_t)0);
+    set_register(CHANNEL_0_LOW_LIMIT, (uint8_t)0);
+
+
+
 }
