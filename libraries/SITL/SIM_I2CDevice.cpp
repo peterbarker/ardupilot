@@ -316,3 +316,11 @@ void SITL::I2CRegisters_ConfigurableLength::get_reg_value(uint8_t reg, uint8_t &
     }
     value = reg_data[reg];
 }
+
+void SITL::I2CRegisters_ConfigurableLength::get_reg_value(uint8_t reg, uint16_t &value) const
+{
+    if (reg_data_len[reg] != 2) {
+	    AP_HAL::panic("Invalid reg_reg_value len");
+    }
+    value = reg_data[reg];
+}

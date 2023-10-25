@@ -15,6 +15,8 @@
 
 */ 
 
+#include "SIM_config.h"
+
 #if AP_SIM_AD7091R5_ENABLED
 
 #include "SIM_I2CDevice.h"
@@ -29,18 +31,16 @@ class AD7091R5DevReg : public I2CRegEnum
 
         static constexpr uint8_t RESULT { 0x00 };
         static constexpr uint8_t CHANNEL { 0x01 };
-        static constexpr uint8_t CONF { 0x02 };
+        static constexpr uint8_t CONFIGURATION { 0x02 };
         static constexpr uint8_t ALERT_INDICATION { 0x03 };
         static constexpr uint8_t CHANNEL_0_LOW_LIMIT { 0x04 };
         static constexpr uint8_t CHANNEL_0_HIGH_LIMIT { 0x05 };
         static constexpr uint8_t CHANNEL_0_HYSTER { 0x06 };
 
         // TODO
+};
 
-
-}
-
-class SIM_BattMonitor_AD7091R5 : public I2CDevice, private I2CRegisters_ConfigurableLength
+class AD7091R5 : public I2CDevice, private I2CRegisters_ConfigurableLength
 {
 public:
 

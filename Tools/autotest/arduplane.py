@@ -5130,6 +5130,14 @@ class AutoTestPlane(AutoTest):
             self.set_current_waypoint(2)
         self.fly_home_land_and_disarm()
 
+    def AD7091R5(self):
+        '''test AD7091R5 analogue battery i2c device'''
+        self.set_parameters({
+            "BATT_MONITOR": 28,
+        })
+        self.reboot_sitl()
+        self.delay_sim_time(100000, reason='waiting for you!')
+
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestPlane, self).tests()
@@ -5233,6 +5241,7 @@ class AutoTestPlane(AutoTest):
             self.TerrainRally,
             self.MAV_CMD_NAV_LOITER_UNLIM,
             self.MAV_CMD_NAV_RETURN_TO_LAUNCH,
+            self.AD7091R5,
         ])
         return ret
 

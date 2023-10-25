@@ -52,7 +52,7 @@ public:
     // void get_reg_value(uint8_t reg, int8_t &value) const;
     void get_reg_value(uint8_t reg, uint8_t &value) const;
     // void get_reg_value(uint8_t reg, int16_t &value) const;
-    // void get_reg_value(uint8_t reg, uint16_t &value) const;
+    void get_reg_value(uint8_t reg, uint16_t &value) const;
     // void get_reg_value(uint8_t reg, uint8_t *value, uint8_t len) const;
 
 protected:
