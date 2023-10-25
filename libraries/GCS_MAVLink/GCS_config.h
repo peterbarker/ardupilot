@@ -86,3 +86,12 @@
 #ifndef AP_MAVLINK_MSG_MISSION_REQUEST_ENABLED
 #define AP_MAVLINK_MSG_MISSION_REQUEST_ENABLED 1
 #endif
+
+// ArduPilot understands two magic values for the "current" field when
+// it receives MISSION_ITEM or MISSION_ITEM_INT messages.  These
+// mission items - received *outside* a mission-item-protocol
+// transaction - can control the vehicle in guided mode (and other
+// modes, in the case of Plane)
+#ifndef HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
+#define HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED 1
+#endif

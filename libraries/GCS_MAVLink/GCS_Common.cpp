@@ -883,9 +883,10 @@ void GCS_MAVLINK::handle_mission_item(const mavlink_message_t &msg)
     } else {
         mavlink_msg_mission_item_int_decode(&msg, &mission_item_int);
     }
-    const uint8_t current = mission_item_int.current;
     const MAV_MISSION_TYPE type = (MAV_MISSION_TYPE)mission_item_int.mission_type;
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
+    const uint8_t current = mission_item_int.current;
     if (type == MAV_MISSION_TYPE_MISSION && (current == 2 || current == 3)) {
         struct AP_Mission::Mission_Command cmd = {};
         MAV_MISSION_RESULT result = AP_Mission::mavlink_int_to_mission_cmd(mission_item_int, cmd);
@@ -911,6 +912,7 @@ void GCS_MAVLINK::handle_mission_item(const mavlink_message_t &msg)
         send_mission_ack(msg, MAV_MISSION_TYPE_MISSION, result);
         return;
     }
+#endif  // HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
 
     // not a guided-mode reqest
     MissionItemProtocol *prot = gcs().get_prot_for_mission_type(type);
