@@ -38,7 +38,9 @@ private:
     void packetReceived(const mavlink_status_t &status, const mavlink_message_t &msg) override;
     void mavlink_check_target(const mavlink_message_t &msg);
     void handleMessage(const mavlink_message_t &msg) override;
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
     bool handle_guided_request(AP_Mission::Mission_Command &cmd) override;
+#endif
     void handle_set_attitude_target(const mavlink_message_t &msg);
 
     void send_global_position_int() override;
