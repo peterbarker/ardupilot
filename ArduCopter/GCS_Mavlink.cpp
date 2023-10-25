@@ -591,6 +591,7 @@ MISSION_STATE GCS_MAVLINK_Copter::mission_state(const class AP_Mission &mission)
     return GCS_MAVLINK::mission_state(mission);
 }
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
 bool GCS_MAVLINK_Copter::handle_guided_request(AP_Mission::Mission_Command &cmd)
 {
 #if MODE_AUTO_ENABLED == ENABLED
@@ -599,6 +600,7 @@ bool GCS_MAVLINK_Copter::handle_guided_request(AP_Mission::Mission_Command &cmd)
     return false;
 #endif
 }
+#endif
 
 void GCS_MAVLINK_Copter::packetReceived(const mavlink_status_t &status,
                                         const mavlink_message_t &msg)
