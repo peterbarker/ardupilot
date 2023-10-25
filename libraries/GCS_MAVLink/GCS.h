@@ -1038,8 +1038,11 @@ private:
 
     void send_distance_sensor(const class AP_RangeFinder_Backend *sensor, const uint8_t instance) const;
 
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
     virtual bool handle_guided_request(AP_Mission::Mission_Command &cmd) { return false; };
     virtual void handle_change_alt_request(AP_Mission::Mission_Command &cmd) {};
+#endif
+
     void handle_common_mission_message(const mavlink_message_t &msg);
 
     virtual void handle_manual_control_axes(const mavlink_manual_control_t &packet, const uint32_t tnow) {};

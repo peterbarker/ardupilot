@@ -941,7 +941,7 @@ void GCS_MAVLINK::handle_mission_item(const mavlink_message_t &msg)
     }
     const MAV_MISSION_TYPE type = (MAV_MISSION_TYPE)mission_item_int.mission_type;
 
-#if AP_MISSION_ENABLED
+#if HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
     const uint8_t current = mission_item_int.current;
 
     if (type == MAV_MISSION_TYPE_MISSION && (current == 2 || current == 3)) {
@@ -969,7 +969,7 @@ void GCS_MAVLINK::handle_mission_item(const mavlink_message_t &msg)
         send_mission_ack(msg, MAV_MISSION_TYPE_MISSION, result);
         return;
     }
-#endif
+#endif  // HAL_GCS_GUIDED_MODE_MISSION_ITEM_HANDLING_ENABLED
 
     // not a guided-mode reqest
     MissionItemProtocol *prot = gcs().get_prot_for_mission_type(type);
