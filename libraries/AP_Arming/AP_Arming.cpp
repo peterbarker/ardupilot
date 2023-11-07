@@ -905,6 +905,7 @@ bool AP_Arming::mission_checks(bool report)
 
 bool AP_Arming::rangefinder_checks(bool report)
 {
+#if AP_RANGEFINDER_ENABLED
     if (check_enabled(ARMING_CHECK_RANGEFINDER)) {
         RangeFinder *range = RangeFinder::get_singleton();
         if (range == nullptr) {
@@ -917,6 +918,7 @@ bool AP_Arming::rangefinder_checks(bool report)
             return false;
         }
     }
+#endif
 
     return true;
 }
