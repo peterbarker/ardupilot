@@ -253,14 +253,20 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
 
         } else {
             // use rangefinder to correct if possible
-            float height = height_above_target() - rangefinder_correction();
+            float height = height_above_target();
+#if AP_RANGEFINDER_ENABLED
+            height -= rangefinder_correction();
+            const bool rangefinder_landing_and_in_range = g.rangefinder_landing && rangefinder_state.in_range;
+#else
+            const bool rangefinder_landing_and_in_range = false;
+#endif
             // for flare calculations we don't want to use the terrain
             // correction as otherwise we will flare early on rising
             // ground
             height -= auto_state.terrain_correction;
             return landing.verify_land(prev_WP_loc, next_WP_loc, current_loc,
                                        height, auto_state.sink_rate, auto_state.wp_proportion, auto_state.last_flying_ms, arming.is_armed(), is_flying(),
-                                       g.rangefinder_landing && rangefinder_state.in_range);
+                                       rangefinder_landing_and_in_range);
         }
 
     case MAV_CMD_NAV_LOITER_UNLIM:
@@ -421,8 +427,10 @@ void Plane::do_land(const AP_Mission::Mission_Command& cmd)
         auto_state.takeoff_pitch_cd = 1000;
     }
 
+#if AP_RANGEFINDER_ENABLED
     // zero rangefinder state, start to accumulate good samples now
     memset(&rangefinder_state, 0, sizeof(rangefinder_state));
+#endif
 
     landing.do_land(cmd, relative_altitude);
 

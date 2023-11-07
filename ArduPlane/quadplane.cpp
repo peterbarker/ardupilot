@@ -3769,6 +3769,14 @@ float QuadPlane::forward_throttle_pct()
     int8_t fwd_throttle_min = plane.have_reverse_thrust() ? 0 : plane.aparm.throttle_min;
     vel_forward.integrator = constrain_float(vel_forward.integrator, fwd_throttle_min, plane.aparm.throttle_cruise);
 
+#if AP_RANGEFINDER_ENABLED
+    const bool rangefinder_landing_and_out_of_range_low = (
+        plane.g.rangefinder_landing &&
+        plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::Status::OutOfRangeLow
+        );
+#else
+        const bool rangefinder_landing_and_out_of_range_low = false;
+#endif
     if (in_vtol_land_approach()) {
         // when we are doing horizontal positioning in a VTOL land
         // we always allow the fwd motor to run. Otherwise a bad
@@ -3776,7 +3784,7 @@ float QuadPlane::forward_throttle_pct()
         // approach the landing point when landing below the takeoff point
         vel_forward.last_pct = vel_forward.integrator;
     } else if ((in_vtol_land_final() && motors->limit.throttle_lower) ||
-              (plane.g.rangefinder_landing && (plane.rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::Status::OutOfRangeLow))) {
+               rangefinder_landing_and_out_of_range_low) {
         // we're in the settling phase of landing or using a rangefinder that is out of range low, disable fwd motor
         vel_forward.last_pct = 0;
         vel_forward.integrator = 0;
