@@ -10,7 +10,7 @@ void Copter::read_barometer(void)
 
 void Copter::init_rangefinder(void)
 {
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
    rangefinder.set_log_rfnd_bit(MASK_LOG_CTUN);
    rangefinder.init(ROTATION_PITCH_270);
    rangefinder_state.alt_cm_filt.set_cutoff_frequency(g2.rangefinder_filt);
@@ -25,7 +25,7 @@ void Copter::init_rangefinder(void)
 // return rangefinder altitude in centimeters
 void Copter::read_rangefinder(void)
 {
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
     rangefinder.update();
 
 #if RANGEFINDER_TILT_CORRECTION == ENABLED
