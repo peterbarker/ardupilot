@@ -17,7 +17,7 @@ void Sub::read_barometer()
 
 void Sub::init_rangefinder()
 {
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
     rangefinder.init(ROTATION_PITCH_270);
     rangefinder_state.alt_cm_filt.set_cutoff_frequency(RANGEFINDER_WPNAV_FILT_HZ);
     rangefinder_state.enabled = rangefinder.has_orientation(ROTATION_PITCH_270);
@@ -27,7 +27,7 @@ void Sub::init_rangefinder()
 // return rangefinder altitude in centimeters
 void Sub::read_rangefinder()
 {
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
     rangefinder.update();
 
     rangefinder_state.alt_healthy = ((rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::Status::Good) && (rangefinder.range_valid_count_orient(ROTATION_PITCH_270) >= RANGEFINDER_HEALTH_MAX));

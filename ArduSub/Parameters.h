@@ -230,7 +230,7 @@ public:
 
     AP_Float        throttle_filt;
 
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
     AP_Float        rangefinder_gain;
 #endif
 
