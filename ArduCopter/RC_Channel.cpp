@@ -261,7 +261,7 @@ bool RC_Channel_Copter::do_aux_function(const aux_func_t ch_option, const AuxSwi
 
         case AUX_FUNC::RANGEFINDER:
             // enable or disable the rangefinder
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
             if ((ch_flag == AuxSwitchPos::HIGH) &&
                 copter.rangefinder.has_orientation(ROTATION_PITCH_270)) {
                 copter.rangefinder_state.enabled = true;
@@ -552,6 +552,7 @@ bool RC_Channel_Copter::do_aux_function(const aux_func_t ch_option, const AuxSwi
             break;
         }
 
+#if AP_RANGEFINDER_ENABLED
         case AUX_FUNC::SURFACE_TRACKING:
             switch (ch_flag) {
             case AuxSwitchPos::LOW:
@@ -565,6 +566,7 @@ bool RC_Channel_Copter::do_aux_function(const aux_func_t ch_option, const AuxSwi
                 break;
             }
             break;
+#endif
 
         case AUX_FUNC::ZIGZAG_Auto:
 #if MODE_ZIGZAG_ENABLED == ENABLED
