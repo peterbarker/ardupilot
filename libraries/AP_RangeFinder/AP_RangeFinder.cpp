@@ -14,6 +14,9 @@
  */
 
 #include "AP_RangeFinder.h"
+
+#if AP_RANGEFINDER_ENABLED
+
 #include "AP_RangeFinder_analog.h"
 #include "AP_RangeFinder_PulsedLightLRF.h"
 #include "AP_RangeFinder_MaxsonarI2CXL.h"
@@ -268,7 +271,6 @@ bool RangeFinder::_add_backend(AP_RangeFinder_Backend *backend, uint8_t instance
  */
 void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
 {
-#if AP_RANGEFINDER_ENABLED
     AP_RangeFinder_Backend_Serial *(*serial_create_fn)(RangeFinder::RangeFinder_State&, AP_RangeFinder_Params&) = nullptr;
 
     const Type _type = (Type)params[instance].type.get();
@@ -596,7 +598,6 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
         // param count could have changed
         AP_Param::invalidate_count();
     }
-#endif //AP_RANGEFINDER_ENABLED
 }
 
 AP_RangeFinder_Backend *RangeFinder::get_backend(uint8_t id) const {
@@ -896,3 +897,4 @@ RangeFinder *rangefinder()
 
 }
 
+#endif  // AP_RANGEFINDER_ENABLED
