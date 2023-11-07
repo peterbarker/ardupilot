@@ -87,9 +87,11 @@ void Rover::update_wheel_encoder()
 #endif
 }
 
+#if AP_RANGEFINDER_ENABLED
 // read the rangefinders
 void Rover::read_rangefinders(void)
 {
     rangefinder.update();
     Log_Write_Depth();
 }
+#endif
