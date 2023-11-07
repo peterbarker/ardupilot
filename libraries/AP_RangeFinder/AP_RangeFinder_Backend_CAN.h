@@ -1,9 +1,10 @@
 #pragma once
 
+#include "AP_RangeFinder_config.h"
+
+#if AP_RANGEFINDER_BACKEND_CAN_ENABLED
+
 #include "AP_RangeFinder_Backend.h"
-
-#if HAL_MAX_CAN_PROTOCOL_DRIVERS
-
 #include <AP_CANManager/AP_CANSensor.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
 
@@ -75,4 +76,4 @@ public:
     AP_RangeFinder_Backend_CAN *drivers;
 };
 
-#endif // HAL_MAX_CAN_PROTOCOL_DRIVERS
+#endif  // AP_RANGEFINDER_BACKEND_CAN_ENABLED
