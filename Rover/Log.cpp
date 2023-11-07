@@ -29,6 +29,7 @@ void Rover::Log_Write_Attitude()
     }
 }
 
+#if AP_RANGEFINDER_ENABLED
 // Write a range finder depth message
 void Rover::Log_Write_Depth()
 {
@@ -81,6 +82,7 @@ void Rover::Log_Write_Depth()
     // send water depth and temp to ground station
     gcs().send_message(MSG_WATER_DEPTH);
 }
+#endif
 
 // guided mode logging
 struct PACKED log_GuidedTarget {

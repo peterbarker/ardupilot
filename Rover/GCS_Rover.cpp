@@ -69,6 +69,7 @@ void GCS_Rover::update_vehicle_sensor_status_flags(void)
     }
 #endif
 
+#if AP_RANGEFINDER_ENABLED
     const RangeFinder *rangefinder = RangeFinder::get_singleton();
     if (rangefinder && rangefinder->num_sensors() > 0) {
         control_sensors_present |= MAV_SYS_STATUS_SENSOR_LASER_POSITION;
@@ -78,4 +79,5 @@ void GCS_Rover::update_vehicle_sensor_status_flags(void)
             control_sensors_health |= MAV_SYS_STATUS_SENSOR_LASER_POSITION;
         }
     }
+#endif
 }
