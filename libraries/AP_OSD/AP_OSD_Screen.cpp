@@ -2254,6 +2254,7 @@ void AP_OSD_Screen::draw_fence(uint8_t x, uint8_t y)
 }
 #endif
 
+#if AP_RANGEFINDER_ENABLED
 void AP_OSD_Screen::draw_rngf(uint8_t x, uint8_t y)
 {
     RangeFinder *rangefinder = RangeFinder::get_singleton();
@@ -2267,6 +2268,7 @@ void AP_OSD_Screen::draw_rngf(uint8_t x, uint8_t y)
         backend->write(x, y, false, "%c%4.1f%c", SYMBOL(SYM_RNGFD), u_scale(DISTANCE, distance), u_icon(DISTANCE));
     }
 }
+#endif
 
 #define DRAW_SETTING(n) if (n.enabled) draw_ ## n(n.xpos, n.ypos)
 
@@ -2292,7 +2294,9 @@ void AP_OSD_Screen::draw(void)
     DRAW_SETTING(hgt_abvterr);
 #endif
 
+#if AP_RANGEFINDER_ENABLED
     DRAW_SETTING(rngf);
+#endif
     DRAW_SETTING(waypoint);
     DRAW_SETTING(xtrack_error);
     DRAW_SETTING(bat_volt);
