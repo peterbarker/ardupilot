@@ -71,7 +71,7 @@ const AP_Param::Info Sub::var_info[] = {
     // @Bitmask: 0:Roll,1:Pitch,2:Yaw
     GSCALAR(gcs_pid_mask,           "GCS_PID_MASK",     0),
 
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
     // @Param: RNGFND_GAIN
     // @DisplayName: Rangefinder gain
     // @Description: Used to adjust the speed with which the target altitude is changed when objects are sensed below the sub
@@ -579,7 +579,7 @@ const AP_Param::Info Sub::var_info[] = {
     // @Path: ../libraries/AP_Mission/AP_Mission.cpp
     GOBJECT(mission, "MIS_",       AP_Mission),
 
-#if RANGEFINDER_ENABLED == ENABLED
+#if AP_RANGEFINDER_ENABLED
     // @Group: RNGFND
     // @Path: ../libraries/AP_RangeFinder/AP_RangeFinder.cpp
     GOBJECT(rangefinder,   "RNGFND", RangeFinder),
