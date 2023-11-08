@@ -251,6 +251,13 @@ const AP_Param::GroupInfo AP_Vehicle::var_info[] = {
     // @Path: ../Filter/AP_Filter.cpp
     AP_SUBGROUPINFO(filters, "FILT", 26, AP_Vehicle, AP_Filters),
 #endif
+
+#if AP_GPIO_ENABLED
+    // @Group: GPIO_
+    // @Path: ../AP_GPIO/AP_GPIO.cpp
+    AP_SUBGROUPINFO(gpio, "GPIO_", 27, AP_Vehicle, AP_GPIO),
+#endif
+
     AP_GROUPEND
 };
 
@@ -316,6 +323,10 @@ void AP_Vehicle::setup()
     // the GCS singleton first as it sets the global mavlink system ID
     // which may get used very early on.
     gcs().init();
+#endif
+
+#if AP_GPIO_ENABLED
+    gpio.init();
 #endif
 
     // initialise serial ports

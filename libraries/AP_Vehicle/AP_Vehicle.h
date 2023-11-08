@@ -67,6 +67,10 @@
 #include <Filter/LowPassFilter.h>
 #include <AP_KDECAN/AP_KDECAN.h>
 #include <Filter/AP_Filter.h>
+#include <AP_GPIO/AP_GPIO_config.h>
+#if AP_GPIO_ENABLED
+#include <AP_GPIO/AP_GPIO.h>
+#endif
 
 class AP_DDS_Client;
 
@@ -399,6 +403,10 @@ protected:
 
 #if AP_FENCE_ENABLED
     AC_Fence fence;
+#endif
+
+#if AP_GPIO_ENABLED
+    AP_GPIO gpio;
 #endif
 
 #if AP_TEMPERATURE_SENSOR_ENABLED
