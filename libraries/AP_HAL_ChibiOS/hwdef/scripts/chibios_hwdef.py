@@ -1321,7 +1321,8 @@ class ChibiOSHWDef(object):
                 # storage is before flash, need to ensure storage fits
                 offset2 = self.get_flash_page_offset_kb(storage_flash_page+2)
                 if flash_reserve_start < offset2:
-                    self.error("Storage overlaps flash")
+                    self.error("Storage overlaps flash (flash_reserve_start=%u) (flash_page_offset=%u)" %
+                               (flash_reserve_start, offset2))
 
         self.env_vars['FLASH_RESERVE_START_KB'] = str(flash_reserve_start)
 
