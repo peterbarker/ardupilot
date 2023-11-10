@@ -9,7 +9,7 @@ FLASH_RESERVE_START_KB 24
 FLASH_SIZE_KB 128
 
 # parameter storage:
-STORAGE_FLASH_PAGE 63
+STORAGE_FLASH_PAGE 62
 define HAL_STORAGE_SIZE 800
 
 # board ID for firmware load
