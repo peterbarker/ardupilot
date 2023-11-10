@@ -3,11 +3,12 @@
 # MCU class and specific type
 MCU STM32G431 STM32G431xx
 
-# bootloader starts firmware at 19k + 4k (STORAGE_FLASH_PAGES)
-FLASH_RESERVE_START_KB 21
+# bootloader starts firmware at 26kB (24k bootloader + 2k (STORAGE_FLASH_PAGES))
+FLASH_RESERVE_START_KB 24
+
 FLASH_SIZE_KB 128
 
-# store parameters in pages 23 and 24
+# parameter storage:
 STORAGE_FLASH_PAGE 63
 define HAL_STORAGE_SIZE 800
 
