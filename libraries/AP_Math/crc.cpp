@@ -584,7 +584,7 @@ uint8_t parity(uint8_t byte)
 uint8_t sum_of_bytes_in_buffer_mod_256(uint8_t *data, uint16_t count)
 {
     uint8_t ret = 0;
-    for (uint8_t i=0; i<count; i++) {
+    for (auto i=0; i<count; i++) {
         ret += data[i];
     }
     return ret;

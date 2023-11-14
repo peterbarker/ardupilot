@@ -39,14 +39,20 @@ void EFI_Hirth::update_receive()
         return;
     }
 
-    const uint8_t expected_bytes_in_message = receive_buf[0];
+    uint8_t expected_bytes_in_message = receive_buf[0];
 
     if (expected_bytes_in_message == 0) {
+#if !AP_SIM_SERIALDEVICE_CORRUPTION_ENABLED
         AP_HAL::panic("zero bytes expected is unexpected");
+#endif
     }
 
     if (expected_bytes_in_message > ARRAY_SIZE(receive_buf)) {
+#if !AP_SIM_SERIALDEVICE_CORRUPTION_ENABLED
         AP_HAL::panic("Unexpectedly large byte count");
+#else
+        expected_bytes_in_message = 0;  // avoid memory issues...
+#endif
     }
 
     if (receive_buf_ofs < expected_bytes_in_message) {
@@ -70,7 +76,9 @@ void EFI_Hirth::update_receive()
             requested_data_record.time_ms = AP_HAL::millis();
         }
     } else {
+#if !AP_SIM_SERIALDEVICE_CORRUPTION_ENABLED
         AP_HAL::panic("checksum failed");
+#endif
         // simply throw these bytes away.  What the actual device does in the
         // face of weird data is unknown.
     }
@@ -80,9 +88,11 @@ void EFI_Hirth::update_receive()
 
 void EFI_Hirth::assert_receive_size(uint8_t receive_size)
 {
+#if !AP_SIM_SERIALDEVICE_CORRUPTION_ENABLED
     if (receive_buf[0] != receive_size) {
         AP_HAL::panic("Expected %u message size, got %u message size", receive_size, receive_buf[0]);
     }
+#endif
 }
 
 void EFI_Hirth::handle_set_values()
@@ -115,7 +125,11 @@ void EFI_Hirth::update_send()
         send_record3();
         break;
     default:
+#if !AP_SIM_SERIALDEVICE_CORRUPTION_ENABLED
         AP_HAL::panic("Unknown data record (%u) requested", (unsigned)requested_data_record.code);
+#else
+        break;
+#endif
     }
 }
 
