@@ -15,13 +15,9 @@
 
 #pragma once
 
-#include <AP_HAL/AP_HAL_Boards.h>
+#include "AP_Airspeed_config.h"
 
-#ifndef AP_AIRSPEED_ND_ENABLED
-#define AP_AIRSPEED_ND_ENABLED AP_AIRSPEED_BACKEND_DEFAULT_ENABLED
-#endif
-
-#if AP_AIRSPEED_ND_ENABLED
+#if AP_AIRSPEED_SST_ND_ENABLED
 
 /*
   backend driver for airspeed from I2C
@@ -34,11 +30,11 @@
 
 #include "AP_Airspeed_Backend.h"
 
-class AP_Airspeed_ND : public AP_Airspeed_Backend
+class AP_Airspeed_SST_ND : public AP_Airspeed_Backend
 {
 public:
-    AP_Airspeed_ND(AP_Airspeed &frontend, uint8_t _instance);
-    ~AP_Airspeed_ND(void) {}
+    AP_Airspeed_SST_ND(AP_Airspeed &frontend, uint8_t _instance);
+    ~AP_Airspeed_SST_ND(void) {}
     
     bool init() override;
     bool get_differential_pressure(float &pressure) override;
@@ -78,4 +74,4 @@ private:
     
 };
 
-#endif  // AP_AIRSPEED_ND_ENABLED
+#endif  // AP_AIRSPEED_SST_ND_ENABLED
