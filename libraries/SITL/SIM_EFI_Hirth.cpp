@@ -70,7 +70,7 @@ void EFI_Hirth::update_receive()
         } else {
             assert_receive_size(3);
             if (requested_data_record.time_ms != 0) {
-                AP_HAL::panic("Requesting too fast?");
+                AP_HAL::panic("Requesting too fast?  now=%u prev=%u", (unsigned)AP_HAL::millis(), requested_data_record.time_ms);
             }
             requested_data_record.code = received_packet_code;
             requested_data_record.time_ms = AP_HAL::millis();
