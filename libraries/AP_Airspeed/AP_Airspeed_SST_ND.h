@@ -47,6 +47,7 @@ private:
         ND130,
         ND160,
         ND005D,
+        SST_ND,
     };
 
     bool matchModel(uint8_t* reading);
