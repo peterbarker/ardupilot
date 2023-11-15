@@ -37,7 +37,7 @@ const float inH20_to_Pa = 249.08f;
 
 const uint8_t MN_ND210[8] = {0x4E, 0x44, 0x32, 0x31, 0x30, 0x00, 0x00, 0x00};
 const uint8_t MN_ND005D[8] = {0x4E, 0x44, 0x30, 0x30, 0x35, 0x44, 0x00, 0x00};
-const uint8_t MN_SST[8] = {};
+const uint8_t MN_SST_ND[8] = {0x56, 0x4E, 0x31, 0x33, 0x31, 0x43, 0x00, 0x00};
 
 const float nd210_range[7] = {10.0, 5.0, 4.0, 2.0, 1.0, 0.5, 0.25}; // all in inH2O
 const float nd130_range[6] = {30.0, 20.0, 10.0, 5.0, 4.0, 2.0};
@@ -45,7 +45,7 @@ const float nd160_range[8] = {60.0, 50.0, 40.0, 30.0, 20.0, 10.0, 5.0, 2.5};
 const float nd005d_range[6] = {138.4, 110.72, 55.36, 27.68, 22.14, 13.84}; // converted psi to inH2O
 
 uint8_t config_setting[2] = {0x54, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, pressure range set to 0b100
-
+uint8_t sst_config_setting[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 151.42Hz, pressure range set to 0b010
 
 AP_Airspeed_SST_ND::AP_Airspeed_SST_ND(AP_Airspeed &_frontend, uint8_t _instance) :
     AP_Airspeed_Backend(_frontend, _instance)
@@ -62,14 +62,14 @@ bool AP_Airspeed_SST_ND::probe(uint8_t bus, uint8_t address)
     WITH_SEMAPHORE(_dev->get_semaphore());
 
     _dev->set_retries(5);
-    uint8_t reading[12]= {'\0'};
+    uint8_t reading[14]= {'\0'};
     uint8_t model[8] = {'\0'};
-    if(!_dev->read(reading, 12)){
+    if(!_dev->read(reading, 14)){
         return false;
     }else{
-        for (int i=0; i<12; i++){
-            if(i>3){
-                model[i-4]= reading[i];
+        for (int i=0; i<14; i++){
+            if(i>5){
+                model[i-6]= reading[i];
             }
         }
     }
@@ -142,6 +142,15 @@ found_sensor:
 
 bool AP_Airspeed_SST_ND::matchModel(uint8_t* reading)
 { 
+  for (int i = 0; i < 8; i++) {
+    if (reading[i] != MN_SST_ND[i]) {
+      goto probeND210;
+    }
+    _dev_model = DevModel::SST_ND;
+    //GCS_SEND_TEXT(MAV_SEVERITY_INFO,"ND210 dev type detected.\n");
+    return true;
+  }
+  probeND210:
   for (int i = 0; i < 8; i++) {
     if (reading[i] != MN_ND210[i]) {
       goto probeND005;
