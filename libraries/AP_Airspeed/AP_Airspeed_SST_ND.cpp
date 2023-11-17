@@ -43,6 +43,7 @@ const float nd210_range[7] = {10.0, 5.0, 4.0, 2.0, 1.0, 0.5, 0.25}; // all in in
 const float nd130_range[6] = {30.0, 20.0, 10.0, 5.0, 4.0, 2.0};
 const float nd160_range[8] = {60.0, 50.0, 40.0, 30.0, 20.0, 10.0, 5.0, 2.5};
 const float nd005d_range[6] = {138.4, 110.72, 55.36, 27.68, 22.14, 13.84}; // converted psi to inH2O
+//const float vn131cm_range[];
 
 uint8_t config_setting[2] = {0x54, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, pressure range set to 0b100
 uint8_t sst_config_setting[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 151.42Hz, pressure range set to 0b010
@@ -61,9 +62,10 @@ bool AP_Airspeed_SST_ND::probe(uint8_t bus, uint8_t address)
     }
     WITH_SEMAPHORE(_dev->get_semaphore());
 
-    _dev->set_retries(5);
+    _dev->set_retries(10);
     uint8_t reading[14]= {'\0'};
     uint8_t model[8] = {'\0'};
+
     if(!_dev->read(reading, 14)){
         return false;
     }else{
@@ -117,6 +119,9 @@ found_sensor:
     _dev->transfer(config_setting, 2, nullptr,0);
 
     switch(_dev_model){
+        case DevModel::SST_ND:
+            _available_ranges = 8;
+            break;
         case DevModel::ND210:
             _available_ranges = 7;
             _range_setting = 3;
