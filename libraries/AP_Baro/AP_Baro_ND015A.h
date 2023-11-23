@@ -15,11 +15,7 @@
 
 #pragma once
 
-#include <AP_HAL/AP_HAL_Boards.h>
-
-#ifndef AP_BARO_ND015A_ENABLED
-#define AP_BARO_ND015A_ENABLED AP_AIRSPEED_BACKEND_DEFAULT_ENABLED
-#endif
+#include "AP_Baro_config.h"
 
 #if AP_BARO_ND015A_ENABLED
 /*
@@ -36,7 +32,7 @@ private:
     AP_Baro_ND015A(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev);
     bool init();
     bool matchModel(uint8_t* reading);
-    float _get_pressure(uint16_t dp_raw) const;
+    float _get_pressure(uint32_t dp_raw) const;
     float _get_temperature(int8_t dT_int, int8_t dT_frac) const;
     void collect();
 
