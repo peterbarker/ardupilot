@@ -46,7 +46,7 @@ const float nd005d_range[6] = {138.4, 110.72, 55.36, 27.68, 22.14, 13.84}; // co
 //const float vn131cm_range[];
 
 uint8_t config_setting[2] = {0x54, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, pressure range set to 0b100
-uint8_t sst_config_setting[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 151.42Hz, pressure range set to 0b010
+uint8_t sst_config_setting[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 155.35Hz, pressure range set to 0b010
 
 AP_Airspeed_SST_ND::AP_Airspeed_SST_ND(AP_Airspeed &_frontend, uint8_t _instance) :
     AP_Airspeed_Backend(_frontend, _instance)
