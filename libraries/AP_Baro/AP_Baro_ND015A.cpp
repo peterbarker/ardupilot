@@ -29,8 +29,13 @@
 
 extern const AP_HAL::HAL &hal;
 
-uint8_t config_set[2] = {0x57, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, fixed range
-const uint8_t model_sign[7] = {0x4E, 0x44, 0x30, 0x31, 0x35, 0x41, 0x00};
+//uint8_t config_set[2] = {0x57, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, fixed range
+const uint8_t mn_sst_nd_baro_sign[7] = {0x56, 0x4e, 0x2d, 0x42, 0x41, 0x52, 0x4f}; 
+uint8_t config_set[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 155.35Hz, pressure range set to 0b010
+
+const unsigned int max_p_range = 1100; // Maximum pressure (mbar)
+unsigned int min_p_range = 400; // Minimum pressure (mbar)
+uint8_t current_mode;
 
 AP_Baro_ND015A::AP_Baro_ND015A(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> _dev)
     : AP_Baro_Backend(baro)
@@ -53,7 +58,7 @@ AP_Baro_Backend *AP_Baro_ND015A::probe(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Dev
 
 bool AP_Baro_ND015A::matchModel(uint8_t* reading) {
   for (uint8_t i = 0; i < 7; i++) {
-    if (reading[i] != model_sign[i]) {
+    if (reading[i] != mn_sst_nd_baro_sign[i]) {
       return false;
     }
   }
@@ -63,16 +68,19 @@ bool AP_Baro_ND015A::matchModel(uint8_t* reading) {
 bool AP_Baro_ND015A::init()
 {
     dev->get_semaphore()->take_blocking();
-    uint8_t reading[12] = {'\0'};
+    uint8_t reading[14] = {'\0'};
     uint8_t model[7] = {'\0'};
-    if (!dev->read(reading,12)) {
+    if (!dev->read(reading,sizeof(reading))) {
         return false;
     } else {
-        for (int i = 0; i < 7; i++) {
-            model[i] = reading[i+4];
+        for (int i = 0; i < 14; i++) {
+            if (i > 5){
+                model[i-6] = reading[i];
+            }
         }
     }
     if (!matchModel(model)) {
+        dev->get_semaphore()->give();
         return false;
     } else {
         instance = _frontend.register_sensor();
@@ -83,22 +91,22 @@ bool AP_Baro_ND015A::init()
         dev->transfer(config_set, 2, nullptr,0);
         dev->get_semaphore()->give();
         dev->register_periodic_callback(100000, // 6757 for 148Hz ODR
-            FUNCTOR_BIND_MEMBER(&AP_Baro_ND015A::collect, void));
+                                        FUNCTOR_BIND_MEMBER(&AP_Baro_ND015A::collect, void));
+        return true;
     }
-    return true;
 }
 
 /*
-    convert raw pressure to pressure in psi
+    convert raw pressure to pressure in Pa
 */
-float AP_Baro_ND015A::_get_pressure(uint16_t dp_raw) const
+float AP_Baro_ND015A::_get_pressure(uint32_t dp_raw) const
 {
-    const float psi_to_Pa = 6894.757f;
-    const float margin = 5898.24f;
-    const float offset = 3276.8f;
+    const float mbar_to_Pa = 100.0f;
     
-    float press_psi  = (((float) dp_raw - offset)*1.50)/margin; //fixed 15 psi range for A series
-    float press  = press_psi * psi_to_Pa;
+    float press_mbar  = (float)(min_p_range + 
+                                (max_p_range - min_p_range) * 
+                                ((dp_raw - 838860.75f)/15099493.5f));
+    float press  = press_mbar * mbar_to_Pa;
     return press;
 }
 
@@ -113,7 +121,7 @@ float AP_Baro_ND015A::_get_temperature(int8_t dT_int, int8_t dT_frac) const
 
 void AP_Baro_ND015A::collect()
 {
-    uint8_t data[4]; //2 bytes for pressure and 2 for temperature
+    uint8_t data[6]; //3 bytes for pressure and 2 for temperature
     
     dev->get_semaphore()->take_blocking();
     if (!dev->read(data, sizeof(data))) {
@@ -121,14 +129,18 @@ void AP_Baro_ND015A::collect()
     }
     dev->get_semaphore()->give();
 
-    uint16_t dp_raw;
-    dp_raw = (data[0] << 8) + data[1];
+    //Get the current sensor mode
+    current_mode = data[0];
+
+    //Read pressure
+    uint32_t dp_raw = 0x00;
+    dp_raw = (data[1] << 16) | (data[2] << 8) | data[3];
 
     float press  = _get_pressure(dp_raw);
-    float temp  = _get_temperature(data[2], data[3]);
+    float temp  = _get_temperature(data[4], data[5]);
 
     WITH_SEMAPHORE(_sem);
-    _press_sum += press ;
+    _press_sum += press;
     _temp_sum += temp;
     _press_count += 1;
     _temp_count += 1;
