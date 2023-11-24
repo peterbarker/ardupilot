@@ -32,6 +32,7 @@ private:
     AP_Baro_ND015A(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev);
     bool init();
     bool matchModel(uint8_t* reading);
+    bool config_setup(uint8_t* config);
     float _get_pressure(uint32_t dp_raw) const;
     float _get_temperature(int8_t dT_int, int8_t dT_frac) const;
     void collect();

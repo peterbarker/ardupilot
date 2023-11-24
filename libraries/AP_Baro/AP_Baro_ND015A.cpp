@@ -88,12 +88,22 @@ bool AP_Baro_ND015A::init()
         dev->set_device_type(DEVTYPE_BARO_ND015A);
         set_bus_id(instance, dev->get_bus_id());
 
-        dev->transfer(config_set, 2, nullptr,0);
+        dev->transfer(config_set,2,nullptr, 0);
+        //config_setup(config_set); //Setting up a initial configuration
         dev->get_semaphore()->give();
         dev->register_periodic_callback(100000, // 6757 for 148Hz ODR
                                         FUNCTOR_BIND_MEMBER(&AP_Baro_ND015A::collect, void));
         return true;
     }
+}
+
+bool AP_Baro_ND015A::config_setup(uint8_t* setup)
+{
+    const uint8_t* config = setup;
+    if(!dev->transfer(config, 2, nullptr,0)){
+        return false;
+    }
+    return true;
 }
 
 /*
