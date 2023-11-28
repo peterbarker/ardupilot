@@ -999,6 +999,7 @@ bool AP_Baro::healthy(uint8_t instance) const {
 }
 #endif
 
+#if AP_AHRS_ENABLED
 /*
   update field elevation value
  */
@@ -1036,6 +1037,7 @@ void AP_Baro::update_field_elevation(void)
         BARO_SEND_TEXT(MAV_SEVERITY_INFO, "Field Elevation Set: %.0fm", _field_elevation_active);
     }
 }
+#endif  // AP_AHRS_ENABLED
 
 /*
   call accumulate on all drivers
