@@ -5,6 +5,7 @@
 /*
   ./Tools/autotest/sim_vehicle.py -v Plane --gdb --debug
 param set ARSPD_TYPE 16
+param set ARSPD_BUS 0
 param set ARSPD_BUS 1
 reboot
 
