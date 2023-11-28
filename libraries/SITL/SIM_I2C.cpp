@@ -36,6 +36,7 @@
 #include "SIM_LM2755.h"
 #include "SIM_MS5525.h"
 #include "SIM_MS5611.h"
+#include "SIM_VN131CM.h"
 
 #include <signal.h>
 
@@ -82,6 +83,11 @@ static IS31FL3195 is31fl3195;
 #define SIM_IS31FL3195_ADDR 0x54
 #endif
 
+#if AP_SIM_VN131CM_ENABLED
+static VN131CM vn131cm;
+#endif
+
+
 struct i2c_device_at_address {
     uint8_t bus;
     uint8_t addr;
@@ -100,6 +106,7 @@ struct i2c_device_at_address {
     { 1, 0x76, ms5525 },  // MS5525: ARSPD_TYPE = 4
     { 1, 0x77, tsys01 },
     { 1, 0x0B, rotoye },        // Rotoye: BATTx_MONITOR 19, BATTx_I2C_ADDR 13
+    { 1, 0x28, vn131cm },  // VN131CM, airspeed
     { 2, 0x0B, maxell },        // Maxell: BATTx_MONITOR 16, BATTx_I2C_ADDR 13
     { 3, 0x0B, smbus_generic},  // BATTx_MONITOR 7, BATTx_I2C_ADDR 13
     { 2, 0x28, airspeed_dlvr }, // ARSPD_TYPE = 7 5inch H2O sensor
