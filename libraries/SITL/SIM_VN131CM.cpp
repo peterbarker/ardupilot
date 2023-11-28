@@ -29,11 +29,11 @@ int VN131CM::rd(I2C::i2c_rdwr_ioctl_data *&data)
         msg.buf[17] = 0xE5;
         FALLTHROUGH;
     case 14:         // model, right-reading ascii with null-termination
-        strncpy((char*)&msg.buf[16], "VN131CM", 8);
+        strncpy((char*)&msg.buf[6], "VN131CM", 8);
         FALLTHROUGH;
     case 6:         // temperature, 2-byte sign int
-        msg.buf[4] = temperature_C;
         msg.buf[5] = (temperature_C-int(temperature_C))*255;
+        msg.buf[4] = temperature_C;
         FALLTHROUGH;
     case 4:         // pressure, 3-byte unsigned int
         msg.buf[3] = 17;
