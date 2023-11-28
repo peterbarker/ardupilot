@@ -39,6 +39,7 @@
 #include "SIM_MS5611.h"
 #include "SIM_QMC5883L.h"
 #include "SIM_INA3221.h"
+#include "SIM_VN131CM.h"
 
 #include <signal.h>
 
@@ -109,6 +110,11 @@ static QMC5883L qmc5883l;
 static INA3221 ina3221;
 #endif
 
+#if AP_SIM_VN131CM_ENABLED
+static VN131CM vn131cm;
+#endif
+
+
 struct i2c_device_at_address {
     uint8_t bus;
     uint8_t addr;
@@ -145,6 +151,8 @@ struct i2c_device_at_address {
     { 1, 0x0B, rotoye },        // Rotoye: BATTx_MONITOR 19, BATTx_I2C_ADDR 13
 #endif
 #if AP_SIM_BATT_MONITOR_SMBUS_MAXELL_ENABLED
+    { 1, 0x28, vn131cm },  // VN131CM, airspeed
+#endif
     { 2, 0x0B, maxell },        // Maxell: BATTx_MONITOR 16, BATTx_I2C_ADDR 13
 #endif
     { 3, 0x0B, smbus_generic},  // BATTx_MONITOR 7, BATTx_I2C_ADDR 13
