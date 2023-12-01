@@ -62,7 +62,7 @@ bool AP_Airspeed_SST_ND::probe(uint8_t bus, uint8_t address)
     }
     WITH_SEMAPHORE(_dev->get_semaphore());
 
-    _dev->set_retries(10);
+    _dev->set_retries(20);
     uint8_t reading[14]= {'\0'};
     uint8_t model[8] = {'\0'};
 
@@ -116,7 +116,7 @@ found_sensor:
 
     // send default configuration
     WITH_SEMAPHORE(_dev->get_semaphore());
-    _dev->transfer(config_setting, 2, nullptr,0);
+    //_dev->transfer(config_setting, 2, nullptr,0);
 
     switch(_dev_model){
         case DevModel::SST_ND:
@@ -138,7 +138,7 @@ found_sensor:
     }
 
     // drop to 2 retries for runtime
-    _dev->set_retries(2);
+    _dev->set_retries(10);
     
     _dev->register_periodic_callback(110000, //  6757 for 148Hz ODR 
                                      FUNCTOR_BIND_MEMBER(&AP_Airspeed_SST_ND::_collect, void));
@@ -178,7 +178,7 @@ bool AP_Airspeed_SST_ND::matchModel(uint8_t* reading)
 /*
     convert raw pressure to pressure in Pascals
 */
-float AP_Airspeed_SST_ND::_get_pressure(int16_t dp_raw) const
+float AP_Airspeed_SST_ND::_get_pressure(uint32_t dp_raw) const
 {
     const float margin = 29491.2f;
 
@@ -199,18 +199,18 @@ float AP_Airspeed_SST_ND::_get_temperature(int8_t dT_int, int8_t dT_frac) const
 // read the values from the sensor
 void AP_Airspeed_SST_ND::_collect()
 {
-    uint8_t data[4]; //2 bytes for pressure and 2 for temperature
+    uint8_t data[6]; //2 bytes for pressure and 2 for temperature
     _dev->get_semaphore()->take_blocking();
     if (!_dev->read(data, sizeof(data))) {
         return;
     }
     _dev->get_semaphore()->give();
 
-    int16_t dp_raw;
-    dp_raw = (data[0] << 8) + data[1];
+    uint32_t dp_raw = 0x00;
+    dp_raw = (data[1] << 16) | (data[2] << 8) | data[3];
 
     float press  = _get_pressure(dp_raw);
-    float temp  = _get_temperature(data[2], data[3]);
+    float temp  = _get_temperature(data[4], data[5]);
 
     WITH_SEMAPHORE(sem);
 

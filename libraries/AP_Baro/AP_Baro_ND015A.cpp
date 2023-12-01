@@ -32,6 +32,7 @@ extern const AP_HAL::HAL &hal;
 //uint8_t config_set[2] = {0x57, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, fixed range
 const uint8_t mn_sst_nd_baro_sign[7] = {0x56, 0x4e, 0x2d, 0x42, 0x41, 0x52, 0x4f}; 
 uint8_t config_set[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 155.35Hz, pressure range set to 0b010
+uint8_t test_config_set = 0x3A;
 
 const unsigned int max_p_range = 1100; // Maximum pressure (mbar)
 unsigned int min_p_range = 400; // Minimum pressure (mbar)
@@ -84,11 +85,11 @@ bool AP_Baro_ND015A::init()
         return false;
     } else {
         instance = _frontend.register_sensor();
-        dev->set_retries(2);
+        dev->set_retries(10);
         dev->set_device_type(DEVTYPE_BARO_ND015A);
         set_bus_id(instance, dev->get_bus_id());
 
-        dev->transfer(config_set,2,nullptr, 0);
+        //dev->transfer(&test_config_set,1,nullptr, 0);
         //config_setup(config_set); //Setting up a initial configuration
         dev->get_semaphore()->give();
         dev->register_periodic_callback(100000, // 6757 for 148Hz ODR
