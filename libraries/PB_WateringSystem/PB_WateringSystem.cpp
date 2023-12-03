@@ -221,7 +221,7 @@ void PB_WateringSystem::handle_uart_read()
     while (true) {
         void *cr = memchr(readbuffer, '\r', readbuffer_used);
         if (cr == nullptr) {
-            return;
+            break;
         }
         *(char*)cr = '\0';
         send_debug("C:%s", readbuffer);
@@ -246,6 +246,19 @@ void PB_WateringSystem::handle_uart_read()
         const uint16_t remaining_byte_count = readbuffer_used - to_consume;
         memmove(readbuffer, cr, remaining_byte_count);
         readbuffer_used = remaining_byte_count;
+    }
+
+    if (readbuffer_used >= ARRAY_SIZE(readbuffer)) {
+        send_debug("too big; discarding readbuffer");
+        readbuffer_used = 0;
+    }
+    if (bytes_read > 0) {
+        for (uint8_t i=0; i<readbuffer_used; i++) {
+            if (readbuffer[i] < ' ' || readbuffer[i] > '~') {
+                send_debug("line noise; discarding readbuffer");
+                readbuffer_used = 0;
+            }
+        }
     }
 }
 
