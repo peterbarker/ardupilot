@@ -43,7 +43,7 @@ const float nd210_range[7] = {10.0, 5.0, 4.0, 2.0, 1.0, 0.5, 0.25}; // all in in
 const float nd130_range[6] = {30.0, 20.0, 10.0, 5.0, 4.0, 2.0};
 const float nd160_range[8] = {60.0, 50.0, 40.0, 30.0, 20.0, 10.0, 5.0, 2.5};
 const float nd005d_range[6] = {138.4, 110.72, 55.36, 27.68, 22.14, 13.84}; // converted psi to inH2O
-//const float vn131cm_range[];
+const float vn131cm_range[8] = {23.6, 27.5, 31.5, 35.4, 39.4, 43.3, 47.2, 51.2} //all in inH2O
 
 uint8_t config_setting[2] = {0x54, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, pressure range set to 0b100
 uint8_t sst_config_setting[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 155.35Hz, pressure range set to 0b010
@@ -140,7 +140,7 @@ found_sensor:
     // drop to 2 retries for runtime
     _dev->set_retries(10);
     
-    _dev->register_periodic_callback(110000, //  6757 for 148Hz ODR 
+    _dev->register_periodic_callback(100000, //  6757 for 148Hz ODR 
                                      FUNCTOR_BIND_MEMBER(&AP_Airspeed_SST_ND::_collect, void));
     return true;
 }
