@@ -43,7 +43,7 @@ const float nd210_range[7] = {10.0, 5.0, 4.0, 2.0, 1.0, 0.5, 0.25}; // all in in
 const float nd130_range[6] = {30.0, 20.0, 10.0, 5.0, 4.0, 2.0};
 const float nd160_range[8] = {60.0, 50.0, 40.0, 30.0, 20.0, 10.0, 5.0, 2.5};
 const float nd005d_range[6] = {138.4, 110.72, 55.36, 27.68, 22.14, 13.84}; // converted psi to inH2O
-const float vn131cm_range[8] = {23.6, 27.5, 31.5, 35.4, 39.4, 43.3, 47.2, 51.2} //all in inH2O
+const float vn131cm_range[8] = {23.6, 27.5, 31.5, 35.4, 39.4, 43.3, 47.2, 51.2}; //all in inH2O
 
 uint8_t config_setting[2] = {0x54, 0x00}; // notch filter disabled, bw limit set to 50Hz-> 148Hz odr with auto select, wdg disabled, pressure range set to 0b100
 uint8_t sst_config_setting[2] = {0x0A, 0x07}; //bw limit set to 50Hz -> 155.35Hz, pressure range set to 0b010
@@ -121,6 +121,8 @@ found_sensor:
     switch(_dev_model){
         case DevModel::SST_ND:
             _available_ranges = 8;
+            _range_setting = 7;
+            _current_range_val = vn131cm_range[_range_setting];
             break;
         case DevModel::ND210:
             _available_ranges = 7;
@@ -181,8 +183,16 @@ bool AP_Airspeed_SST_ND::matchModel(uint8_t* reading)
 float AP_Airspeed_SST_ND::_get_pressure(uint32_t dp_raw) const
 {
     const float margin = 29491.2f;
+    float diff_press_inH2O = 0.0f;
 
-    float diff_press_inH2O  = (dp_raw*_current_range_val)/margin;
+    if (_dev_model != DevModel::SST_ND){
+        diff_press_inH2O = (dp_raw * _current_range_val) / margin;
+    }
+    else{
+        diff_press_inH2O = (float)(_current_range_val *
+                                    (dp_raw - 8388607.5f) /
+                                    15099493.5f);
+    }
     float press  = diff_press_inH2O * inH20_to_Pa;
     return press;
 }
@@ -248,12 +258,12 @@ void AP_Airspeed_SST_ND::update_range()
             _current_range_val = nd005d_range[_range_setting];
             break;
         default:
-            _current_range_val = 0.0;
+            _current_range_val = 0.0f;
             //GCS_SEND_TEXT(MAV_SEVERITY_INFO,"No specific device detected/not supported\n");
     }
     config_setting[0] = (config_setting[0] & 0xF0) + (0b0111 - _range_setting);
     WITH_SEMAPHORE(_dev->get_semaphore());
-    _dev->transfer(config_setting, 2, nullptr,0);
+    //_dev->transfer(config_setting, 2, nullptr,0);
     //GCS_SEND_TEXT(MAV_SEVERITY_INFO,"Range changed to %d: %.2f inH2O\n", _range_setting, _current_range_val);
     hal.scheduler->delay(2); // wait for the sensor to change range
 }
