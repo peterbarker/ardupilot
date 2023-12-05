@@ -2848,6 +2848,10 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
                 raise NotAchievedException("Never saw an airspeed1")
             if airspeed[1] is None:
                 raise NotAchievedException("Never saw an airspeed2")
+            if airspeed[0] < 2:
+                raise NotAchievedException(f"Never saw a good airspeed1 {airspeed[0]}")
+            if airspeed[1] < 2:
+                raise NotAchievedException(f"Never saw a good airspeed2 {airspeed[1]}")
             self.context_pop()
         self.reboot_sitl()
 
