@@ -54,7 +54,7 @@ private:
     bool probe(uint8_t bus, uint8_t address);
     void _collect();
     float _get_pressure(uint32_t dp_raw) const;
-    float _get_temperature(int8_t dT_int, int8_t dT_frac) const;
+    float _get_temperature(int8_t dT_int, uint8_t dT_frac) const;
     bool range_change_needed(float last_pressure);
     void update_range(void);
 
