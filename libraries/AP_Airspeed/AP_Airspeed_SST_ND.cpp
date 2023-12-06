@@ -200,7 +200,7 @@ float AP_Airspeed_SST_ND::_get_pressure(uint32_t dp_raw) const
 /*
   convert raw temperature to temperature in degrees C
  */
-float AP_Airspeed_SST_ND::_get_temperature(int8_t dT_int, int8_t dT_frac) const
+float AP_Airspeed_SST_ND::_get_temperature(int8_t dT_int, uint8_t dT_frac) const
 {
     float temp  = dT_int + dT_frac/256.0;
     return temp;
