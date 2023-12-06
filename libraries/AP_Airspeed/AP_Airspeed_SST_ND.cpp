@@ -116,7 +116,7 @@ found_sensor:
 
     // send default configuration
     WITH_SEMAPHORE(_dev->get_semaphore());
-    //_dev->transfer(config_setting, 2, nullptr,0);
+    _dev->transfer(config_setting, 2, nullptr,0);
 
     switch(_dev_model){
         case DevModel::SST_ND:
@@ -263,7 +263,7 @@ void AP_Airspeed_SST_ND::update_range()
     }
     config_setting[0] = (config_setting[0] & 0xF0) + (0b0111 - _range_setting);
     WITH_SEMAPHORE(_dev->get_semaphore());
-    //_dev->transfer(config_setting, 2, nullptr,0);
+    _dev->transfer(config_setting, 2, nullptr,0);
     //GCS_SEND_TEXT(MAV_SEVERITY_INFO,"Range changed to %d: %.2f inH2O\n", _range_setting, _current_range_val);
     hal.scheduler->delay(2); // wait for the sensor to change range
 }
