@@ -273,14 +273,15 @@ bool AP_Airspeed_SST_ND::get_differential_pressure(float &pressure)
 {
     WITH_SEMAPHORE(sem);
 
-    if ((AP_HAL::millis() - _last_sample_time_ms) > 100 || _press_count == 0) {
+    if ((AP_HAL::millis() - _last_sample_time_ms) > 100) {
         return false;
     }
 
-    _pressure = _press_sum / _press_count;
-    _press_count = 0;
-    _press_sum = 0;
-    
+    if (_press_count > 0) {
+        _pressure = _press_sum / _press_count;
+        _press_count = 0;
+        _press_sum = 0;
+    }
     if(range_change_needed(_pressure)){
         update_range();     
     }
@@ -292,13 +293,15 @@ bool AP_Airspeed_SST_ND::get_temperature(float &temperature)
 {
     WITH_SEMAPHORE(sem);
 
-    if ((AP_HAL::millis() - _last_sample_time_ms) > 100 || _temp_count == 0) {
+    if ((AP_HAL::millis() - _last_sample_time_ms) > 100) {
         return false;
     }
 
-    _temperature = _temp_sum / _temp_count;
-    _temp_count = 0;
-    _temp_sum = 0;
+    if (_temp_count > 0) {
+        _temperature = _temp_sum / _temp_count;
+        _temp_count = 0;
+        _temp_sum = 0;
+    }
     temperature = _temperature;
     return true;
 }
