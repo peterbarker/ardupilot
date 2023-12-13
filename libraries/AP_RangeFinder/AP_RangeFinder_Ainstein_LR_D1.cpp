@@ -21,6 +21,7 @@
 
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_HAL/utility/sparse-endian.h>
+#include <GCS_MAVLink/GCS.h>
 
 static const uint8_t PACKET_HEADER_MSB = 0xEB;
 static const uint8_t PACKET_HEADER_LSB = 0x90;
@@ -78,7 +79,6 @@ bool AP_RangeFinder_Ainstein_LR_D1::get_reading(float &reading_m)
     if (u.packet.header_lsb != PACKET_HEADER_LSB ||
         u.packet.device_id != 0x00 ||
         u.packet.length != 28 ||
-        u.packet.objects_number != 1 ||
         u.calculate_checksum() != u.packet.checksum) {
         // sanity checks failed - discard and try again next time we're called:
         move_signature_in_buffer(1);
@@ -107,22 +107,44 @@ bool AP_RangeFinder_Ainstein_LR_D1::get_reading(float &reading_m)
 
     snr = u.packet.object1_snr;
 
-    if (snr == 0) {
+    /* From datasheet:
+        Altitude measurements associated with a SNR value 
+        of 13dB or lower are considered erroneous
+    */
+    if (snr <= 13)
+    {
+        signal_quality_pct = RangeFinder::SIGNAL_QUALITY_MIN;
         // out of range according to datasheet
         // max valid altitude from device is 655 metres
-        reading_m = MAX(656, max_distance_cm() * 0.01 + 1);
-        return true;
+        if (snr == 0)
+        {
+            reading_m = MAX(656, max_distance_cm() * 0.01 + 1);
+            return true;
+        }
+        
+        return false;
     }
+
+    signal_quality_pct = RangeFinder::SIGNAL_QUALITY_MAX;
+
+    check_for_malfunction();
 
     return true;
 }
 
-bool AP_RangeFinder_Ainstein_LR_D1::get_signal_quality_pct(uint8_t &quality_pct) const
+int8_t AP_RangeFinder_Ainstein_LR_D1::get_signal_quality_pct() const
 {
-    if (snr == 255) {
-        return false;
+    return signal_quality_pct;
+}
+
+void AP_RangeFinder_Ainstein_LR_D1::check_for_malfunction() {
+    uint8_t malfunction_alert = u.packet.malfunction_alert;
+    if (malfunction_alert & static_cast<uint8_t>(MalfunctionAlert::Temperature)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "RangeFinder: Temperature alert");
     }
-    return snr;
+    if (malfunction_alert & static_cast<uint8_t>(MalfunctionAlert::Voltage)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "RangeFinder: Voltage alert");
+    }
 }
 
 #endif  // AP_RANGEFINDER_AINSTEIN_LR_D1_ENABLED

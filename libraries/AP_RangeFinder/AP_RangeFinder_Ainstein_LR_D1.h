@@ -45,17 +45,19 @@ private:
 
     // 0 is no return value, 100 is perfect.  false means signal
     // quality is not available
-    bool get_signal_quality_pct(uint8_t &quality_pct) const override;
+    int8_t get_signal_quality_pct() const override;
 
     // find signature byte in buffer starting at start, moving that
     // byte and following bytes to start of buffer.
     bool move_signature_in_buffer(uint8_t start);
 
+    void check_for_malfunction();
+
     enum class MalfunctionAlert {
         Temperature = 0x01,
         Voltage = 0x02,
-        IFSignalSaturation = 0x04,
-        AltitudeReading = 0x08,
+        IFSignalSaturation = 0x40,
+        AltitudeReading = 0x80,
     };
 
     union LRD1Union {
@@ -65,7 +67,7 @@ private:
             uint8_t device_id;
             uint8_t length;  // "fixed as 28 bytes"
             uint8_t malfunction_alert;
-            uint8_t objects_number;  // "fixed as 1"
+            uint8_t objects_number;  // "fixed as 1 (in version FW 6.0.7.x only), no longer reliable for data validation checks"
             uint16_t object1_alt;
             uint8_t object1_snr;
             uint16_t object1_velocity;
@@ -80,6 +82,7 @@ private:
     uint8_t buffer_used;
 
     uint8_t snr = 255;  // stashed SNR value after successful reading; 255 is unknown
+    int8_t signal_quality_pct = RangeFinder::SIGNAL_QUALITY_UNKNOWN;    
 };
 
 #endif  // AP_RANGEFINDER_AINSTEIN_LR_D1_ENABLED
