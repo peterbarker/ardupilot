@@ -1036,8 +1036,6 @@ class ChibiOSHWDef(object):
         if self.have_type_prefix('CAN') and not using_chibios_can:
             self.enable_can(f)
         flash_size = self.get_config('FLASH_SIZE_KB', type=int)
-        f.write('#define BOARD_FLASH_SIZE %u\n' % flash_size)
-        self.env_vars['BOARD_FLASH_SIZE'] = flash_size
 
         flash_reserve_start = self.get_config(
             'FLASH_RESERVE_START_KB', default=16, type=int)
@@ -1047,13 +1045,14 @@ class ChibiOSHWDef(object):
         if not args.bootloader and flash_reserve_start == 0:
             f.write('#define HAL_ENABLE_SAVE_PERSISTENT_PARAMS 0\n')
 
-        f.write('#define EXT_FLASH_SIZE_MB %u\n' % self.get_config('EXT_FLASH_SIZE_MB', default=0, type=int))
+        ext_flash_size_mb = self.get_config('EXT_FLASH_SIZE_MB', default=0, type=int)
+        f.write('#define EXT_FLASH_SIZE_MB %u\n' % ext_flash_size_mb)
         f.write('#define EXT_FLASH_RESERVE_START_KB %u\n' % self.get_config('EXT_FLASH_RESERVE_START_KB', default=0, type=int))
         f.write('#define EXT_FLASH_RESERVE_END_KB %u\n' % self.get_config('EXT_FLASH_RESERVE_END_KB', default=0, type=int))
 
-        self.env_vars['EXT_FLASH_SIZE_MB'] = self.get_config('EXT_FLASH_SIZE_MB', default=0, type=int)
+        self.env_vars['EXT_FLASH_SIZE_MB'] = ext_flash_size_mb
         self.env_vars['INT_FLASH_PRIMARY'] = self.get_config('INT_FLASH_PRIMARY', default=False, type=bool)
-        if self.env_vars['EXT_FLASH_SIZE_MB'] and not args.bootloader and not self.env_vars['INT_FLASH_PRIMARY']:
+        if ext_flash_size_mb and not args.bootloader and not self.env_vars['INT_FLASH_PRIMARY']:
             f.write('#define CRT0_AREAS_NUMBER 4\n')
             f.write('#define __FASTRAMFUNC__ __attribute__ ((__section__(".fastramfunc")))\n')
             f.write('#define __RAMFUNC__ __attribute__ ((__section__(".ramfunc")))\n')
@@ -1067,6 +1066,12 @@ class ChibiOSHWDef(object):
             f.write('#define __EXTFLASHFUNC__ __attribute__ ((__section__(".extflash")))\n')
         else:
             f.write('#define __EXTFLASHFUNC__\n')
+
+        # write out total flash storage.  Note that this does not take
+        # into account reserved areas!
+        board_flash_size = int(flash_size) + int(ext_flash_size_mb)*1024
+        f.write('#define BOARD_FLASH_SIZE %u\n' % board_flash_size)
+        self.env_vars['BOARD_FLASH_SIZE'] = board_flash_size
 
         storage_flash_page = self.get_storage_flash_page()
         flash_reserve_end = self.get_config('FLASH_RESERVE_END_KB', default=0, type=int)
