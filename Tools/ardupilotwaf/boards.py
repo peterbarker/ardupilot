@@ -855,6 +855,7 @@ class sitl_periph_gps(sitl):
             HAL_PERIPH_ENABLE_RPM = 1,
             HAL_PERIPH_ENABLE_RC_OUT = 1,
             HAL_PERIPH_ENABLE_ADSB = 1,
+            HAL_PERIPH_ENABLE_ADSB_LIBRARY = 1,
             HAL_PERIPH_ENABLE_SERIAL_OPTIONS = 1,
             AP_ICENGINE_ENABLED = 0,
             AP_AIRSPEED_ENABLED = 1,
