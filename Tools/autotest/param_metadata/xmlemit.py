@@ -2,6 +2,7 @@ from lxml import etree
 
 from emit import Emit
 from param import known_param_fields, known_units
+import re
 
 # Emit ArduPilot documentation in an machine readable XML format
 class XmlEmit(Emit):
@@ -30,6 +31,27 @@ class XmlEmit(Emit):
     def start_libraries(self):
         self.current_element = self.libraries
 
+    def sorted_Values_keys(self, param, nv_pairs):
+        keys = nv_pairs.keys()
+        if not re.match('RC\d+_OPTION', param.name):
+            return keys
+
+        def rc_option_key(value):
+            not_really_modes = frozenset([
+                'AirMode',
+                'Camera Mode Toggle',
+            ])
+            really_modes = frozenset([
+                'RTL AUTO',
+            ])
+            if nv_pairs[value] == 'Do Nothing':
+                return "AAAAAAAAAAAAA"
+            if nv_pairs[value] in really_modes or re.match('.*mode.*', nv_pairs[value], re.IGNORECASE) and nv_pairs[value] not in not_really_modes:
+                return "AAA%s" % nv_pairs[value]
+            return nv_pairs[value]
+
+        return sorted(keys, key=rc_option_key)
+
     def emit(self, g):
         xml_parameters = etree.SubElement(self.current_element, 'parameters', name=g.reference)  # i.e. ArduPlane
 
@@ -54,13 +76,23 @@ class XmlEmit(Emit):
                     if field == 'Values' and Emit.prog_values_field.match(param.__dict__[field]):
                         xml_values = etree.SubElement(xml_param, 'values')
                         values = (param.__dict__[field]).split(',')
+                        nv_unsorted = {}
                         for value in values:
                             v = value.split(':')
                             if len(v) != 2:
                                 raise ValueError("Bad value (%s)" % v)
                             # i.e. numeric value, string label
-                            xml_value = etree.SubElement(xml_values, 'value', code=v[0])
-                            xml_value.text = v[1]
+                            if v[0] in nv_unsorted:
+                                raise ValueError("%s already exists" % v[0])
+                            nv_unsorted[v[0]] = v[1]
+
+                        sorted_keys = self.sorted_Values_keys(param, nv_unsorted)
+
+                        for key in sorted_keys:
+                            value = nv_unsorted[key]
+
+                            xml_value = etree.SubElement(xml_values, 'value', code=key)
+                            xml_value.text = value
 
                     elif field == 'Units':
                         abreviated_units = param.__dict__[field]
