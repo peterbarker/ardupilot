@@ -265,6 +265,7 @@ class ExtractFeatures(object):
             ('AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED', 'GCS_MAVLINK::send_flight_information'),
             ('AP_MAVLINK_MSG_RANGEFINDER_SENDING_ENABLED', r'GCS_MAVLINK::send_rangefinder'),
 
+            ('AP_MAVLINK_MSG_LOCAL_POSITION_NED_COV_ENABLED', r'GCS_MAVLINK::send_local_position_ned_cov\b'),
             ('AP_DRONECAN_HIMARK_SERVO_SUPPORT', 'AP_DroneCAN::SRV_send_himark'),
             ('AP_DRONECAN_HOBBYWING_ESC_SUPPORT', 'AP_DroneCAN::hobbywing_ESC_update'),
             ('COMPASS_CAL_ENABLED', 'CompassCalibrator::stop'),
