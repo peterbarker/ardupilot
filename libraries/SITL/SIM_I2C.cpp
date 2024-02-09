@@ -38,6 +38,7 @@
 #include "SIM_MS5525.h"
 #include "SIM_MS5611.h"
 #include "SIM_QMC5883L.h"
+#include "SIM_TI_DACx3204.h"
 #include "SIM_RF_Benewake_TFMiniPlus.h"
 #include "SIM_Temperature_MCP9600.h"
 #include "SIM_Temperature_SHT3x.h"
@@ -118,23 +119,9 @@ static IS31FL3195 is31fl3195;
 #if AP_SIM_COMPASS_QMC5883L_ENABLED
 static QMC5883L qmc5883l;
 #endif
-#if AP_SIM_RF_BENEWAKE_TFMINIPLUS_ENABLED
-static Benewake_TFMiniPlus benewake_tfminiplus;
-#endif  // AP_SIM_RF_BENEWAKE_TFMINIPLUS_ENABLED
-#if AP_SIM_INA3221_ENABLED
-static INA3221 ina3221;
+#if AP_SIM_DAC_TI_DACx3204_ENABLED
+static TI_DACx3204 dac_x3204;
 #endif
-#if AP_SIM_TERARANGERI2C_ENABLED
-static TeraRangerI2C terarangeri2c;
-#endif
-#if AP_SIM_AS5600_ENABLED
-static AS5600 as5600;  // AoA sensor
-#endif  // AP_SIM_AS5600_ENABLED
-
-#if AP_SIM_TFS20L_ENABLED
-static TFS20L tfs20l;  // Benewake TFS20L rangefinder
-#endif  // AP_SIM_TFS20L_ENABLED
-
 
 struct i2c_device_at_address {
     uint8_t bus;
@@ -192,6 +179,9 @@ struct i2c_device_at_address {
 #endif
 #if AP_SIM_LP5562_ENABLED
     { 2, 0x30, lp5562 },        // LP5562 RGB LED driver
+#endif
+#if AP_SIM_DAC_TI_DACx3204_ENABLED
+    { 2, 0x4A, dac_x3204 },  // TI DAC, addr is (0b1001 << 3) | 0b011 (p49)
 #endif
 #if AP_SIM_LM2755_ENABLED
     { 2, 0x67, lm2755 },        // LM2755 RGB LED driver
