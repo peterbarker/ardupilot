@@ -46,6 +46,7 @@
 #include "SIM_TeraRangerI2C.h"
 #include "SIM_TFS20L.h"
 #include "SIM_ToshibaLED.h"
+#include "SIM_TI_DACx3204.h"
 
 #include <signal.h>
 
@@ -135,6 +136,9 @@ static AS5600 as5600;  // AoA sensor
 static TFS20L tfs20l;  // Benewake TFS20L rangefinder
 #endif  // AP_SIM_TFS20L_ENABLED
 
+#if AP_SIM_DAC_TI_DACx3204_ENABLED
+static TI_DACx3204 dac_x3204;
+#endif  // AP_SIM_DAC_TI_DACx3204_ENABLED
 
 struct i2c_device_at_address {
     uint8_t bus;
@@ -192,6 +196,9 @@ struct i2c_device_at_address {
 #endif
 #if AP_SIM_LP5562_ENABLED
     { 2, 0x30, lp5562 },        // LP5562 RGB LED driver
+#endif
+#if AP_SIM_DAC_TI_DACx3204_ENABLED
+    { 2, 0x4A, dac_x3204 },  // TI DAC, addr is (0b1001 << 3) | 0b011 (p49)
 #endif
 #if AP_SIM_LM2755_ENABLED
     { 2, 0x67, lm2755 },        // LM2755 RGB LED driver
