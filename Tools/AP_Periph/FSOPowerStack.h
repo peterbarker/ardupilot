@@ -54,13 +54,39 @@ private:
     uint32_t last_update_ms;
     bool version_displayed = false;
     
-    struct FAN {
+
+    class Fan {
+    public:
+        Fan(uint8_t _instance, uint8_t _pin, const AP_Float &_min_Hz) :
+            instance{_instance},
+            pin{_pin},
+            min_Hz{_min_Hz}
+            { }
+        void init();
+        void update();
+        void handler(uint8_t pin,
+                     bool pin_state,
+                     uint32_t timestamp);
+        uint8_t get_instance_number() const { return instance; }
+        void report_errors();
+        float freq_hz;
+    private:
+        uint8_t instance;
         uint8_t pin;
+        const AP_Float &min_Hz;
         uint32_t last_pulse_us;
         uint32_t dt_sum;
         uint32_t dt_count;
-        float freq_hz;
+        uint32_t last_error_ms;
+    } fans[4] {
+        { 0, FSO_FAN_TACH1_PIN, fan_1_min_Hz },
+        { 1, FSO_FAN_TACH2_PIN, fan_2_min_Hz },
+        { 2, FSO_FAN_TACH3_PIN, fan_3_min_Hz },
+        { 3, FSO_FAN_TACH4_PIN, fan_4_min_Hz },
     };
+
+    uint32_t last_fan_ms;
+    void update_fans();
 
     // States used during turn on
     enum TurnOnState {
@@ -119,16 +145,6 @@ private:
     float       cal_measurement_3;
     float       cal_measurement_4;
 
-
-    uint32_t last_fan_ms;
-    uint32_t last_fan_error_ms;
-    FAN fans[4];
-
-    void fan_handler(uint8_t pin,
-                     bool pin_state,
-                     uint32_t timestamp);
-    void init_fan(uint8_t pin, FAN &fan);
-    void update_fans();
     void update_switches();
     void update_main_power();
     void update_payload_HV_power();
