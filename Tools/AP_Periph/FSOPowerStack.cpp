@@ -170,39 +170,36 @@ FSOPowerStack::FSOPowerStack(void)
 /*
   handle interrupt for a fan
  */
-void FSOPowerStack::fan_handler(uint8_t pin, bool pin_state, uint32_t timestamp)
+void FSOPowerStack::Fan::handler(uint8_t _pin, bool pin_state, uint32_t timestamp)
 {
-    for (uint8_t i=0; i<ARRAY_SIZE(fans); i++) {
-        auto &fan = fans[i];
-        if (pin == fan.pin) {
-            if (fan.last_pulse_us != 0) {
-                const uint32_t dt = timestamp - fan.last_pulse_us;
-                fan.dt_sum += dt;
-                fan.dt_count++;
-            }
-            fan.last_pulse_us = timestamp;
-        }
+    if (_pin != pin) {
+        return;
     }
+    if (last_pulse_us != 0) {
+        const uint32_t dt = timestamp - last_pulse_us;
+        dt_sum += dt;
+        dt_count++;
+    }
+    last_pulse_us = timestamp;
 }
 
 /*
   initialise a fan interrupt
  */
-void FSOPowerStack::init_fan(uint8_t pin, FAN &fan)
+void FSOPowerStack::Fan::init()
 {
-    fan.pin = pin;
     hal.gpio->pinMode(pin, HAL_GPIO_INPUT);
-    hal.gpio->attach_interrupt(pin,
-                               FUNCTOR_BIND_MEMBER(&FSOPowerStack::fan_handler, void, uint8_t, bool, uint32_t),
-                               AP_HAL::GPIO::INTERRUPT_RISING);
+    hal.gpio->attach_interrupt(
+        pin,
+        FUNCTOR_BIND_MEMBER(&FSOPowerStack::Fan::handler, void, uint8_t, bool, uint32_t),
+        AP_HAL::GPIO::INTERRUPT_RISING);
 }
 
 void FSOPowerStack::init()
 {
-    init_fan(FSO_FAN_TACH1_PIN, fans[0]);
-    init_fan(FSO_FAN_TACH2_PIN, fans[1]);
-    init_fan(FSO_FAN_TACH3_PIN, fans[2]);
-    init_fan(FSO_FAN_TACH4_PIN, fans[3]);
+    for (auto & fan : fans) {
+        fan.init();
+    }
 
     float sample_freq = 1.0 / FSO_LOOP_TIME_MS;
     float over_current_tc = 1.0;
@@ -232,29 +229,28 @@ void FSOPowerStack::update_fans(void)
     last_fan_ms = now_ms;
 
     for (auto &fan : fans) {
-        if (fan.dt_count == 0) {
-            fan.freq_hz = 0;
-            continue;
-        }
-        void *irqstate = hal.scheduler->disable_interrupts_save();
-        const float dt_avg = float(fan.dt_sum) / fan.dt_count;
-        fan.dt_sum = 0;
-        fan.dt_count = 0;
-        hal.scheduler->restore_interrupts(irqstate);
-        fan.freq_hz = 1.0/(dt_avg*1.0e-6);
+        fan.update();
     }
+}
 
-    if (fans[0].freq_hz < fan_1_min_Hz) {
-        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Fan 1 failure");
+void FSOPowerStack::Fan::update(void)
+{
+    if (dt_count == 0) {
+        freq_hz = 0;
+        return;
     }
-    if (fans[1].freq_hz < fan_2_min_Hz){
-        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Fan 2 failure");
+    float dt_avg;
+    {
+        void *irqstate = hal.scheduler->disable_interrupts_save();
+        dt_avg = float(dt_sum) / dt_count;
+        dt_sum = 0;
+        dt_count = 0;
+        hal.scheduler->restore_interrupts(irqstate);
     }
-    if (fans[2].freq_hz < fan_3_min_Hz){
-        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Fan 3 failure");
-    }
-    if (fans[3].freq_hz < fan_4_min_Hz){
-        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Fan 4 failure");
+    freq_hz = 1.0/(dt_avg*1.0e-6);
+
+    if (freq_hz < min_Hz) {
+        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Fan %u failure", instance);
     }
 }
 
