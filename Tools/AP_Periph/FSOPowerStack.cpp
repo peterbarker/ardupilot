@@ -19,18 +19,14 @@
 
 #include <dronecan_msgs.h>
 
+#include <AP_Common/ExpandingString.h>
+
 #define FSO_OUT_VOLTS_DIFF_MAX              2.0     // Maximum difference between output and batteries before turn on
 #define FSO_BATT_VOLTS_DIFF_MAX             1.0     // Maximum difference between batteries before turn on
 #define FSO_PRECHARGE_TIMEOUT_MS            500     // Maximum pre-charge time before turn on is aborted
 #define FSO_SWITCH_ON_TIME_MS               500     // Minimum press time to turn on
 #define FSO_SWITCH_OFF_TIME_MS              1000    // Minimum press time to turn off
 #define FSO_LOOP_TIME_MS                    100     // Loop time in ms
-#define FSO_PAYLOAD_HV_CURRENT_MAX          25.0    // Maximum current of the HV payload output
-#define FSO_PAYLOAD_BEC_CURRENT_MAX         10.0    // Maximum current of the payload BEC's
-#define FSO_PAYLOAD_BEC_TEMPERATURE_MAX     100.0   // Maximum temperature of the payload BEC's
-#define FSO_INTERNAL_BEC_HC_CURRENT_MAX     10.0    // Maximum current of the high current internal BEC
-#define FSO_INTERNAL_BEC_CURRENT_MAX        1.0     // Maximum current of the low current internal BEC's
-#define FSO_INTERNAL_BEC_TEMPERATURE_MAX    100.0   // Maximum temperature of the payload BEC's
 
 extern const AP_HAL::HAL &hal;
 
@@ -45,7 +41,7 @@ const AP_Param::GroupInfo FSOPowerStack::var_info[] {
     // @DisplayName: Payload HV amp limit
     // @Description: Payload HV amp limit
     // @Range: 0 25
-    AP_GROUPINFO("_HV_AMP_LIM", 2, FSOPowerStack, payload_HV_current_max, FSO_PAYLOAD_HV_CURRENT_MAX),
+    AP_GROUPINFO("_HV_AMP_LIM", 2, FSOPowerStack, payload_HV_current_max, PAYLOAD_HV_CURRENT_MAX),
 
     // @Param: _BEC1_VOLT
     // @DisplayName: Payload 1 voltage
@@ -63,19 +59,19 @@ const AP_Param::GroupInfo FSOPowerStack::var_info[] {
     // @DisplayName: Payload 1 amp limit
     // @Description: Payload 1 amp limit
     // @Range: 0 10
-    AP_GROUPINFO("_BEC1_AMP_LIM", 5, FSOPowerStack, payload_1_current_max, FSO_PAYLOAD_BEC_CURRENT_MAX),
+    AP_GROUPINFO("_BEC1_AMP_LIM", 5, FSOPowerStack, payload_1_current_max, PAYLOAD_BEC_CURRENT_MAX),
 
     // @Param: _BEC2_AMP_LIM
     // @DisplayName: Payload 2 amp limit
     // @Description: Payload 2 amp limit
     // @Range: 0 10
-    AP_GROUPINFO("_BEC2_AMP_LIM", 6, FSOPowerStack, payload_2_current_max, FSO_PAYLOAD_BEC_CURRENT_MAX),
+    AP_GROUPINFO("_BEC2_AMP_LIM", 6, FSOPowerStack, payload_2_current_max, PAYLOAD_BEC_CURRENT_MAX),
 
     // @Param: _BEC_TEMP_LIM
     // @DisplayName: Maximum temperature of BEC circuits before shutdown or warning
     // @Description: Maximum temperature of BEC circuits before shutdown or warning
     // @Range: 0 100
-    AP_GROUPINFO("_BEC_TEMP_LIM", 7, FSOPowerStack, bec_temperature_max, FSO_PAYLOAD_BEC_TEMPERATURE_MAX),
+    AP_GROUPINFO("_BEC_TEMP_LIM", 7, FSOPowerStack, bec_temperature_max, PAYLOAD_BEC_TEMPERATURE_MAX),
 
     // @Param: _FAN_1_MIN
     // @DisplayName: Alarm threshold for minimum fan 1 tachometer in Hz
@@ -201,11 +197,34 @@ void FSOPowerStack::init()
         fan.init();
     }
 
-    float sample_freq = 1.0 / FSO_LOOP_TIME_MS;
-    float over_current_tc = 1.0;
-    payload_HV_current_filter.set_cutoff_frequency(sample_freq, 1.0/over_current_tc);
-    payload_1_current_filter.set_cutoff_frequency(sample_freq, 1.0/over_current_tc);
-    payload_2_current_filter.set_cutoff_frequency(sample_freq, 1.0/over_current_tc);
+    // define payload BECs:
+    becs[num_becs++] = new PayloadHVBEC{
+        "Payload HV",  // name
+        "PHV",
+        2,  // battery instance
+        payload_HV_current_max,  // user-parameter overriding max current
+        FSO_PAYLOAD_HV_EN_PIN,   // pin used to turn BEC on/off
+        FSO_PAYLOAD_HV_PC_PIN    // pin used to turn precharge circuit on/off
+    };
+    becs[num_becs++] = new PayloadBEC{
+        "Payload 1",
+        "P1",
+        3,
+        payload_1_current_max,
+        FSO_PAYLOAD_1_EN_PIN}
+    ;
+    becs[num_becs++] = new PayloadBEC{
+        "Payload 2",
+        "P2",
+        4,
+        payload_2_current_max,
+        FSO_PAYLOAD_2_EN_PIN
+    };
+
+    // define internal BECs:
+    becs[num_becs++] = new InternalHCBEC{"Internal HC", "IHC", 5};
+    becs[num_becs++] = new InternalBEC{"Internal 1", "I1", 6};
+    becs[num_becs++] = new InternalBEC{"Internal 2", "I2", 7};
 }
 
 /*
@@ -266,29 +285,47 @@ void FSOPowerStack::report(void)
     }
     last_report_ms = now_ms;
 
-    auto &batt = AP::battery();
+    {
+        auto &batt = AP::battery();
 
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Volt - B1:%.1f, B2:%.1f, PHV:%.1f, P1:%.2f, P2:%.2f, IHC:%.2f, I1:%.2f, I2:%.2f, O:%.2f",
-                  batt.voltage(0), batt.voltage(1), batt.voltage(2), batt.voltage(3),
-                  batt.voltage(4), batt.voltage(5), batt.voltage(6), batt.voltage(7), batt.voltage(8));
+        char volt_msg[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1];
+        ExpandingString volt_msg_e(volt_msg, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1);
+        char curr_msg[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1];
+        ExpandingString curr_msg_e(curr_msg, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1);
 
-    float B1_C = nanf("");
-    float B2_C = nanf("");
-    float PHV_C = nanf("");
-    float P1_C = nanf("");
-    float P2_C = nanf("");
-    float IHC_C = nanf("");
-    float I1_C = nanf("");
-    float I2_C = nanf("");
-    if (batt.current_amps(B1_C, 0) || batt.current_amps(B2_C, 1) || batt.current_amps(PHV_C, 2) || batt.current_amps(P1_C, 3) || batt.current_amps(P2_C, 4) || batt.current_amps(IHC_C, 5) || batt.current_amps(I1_C, 6) || batt.current_amps(I2_C, 7)) {
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Current - B1:%.4f, B2:%.4f, PHV:%.2f, P1:%.2f, P2:%.2f, IHC:%.2f, I1:%.2f, I2:%.2f",
-                  B1_C, B2_C, PHV_C, P1_C, P2_C, IHC_C, I1_C, I2_C);
+        static const char *batt_roles[] {
+            "B1", "B2", "PHV", "p1", "p2", "IHC", "I1", "I2", "O",
+        };
+        for (uint8_t i=0; i<9; i++) {
+            volt_msg_e.printf(" %s:%.2f", batt_roles[i], batt.voltage(i));
+
+            float current;
+            if (batt.current_amps(current, i)) {
+                curr_msg_e.printf(" %s:%.4f", batt_roles[i], current);
+            }
+        }
+
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Volt -%s", volt_msg_e.get_writeable_string());
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Curr -%s", curr_msg_e.get_writeable_string());
     }
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Current Limit - PHV:%.2f, P1:%.2f, P2:%.2f,  IHC:%.2f, I1:%.2f, I2:%.2f",
-                  payload_HV_current_filter.get(), payload_1_current_filter.get(), payload_2_current_filter.get(),
-                  internal_HC_current_filter.get(), internal_1_current_filter.get(), internal_2_current_filter.get());
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Temp Limit - P1:%.1f, P2:%.1f, IHC:%.1f, I1:%.1f, I2:%.1f",
-                   payload_1_temp, payload_2_temp, internal_HC_temp, internal_1_temp, internal_2_temp);
+
+    {
+        char curr_msg[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1];
+        ExpandingString curr_msg_e(curr_msg, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1);
+
+        char volt_msg[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1];
+        ExpandingString volt_msg_e(volt_msg, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1);
+
+        for (uint8_t i=0; i<num_becs; i++) {
+            auto &bec = becs[i];
+            curr_msg_e.printf(" %s:%0.2f", bec->shortname, bec->current_filter.get());
+            volt_msg_e.printf(" %s:%0.2f", bec->shortname, bec->temperature);
+        }
+
+        GCS_SEND_TEXT(MAV_SEVERITY_NOTICE, "Current Filter -%s", curr_msg_e.get_writeable_string());
+        GCS_SEND_TEXT(MAV_SEVERITY_NOTICE, "Temp -%s", volt_msg_e.get_writeable_string());
+    }
+
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Fans - F1: %.0f, F2: %.0f, F3: %.0f, F4: %.0f",
                     fans[0].freq_hz, fans[1].freq_hz, fans[2].freq_hz, fans[3].freq_hz);
 }
@@ -392,150 +429,157 @@ void FSOPowerStack::update_main_power()
     }
 }
 
-void FSOPowerStack::update_payload_HV_power()
+void FSOPowerStack::PayloadHVBEC::update_state()
 {
     uint32_t now_ms = AP_HAL::millis();
-    auto &batt = AP::battery();
-    
-    float payload_HV_current;
-    if (batt.current_amps(payload_HV_current, 3)) {
-        payload_HV_current_filter.apply(payload_HV_current, 0.001 * FSO_LOOP_TIME_MS);
-        if (payload_HV_current_filter.get() > MIN(payload_HV_current_max, FSO_PAYLOAD_HV_CURRENT_MAX)) {
-            payload_HV_state = ShutDown;
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Payload HV over current shutdown");
-        }
-    }
-    
+
     // Payload Turn On State Machine
-    switch (payload_HV_state) {
+    switch (desired_state) {
+    case DesiredState::OFF:
+        switch (current_state) {
+        case State::ON:
+        case State::PRECHARGE:
+            // Turn off HV pre-charge
+            precharge_off();
 
-    case TurnOnState::Off:
-        if (payload_HV_on == true) {
-            payload_HV_state = TurnOnState::PreChargeStart;
+            // Turn off payload HV switch
+            off();
+            set_state(State::OFF);
+            break;
+        case State::OFF:
+            break;
         }
         break;
 
-    case TurnOnState::PreChargeStart:
-        // Turn on Payload HV pre-charge
-        set_payload_HV_PC_on();
-        start_payload_HV_precharge_ms = now_ms;
-        payload_HV_state = TurnOnState::PreCharge;
-        break;
+    case DesiredState::ON:
+        switch (current_state) {
+        case State::ON:
+            return;
+        case State::OFF:
+            // start pre-charge
+            precharge_on();
+            precharge_start_ms = now_ms;
+            set_state(State::PRECHARGE);
+            // FALLTHROUGH
+        case State::PRECHARGE: {
+            auto &batt = AP::battery();
 
-    case TurnOnState::PreCharge:
-        if (MAX(batt.voltage(0), batt.voltage(1)) - batt.voltage(2) < FSO_OUT_VOLTS_DIFF_MAX) {
+            // check for timeout first:
+            if (now_ms - precharge_start_ms >= FSO_PRECHARGE_TIMEOUT_MS) {
+                // did not reach voltage in time
+                GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "%s Pre-Charge Failure Diff Voltage: %.2f", name, MAX(batt.voltage(0), batt.voltage(1)) - batt.voltage(2));
+                set_desired_state(DesiredState::OFF);
+                break;
+            }
+            if (MAX(batt.voltage(0), batt.voltage(1)) - batt.voltage(2) >= FSO_OUT_VOLTS_DIFF_MAX) {
+                // have not yet reached sufficient voltage, but there is still time!
+                break;
+            }
+            // reached voltage
             // Turn off payload HV pre-charge
-            set_payload_HV_PC_off();
+            precharge_off();
 
             // Turn on payload HV switch
-            set_payload_HV_SW_on();
-
-            payload_HV_state = TurnOnState::On;
-        } else if (now_ms - start_payload_HV_precharge_ms > FSO_PRECHARGE_TIMEOUT_MS) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Payload Pre-Charge Failure Diff Voltage: %.2f", MAX(batt.voltage(0), batt.voltage(1)) - batt.voltage(2));
-            payload_HV_state = ShutDown;
+            on();
+            set_state(State::ON);
+            break;
         }
-        break;
-
-    case TurnOnState::On:
-        if (payload_HV_on == false) {
-            payload_HV_state = TurnOnState::ShutDown;
-        }
-        break;
-
-    case TurnOnState::ShutDown:
-        // Turn off payload HV pre-charge
-        set_payload_HV_PC_off();
-
-        // Turn off payload HV switch
-        set_payload_HV_SW_off();
-
-        payload_HV_state = TurnOnState::Off;
-        break;
-    }
-}
-
-void FSOPowerStack::update_payload_BEC()
-{
-    auto &batt = AP::battery();
-
-    float payload_1_current;
-    if (batt.current_amps(payload_1_current, 3)) {
-        payload_1_current_filter.apply(payload_1_current, 0.001 * FSO_LOOP_TIME_MS);
-        if (payload_1_current_filter.get() > MIN(payload_1_current_max, FSO_PAYLOAD_BEC_CURRENT_MAX)) {
-            set_payload_BEC_1_off();
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Payload 1 over current shutdown");
-        }
-    }
-    
-    float payload_2_current;
-    if (batt.current_amps(payload_2_current, 4)) {
-        payload_2_current_filter.apply(payload_2_current, 0.001 * FSO_LOOP_TIME_MS);
-        if (payload_2_current_filter.get() > MIN(payload_2_current_max, FSO_PAYLOAD_BEC_CURRENT_MAX)) {
-            set_payload_BEC_2_off();
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Payload 2 over current shutdown");
-        }
-    }
-    
-    if (batt.get_temperature(payload_1_temp, 3)) {
-        if (payload_1_temp > MIN(bec_temperature_max, FSO_PAYLOAD_BEC_TEMPERATURE_MAX)) {
-            set_payload_BEC_1_off();
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Payload 1 over temperature shutdown");
-        }
-    }
-    
-    if (batt.get_temperature(payload_2_temp, 4)) {
-        if (payload_2_temp > MIN(bec_temperature_max, FSO_PAYLOAD_BEC_TEMPERATURE_MAX)) {
-            set_payload_BEC_2_off();
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Payload 2 over temperature shutdown");
         }
     }
 }
 
-void FSOPowerStack::update_internal_BEC()
+FSOPowerStack::BEC::BEC(const char *_name, const char *_shortname, uint8_t _battery_index) :
+    name{_name},
+    shortname{_shortname},
+    battery_index{_battery_index}
 {
-    auto &batt = AP::battery();
+    static constexpr float over_current_tc = 1.0;
+    static constexpr float sample_freq = 1.0 / FSO_LOOP_TIME_MS;
 
-    float internal_HC_current;
-    if (batt.current_amps(internal_HC_current, 5)) {
-        internal_HC_current_filter.apply(internal_HC_current, 0.001 * FSO_LOOP_TIME_MS);
-        if (internal_HC_current_filter.get() > FSO_INTERNAL_BEC_HC_CURRENT_MAX) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Internal BEC HC Over Current Fault");
+    current_filter.set_cutoff_frequency(sample_freq, 1.0/over_current_tc);
+}
+
+void FSOPowerStack::BEC::check_current()
+{
+    const auto &batt = AP::battery();
+
+    float current;
+    if (!batt.current_amps(current, battery_index)) {
+        // this is probably very bad
+        return;
+    }
+    current_filter.apply(current, 0.001 * FSO_LOOP_TIME_MS);
+    if (current_filter.get() < max_current()) {
+        // current is OK
+        return;
+    }
+    handle_over_current();
+}
+
+void FSOPowerStack::BEC::handle_over_current()
+{
+    GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "%s Over Current Fault", name);
+}
+
+void FSOPowerStack::PayloadBEC::handle_over_current()
+{
+    GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "%s Over Current Shutdown", name);
+    set_desired_state(DesiredState::OFF);
+}
+
+void FSOPowerStack::BEC::check_temperature()
+{
+    const auto &batt = AP::battery();
+
+    if (!batt.get_temperature(temperature, battery_index)) {
+        // this is probably very bad
+        return;
+    }
+    if (temperature <= max_temperature()) {
+        // temperature is good
+        return;
+    }
+    GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "%s Over Temperature Fault", name);
+}
+
+void FSOPowerStack::PayloadBEC::update_state()
+{
+    switch (desired_state) {
+    case DesiredState::ON:
+        switch (current_state) {
+        case State::ON:
+            // nothing to do
+            return;
+        case State::OFF:
+            off();
+            set_state(State::OFF);
+            break;
+        }
+    case DesiredState::OFF:
+        switch (current_state) {
+        case State::OFF:
+            // nothing to do
+            return;
+        case State::ON:
+            on();
+            set_state(State::ON);
+            break;
         }
     }
-    
-    float internal_1_current;
-    if (batt.current_amps(internal_1_current, 6)) {
-        internal_1_current_filter.apply(internal_1_current, 0.001 * FSO_LOOP_TIME_MS);
-        if (internal_1_current_filter.get() > FSO_INTERNAL_BEC_CURRENT_MAX) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Internal BEC 1 Over Current Fault");
-        }
-    }
-    
-    float internal_2_current;
-    if (batt.current_amps(internal_2_current, 7)) {
-        internal_2_current_filter.apply(internal_2_current, 0.001 * FSO_LOOP_TIME_MS);
-        if (internal_2_current_filter.get() > FSO_INTERNAL_BEC_CURRENT_MAX) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Internal BEC 2 Over Current Fault");
-        }
-    }
-    
-    if (batt.get_temperature(internal_HC_temp, 5)) {
-        if (internal_HC_temp > FSO_INTERNAL_BEC_TEMPERATURE_MAX) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Internal BEC HC Over Temperature Fault");
-        }
-    }
-    
-    if (batt.get_temperature(internal_1_temp, 6)) {
-        if (internal_1_temp > FSO_INTERNAL_BEC_TEMPERATURE_MAX) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Internal BEC 1 Over Temperature Fault");
-        }
-    }
-    
-    if (batt.get_temperature(internal_2_temp, 7)) {
-        if (internal_2_temp > FSO_INTERNAL_BEC_TEMPERATURE_MAX) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Internal BEC 2 Over Temperature Fault");
-        }
+}
+
+void FSOPowerStack::BEC::update()
+{
+     check_current();
+     check_temperature();
+
+     update_state();
+}
+
+void FSOPowerStack::update_BECs()
+{
+    for (auto &bec : becs) {
+        bec->update();
     }
 }
 
@@ -1328,9 +1372,7 @@ void FSOPowerStack::update()
 
     update_fans();
 
-    update_payload_BEC();
-
-    update_internal_BEC();
+    update_BECs();
 
     report();
 }

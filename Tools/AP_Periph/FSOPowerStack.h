@@ -81,6 +81,8 @@ private:
     uint32_t last_fan_ms;
     void update_fans();
 
+    void update_BECs();
+
     // States used during turn on
     enum TurnOnState {
         Off,
@@ -135,12 +137,6 @@ private:
     bool main_is_on(){return main_state == TurnOnState::On;}
     bool main_is_off(){return main_state == TurnOnState::Off;}
 
-    void set_HV_payload_on(){payload_HV_on = true;}
-    void set_HV_payload_off(){payload_HV_on = false;}
-    
-    bool HV_payload_is_on(){return payload_HV_state == TurnOnState::On;}
-    bool HV_payload_is_off(){return payload_HV_state == TurnOnState::Off;}
-
     void set_payload_BEC_1_on(){hal.gpio->write(FSO_PAYLOAD_1_EN_PIN, 1);}
     void set_payload_BEC_1_off(){hal.gpio->write(FSO_PAYLOAD_1_EN_PIN, 0);}
 
@@ -177,12 +173,6 @@ private:
     void set_bat_2_SW_on(){hal.gpio->write(FSO_BAT_2_EN_PIN, 1);}
     void set_bat_2_SW_off(){hal.gpio->write(FSO_BAT_2_EN_PIN, 0);}
 
-    void set_payload_HV_PC_on(){hal.gpio->write(FSO_PAYLOAD_HV_PC_PIN, 1);}
-    void set_payload_HV_PC_off(){hal.gpio->write(FSO_PAYLOAD_HV_PC_PIN, 0);}
-
-    void set_payload_HV_SW_on(){hal.gpio->write(FSO_PAYLOAD_HV_EN_PIN, 1);}
-    void set_payload_HV_SW_off(){hal.gpio->write(FSO_PAYLOAD_HV_EN_PIN, 0);}
-
     uint32_t last_report_ms;
     void report();
 
@@ -196,24 +186,145 @@ private:
     uint32_t switch_2_press_time_ms;
 
     bool main_on;
-    bool payload_HV_on;
     bool power_on;
     uint32_t start_main_precharge_ms;
-    uint32_t start_payload_HV_precharge_ms;
-    LowPassFilterFloat  payload_HV_current_filter;  // Payload HV current input filter
-    LowPassFilterFloat  payload_1_current_filter;   // Payload BEC 1 current input filter
-    LowPassFilterFloat  payload_2_current_filter;   // Payload BEC 2 current input filter
-    float   payload_1_temp;     // Payload BEC 1 current input filter
-    float   payload_2_temp;     // Payload BEC 2 current input filter
-    LowPassFilterFloat  internal_HC_current_filter;  // Internal BEC HC current input filter
-    LowPassFilterFloat  internal_1_current_filter;   // Internal BEC 1 current input filter
-    LowPassFilterFloat  internal_2_current_filter;   // Internal BEC 2 current input filter
-    float   internal_HC_temp;     // Internal BEC HC current input filter
-    float   internal_1_temp;     // Internal BEC 1 current input filter
-    float   internal_2_temp;     // Internal BEC 2 current input filter
+
+    class BEC {
+    public:
+        BEC(const char *_name, const char *shortname, uint8_t _battery_index);
+        const char *name;
+        const char *shortname;
+        const uint8_t battery_index;
+
+        float temperature;
+        LowPassFilterFloat current_filter;
+
+        virtual float max_current() const = 0;
+        virtual float max_temperature() const = 0;
+
+        void update();
+
+    private:
+        void check_current();
+        void check_temperature();
+
+        virtual void update_state() = 0;
+        virtual void handle_over_current();
+    };
+
+    class InternalBEC : public BEC {
+    public:
+        using BEC::BEC;
+        // Maximum current of the low current internal BECs:
+        float max_current() const override { return 1.0; }
+        // Maximum temperature of the low current internal BECs:
+        float max_temperature() const override { return 100.0; }
+
+        void update_state() override {};
+    };
+    class InternalHCBEC : public InternalBEC {
+    public:
+        using InternalBEC::InternalBEC;
+        // Maximum current of the high current internal BEC:
+        float max_current() const override { return 10.0; }
+        // Maximum temperature of the low current internal BECs:
+        float max_temperature() const override { return nanf(""); }
+
+    };
+
+    class PayloadBEC : public BEC {
+    public:
+        PayloadBEC(const char * _name, const char *_shortname, uint8_t _battery_index, AP_Float &_max_current_parameter, uint8_t _enable_pin) :
+            BEC(_name, _shortname, _battery_index),
+            max_current_parameter{_max_current_parameter},
+            enable_pin{_enable_pin}
+            { }
+        virtual float max_current() const override {
+            // return the smaller of the user-configured current and
+            // the compiled-in limit:
+            return MIN(fixed_max_current(), max_current_parameter);
+        }
+        float max_temperature() const override { return PAYLOAD_BEC_TEMPERATURE_MAX; }
+
+    protected:
+        // Maximum current of the payload BECs (Amps):
+        virtual float fixed_max_current() const { return PAYLOAD_BEC_CURRENT_MAX; }
+        virtual void handle_over_current() override;
+
+        // turn the BEC on or off instantly:
+        void on() { hal.gpio->write(enable_pin, 1); }
+        void off() { hal.gpio->write(enable_pin, 0); }
+
+        virtual void update_state() override;
+
+        enum class DesiredState {
+            OFF = 0,
+            ON = 1,
+        };
+        void set_desired_state(DesiredState _desired_state) {
+            desired_state = _desired_state;
+        }
+
+        DesiredState desired_state = DesiredState::OFF;
+
+    private:
+
+        // States used during turn on
+        enum class State {
+            OFF,
+            ON,
+        };
+        State current_state = State::OFF;
+        void set_state(State _state) {
+            current_state = _state;
+        }
+
+        const AP_Float &max_current_parameter;
+        const uint8_t enable_pin;
+    };
+
+    class PayloadHVBEC : public PayloadBEC{
+    public:
+        PayloadHVBEC(const char * _name, const char *_shortname, uint8_t _battery_index, AP_Float &_max_current_parameter, uint8_t _enable_pin, uint8_t _precharge_enable_pin) :
+            PayloadBEC(_name, _shortname, _battery_index, _max_current_parameter, _enable_pin),
+            precharge_enable_pin{_precharge_enable_pin}
+            { }
+
+        // States used during turn on
+        enum class State {
+            OFF,
+            PRECHARGE,
+            ON,
+        };
+
+    protected:
+        // Maximum current of the HC payload output (Amps):
+        float fixed_max_current() const override { return PAYLOAD_HV_CURRENT_MAX; }
+        void update_state() override;
+        virtual void handle_over_current() override;
+
+    private:
+        State current_state = State::OFF;
+        void set_state(State _state) {
+            current_state = _state;
+        }
+
+        float precharge_start_ms;
+        uint8_t precharge_enable_pin;
+
+        void precharge_on() {
+            hal.gpio->write(precharge_enable_pin, 1);
+        }
+        void precharge_off() {
+            hal.gpio->write(precharge_enable_pin, 0);
+        }
+    };
+
+    static constexpr uint8_t FSO_MAX_BECS { 10 };
+    BEC *becs[FSO_MAX_BECS];
+    uint8_t num_becs;
 
     TurnOnState main_state = Off;
-    TurnOnState payload_HV_state = Off;
 
     AP_DAC dac;
 
@@ -221,6 +332,13 @@ private:
     void late_init(void);
 
     bool done_late_init;
+
+    // Maximum current of the HV payload output
+    static constexpr float PAYLOAD_HV_CURRENT_MAX { 25.0 };
+    // Maximum current of the payload BECs:
+    static constexpr float PAYLOAD_BEC_CURRENT_MAX { 10.0 };
+    // Maximum temperature of the payload BECs (degC):
+    static constexpr float PAYLOAD_BEC_TEMPERATURE_MAX { 100.0 };
 };
 
 #endif // HAL_PERIPH_ENABLE_FSO_POWER_STACK
