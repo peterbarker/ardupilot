@@ -273,7 +273,7 @@ void HAL_SITL::run(int argc, char * const argv[], Callbacks* callbacks) const
     while (true) {
         if (HALSITL::Scheduler::_should_exit) {
             ::fprintf(stderr, "Exitting\n");
-            exit(0);
+            exit(exit_code);
         }
         if (fill_count++ % 10 == 0) {
             // only fill every 10 loops. This still gives us a lot of

@@ -117,6 +117,8 @@ public:
 
     virtual void run(int argc, char * const argv[], Callbacks* callbacks) const = 0;
 
+    void set_exit_code(int8_t code) { exit_code = code; }
+
 public:
     AP_HAL::I2CDeviceManager* i2c_mgr;
     AP_HAL::SPIDeviceManager* spi;
@@ -158,6 +160,7 @@ public:
 # define DEV_PRINTF(fmt, args ...)
 #endif
 
+    int8_t exit_code;  // initialised to zero
 };
 
 // access serial ports using SERIALn numbering

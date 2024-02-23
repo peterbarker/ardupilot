@@ -52,7 +52,7 @@ protected:
 static RC_Channels_Example rchannels;
 static AP_SerialManager serial_manager;
 
-const AP_HAL::HAL& hal = AP_HAL::get_HAL();
+AP_HAL::HAL& hal = AP_HAL::get_HAL_mutable();
 
 static AP_VideoTX vtx; // for set_vtx functions
 
@@ -483,10 +483,10 @@ void loop()
     if (test_count++ == 10) {
         if (test_failures == 0) {
             printf("Test PASSED\n");
-            ::exit(0);
+        } else {
+            printf("Test FAILED - %u failures\n", unsigned(test_failures));
+            hal.set_exit_code(1);
         }
-        printf("Test FAILED - %u failures\n", unsigned(test_failures));
-        ::exit(1);
     }
     printf("Test count %u - %u failures\n", unsigned(test_count), unsigned(test_failures));
 }
