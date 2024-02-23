@@ -113,7 +113,7 @@ jobs:
         config: [
             unit-tests,
             sitl
-            # examples,
+            examples,
         ]
     steps:
       # git checkout the PR

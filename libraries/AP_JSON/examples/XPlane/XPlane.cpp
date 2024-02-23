@@ -18,6 +18,7 @@ static void test_xplane(void)
     auto *obj = AP_JSON::load_json("@ROMFS/models/xplane_plane.json");
     if (obj == nullptr) {
         ::printf("Failed to parse json\n");
+        return;
     }
     const uint32_t m2 = hal.util->available_memory();
     ::printf("Used %u bytes\n", unsigned(m1-m2));

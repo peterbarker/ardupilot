@@ -479,6 +479,7 @@ void loop()
     test_protocol("FPORT2_16CH", 115200, fport2_16ch_bytes, sizeof(fport2_16ch_bytes), fport2_16ch_output, ARRAY_SIZE(fport2_16ch_output), 3, 0, true);
     test_protocol("FPORT2_24CH", 115200, fport2_24ch_bytes, sizeof(fport2_24ch_bytes), fport2_24ch_output, ARRAY_SIZE(fport2_24ch_output), 3, 0, true);
 
+    test_failures = 1;
     if (test_count++ == 10) {
         if (test_failures == 0) {
             printf("Test PASSED\n");
