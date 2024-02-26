@@ -3,11 +3,13 @@
  */
 #pragma once
 
+#include "AP_Logger_config.h"
+
+#if HAL_LOGGING_W25N01GV_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_Logger_Block.h"
-
-#if HAL_LOGGING_DATAFLASH_ENABLED
 
 class AP_Logger_W25N01GV : public AP_Logger_Block {
 public:
@@ -45,4 +47,4 @@ private:
     bool read_cache_valid;
 };
 
-#endif // HAL_LOGGING_DATAFLASH_ENABLED
+#endif // HAL_LOGGING_W25N01GV_ENABLED

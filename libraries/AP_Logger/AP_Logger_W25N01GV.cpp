@@ -7,7 +7,7 @@
 
 #include "AP_Logger_W25N01GV.h"
 
-#if HAL_LOGGING_DATAFLASH_ENABLED
+#if HAL_LOGGING_W25N01GV_ENABLED
 
 #include <stdio.h>
 
@@ -331,4 +331,4 @@ void AP_Logger_W25N01GV::WriteEnable(void)
     dev->transfer(&b, 1, nullptr, 0);
 }
 
-#endif // HAL_LOGGING_DATAFLASH_ENABLED
+#endif // HAL_LOGGING_W25N01GV_ENABLED
