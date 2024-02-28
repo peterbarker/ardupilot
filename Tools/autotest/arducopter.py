@@ -9060,6 +9060,44 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         if ex is not None:
             raise ex
 
+    def SMART_RTL_MISSION(self):
+        '''Fly a mission in smartrtl, trigger brake twice and return early'''
+        self.load_mission("mission.txt")
+        self.customise_SITL_commandline(
+            ["--home", self.sitl_home_string_from_mission("mission.txt")]
+        )
+        self.set_parameters({
+            'WPNAV_SPEED_UP': 150,
+            'WPNAV_SPEED_DN': 120,
+            'WPNAV_SPEED': 1388.888916,
+            'LOIT_BRK_JERK': 100,
+            'ANGLE_MAX': 4500,
+        })
+        self.set_parameter("AUTO_OPTIONS", 6)
+        self.change_mode('GUIDED')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.change_mode('AUTO')
+        bp1 = mavutil.location(-10.94496679,
+                               -37.04349201,
+                               40,
+                               0)
+        self.wait_location(bp1, timeout=300)
+        self.change_mode('BRAKE')
+        self.delay_sim_time(10)
+        self.change_mode('SMART_RTL')
+
+        bp2 = mavutil.location(-10.94531767,
+                               -37.04403637,
+                               40,
+                               0)
+        self.wait_location(bp2, timeout=300)
+        self.change_mode('BRAKE')
+        self.delay_sim_time(15)
+        self.change_mode('SMART_RTL')
+        self.wait_disarmed()
+        self.change_mode('LOITER')
+
     def get_ground_effect_duration_from_current_onboard_log(self, bit, ignore_multi=False):
         '''returns a duration in seconds we were expecting to interact with
         the ground.  Will die if there's more than one such block of
@@ -10706,6 +10744,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.GSF_reset,
             self.AP_Avoidance,
             self.SMART_RTL,
+            self.SMART_RTL_MISSION,
             self.RTL_TO_RALLY,
             self.FlyEachFrame,
             self.GPSBlending,
