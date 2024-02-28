@@ -7505,7 +7505,10 @@ class TestSuite(ABC):
             else:
                 return False
         debug_text = "Distance to Location (%.4f, %.4f) " % (loc.lat, loc.lng)
-        if target_altitude is not None:
+        if target_altitude is None:
+            target_altitude = loc.alt * 0.01
+
+        if True:
             debug_text += ",at altitude %.1f height_accuracy=%.1f, d" % (target_altitude, height_accuracy)
         self.wait_and_maintain(
             value_name=debug_text,
