@@ -453,9 +453,15 @@ void AP_Scheduler::Log_Write_Performance()
         max_time         : perf_info.get_max_time(),
         mem_avail        : hal.util->available_memory(),
         load             : (uint16_t)(load_average() * 1000),
+#if AP_INTERNALERROR_ENABLED
         internal_error_last_line : AP::internalerror().last_error_line(),
         internal_errors  : AP::internalerror().errors(),
         internal_error_count : AP::internalerror().count(),
+#else
+        internal_error_last_line : 0,
+        internal_errors  : 0,
+        internal_error_count : 0,
+#endif
         spi_count        : pd.spi_count,
         i2c_count        : pd.i2c_count,
         i2c_isr_count    : pd.i2c_isr_count,
