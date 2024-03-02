@@ -102,7 +102,7 @@ void Tracker::one_second_loop()
     // learning to run
     set_likely_flying(hal.util->get_soft_armed());
 
-    AP_Notify::flags.flying = hal.util->get_soft_armed();
+    AP_Notify::set_flag(AP_Notify::Flag::FLYING, hal.util->get_soft_armed());
 
     g.pidYaw2Srv.set_notch_sample_rate(AP::scheduler().get_filtered_loop_rate_hz());
 }

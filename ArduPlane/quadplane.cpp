@@ -886,13 +886,13 @@ void QuadPlane::run_esc_calibration(void)
 {
     if (!motors->armed()) {
         motors->set_throttle_passthrough_for_esc_calibration(0);
-        AP_Notify::flags.esc_calibration = false;
+        AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, false);
         return;
     }
-    if (!AP_Notify::flags.esc_calibration) {
+    if (!AP_Notify::flag_is_set(AP_Notify::Flag::ESC_CALIBRATION)) {
         gcs().send_text(MAV_SEVERITY_INFO, "Starting ESC calibration");
     }
-    AP_Notify::flags.esc_calibration = true;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, true);
     switch (esc_calibration) {
     case 1:
         // throttle based calibration
@@ -2061,7 +2061,7 @@ void QuadPlane::motors_output(bool run_rate_controller)
         motors->output();
         return;
     }
-    if (esc_calibration && AP_Notify::flags.esc_calibration && plane.control_mode == &plane.mode_qstabilize) {
+    if (esc_calibration && AP_Notify::flag_is_set(AP_Notify::Flag::ESC_CALIBRATION) && plane.control_mode == &plane.mode_qstabilize) {
         // output is direct from run_esc_calibration()
         return;
     }

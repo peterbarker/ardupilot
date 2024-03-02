@@ -168,7 +168,7 @@ void Plane::update_is_flying_5Hz(void)
 #if AP_STATS_ENABLED
     AP::stats()->set_flying(new_is_flying);
 #endif
-    AP_Notify::flags.flying = new_is_flying;
+    AP_Notify::set_flag(AP_Notify::Flag::FLYING, new_is_flying);
 
     crash_detection_update();
 

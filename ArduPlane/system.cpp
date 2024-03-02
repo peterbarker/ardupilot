@@ -234,7 +234,7 @@ bool Plane::set_mode(Mode &new_mode, const ModeReason reason)
         // don't switch modes if we are already in the correct mode.
         // only make happy noise if using a different method to switch, this stops beeping for repeated change mode requests from GCS
         if ((reason != control_mode_reason) && (reason != ModeReason::INITIALISED)) {
-            AP_Notify::events.user_mode_change = 1;
+            AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE);
         }
         return true;
     }
@@ -324,7 +324,7 @@ bool Plane::set_mode(Mode &new_mode, const ModeReason reason)
 
     // make happy noise
     if (reason != ModeReason::INITIALISED) {
-        AP_Notify::events.user_mode_change = 1;
+        AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE);
     }
     return true;
 }

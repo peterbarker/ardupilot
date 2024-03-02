@@ -7,8 +7,8 @@ void Tracker::init_ardupilot()
 {
     // initialise notify
     notify.init();
-    AP_Notify::flags.pre_arm_check = true;
-    AP_Notify::flags.pre_arm_gps_check = true;
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARMS_OK, true);
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, true);
 
     // initialise battery
     battery.init();

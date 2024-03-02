@@ -194,9 +194,9 @@ void Tracker::tracking_manual_control(const mavlink_manual_control_t &msg)
 void Tracker::update_armed_disarmed() const
 {
     if (vehicle.last_update_ms != 0 && (AP_HAL::millis() - vehicle.last_update_ms) < TRACKING_TIMEOUT_MS) {
-        AP_Notify::flags.armed = true;
+        AP_Notify::set_flag(AP_Notify::Flag::ARMED, true);
     } else {
-        AP_Notify::flags.armed = false;
+        AP_Notify::set_flag(AP_Notify::Flag::ARMED, false);
     }
 }
 

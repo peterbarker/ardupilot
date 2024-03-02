@@ -104,7 +104,7 @@ MAV_RESULT QuadPlane::mavlink_motor_test_start(mavlink_channel_t chan, uint8_t m
         set_armed(true);
         
         // turn on notify leds
-        AP_Notify::flags.esc_calibration = true;
+        AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, true);
     }
 
     // set timeout
@@ -140,7 +140,7 @@ void QuadPlane::motor_test_stop()
     motor_test.timeout_ms = 0;
 
     // turn off notify leds
-    AP_Notify::flags.esc_calibration = false;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, false);
 }
 
 #endif  // HAL_QUADPLANE_ENABLED
