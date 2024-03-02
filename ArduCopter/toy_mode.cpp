@@ -805,14 +805,14 @@ void ToyMode::action_arm(void)
 #endif
         copter.arming.arm(AP_Arming::Method::RUDDER);
         if (!copter.motors->armed()) {
-            AP_Notify::events.arming_failed = true;
+            AP_Notify::event(AP_Notify::Event::ARMING_FAILED);
             gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: GPS arming failed");
         } else {
             gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: GPS armed motors");
         }
     } else if (needs_gps) {
         // notify of arming fail
-        AP_Notify::events.arming_failed = true;
+        AP_Notify::event(AP_Notify::Event::ARMING_FAILED);
         gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: GPS arming failed");
     } else {
 #if AP_FENCE_ENABLED
@@ -821,7 +821,7 @@ void ToyMode::action_arm(void)
 #endif
         copter.arming.arm(AP_Arming::Method::RUDDER);
         if (!copter.motors->armed()) {
-            AP_Notify::events.arming_failed = true;
+            AP_Notify::event(AP_Notify::Event::ARMING_FAILED);
             gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: non-GPS arming failed");
         } else {
             gcs().send_text(MAV_SEVERITY_ERROR, "Tmode: non-GPS armed motors");

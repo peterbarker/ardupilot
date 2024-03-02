@@ -86,7 +86,7 @@ bool AP_Arming_Sub::arm(AP_Arming::Method method, bool do_arming_checks)
     in_arm_motors = true;
 
     if (!AP_Arming::arm(method, do_arming_checks)) {
-        AP_Notify::events.arming_failed = true;
+        AP_Notify::event(AP_Notify::Event::ARMING_FAILED);
         in_arm_motors = false;
         return false;
     }

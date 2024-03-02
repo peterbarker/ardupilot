@@ -55,7 +55,7 @@ void AP_BoardLED::update(void)
     uint8_t counter2 = _counter / 3;
 
     // initialising
-    if (AP_Notify::flags.initialising) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::INITIALISING)) {
         // blink LEDs A and C at 8Hz (full cycle) during initialisation
         hal.gpio->write(HAL_GPIO_A_LED_PIN, (counter2 & 1) ? HAL_GPIO_LED_ON : HAL_GPIO_LED_OFF);
         hal.gpio->write(HAL_GPIO_C_LED_PIN, (counter2 & 1) ? HAL_GPIO_LED_OFF : HAL_GPIO_LED_ON);
@@ -63,7 +63,7 @@ void AP_BoardLED::update(void)
 	}
 
     // save trim and ESC calibration
-    if (AP_Notify::flags.save_trim || AP_Notify::flags.esc_calibration) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::SAVE_TRIM) || AP_Notify::flag_is_set(AP_Notify::Flag::ESC_CALIBRATION)) {
         static uint8_t save_trim_counter = 0;
         if ((counter2 & 0x2) == 0) {
             save_trim_counter++;
@@ -93,14 +93,14 @@ void AP_BoardLED::update(void)
 
     // arming light
     static uint8_t arm_counter = 0;
-	if (AP_Notify::flags.armed) {
+	if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         // red led solid
         hal.gpio->write(HAL_GPIO_A_LED_PIN, HAL_GPIO_LED_ON);
     }else{
         if ((counter2 & 0x2) == 0) {
             arm_counter++;
         }
-        if (AP_Notify::flags.pre_arm_check) {
+        if (AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)) {
             // passed pre-arm checks so slower single flash
             switch(arm_counter) {
                 case 0:
@@ -142,7 +142,7 @@ void AP_BoardLED::update(void)
     }
 
     // gps light
-    switch (AP_Notify::flags.gps_status) {
+    switch (AP_Notify::gps_status()) {
         case 0:
             // no GPS attached
             hal.gpio->write(HAL_GPIO_C_LED_PIN, HAL_GPIO_LED_OFF);

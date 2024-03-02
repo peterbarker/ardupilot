@@ -245,7 +245,7 @@ bool Plane::set_mode(Mode &new_mode, const ModeReason reason)
         gcs().send_text(MAV_SEVERITY_INFO,"Q_ENABLE 0");
         // make sad noise
         if (reason != ModeReason::INITIALISED) {
-            AP_Notify::events.user_mode_change_failed = 1;
+            AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE_FAILED);
         }
         return false;
     }
@@ -256,7 +256,7 @@ bool Plane::set_mode(Mode &new_mode, const ModeReason reason)
         gcs().send_text(MAV_SEVERITY_INFO,"HAL_QUADPLANE_ENABLED=0");
         // make sad noise
         if (reason != ModeReason::INITIALISED) {
-            AP_Notify::events.user_mode_change_failed = 1;
+            AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE_FAILED);
         }
         return false;
     }
@@ -271,7 +271,7 @@ bool Plane::set_mode(Mode &new_mode, const ModeReason reason)
         in_fence_recovery() &&
         !mode_reason_is_landing_sequence(reason)) {
         gcs().send_text(MAV_SEVERITY_NOTICE,"Mode change to %s denied, in fence recovery", new_mode.name());
-        AP_Notify::events.user_mode_change_failed = 1;
+        AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE_FAILED);
         return false;
     }
 #endif
@@ -307,7 +307,7 @@ bool Plane::set_mode(Mode &new_mode, const ModeReason reason)
 
         // make sad noise
         if (reason != ModeReason::INITIALISED) {
-            AP_Notify::events.user_mode_change_failed = 1;
+            AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE_FAILED);
         }
         return false;
     }

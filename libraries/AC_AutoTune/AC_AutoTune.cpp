@@ -525,9 +525,9 @@ void AC_AutoTune::control_attitude()
                     mode = SUCCESS;
                     update_gcs(AUTOTUNE_MESSAGE_SUCCESS);
                     LOGGER_WRITE_EVENT(LogEvent::AUTOTUNE_SUCCESS);
-                    AP_Notify::events.autotune_complete = true;
+                    AP_Notify::event(AP_Notify::Event::AUTOTUNE_COMPLETE);
                 } else {
-                    AP_Notify::events.autotune_next_axis = true;
+                    AP_Notify::event(AP_Notify::Event::AUTOTUNE_NEXT_AXIS);
                     reset_update_gain_variables();
                 }
             }

@@ -51,7 +51,7 @@ void Buzzer::update()
 void Buzzer::update_pattern_to_play()
 {
     // check for arming failed event
-    if (AP_Notify::events.arming_failed) {
+    if (AP_Notify::event_triggered(AP_Notify::Event::ARMING_FAILED)) {
         // arming failed buzz
         play_pattern(SINGLE_BUZZ);
         return;
@@ -63,26 +63,26 @@ void Buzzer::update_pattern_to_play()
     }
 
     // check if prearm check are good
-    if (AP_Notify::events.flag_changed_pre_arms_ok_on &&
+    if (AP_Notify::event_triggered(AP_Notify::Event::FLAG_CHANGED_PRE_ARMS_OK_ON) &&
         !_flags.pre_arm_check) {
         _flags.pre_arm_check = true;
         play_pattern(PRE_ARM_GOOD);
     }
 
     // check if armed status has changed
-    if (AP_Notify::events.flag_changed_armed_on) {
+    if (AP_Notify::event_triggered(AP_Notify::Event::FLAG_CHANGED_ARMED_ON)) {
             // double buzz when armed
             play_pattern(ARMING_BUZZ);
             return;
     }
-    if (AP_Notify::events.flag_changed_armed_off) {
+    if (AP_Notify::event_triggered(AP_Notify::Event::FLAG_CHANGED_ARMED_OFF)) {
             // single buzz when disarmed
             play_pattern(SINGLE_BUZZ);
             return;
     }
 
     // check ekf bad
-    if (AP_Notify::events.flag_changed_ekf_bad_on) {
+    if (AP_Notify::event_triggered(AP_Notify::Event::FLAG_CHANGED_EKF_BAD_ON)) {
             play_pattern(EKF_BAD);
     }
 

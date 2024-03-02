@@ -117,7 +117,7 @@ void AP_BoardLED2::update(void)
         
     }
 
-    if(AP_Notify::events.autotune_complete){
+    if(AP_Notify::event_triggered(AP_Notify::Event::AUTOTUNE_COMPLETE)) {
         switch(save_trim_counter) {
         case 0:
             hal.gpio->write(HAL_GPIO_A_LED_PIN, HAL_GPIO_LED_ON); // short darkening
@@ -140,7 +140,7 @@ void AP_BoardLED2::update(void)
         led_a_used=true;
     }
 
-    if(AP_Notify::events.autotune_failed){
+    if (AP_Notify::event_triggered(AP_Notify::Event::AUTOTUNE_FAILED)) {
         switch(save_trim_counter) {
         case 0:
             hal.gpio->write(HAL_GPIO_A_LED_PIN, HAL_GPIO_LED_ON); // short double darkening

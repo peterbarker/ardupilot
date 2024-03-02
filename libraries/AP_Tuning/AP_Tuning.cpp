@@ -92,7 +92,7 @@ void AP_Tuning::check_selector_switch(void)
             save_parameters();
             re_center();
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Tuning: Saved");
-            AP_Notify::events.tune_save = 1;
+            AP_Notify::event(AP_Notify::Event::TUNE_SAVE);
             changed = false;
             need_revert = 0;
         }
@@ -214,7 +214,7 @@ void AP_Tuning::check_input(uint8_t flightmode)
         // starting tuning
         mid_point_wait = false;
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Tuning: mid-point %s", get_tuning_name(current_parm));
-        AP_Notify::events.tune_started = 1;
+        AP_Notify::event(AP_Notify::Event::TUNE_STARTED);
     }
     last_channel_value = chan_value;
 
@@ -325,7 +325,7 @@ void AP_Tuning::next_parameter(void)
             current_parm = tuning_sets[i].parms[current_parm_index];
             re_center();
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Tuning: started %s", get_tuning_name(current_parm));
-            AP_Notify::events.tune_next = current_parm_index+1;
+            AP_Notify::set_tune_next(current_parm_index+1);
             break;
         }
     }

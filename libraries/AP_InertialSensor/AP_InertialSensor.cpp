@@ -1946,7 +1946,7 @@ void AP_InertialSensor::update(void)
 #if HAL_INS_TEMPERATURE_CAL_ENABLE
     if (tcal_learning && !temperature_cal_running()) {
         AP_Notify::set_flag(AP_Notify::Flag::TEMP_CAL_RUNNING, false);
-        AP_Notify::events.temp_cal_saved = 1;
+        AP_Notify::event(AP_Notify::Event::TEMP_CAL_SAVED);
         tcal_learning = false;
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "TCAL finished all IMUs");
     }

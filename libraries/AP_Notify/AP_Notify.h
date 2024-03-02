@@ -152,6 +152,64 @@ public:
     static void set_gps_num_sats(uint8_t num_sats) { _gps_num_sats = num_sats; }
     static uint8_t gps_num_sats() { return _gps_num_sats; }
 
+    static void set_tune_next(uint8_t _tune) { tune = _tune; }
+    static uint8_t get_tune_next() { return tune; }
+
+    enum class Event {
+        ARMING_FAILED,
+        USER_MODE_CHANGE,
+        USER_MODE_CHANGE_FAILED,
+        FAILSAFE_MODE_CHANGE,
+        AUTOTUNE_COMPLETE,
+        AUTOTUNE_FAILED,
+        AUTOTUNE_NEXT_AXIS,
+        MISSION_COMPLETE,
+        WAYPOINT_COMPLETE,
+        INITIATED_COMPASS_CAL,
+        COMPASS_CAL_SAVED,
+        COMPASS_CAL_FAILED,
+        COMPASS_CAL_CANCELED,
+        TUNE_STARTED,
+        TUNE_SAVE,
+        TUNE_ERROR,
+        INITIATED_TEMP_CAL,
+        TEMP_CAL_SAVED,
+        TEMP_CAL_FAILED,
+
+
+        FLAG_CHANGED_ARMED_ON,
+        FLAG_CHANGED_ARMED_OFF,
+        FLAG_CHANGED_BATTERY_FAILSAFE_ON,
+        FLAG_CHANGED_BATTERY_FAILSAFE_OFF,
+        FLAG_CHANGED_PARACHUTE_RELEASED_ON,
+        FLAG_CHANGED_PARACHUTE_RELEASED_OFF,
+        FLAG_CHANGED_PRE_ARMS_OK_ON,
+        FLAG_CHANGED_PRE_ARMS_OK_OFF,
+        FLAG_CHANGED_RADIO_FAILSAFE_ON,
+        FLAG_CHANGED_RADIO_FAILSAFE_OFF,
+        FLAG_CHANGED_GCS_FAILSAFE_ON,
+        FLAG_CHANGED_GCS_FAILSAFE_OFF,
+        FLAG_CHANGED_EKF_FAILSAFE_ON,
+        FLAG_CHANGED_EKF_FAILSAFE_OFF,
+        FLAG_CHANGED_VEHICLE_LOST_ON,
+        FLAG_CHANGED_VEHICLE_LOST_OFF,
+        FLAG_CHANGED_COMPASS_CAL_RUNNING_ON,
+        FLAG_CHANGED_COMPASS_CAL_RUNNING_OFF,
+        FLAG_CHANGED_WAITING_FOR_THROW_ON,
+        FLAG_CHANGED_WAITING_FOR_THROW_OFF,
+        FLAG_CHANGED_LEAK_DETECTED_ON,
+        FLAG_CHANGED_LEAK_DETECTED_OFF,
+        FLAG_CHANGED_POWERING_OFF_ON,
+        FLAG_CHANGED_POWERING_OFF_OFF,
+        FLAG_CHANGED_TEMP_CAL_RUNNING_ON,
+        FLAG_CHANGED_TEMP_CAL_RUNNING_OFF,
+        FLAG_CHANGED_EKF_BAD_ON,
+        FLAG_CHANGED_EKF_BAD_OFF,
+    };
+
+    static void event(Event event) { events |= (1U<<(uint8_t)event); }
+    static bool event_triggered(Event event) { return events & (1U<<(uint8_t)event); }
+
 private:
 
     static uint8_t _gps_status;       // see the GPS_0 = no gps, 1 = no lock, 2 = 2d lock, 3 = 3d lock, 4 = dgps lock, 5 = rtk lock
@@ -160,66 +218,13 @@ private:
 
     static uint32_t flags;
 
-public:
-
-    /// notify_events_type - bitmask of active events.
-    //      Notify library is responsible for setting back to zero after notification has been completed
-    struct notify_events_type {
-        uint64_t arming_failed          : 1;    // 1 if copter failed to arm after user input
-        uint64_t user_mode_change       : 1;    // 1 if user has initiated a flight mode change
-        uint64_t user_mode_change_failed: 1;    // 1 when user initiated flight mode change fails
-        uint64_t failsafe_mode_change   : 1;    // 1 when failsafe has triggered a flight mode change
-        uint64_t autotune_complete      : 1;    // 1 when autotune has successfully completed
-        uint64_t autotune_failed        : 1;    // 1 when autotune has failed
-        uint64_t autotune_next_axis     : 1;    // 1 when autotune has completed one axis and is moving onto the next
-        uint64_t mission_complete       : 1;    // 1 when the mission has completed successfully
-        uint64_t waypoint_complete      : 1;    // 1 as vehicle completes a waypoint
-        uint64_t initiated_compass_cal  : 1;    // 1 when user input to begin compass cal was accepted
-        uint64_t compass_cal_saved      : 1;    // 1 when compass calibration was just saved
-        uint64_t compass_cal_failed     : 1;    // 1 when compass calibration has just failed
-        uint64_t compass_cal_canceled   : 1;    // 1 when compass calibration was just canceled
-        uint64_t tune_started           : 1;    // tuning a parameter has started
-        uint64_t tune_next              : 3;    // tuning switched to next parameter
-        uint64_t tune_save              : 1;    // tuning saved parameters
-        uint64_t tune_error             : 1;    // tuning controller error
-        uint64_t initiated_temp_cal     : 1;    // 1 when temperature calibration starts
-        uint64_t temp_cal_saved         : 1;    // 1 when temperature calibration was just saved
-        uint64_t temp_cal_failed        : 1;    // 1 when temperature calibration has just failed
-
-        // events triggered by edge-changes on flags:
-        uint64_t flag_changed_armed_on                : 1;
-        uint64_t flag_changed_armed_off               : 1;
-        uint64_t flag_changed_battery_failsafe_on     : 1;
-        uint64_t flag_changed_battery_failsafe_off    : 1;
-        uint64_t flag_changed_parachute_released_on   : 1;
-        uint64_t flag_changed_parachute_released_off  : 1;
-        uint64_t flag_changed_pre_arms_ok_on          : 1;
-        uint64_t flag_changed_pre_arms_ok_off         : 1;
-        uint64_t flag_changed_radio_failsafe_on       : 1;
-        uint64_t flag_changed_radio_failsafe_off      : 1;
-        uint64_t flag_changed_gcs_failsafe_on         : 1;
-        uint64_t flag_changed_gcs_failsafe_off        : 1;
-        uint64_t flag_changed_ekf_failsafe_on         : 1;
-        uint64_t flag_changed_ekf_failsafe_off        : 1;
-        uint64_t flag_changed_vehicle_lost_on         : 1;
-        uint64_t flag_changed_vehicle_lost_off        : 1;
-        uint64_t flag_changed_compass_cal_running_on  : 1;
-        uint64_t flag_changed_compass_cal_running_off : 1;
-        uint64_t flag_changed_waiting_for_throw_on    : 1;
-        uint64_t flag_changed_waiting_for_throw_off   : 1;
-        uint64_t flag_changed_leak_detected_on        : 1;
-        uint64_t flag_changed_leak_detected_off       : 1;
-        uint64_t flag_changed_powering_off_on         : 1;
-        uint64_t flag_changed_powering_off_off        : 1;
-        uint64_t flag_changed_temp_cal_running_on     : 1;
-        uint64_t flag_changed_temp_cal_running_off    : 1;
-        uint64_t flag_changed_ekf_bad_on     : 1;
-        uint64_t flag_changed_ekf_bad_off    : 1;
-    };
+    static uint8_t tune;
 
     // The notify flags and values are static to allow direct class access
     // without declaring the object.
-    static struct notify_events_type events;
+    static uint64_t events;
+
+public:
 
     // initialisation
     void init(void);

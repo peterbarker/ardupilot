@@ -254,11 +254,12 @@ AP_Notify::AP_Notify()
 }
 
 // static flags, to allow for direct class update from device drivers
-struct AP_Notify::notify_events_type AP_Notify::events;
+uint64_t AP_Notify::events;
 uint32_t AP_Notify::flags;
 uint8_t AP_Notify::_gps_status;
 uint8_t AP_Notify::_flight_mode;
 uint8_t AP_Notify::_gps_num_sats;
+uint8_t AP_Notify::tune;
 
 NotifyDevice *AP_Notify::_devices[CONFIG_NOTIFY_DEVICES_MAX];
 uint8_t AP_Notify::_num_devices;
@@ -268,58 +269,91 @@ void AP_Notify::set_flag(AP_Notify::Flag flag, bool value)
     flags |= (1U << (uint8_t)value);
 
     // trigger events for some flags:
-    switch (flag) {
-    case Flag::RADIO_FAILSAFE:
-        events.flag_changed_armed_on = value;
-        events.flag_changed_armed_off = !value;
-        break;
-    case Flag::GCS_FAILSAFE:
-        events.flag_changed_gcs_failsafe_on = value;
-        events.flag_changed_gcs_failsafe_off = !value;
-        break;
-    case Flag::BATTERY_FAILSAFE:
-        events.flag_changed_battery_failsafe_on = value;
-        events.flag_changed_battery_failsafe_off = !value;
-        break;
-    case Flag::EKF_FAILSAFE:
-        events.flag_changed_ekf_failsafe_on = value;
-        events.flag_changed_ekf_failsafe_off = !value;
-        break;
-    case Flag::PRE_ARMS_OK:
-        events.flag_changed_pre_arms_ok_on = value;
-        events.flag_changed_pre_arms_ok_off = !value;
-        break;
-    case Flag::COMPASS_CAL_RUNNING:
-        events.flag_changed_compass_cal_running_on = value;
-        events.flag_changed_compass_cal_running_off = !value;
-        break;
-    case Flag::ARMED:
-        events.flag_changed_armed_on = value;
-        events.flag_changed_armed_off = !value;
-        break;
-    case Flag::TEMP_CAL_RUNNING:
-        events.flag_changed_temp_cal_running_on = value;
-        events.flag_changed_temp_cal_running_off = !value;
-        break;
-    case Flag::PARACHUTE_RELEASED:
-        events.flag_changed_parachute_released_on = value;
-        events.flag_changed_parachute_released_off = !value;
-        break;
-    case Flag::POWERING_OFF:
-        events.flag_changed_powering_off_on = value;
-        events.flag_changed_powering_off_off = !value;
-        break;
-    case Flag::VEHICLE_LOST:
-        events.flag_changed_vehicle_lost_on = value;
-        events.flag_changed_vehicle_lost_off = !value;
-        break;
-    case Flag::EKF_BAD:
-        events.flag_changed_ekf_bad_on = value;
-        events.flag_changed_ekf_bad_off = !value;
-        break;
-    default:
-        break;
+    Event ev;
+    if (value) {
+        switch (flag) {
+        case Flag::RADIO_FAILSAFE:
+            ev = Event::FLAG_CHANGED_ARMED_ON;
+            break;
+        case Flag::GCS_FAILSAFE:
+            ev = Event::FLAG_CHANGED_GCS_FAILSAFE_ON;
+            break;
+        case Flag::BATTERY_FAILSAFE:
+            ev = Event::FLAG_CHANGED_BATTERY_FAILSAFE_ON;
+            break;
+        case Flag::EKF_FAILSAFE:
+            ev = Event::FLAG_CHANGED_EKF_FAILSAFE_ON;
+            break;
+        case Flag::PRE_ARMS_OK:
+            ev = Event::FLAG_CHANGED_PRE_ARMS_OK_ON;
+            break;
+        case Flag::COMPASS_CAL_RUNNING:
+            ev = Event::FLAG_CHANGED_COMPASS_CAL_RUNNING_ON;
+            break;
+        case Flag::ARMED:
+            ev = Event::FLAG_CHANGED_ARMED_ON;
+            break;
+        case Flag::TEMP_CAL_RUNNING:
+            ev = Event::FLAG_CHANGED_TEMP_CAL_RUNNING_ON;
+            break;
+        case Flag::PARACHUTE_RELEASED:
+            ev = Event::FLAG_CHANGED_PARACHUTE_RELEASED_ON;
+            break;
+        case Flag::POWERING_OFF:
+            ev = Event::FLAG_CHANGED_POWERING_OFF_ON;
+            break;
+        case Flag::VEHICLE_LOST:
+            ev = Event::FLAG_CHANGED_VEHICLE_LOST_ON;
+            break;
+        case Flag::EKF_BAD:
+            ev = Event::FLAG_CHANGED_EKF_BAD_ON;
+            break;
+        default:
+            return;
+        }
+    } else {
+        switch (flag) {
+        case Flag::RADIO_FAILSAFE:
+            ev = Event::FLAG_CHANGED_ARMED_OFF;
+            break;
+        case Flag::GCS_FAILSAFE:
+            ev = Event::FLAG_CHANGED_GCS_FAILSAFE_OFF;
+            break;
+        case Flag::BATTERY_FAILSAFE:
+            ev = Event::FLAG_CHANGED_BATTERY_FAILSAFE_OFF;
+            break;
+        case Flag::EKF_FAILSAFE:
+            ev = Event::FLAG_CHANGED_EKF_FAILSAFE_OFF;
+            break;
+        case Flag::PRE_ARMS_OK:
+            ev = Event::FLAG_CHANGED_PRE_ARMS_OK_OFF;
+            break;
+        case Flag::COMPASS_CAL_RUNNING:
+            ev = Event::FLAG_CHANGED_COMPASS_CAL_RUNNING_OFF;
+            break;
+        case Flag::ARMED:
+            ev = Event::FLAG_CHANGED_ARMED_OFF;
+            break;
+        case Flag::TEMP_CAL_RUNNING:
+            ev = Event::FLAG_CHANGED_TEMP_CAL_RUNNING_OFF;
+            break;
+        case Flag::PARACHUTE_RELEASED:
+            ev = Event::FLAG_CHANGED_PARACHUTE_RELEASED_OFF;
+            break;
+        case Flag::POWERING_OFF:
+            ev = Event::FLAG_CHANGED_POWERING_OFF_OFF;
+            break;
+        case Flag::VEHICLE_LOST:
+            ev = Event::FLAG_CHANGED_VEHICLE_LOST_OFF;
+            break;
+        case Flag::EKF_BAD:
+            ev = Event::FLAG_CHANGED_EKF_BAD_OFF;
+            break;
+        default:
+            return;
+        }
     }
+    event(ev);
 }
 
 void AP_Notify::add_backend_helper(NotifyDevice *backend)
