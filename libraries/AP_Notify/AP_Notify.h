@@ -141,7 +141,7 @@ public:
     };
 
     static bool flag_is_set(Flag flag) { return flags & (1U << (uint8_t)flag); }
-    static void set_flag(Flag flag, bool value) { flags |= (1U << (uint8_t)flag); }
+    static void set_flag(Flag flag, bool value);
 
     static void set_flight_mode(uint8_t flight_mode) { _flight_mode = flight_mode; }
     static uint8_t flight_mode() { return _flight_mode; }
@@ -165,26 +165,56 @@ public:
     /// notify_events_type - bitmask of active events.
     //      Notify library is responsible for setting back to zero after notification has been completed
     struct notify_events_type {
-        uint32_t arming_failed          : 1;    // 1 if copter failed to arm after user input
-        uint32_t user_mode_change       : 1;    // 1 if user has initiated a flight mode change
-        uint32_t user_mode_change_failed: 1;    // 1 when user initiated flight mode change fails
-        uint32_t failsafe_mode_change   : 1;    // 1 when failsafe has triggered a flight mode change
-        uint32_t autotune_complete      : 1;    // 1 when autotune has successfully completed
-        uint32_t autotune_failed        : 1;    // 1 when autotune has failed
-        uint32_t autotune_next_axis     : 1;    // 1 when autotune has completed one axis and is moving onto the next
-        uint32_t mission_complete       : 1;    // 1 when the mission has completed successfully
-        uint32_t waypoint_complete      : 1;    // 1 as vehicle completes a waypoint
-        uint32_t initiated_compass_cal  : 1;    // 1 when user input to begin compass cal was accepted
-        uint32_t compass_cal_saved      : 1;    // 1 when compass calibration was just saved
-        uint32_t compass_cal_failed     : 1;    // 1 when compass calibration has just failed
-        uint32_t compass_cal_canceled   : 1;    // 1 when compass calibration was just canceled
-        uint32_t tune_started           : 1;    // tuning a parameter has started
-        uint32_t tune_next              : 3;    // tuning switched to next parameter
-        uint32_t tune_save              : 1;    // tuning saved parameters
-        uint32_t tune_error             : 1;    // tuning controller error
-        uint32_t initiated_temp_cal     : 1;    // 1 when temperature calibration starts
-        uint32_t temp_cal_saved         : 1;    // 1 when temperature calibration was just saved
-        uint32_t temp_cal_failed        : 1;    // 1 when temperature calibration has just failed
+        uint64_t arming_failed          : 1;    // 1 if copter failed to arm after user input
+        uint64_t user_mode_change       : 1;    // 1 if user has initiated a flight mode change
+        uint64_t user_mode_change_failed: 1;    // 1 when user initiated flight mode change fails
+        uint64_t failsafe_mode_change   : 1;    // 1 when failsafe has triggered a flight mode change
+        uint64_t autotune_complete      : 1;    // 1 when autotune has successfully completed
+        uint64_t autotune_failed        : 1;    // 1 when autotune has failed
+        uint64_t autotune_next_axis     : 1;    // 1 when autotune has completed one axis and is moving onto the next
+        uint64_t mission_complete       : 1;    // 1 when the mission has completed successfully
+        uint64_t waypoint_complete      : 1;    // 1 as vehicle completes a waypoint
+        uint64_t initiated_compass_cal  : 1;    // 1 when user input to begin compass cal was accepted
+        uint64_t compass_cal_saved      : 1;    // 1 when compass calibration was just saved
+        uint64_t compass_cal_failed     : 1;    // 1 when compass calibration has just failed
+        uint64_t compass_cal_canceled   : 1;    // 1 when compass calibration was just canceled
+        uint64_t tune_started           : 1;    // tuning a parameter has started
+        uint64_t tune_next              : 3;    // tuning switched to next parameter
+        uint64_t tune_save              : 1;    // tuning saved parameters
+        uint64_t tune_error             : 1;    // tuning controller error
+        uint64_t initiated_temp_cal     : 1;    // 1 when temperature calibration starts
+        uint64_t temp_cal_saved         : 1;    // 1 when temperature calibration was just saved
+        uint64_t temp_cal_failed        : 1;    // 1 when temperature calibration has just failed
+
+        // events triggered by edge-changes on flags:
+        uint64_t flag_changed_armed_on                : 1;
+        uint64_t flag_changed_armed_off               : 1;
+        uint64_t flag_changed_battery_failsafe_on     : 1;
+        uint64_t flag_changed_battery_failsafe_off    : 1;
+        uint64_t flag_changed_parachute_released_on   : 1;
+        uint64_t flag_changed_parachute_released_off  : 1;
+        uint64_t flag_changed_pre_arms_ok_on          : 1;
+        uint64_t flag_changed_pre_arms_ok_off         : 1;
+        uint64_t flag_changed_radio_failsafe_on       : 1;
+        uint64_t flag_changed_radio_failsafe_off      : 1;
+        uint64_t flag_changed_gcs_failsafe_on         : 1;
+        uint64_t flag_changed_gcs_failsafe_off        : 1;
+        uint64_t flag_changed_ekf_failsafe_on         : 1;
+        uint64_t flag_changed_ekf_failsafe_off        : 1;
+        uint64_t flag_changed_vehicle_lost_on         : 1;
+        uint64_t flag_changed_vehicle_lost_off        : 1;
+        uint64_t flag_changed_compass_cal_running_on  : 1;
+        uint64_t flag_changed_compass_cal_running_off : 1;
+        uint64_t flag_changed_waiting_for_throw_on    : 1;
+        uint64_t flag_changed_waiting_for_throw_off   : 1;
+        uint64_t flag_changed_leak_detected_on        : 1;
+        uint64_t flag_changed_leak_detected_off       : 1;
+        uint64_t flag_changed_powering_off_on         : 1;
+        uint64_t flag_changed_powering_off_off        : 1;
+        uint64_t flag_changed_temp_cal_running_on     : 1;
+        uint64_t flag_changed_temp_cal_running_off    : 1;
+        uint64_t flag_changed_ekf_bad_on     : 1;
+        uint64_t flag_changed_ekf_bad_off    : 1;
     };
 
     // The notify flags and values are static to allow direct class access

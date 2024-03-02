@@ -38,10 +38,6 @@ bool Buzzer::init()
     hal.gpio->pinMode(_pin, HAL_GPIO_OUTPUT);
     on(false);
 
-    // set initial boot states. This prevents us issuing a arming
-    // warning in plane and rover on every boot
-    _flags.armed = AP_Notify::flag_is_set(AP_Notify::Flag::ARMED);
-    _flags.failsafe_battery = AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE);
     return true;
 }
 
@@ -66,39 +62,28 @@ void Buzzer::update_pattern_to_play()
         return;
     }
 
-    // initializing?
-    if (_flags.gyro_calibrated != AP_Notify::flag_is_set(AP_Notify::Flag::GYRO_CALIBRATED)) {
-        _flags.gyro_calibrated = AP_Notify::flag_is_set(AP_Notify::Flag::GYRO_CALIBRATED);
-    }
-
     // check if prearm check are good
-    if (AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)  &&
+    if (AP_Notify::events.flag_changed_pre_arms_ok_on &&
         !_flags.pre_arm_check) {
         _flags.pre_arm_check = true;
         play_pattern(PRE_ARM_GOOD);
     }
 
     // check if armed status has changed
-    if (_flags.armed != AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
-        _flags.armed = AP_Notify::flag_is_set(AP_Notify::Flag::ARMED);
-        if (_flags.armed) {
+    if (AP_Notify::events.flag_changed_armed_on) {
             // double buzz when armed
             play_pattern(ARMING_BUZZ);
-        } else {
+            return;
+    }
+    if (AP_Notify::events.flag_changed_armed_off) {
             // single buzz when disarmed
             play_pattern(SINGLE_BUZZ);
-        }
-        return;
+            return;
     }
 
     // check ekf bad
-    if (_flags.ekf_bad != AP_Notify::flag_is_set(AP_Notify::Flag::EKF_BAD)) {
-        _flags.ekf_bad = AP_Notify::flag_is_set(AP_Notify::Flag::EKF_BAD);
-        if (_flags.ekf_bad) {
-            // ekf bad warning buzz
+    if (AP_Notify::events.flag_changed_ekf_bad_on) {
             play_pattern(EKF_BAD);
-        }
-        return;
     }
 
     // if vehicle lost was enabled, starting beep

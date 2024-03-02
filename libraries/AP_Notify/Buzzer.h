@@ -52,11 +52,11 @@ private:
     /// buzzer_flag_type - bitmask of current state and ap_notify states we track
     struct buzzer_flag_type {
         uint8_t on                  : 1;    // 1 if the buzzer is currently on
-        uint8_t arming              : 1;    // 1 if we are beginning the arming process
-        uint8_t armed               : 1;    // 0 = disarmed, 1 = armed
-        uint8_t failsafe_battery    : 1;    // 1 if battery failsafe has triggered
-        uint8_t ekf_bad             : 1;    // 1 if ekf position has gone bad
-        uint8_t gyro_calibrated     : 1;    // 1 if calibrating gyro
+        // uint8_t arming              : 1;    // 1 if we are beginning the arming process
+        // uint8_t armed               : 1;    // 0 = disarmed, 1 = armed
+        // uint8_t failsafe_battery    : 1;    // 1 if battery failsafe has triggered
+        // uint8_t ekf_bad             : 1;    // 1 if ekf position has gone bad
+        // uint8_t gyro_calibrated     : 1;    // 1 if calibrating gyro
         uint8_t pre_arm_check       : 1;    // 1 if pre-arm check has passed
     } _flags;
 
