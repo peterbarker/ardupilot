@@ -453,7 +453,9 @@ void Scheduler::_monitor_thread(void *arg)
         }
         if (loop_delay >= 500 && !sched->in_expected_delay()) {
             // at 500ms we declare an internal error
+#if AP_INTERNALERROR_ENABLED
             AP::internalerror().error(AP_InternalError::error_t::main_loop_stuck, hal.util->persistent_data.semaphore_line);
+#endif
             /*
               if we are armed and get this condition then it is likely
               a lock ordering deadlock. If the main thread is waiting
