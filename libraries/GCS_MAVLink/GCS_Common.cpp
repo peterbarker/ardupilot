@@ -2880,9 +2880,11 @@ MAV_STATE GCS_MAVLINK::system_status() const
         // FLIGHT_TERMINATION even if we have internal errors.  If new
         // enum entries are added then this may also not overwrite
         // those.
+#if AP_INTERNALERROR_ENABLED
         if (AP::internalerror().errors()) {
             _system_status = MAV_STATE_CRITICAL;
         }
+#endif
     }
     return _system_status;
 }
@@ -5512,10 +5514,16 @@ void GCS_MAVLINK::send_sys_status()
 
     gcs().get_sensor_status_flags(control_sensors_present, control_sensors_enabled, control_sensors_health);
 
+#if AP_INTERNALERROR_ENABLED
     const uint32_t errors = AP::internalerror().errors();
     const uint16_t errors1 = errors & 0xffff;
     const uint16_t errors2 = (errors>>16) & 0xffff;
     const uint16_t errors4 = AP::internalerror().count() & 0xffff;
+#else
+    const uint16_t errors1 = 0;
+    const uint16_t errors2 = 0;
+    const uint32_t errors4 = 0;
+#endif
 
     mavlink_msg_sys_status_send(
         chan,
