@@ -823,7 +823,7 @@ void AP_BattMonitor::check_failsafes(void)
                             (double)voltage(i), (double)state[i].consumed_mah);
             _has_triggered_failsafe = true;
 #ifndef HAL_BUILD_AP_PERIPH
-            AP_Notify::flags.failsafe_battery = true;
+            AP_Notify::set_flag(AP_Notify::Flag::BATTERY_FAILSAFE, true);
 #endif
             state[i].failsafe = type;
 
@@ -974,7 +974,7 @@ void AP_BattMonitor::checkPoweringOff(void)
         if (state[i].is_powering_off && !state[i].powerOffNotified) {
 #ifndef HAL_BUILD_AP_PERIPH
             // Set the AP_Notify flag, which plays the power off tones
-            AP_Notify::flags.powering_off = true;
+            AP_Notify::set_flag(AP_Notify::Flag::POWERING_OFF, true);
 #endif
 
             // Send a Mavlink broadcast announcing the shutdown
@@ -1019,7 +1019,7 @@ bool AP_BattMonitor::reset_remaining_mask(uint16_t battery_mask, float percentag
         _highest_failsafe_priority = INT8_MAX;
         _has_triggered_failsafe = false;
         // and reset notify flag
-        AP_Notify::flags.failsafe_battery = false;
+        AP_Notify::set_flag(AP_Notify::Flag::BATTERY_FAILSAFE, false);
     }
     return ret;
 }

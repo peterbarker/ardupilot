@@ -1463,7 +1463,7 @@ void AP_OSD_Screen::draw_fltmode(uint8_t x, uint8_t y)
 {
     AP_Notify * notify = AP_Notify::get_singleton();
     char arm;
-    if (AP_Notify::flags.armed) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         arm = SYMBOL(SYM_ARMED);
     } else {
         arm = SYMBOL(SYM_DISARMED);

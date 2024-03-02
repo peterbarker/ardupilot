@@ -1149,13 +1149,13 @@ void RC_Channel::do_aux_function_lost_vehicle_sound(const AuxSwitchPos ch_flag)
 {
     switch (ch_flag) {
     case AuxSwitchPos::HIGH:
-        AP_Notify::flags.vehicle_lost = true;
+        AP_Notify::set_flag(AP_Notify::Flag::VEHICLE_LOST, true);
         break;
     case AuxSwitchPos::MIDDLE:
         // nothing
         break;
     case AuxSwitchPos::LOW:
-        AP_Notify::flags.vehicle_lost = false;
+        AP_Notify::set_flag(AP_Notify::Flag::VEHICLE_LOST, false);
         break;
     }
 }

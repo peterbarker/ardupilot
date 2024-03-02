@@ -577,15 +577,15 @@ uint32_t AP_Frsky_SPort_Passthrough::calc_ap_status(void)
     ap_status |= (uint8_t)(gcs().simple_input_active())<<AP_SIMPLE_OFFSET;
     ap_status |= (uint8_t)(gcs().supersimple_input_active())<<AP_SSIMPLE_OFFSET;
     // is_flying flag
-    ap_status |= (uint8_t)(AP_Notify::flags.flying) << AP_FLYING_OFFSET;
+    ap_status |= (uint8_t)(AP_Notify::flag_is_set(AP_Notify::Flag::FLYING)) << AP_FLYING_OFFSET;
     // armed flag
-    ap_status |= (uint8_t)(AP_Notify::flags.armed)<<AP_ARMED_OFFSET;
+    ap_status |= (uint8_t)(AP_Notify::flag_is_set(AP_Notify::Flag::ARMED))<<AP_ARMED_OFFSET;
     // battery failsafe flag
-    ap_status |= (uint8_t)(AP_Notify::flags.failsafe_battery)<<AP_BATT_FS_OFFSET;
+    ap_status |= (uint8_t)(AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE))<<AP_BATT_FS_OFFSET;
     // bad ekf flag
-    ap_status |= (uint8_t)(AP_Notify::flags.ekf_bad)<<AP_EKF_FS_OFFSET;
+    ap_status |= (uint8_t)(AP_Notify::flag_is_set(AP_Notify::Flag::EKF_BAD))<<AP_EKF_FS_OFFSET;
     // generic failsafe
-    ap_status |= (uint8_t)(AP_Notify::flags.failsafe_battery||AP_Notify::flags.failsafe_ekf||AP_Notify::flags.failsafe_gcs||AP_Notify::flags.failsafe_radio)<<AP_FS_OFFSET;
+    ap_status |= (uint8_t)(AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)||AP_Notify::flag_is_set(AP_Notify::Flag::EKF_FAILSAFE)||AP_Notify::flag_is_set(AP_Notify::Flag::GCS_FAILSAFE)||AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE))<<AP_FS_OFFSET;
 #if AP_FENCE_ENABLED
     // fence status
     AC_Fence *fence = AP::fence();

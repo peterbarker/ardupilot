@@ -439,7 +439,7 @@ void Plane::startup_INS_ground(void)
 // sets notify object flight mode information
 void Plane::notify_mode(const Mode& mode)
 {
-    notify.flags.flight_mode = mode.mode_number();
+    notify.set_flight_mode(mode.mode_number());
     notify.set_flight_mode_str(mode.name4());
 }
 

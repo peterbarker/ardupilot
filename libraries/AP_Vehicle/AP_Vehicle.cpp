@@ -896,7 +896,7 @@ void AP_Vehicle::reboot(bool hold_in_bootloader)
     }
 
     // Notify might want to blink some LEDs:
-    AP_Notify::flags.firmware_update = 1;
+    AP_Notify::set_flag(AP_Notify::Flag::FIRMWARE_UPDATE, true);
     notify.update();
 
     // force safety on

@@ -787,8 +787,7 @@ bool AP_Arming::rc_in_calibration_check(bool report)
 bool AP_Arming::manual_transmitter_checks(bool report)
 {
     if (check_enabled(ARMING_CHECK_RC)) {
-
-        if (AP_Notify::flags.failsafe_radio) {
+        if (rc().in_rc_failsafe()) {
             check_failed(ARMING_CHECK_RC, report, "Radio failsafe on");
             return false;
         }

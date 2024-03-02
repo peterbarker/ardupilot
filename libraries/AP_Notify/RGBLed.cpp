@@ -90,7 +90,7 @@ uint8_t RGBLed::get_brightness(void) const
 
 uint32_t RGBLed::get_colour_sequence_obc(void) const
 {
-    if (AP_Notify::flags.armed) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         return DEFINE_COLOUR_SEQUENCE_SOLID(RED);
     }
     return DEFINE_COLOUR_SEQUENCE_SOLID(GREEN);
@@ -100,35 +100,35 @@ uint32_t RGBLed::get_colour_sequence_obc(void) const
 uint32_t RGBLed::get_colour_sequence(void) const
 {
     // initialising pattern
-    if (AP_Notify::flags.initialising) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::INITIALISING)) {
         return sequence_initialising;
     }
 
     // save trim or any calibration pattern
-    if (AP_Notify::flags.save_trim ||
-        AP_Notify::flags.esc_calibration ||
-        AP_Notify::flags.compass_cal_running ||
-        AP_Notify::flags.temp_cal_running) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::SAVE_TRIM) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::ESC_CALIBRATION) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::COMPASS_CAL_RUNNING) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::TEMP_CAL_RUNNING)) {
         return sequence_trim_or_esc;
     }
 
     // radio and battery failsafe patter: flash yellow
     // gps failsafe pattern : flashing yellow and blue
     // ekf_bad pattern : flashing yellow and red
-    if (AP_Notify::flags.failsafe_radio ||
-        AP_Notify::flags.failsafe_gcs ||
-        AP_Notify::flags.failsafe_battery ||
-        AP_Notify::flags.ekf_bad ||
-        AP_Notify::flags.gps_glitching ||
-        AP_Notify::flags.leak_detected) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::GCS_FAILSAFE) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::EKF_BAD) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::GPS_GLITCHING) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::LEAK_DETECTED)) {
 
-        if (AP_Notify::flags.leak_detected) {
+        if (AP_Notify::flag_is_set(AP_Notify::Flag::LEAK_DETECTED)) {
             // purple if leak detected
             return sequence_failsafe_leak;
-        } else if (AP_Notify::flags.ekf_bad) {
+        } else if (AP_Notify::flag_is_set(AP_Notify::Flag::EKF_BAD)) {
             // red on if ekf bad
             return sequence_failsafe_ekf;
-        } else if (AP_Notify::flags.gps_glitching) {
+        } else if (AP_Notify::flag_is_set(AP_Notify::Flag::GPS_GLITCHING)) {
             // blue on gps glitch
             return sequence_failsafe_gps_glitching;
         }
@@ -137,10 +137,10 @@ uint32_t RGBLed::get_colour_sequence(void) const
     }
 
     // solid green or blue if armed
-    if (AP_Notify::flags.armed) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
 #if AP_GPS_ENABLED
         // solid green if armed with GPS 3d lock
-        if (AP_Notify::flags.gps_status >= AP_GPS::GPS_OK_FIX_3D) {
+        if (AP_Notify::gps_status() >= AP_GPS::GPS_OK_FIX_3D) {
             return sequence_armed;
         }
 #endif
@@ -149,15 +149,15 @@ uint32_t RGBLed::get_colour_sequence(void) const
     }
 
     // double flash yellow if failing pre-arm checks
-    if (!AP_Notify::flags.pre_arm_check) {
+    if (!AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)) {
         return sequence_prearm_failing;
     }
 #if AP_GPS_ENABLED
-    if (AP_Notify::flags.gps_status >= AP_GPS::GPS_OK_FIX_3D_DGPS && AP_Notify::flags.pre_arm_gps_check) {
+        if (AP_Notify::gps_status() >= AP_GPS::GPS_OK_FIX_3D_DGPS && AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARM_GPS_CHECK)) {
         return sequence_disarmed_good_dgps;
     }
 
-    if (AP_Notify::flags.gps_status >= AP_GPS::GPS_OK_FIX_3D && AP_Notify::flags.pre_arm_gps_check) {
+    if (AP_Notify::gps_status() >= AP_GPS::GPS_OK_FIX_3D && AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARM_GPS_CHECK)) {
         return sequence_disarmed_good_gps;
     }
 #endif
@@ -167,23 +167,23 @@ uint32_t RGBLed::get_colour_sequence(void) const
 
 uint32_t RGBLed::get_colour_sequence_traffic_light(void) const
 {
-    if (AP_Notify::flags.initialising) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::INITIALISING)) {
         return DEFINE_COLOUR_SEQUENCE(RED,GREEN,BLUE,RED,GREEN,BLUE,RED,GREEN,BLUE,BLACK);
     }
 
-    if (AP_Notify::flags.armed) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         return DEFINE_COLOUR_SEQUENCE_SLOW(RED);
     }
 
     if (hal.util->safety_switch_state() != AP_HAL::Util::SAFETY_DISARMED) {
-        if (!AP_Notify::flags.pre_arm_check) {
+        if (!AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)) {
             return DEFINE_COLOUR_SEQUENCE_ALTERNATE(YELLOW, BLACK);
         } else {
             return DEFINE_COLOUR_SEQUENCE_SLOW(YELLOW);
         }
     }
 
-    if (!AP_Notify::flags.pre_arm_check) {
+    if (!AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)) {
         return DEFINE_COLOUR_SEQUENCE_ALTERNATE(GREEN, BLACK);
     }
     return DEFINE_COLOUR_SEQUENCE_SLOW(GREEN);

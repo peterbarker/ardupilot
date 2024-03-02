@@ -89,7 +89,7 @@ MAV_RESULT Copter::mavlink_compassmot(const GCS_MAVLINK &gcs_chan)
                                  0, 0, 0, 0);
 
     // flash leds
-    AP_Notify::flags.esc_calibration = true;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, true);
 
     // warn user we are starting calibration
     gcs_chan.send_text(MAV_SEVERITY_INFO, "Starting calibration");
@@ -253,7 +253,7 @@ MAV_RESULT Copter::mavlink_compassmot(const GCS_MAVLINK &gcs_chan)
     }
 
     // turn off notify leds
-    AP_Notify::flags.esc_calibration = false;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, false);
 
     // re-enable cpu failsafe
     failsafe_enable();

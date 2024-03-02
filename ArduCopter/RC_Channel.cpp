@@ -692,7 +692,7 @@ void Copter::save_trim()
 void Copter::auto_trim_cancel()
 {
     auto_trim_counter = 0;
-    AP_Notify::flags.save_trim = false;
+    AP_Notify::set_flag(AP_Notify::Flag::SAVE_TRIM, false);
     gcs().send_text(MAV_SEVERITY_INFO, "AutoTrim cancelled");
 }
 
@@ -706,7 +706,7 @@ void Copter::auto_trim()
         }
 
         // flash the leds
-        AP_Notify::flags.save_trim = true;
+        AP_Notify::set_flag(AP_Notify::Flag::SAVE_TRIM, true);
 
         if (!auto_trim_started) {
             if (ap.land_complete) {
@@ -736,7 +736,7 @@ void Copter::auto_trim()
 
         // on last iteration restore leds and accel gains to normal
         if (auto_trim_counter == 0) {
-            AP_Notify::flags.save_trim = false;
+            AP_Notify::set_flag(AP_Notify::Flag::SAVE_TRIM, false);
             gcs().send_text(MAV_SEVERITY_INFO, "AutoTrim: Trims saved");
         }
     }

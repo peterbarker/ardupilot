@@ -56,7 +56,7 @@ void ModeThrow::run()
         stage = Throw_Wait_Throttle_Unlimited;
 
         // Cancel the waiting for throw tone sequence
-        AP_Notify::flags.waiting_for_throw = false;
+        AP_Notify::set_flag(AP_Notify::Flag::WAITING_FOR_THROW, false);
 
     } else if (stage == Throw_Wait_Throttle_Unlimited &&
                motors->get_spool_state() == AP_Motors::SpoolState::THROTTLE_UNLIMITED) {
@@ -141,7 +141,7 @@ void ModeThrow::run()
         attitude_control->set_throttle_out(0,true,g.throttle_filt);
 
         // Play the waiting for throw tone sequence to alert the user
-        AP_Notify::flags.waiting_for_throw = true;
+        AP_Notify::set_flag(AP_Notify::Flag::WAITING_FOR_THROW, true);
 
         break;
 

@@ -399,7 +399,7 @@ void AP_OSD::update_stats()
     WITH_SEMAPHORE(_sem);
 
     uint32_t now = AP_HAL::millis();
-    if (!AP_Notify::flags.armed) {
+    if (!AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         _stats.last_update_ms = now;
         return;
     }
@@ -483,7 +483,7 @@ void AP_OSD::update_stats()
 void AP_OSD::update_current_screen()
 {
     // Switch on ARM/DISARM event
-    if (AP_Notify::flags.armed) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         if (!was_armed && arm_scr > 0 && arm_scr <= AP_OSD_NUM_DISPLAY_SCREENS && get_screen(arm_scr-1).enabled) {
             current_screen = arm_scr-1;
         }
@@ -496,7 +496,8 @@ void AP_OSD::update_current_screen()
     }
 
     // Switch on failsafe event
-    if (AP_Notify::flags.failsafe_radio || AP_Notify::flags.failsafe_battery) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)) {
         if (!was_failsafe && failsafe_scr > 0 && failsafe_scr <= AP_OSD_NUM_DISPLAY_SCREENS && get_screen(failsafe_scr-1).enabled) {
             pre_fs_screen = current_screen;
             current_screen = failsafe_scr-1;

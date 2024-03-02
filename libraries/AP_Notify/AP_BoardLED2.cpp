@@ -57,7 +57,7 @@ void AP_BoardLED2::update(void)
     uint8_t counter2 = _counter / 3;
 
     // initialising
-    if (AP_Notify::flags.initialising) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::INITIALISING)) {
         // blink LEDs A at 8Hz (full cycle) during initialisation
         hal.gpio->write(HAL_GPIO_A_LED_PIN, (counter2 & 1) ? HAL_GPIO_LED_ON : HAL_GPIO_LED_OFF);
         return;
@@ -70,7 +70,7 @@ void AP_BoardLED2::update(void)
     bool led_a_used=false;
 
     // save trim and ESC calibration
-    if (AP_Notify::flags.save_trim || AP_Notify::flags.esc_calibration) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::SAVE_TRIM) || AP_Notify::flag_is_set(AP_Notify::Flag::ESC_CALIBRATION)) {
         switch(save_trim_counter) {
             case 0:
                 hal.gpio->write(HAL_GPIO_B_LED_PIN, HAL_GPIO_LED_OFF);
@@ -89,8 +89,8 @@ void AP_BoardLED2::update(void)
         return;
     }
 
-    if(AP_Notify::flags.compass_cal_running ||
-       AP_Notify::flags.temp_cal_running){
+    if(AP_Notify::flag_is_set(AP_Notify::Flag::COMPASS_CAL_RUNNING) ||
+       AP_Notify::flag_is_set(AP_Notify::Flag::TEMP_CAL_RUNNING)){
         // compass calibration or IMU temperature calibration
         switch(save_trim_counter) {
         case 0:
@@ -168,12 +168,12 @@ void AP_BoardLED2::update(void)
 
     // arming light
     if(!led_a_used) {
-        if (AP_Notify::flags.armed) {
-            if(AP_Notify::flags.failsafe_battery){//   blink slowly (around 2Hz)
+        if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
+            if(AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)) {//   blink slowly (around 2Hz)
                 if ((counter2 & 0x7) == 0) {
                     hal.gpio->toggle(HAL_GPIO_A_LED_PIN);
                 }
-            }else if(AP_Notify::flags.failsafe_radio || AP_Notify::flags.failsafe_gcs){//   blink fast (around 4Hz)
+            }else if(AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE) || AP_Notify::flag_is_set(AP_Notify::Flag::GCS_FAILSAFE)) {//   blink fast (around 4Hz)
                 if ((counter2 & 0x3) == 0) {
                     hal.gpio->toggle(HAL_GPIO_A_LED_PIN);
                 }
@@ -186,7 +186,7 @@ void AP_BoardLED2::update(void)
                 arm_counter++;
             }
         
-            if (AP_Notify::flags.pre_arm_check) {
+            if (AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)) {
                 // passed pre-arm checks so slower single flash
                 switch(arm_counter) {
                     case 0:
@@ -238,7 +238,7 @@ void AP_BoardLED2::update(void)
         }
     }
     // gps light
-    switch (AP_Notify::flags.gps_status) {
+    switch (AP_Notify::gps_status()) {
         case 0:
         case 1:
             // no GPS attached or no lock - be dark
@@ -251,7 +251,7 @@ void AP_BoardLED2::update(void)
             if ((counter2 & 0x2) == 0) {
                 _sat_cnt++;
             }
-            uint16_t sats = AP_Notify::flags.gps_num_sats;
+            uint16_t sats = AP_Notify::gps_num_sats();
     
             if(_sat_cnt<8) { // pause between pulses
                 hal.gpio->write(HAL_GPIO_B_LED_PIN, HAL_GPIO_LED_OFF);

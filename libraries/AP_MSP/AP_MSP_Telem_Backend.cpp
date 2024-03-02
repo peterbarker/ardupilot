@@ -239,7 +239,7 @@ void AP_MSP_Telem_Backend::update_battery_state(battery_state_t &battery_state)
     battery_state.batt_capacity_mah = _battery.pack_capacity_mah();
 
     const AP_Notify& notify = AP::notify();
-    if (notify.flags.failsafe_battery) {
+    if (notify.flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)) {
         battery_state.batt_state = MSP_BATTERY_CRITICAL;
     } else {
         battery_state.batt_state = MSP_BATTERY_OK;
@@ -796,7 +796,7 @@ MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_status(sbuf_t *dst)
 
     status.flight_mode_flags = get_osd_flight_mode_bitmask();
     status.arming_disable_flags_count = 1;
-    status.arming_disable_flags = !AP::notify().flags.armed;
+    status.arming_disable_flags = !AP::notify().flag_is_set(AP_Notify::Flag::ARMED);
 
     sbuf_write_data(dst, &status, sizeof(status));
     return MSP_RESULT_ACK;
@@ -1190,7 +1190,7 @@ void AP_MSP_Telem_Backend::hide_osd_items(void)
         }
 #if AP_BATTERY_ENABLED
         // flash battery on failsafe
-        if (notify.flags.failsafe_battery) {
+        if (notify.flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)) {
             BIT_SET(osd_hidden_items_bitmask, OSD_AVG_CELL_VOLTAGE);
             BIT_SET(osd_hidden_items_bitmask, OSD_MAIN_BATT_VOLTAGE);
         }

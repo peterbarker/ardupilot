@@ -1674,7 +1674,7 @@ AP_InertialSensor::_init_gyro()
     _calibrating_gyro = true;
 
     // flash leds to tell user to keep the IMU still
-    AP_Notify::flags.initialising = true;
+    AP_Notify::set_flag(AP_Notify::Flag::INITIALISING, true);
 
     // cold start
     DEV_PRINTF("Init Gyro");
@@ -1807,8 +1807,8 @@ AP_InertialSensor::_init_gyro()
     _calibrating_gyro = false;
 
     // stop flashing leds
-    AP_Notify::flags.initialising = false;
-    AP_Notify::flags.gyro_calibrated = true;
+    AP_Notify::set_flag(AP_Notify::Flag::INITIALISING, false);
+    AP_Notify::set_flag(AP_Notify::Flag::GYRO_CALIBRATED, true);
 }
 
 // save parameters to eeprom
@@ -1945,7 +1945,7 @@ void AP_InertialSensor::update(void)
 
 #if HAL_INS_TEMPERATURE_CAL_ENABLE
     if (tcal_learning && !temperature_cal_running()) {
-        AP_Notify::flags.temp_cal_running = false;
+        AP_Notify::set_flag(AP_Notify::Flag::TEMP_CAL_RUNNING, false);
         AP_Notify::events.temp_cal_saved = 1;
         tcal_learning = false;
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "TCAL finished all IMUs");
@@ -2520,7 +2520,7 @@ MAV_RESULT AP_InertialSensor::simple_accel_cal()
     _calibrating_accel = true;
 
     // flash leds to tell user to keep the IMU still
-    AP_Notify::flags.initialising = true;
+    AP_Notify::set_flag(AP_Notify::Flag::INITIALISING, true);
 
     /*
       we do the accel calibration with no board rotation. This avoids
@@ -2664,7 +2664,7 @@ MAV_RESULT AP_InertialSensor::simple_accel_cal()
 #endif
 
     // stop flashing leds
-    AP_Notify::flags.initialising = false;
+    AP_Notify::set_flag(AP_Notify::Flag::INITIALISING, false);
     last_accel_cal_ms = AP_HAL::millis ();
 
     return result;

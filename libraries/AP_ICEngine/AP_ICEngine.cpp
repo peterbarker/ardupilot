@@ -251,7 +251,8 @@ void AP_ICEngine::update(void)
         should_run = true;
     }
 
-    if (option_set(Options::DISABLE_IGNITION_RC_FAILSAFE) && AP_Notify::flags.failsafe_radio) {
+    if (option_set(Options::DISABLE_IGNITION_RC_FAILSAFE) &&
+        AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE)) {
         // user has requested ignition kill on RC failsafe
         should_run = false;
     }

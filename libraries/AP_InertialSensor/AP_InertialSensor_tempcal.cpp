@@ -358,7 +358,7 @@ void AP_InertialSensor_TCal::update_accel_learning(const Vector3f &accel, float 
         }
     }
     if (learn != nullptr) {
-        AP_Notify::flags.temp_cal_running = true;
+        AP_Notify::set_flag(AP_Notify::Flag::TEMP_CAL_RUNNING, true);
         learn->add_sample(accel, temperature, learn->state[0]);
     }
 }

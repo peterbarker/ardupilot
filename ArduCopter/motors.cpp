@@ -196,8 +196,8 @@ void Copter::lost_vehicle_check()
     // ensure throttle is down, motors not armed, pitch and roll rc at max. Note: rc1=roll rc2=pitch
     if (ap.throttle_zero && !motors->armed() && (channel_roll->get_control_in() > 4000) && (channel_pitch->get_control_in() > 4000)) {
         if (soundalarm_counter >= LOST_VEHICLE_DELAY) {
-            if (AP_Notify::flags.vehicle_lost == false) {
-                AP_Notify::flags.vehicle_lost = true;
+            if (AP_Notify::flag_is_set(AP_Notify::Flag::VEHICLE_LOST) == false) {
+                AP_Notify::set_flag(AP_Notify::Flag::VEHICLE_LOST, true);
                 gcs().send_text(MAV_SEVERITY_NOTICE,"Locate Copter alarm");
             }
         } else {
@@ -205,8 +205,8 @@ void Copter::lost_vehicle_check()
         }
     } else {
         soundalarm_counter = 0;
-        if (AP_Notify::flags.vehicle_lost == true) {
-            AP_Notify::flags.vehicle_lost = false;
+        if (AP_Notify::flag_is_set(AP_Notify::Flag::VEHICLE_LOST) == true) {
+            AP_Notify::set_flag(AP_Notify::Flag::VEHICLE_LOST, false);
         }
     }
 }

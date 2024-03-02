@@ -171,7 +171,7 @@ MAV_RESULT Copter::mavlink_motor_test_start(const GCS_MAVLINK &gcs_chan, uint8_t
             g.fs_ekf_action.set(0);
 
             // turn on notify leds
-            AP_Notify::flags.esc_calibration = true;
+            AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, true);
         }
     }
 
@@ -224,5 +224,5 @@ void Copter::motor_test_stop()
     }
 
     // turn off notify leds
-    AP_Notify::flags.esc_calibration = false;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, false);
 }

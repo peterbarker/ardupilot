@@ -139,7 +139,7 @@ void AP_LTM_Telem::send_Sframe(void)
     }
 #endif
 
-    const uint8_t flightmode = AP_Notify::flags.flight_mode; // flight mode
+    const uint8_t flightmode = AP_Notify::flight_mode();
 
     uint8_t rssi = 0; // radio RSSI (%a)
     AP_RSSI *ap_rssi = AP_RSSI::get_singleton();
@@ -147,8 +147,8 @@ void AP_LTM_Telem::send_Sframe(void)
         rssi = ap_rssi->read_receiver_rssi_uint8();
     }
 
-    const uint8_t armstat = AP_Notify::flags.armed;                                     // 0: disarmed, 1: armed
-    const uint8_t failsafe = AP_Notify::flags.failsafe_radio;                           // 0: normal,   1: failsafe
+    const uint8_t armstat = AP_Notify::flag_is_set(AP_Notify::Flag::ARMED);                                     // 0: disarmed, 1: armed
+    const uint8_t failsafe = AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE);                           // 0: normal,   1: failsafe
 
     uint8_t lt_buff[LTM_SFRAME_SIZE];
     // START

@@ -27,7 +27,7 @@ bool ModeTurtle::init(bool ignore_checks)
     }
 
     // turn on notify leds
-    AP_Notify::flags.esc_calibration = true;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, true);
 
     return true;
 }
@@ -65,7 +65,7 @@ void ModeTurtle::exit()
     disarm_motors();
 
     // turn off notify leds
-    AP_Notify::flags.esc_calibration = false;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, false);
 }
 
 void ModeTurtle::disarm_motors()

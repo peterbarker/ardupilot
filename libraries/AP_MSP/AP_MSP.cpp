@@ -184,9 +184,9 @@ void AP_MSP::loop(void)
         }
 
         // detect flight mode changes and steal focus from text messages
-        if (AP::notify().flags.flight_mode != _msp_status.last_flight_mode) {
+        if (AP::notify().flight_mode() != _msp_status.last_flight_mode) {
             _msp_status.flight_mode_focus = true;
-            _msp_status.last_flight_mode = AP::notify().flags.flight_mode;
+            _msp_status.last_flight_mode = AP::notify().flight_mode();
             _msp_status.last_flight_mode_change_ms = AP_HAL::millis();
         } else if (now - _msp_status.last_flight_mode_change_ms > OSD_FLIGHT_MODE_FOCUS_TIME) {
             _msp_status.flight_mode_focus = false;

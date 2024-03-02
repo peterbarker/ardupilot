@@ -957,71 +957,39 @@ void AP_DroneCAN::notify_state_send()
 
     ardupilot_indication_NotifyState msg;
     msg.vehicle_state = 0;
-    if (AP_Notify::flags.initialising) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_INITIALISING;
-    }
-    if (AP_Notify::flags.armed) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_ARMED;
-    }
-    if (AP_Notify::flags.flying) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FLYING;
-    }
-    if (AP_Notify::flags.compass_cal_running) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_MAGCAL_RUN;
-    }
-    if (AP_Notify::flags.ekf_bad) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_EKF_BAD;
-    }
-    if (AP_Notify::flags.esc_calibration) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_ESC_CALIBRATION;
-    }
-    if (AP_Notify::flags.failsafe_battery) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FAILSAFE_BATT;
-    }
-    if (AP_Notify::flags.failsafe_gcs) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FAILSAFE_GCS;
-    }
-    if (AP_Notify::flags.failsafe_radio) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FAILSAFE_RADIO;
-    }
-    if (AP_Notify::flags.firmware_update) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FW_UPDATE;
-    }
-    if (AP_Notify::flags.gps_fusion) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_GPS_FUSION;
-    }
-    if (AP_Notify::flags.gps_glitching) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_GPS_GLITCH;
-    }
-    if (AP_Notify::flags.have_pos_abs) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_POS_ABS_AVAIL;
-    }
-    if (AP_Notify::flags.leak_detected) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_LEAK_DET;
-    }
-    if (AP_Notify::flags.parachute_release) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_CHUTE_RELEASED;
-    }
-    if (AP_Notify::flags.powering_off) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_POWERING_OFF;
-    }
-    if (AP_Notify::flags.pre_arm_check) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_PREARM;
-    }
-    if (AP_Notify::flags.pre_arm_gps_check) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_PREARM_GPS;
-    }
-    if (AP_Notify::flags.save_trim) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_SAVE_TRIM;
-    }
-    if (AP_Notify::flags.vehicle_lost) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_LOST;
-    }
-    if (AP_Notify::flags.video_recording) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_VIDEO_RECORDING;
-    }
-    if (AP_Notify::flags.waiting_for_throw) {
-        msg.vehicle_state |= 1 << ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_THROW_READY;
+    static const struct {
+        AP_Notify::Flag flag;
+        uint8_t mavlink_flag;
+    } flag_mapping[] {
+        { AP_Notify::Flag::INITIALISING, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_INITIALISING },
+        { AP_Notify::Flag::ARMED, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_ARMED },
+        { AP_Notify::Flag::FLYING, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FLYING },
+        { AP_Notify::Flag::COMPASS_CAL_RUNNING, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_MAGCAL_RUN },
+        { AP_Notify::Flag::EKF_BAD, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_EKF_BAD },
+        { AP_Notify::Flag::ESC_CALIBRATION, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_ESC_CALIBRATION },
+        { AP_Notify::Flag::BATTERY_FAILSAFE, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FAILSAFE_BATT },
+        { AP_Notify::Flag::GCS_FAILSAFE, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FAILSAFE_GCS },
+        { AP_Notify::Flag::RADIO_FAILSAFE, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FAILSAFE_RADIO },
+        { AP_Notify::Flag::FIRMWARE_UPDATE, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_FW_UPDATE },
+        { AP_Notify::Flag::GPS_FUSION, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_GPS_FUSION },
+        { AP_Notify::Flag::GPS_GLITCHING, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_GPS_GLITCH },
+        { AP_Notify::Flag::HAVE_POS_ABS, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_POS_ABS_AVAIL },
+        { AP_Notify::Flag::LEAK_DETECTED, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_LEAK_DET },
+        { AP_Notify::Flag::PARACHUTE_RELEASED, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_CHUTE_RELEASED },
+        { AP_Notify::Flag::POWERING_OFF, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_POWERING_OFF },
+        { AP_Notify::Flag::PRE_ARMS_OK, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_PREARM },
+        { AP_Notify::Flag::PRE_ARM_GPS_CHECK, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_PREARM_GPS },
+        { AP_Notify::Flag::SAVE_TRIM, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_SAVE_TRIM },
+
+        { AP_Notify::Flag::VEHICLE_LOST, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_LOST },
+        { AP_Notify::Flag::VIDEO_RECORDING, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_VIDEO_RECORDING },
+        { AP_Notify::Flag::WAITING_FOR_THROW, ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_STATE_THROW_READY },
+    };
+
+    for (const auto &map : flag_mapping) {
+        if (AP_Notify::flag_is_set(map.flag)) {
+            msg.vehicle_state |= 1 << map.mavlink_flag;
+        }
     }
 
 #ifndef HAL_BUILD_AP_PERIPH

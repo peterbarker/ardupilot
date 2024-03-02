@@ -382,7 +382,7 @@ void Display::update()
     }
     timer = 0;
 
-    if (AP_Notify::flags.armed) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         if (_screenpage != 1) {
             _driver->clear_screen();
             update_arm(3);
@@ -499,7 +499,7 @@ void Display::draw_char(uint16_t x, uint16_t y, const char c)
 
 void Display::update_arm(uint8_t r)
 {
-    if (AP_Notify::flags.armed) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
         draw_text(COLUMN(0), ROW(r), ">>>>> ARMED! <<<<<");
     } else {
         draw_text(COLUMN(0), ROW(r), "     disarmed     ");
@@ -508,7 +508,7 @@ void Display::update_arm(uint8_t r)
 
 void Display::update_prearm(uint8_t r)
 {
-    if (AP_Notify::flags.pre_arm_check) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)) {
         draw_text(COLUMN(0), ROW(r), "Prearm: passed    ");
     } else {
         draw_text(COLUMN(0), ROW(r), "Prearm: failed    ");
@@ -521,7 +521,7 @@ void Display::update_gps(uint8_t r)
     static const char * gpsfixname[] = {"Other", "NoGPS","NoFix","2D","3D","DGPS", "RTK f", "RTK F"};
     char msg [DISPLAY_MESSAGE_SIZE];
     const char * fixname;
-    switch  (AP_Notify::flags.gps_status) {
+    switch  (AP_Notify::gps_status()) {
         case AP_GPS::NO_GPS:
             fixname = gpsfixname[1];
             break;
@@ -547,21 +547,21 @@ void Display::update_gps(uint8_t r)
             fixname = gpsfixname[0];
             break;
     }
-    snprintf(msg, DISPLAY_MESSAGE_SIZE, "GPS:%-5s Sats:%2u", fixname, (unsigned)AP_Notify::flags.gps_num_sats) ;
+    snprintf(msg, DISPLAY_MESSAGE_SIZE, "GPS:%-5s Sats:%2u", fixname, (unsigned)AP_Notify::gps_num_sats()) ;
     draw_text(COLUMN(0), ROW(r), msg);
 }
 
 void Display::update_gps_sats(uint8_t r)
 {
     draw_text(COLUMN(0), ROW(r), "Sats:");
-    draw_char(COLUMN(8), ROW(r), (AP_Notify::flags.gps_num_sats / 10) + '0');
-    draw_char(COLUMN(9), ROW(r), (AP_Notify::flags.gps_num_sats % 10) + '0');
+    draw_char(COLUMN(8), ROW(r), (AP_Notify::gps_num_sats() / 10) + '0');
+    draw_char(COLUMN(9), ROW(r), (AP_Notify::gps_num_sats() % 10) + '0');
 }
 #endif
 
 void Display::update_ekf(uint8_t r)
 {
-    if (AP_Notify::flags.ekf_bad) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::EKF_BAD)) {
         draw_text(COLUMN(0), ROW(r), "EKF:    fail");
     } else {
         draw_text(COLUMN(0), ROW(r), "EKF:    ok  ");

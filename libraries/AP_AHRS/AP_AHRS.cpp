@@ -546,9 +546,9 @@ void AP_AHRS::update_SITL(void)
 
 void AP_AHRS::update_notify_from_filter_status(const nav_filter_status &status)
 {
-    AP_Notify::flags.gps_fusion = status.flags.using_gps; // Drives AP_Notify flag for usable GPS.
-    AP_Notify::flags.gps_glitching = status.flags.gps_glitching;
-    AP_Notify::flags.have_pos_abs = status.flags.horiz_pos_abs;
+    AP_Notify::set_flag(AP_Notify::Flag::GPS_FUSION, status.flags.using_gps); // Drives AP_Notify flag for usable GPS.
+    AP_Notify::set_flag(AP_Notify::Flag::GPS_GLITCHING, status.flags.gps_glitching);
+    AP_Notify::set_flag(AP_Notify::Flag::HAVE_POS_ABS, status.flags.horiz_pos_abs);
 }
 
 #if HAL_NAVEKF2_AVAILABLE

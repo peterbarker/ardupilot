@@ -114,8 +114,8 @@ bool AP_ToneAlarm::init()
 
     // set initial boot states. This prevents us issuing a arming
     // warning in plane and rover on every boot
-    flags.armed = AP_Notify::flags.armed;
-    flags.failsafe_battery = AP_Notify::flags.failsafe_battery;
+    flags.armed = AP_Notify::flag_is_set(AP_Notify::Flag::ARMED);
+    flags.failsafe_battery = AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE);
     flags.pre_arm_check = 1;
     _cont_tone_playing = -1;
     hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &AP_ToneAlarm::_timer_task, void));
@@ -194,6 +194,8 @@ void AP_ToneAlarm::check_cont_tone()
 // update - updates led according to timed_updated.  Should be called at 50Hz
 void AP_ToneAlarm::update()
 {
+    const bool armed = AP_Notify::flag_is_set(AP_Notify::Flag::ARMED);
+
     // exit if buzzer is not enabled
     if (pNotify->buzzer_enabled() == false) {
         return;
@@ -201,16 +203,17 @@ void AP_ToneAlarm::update()
 
     check_cont_tone();
 
-    if (AP_Notify::flags.powering_off) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::POWERING_OFF)) {
         if (!flags.powering_off) {
             play_tone(AP_NOTIFY_TONE_QUIET_SHUTDOWN);
         }
-        flags.powering_off = AP_Notify::flags.powering_off;
+        flags.powering_off = AP_Notify::flag_is_set(AP_Notify::Flag::POWERING_OFF);
         return;
     }
 
-    if (AP_Notify::flags.compass_cal_running != flags.compass_cal_running) {
-        if (AP_Notify::flags.compass_cal_running) {
+    const bool compass_cal_running = AP_Notify::flag_is_set(AP_Notify::Flag::COMPASS_CAL_RUNNING);
+    if (compass_cal_running != flags.compass_cal_running) {
+        if (compass_cal_running) {
             play_tone(AP_NOTIFY_TONE_QUIET_CALIBRATING_CTS);
             play_tone(AP_NOTIFY_TONE_QUIET_POS_FEEDBACK);
         } else {
@@ -219,7 +222,7 @@ void AP_ToneAlarm::update()
             }
         }
     }
-    flags.compass_cal_running = AP_Notify::flags.compass_cal_running;
+    flags.compass_cal_running = compass_cal_running;
 
     if (AP_Notify::events.compass_cal_canceled) {
         play_tone(AP_NOTIFY_TONE_QUIET_NEU_FEEDBACK);
@@ -248,8 +251,9 @@ void AP_ToneAlarm::update()
         return;
     }
 
-    if (AP_Notify::flags.temp_cal_running != flags.temp_cal_running) {
-        if (AP_Notify::flags.temp_cal_running) {
+    const bool temp_cal_running = AP_Notify::flag_is_set(AP_Notify::Flag::TEMP_CAL_RUNNING);
+    if (temp_cal_running != flags.temp_cal_running) {
+        if (temp_cal_running) {
             play_tone(AP_NOTIFY_TONE_QUIET_CALIBRATING_CTS);
             play_tone(AP_NOTIFY_TONE_QUIET_POS_FEEDBACK);
         } else {
@@ -258,21 +262,23 @@ void AP_ToneAlarm::update()
             }
         }
     }
-    flags.temp_cal_running = AP_Notify::flags.temp_cal_running;
+    flags.temp_cal_running = temp_cal_running;
     
     // don't play other tones if cal is running
-    if (AP_Notify::flags.compass_cal_running ||
-        AP_Notify::flags.temp_cal_running) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::COMPASS_CAL_RUNNING) ||
+        AP_Notify::flag_is_set(AP_Notify::Flag::TEMP_CAL_RUNNING)) {
         return;
     }
 
     // notify the user when autotune or mission completes
-    if (AP_Notify::flags.armed && (AP_Notify::events.autotune_complete || AP_Notify::events.mission_complete)) {
+    if (armed &&
+        (AP_Notify::events.autotune_complete || AP_Notify::events.mission_complete)) {
         play_tone(AP_NOTIFY_TONE_LOUD_READY_OR_FINISHED);
     }
 
     //notify the user when autotune fails
-    if (AP_Notify::flags.armed && (AP_Notify::events.autotune_failed)) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::ARMED) &&
+        (AP_Notify::events.autotune_failed)) {
         play_tone(AP_NOTIFY_TONE_LOUD_NEG_FEEDBACK);
     }
 
@@ -283,7 +289,7 @@ void AP_ToneAlarm::update()
 
     // notify the user when their mode change was successful
     if (AP_Notify::events.user_mode_change) {
-        if (AP_Notify::flags.armed) {
+        if (armed) {
             play_tone(AP_NOTIFY_TONE_LOUD_NEU_FEEDBACK);
         } else {
             play_tone(AP_NOTIFY_TONE_QUIET_NEU_FEEDBACK);
@@ -292,7 +298,7 @@ void AP_ToneAlarm::update()
 
     // notify the user when their mode change failed
     if (AP_Notify::events.user_mode_change_failed) {
-        if (AP_Notify::flags.armed) {
+        if (armed) {
             play_tone(AP_NOTIFY_TONE_LOUD_NEG_FEEDBACK);
         } else {
             play_tone(AP_NOTIFY_TONE_QUIET_NEG_FEEDBACK);
@@ -310,15 +316,15 @@ void AP_ToneAlarm::update()
     }
 
     // notify the user when RC contact is lost
-    if (flags.failsafe_radio != AP_Notify::flags.failsafe_radio) {
-        flags.failsafe_radio = AP_Notify::flags.failsafe_radio;
+    if (flags.failsafe_radio != AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE)) {
+        flags.failsafe_radio = AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE);
         if (flags.failsafe_radio) {
             // armed case handled by events.failsafe_mode_change
-            if (!AP_Notify::flags.armed) {
+            if (!armed) {
                 play_tone(AP_NOTIFY_TONE_QUIET_NEG_FEEDBACK);
             }
         } else {
-            if (AP_Notify::flags.armed) {
+            if (armed) {
                 play_tone(AP_NOTIFY_TONE_LOUD_POS_FEEDBACK);
             } else {
                 play_tone(AP_NOTIFY_TONE_QUIET_POS_FEEDBACK);
@@ -327,15 +333,15 @@ void AP_ToneAlarm::update()
     }
 
     // notify the user when GCS failsafe is triggered
-    if (flags.failsafe_gcs != AP_Notify::flags.failsafe_gcs) {
-        flags.failsafe_gcs = AP_Notify::flags.failsafe_gcs;
+    if (flags.failsafe_gcs != AP_Notify::flag_is_set(AP_Notify::Flag::GCS_FAILSAFE)) {
+        flags.failsafe_gcs = AP_Notify::flag_is_set(AP_Notify::Flag::GCS_FAILSAFE);
         if (flags.failsafe_gcs) {
             // armed case handled by events.failsafe_mode_change
-            if (!AP_Notify::flags.armed) {
+            if (!armed) {
                 play_tone(AP_NOTIFY_TONE_QUIET_NEG_FEEDBACK);
             }
         } else {
-            if (AP_Notify::flags.armed) {
+            if (armed) {
                 play_tone(AP_NOTIFY_TONE_LOUD_POS_FEEDBACK);
             } else {
                 play_tone(AP_NOTIFY_TONE_QUIET_POS_FEEDBACK);
@@ -344,8 +350,8 @@ void AP_ToneAlarm::update()
     }
 
     // notify the user when pre_arm checks are passing
-    if (flags.pre_arm_check != AP_Notify::flags.pre_arm_check) {
-        flags.pre_arm_check = AP_Notify::flags.pre_arm_check;
+    if (flags.pre_arm_check != AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK)) {
+        flags.pre_arm_check = AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK);
         if (flags.pre_arm_check) {
             play_tone(AP_NOTIFY_TONE_QUIET_READY_OR_FINISHED);
             _have_played_ready_tone = true;
@@ -358,8 +364,8 @@ void AP_ToneAlarm::update()
     }
 
     // check if arming status has changed
-    if (flags.armed != AP_Notify::flags.armed) {
-        flags.armed = AP_Notify::flags.armed;
+    if (flags.armed != armed) {
+        flags.armed = armed;
         if (flags.armed) {
             // arming tune
             play_tone(AP_NOTIFY_TONE_QUIET_ARMING_WARNING);
@@ -373,8 +379,8 @@ void AP_ToneAlarm::update()
     }
 
     // check if battery status has changed
-    if (flags.failsafe_battery != AP_Notify::flags.failsafe_battery) {
-        flags.failsafe_battery = AP_Notify::flags.failsafe_battery;
+    if (flags.failsafe_battery != AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)) {
+        flags.failsafe_battery = AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE);
         if (flags.failsafe_battery) {
             // battery warning tune
             play_tone(AP_NOTIFY_TONE_LOUD_BATTERY_ALERT_CTS);
@@ -382,8 +388,8 @@ void AP_ToneAlarm::update()
     }
 
     // check parachute release
-    if (flags.parachute_release != AP_Notify::flags.parachute_release) {
-        flags.parachute_release = AP_Notify::flags.parachute_release;
+    if (flags.parachute_release != AP_Notify::flag_is_set(AP_Notify::Flag::PARACHUTE_RELEASED)) {
+        flags.parachute_release = AP_Notify::flag_is_set(AP_Notify::Flag::PARACHUTE_RELEASED);
         if (flags.parachute_release) {
             // parachute release warning tune
             play_tone(AP_NOTIFY_TONE_LOUD_ATTENTION_NEEDED);
@@ -391,8 +397,8 @@ void AP_ToneAlarm::update()
     }
 
     // lost vehicle tone
-    if (flags.vehicle_lost != AP_Notify::flags.vehicle_lost) {
-        flags.vehicle_lost = AP_Notify::flags.vehicle_lost;
+    if (flags.vehicle_lost != AP_Notify::flag_is_set(AP_Notify::Flag::VEHICLE_LOST)) {
+        flags.vehicle_lost = AP_Notify::flag_is_set(AP_Notify::Flag::VEHICLE_LOST);
         if (flags.vehicle_lost) {
             play_tone(AP_NOTIFY_TONE_LOUD_VEHICLE_LOST_CTS);
         } else {
@@ -401,8 +407,8 @@ void AP_ToneAlarm::update()
     }
 
     // waiting to be thrown vehicle tone
-    if (flags.waiting_for_throw != AP_Notify::flags.waiting_for_throw) {
-        flags.waiting_for_throw = AP_Notify::flags.waiting_for_throw;
+    if (flags.waiting_for_throw != AP_Notify::flag_is_set(AP_Notify::Flag::WAITING_FOR_THROW)) {
+        flags.waiting_for_throw = AP_Notify::flag_is_set(AP_Notify::Flag::WAITING_FOR_THROW);
         if (flags.waiting_for_throw) {
             play_tone(AP_NOTIFY_TONE_WAITING_FOR_THROW);
         } else {
@@ -410,8 +416,8 @@ void AP_ToneAlarm::update()
         }
     }
 
-    if (flags.leak_detected != AP_Notify::flags.leak_detected) {
-        flags.leak_detected = AP_Notify::flags.leak_detected;
+    if (flags.leak_detected != AP_Notify::flag_is_set(AP_Notify::Flag::LEAK_DETECTED)) {
+        flags.leak_detected = AP_Notify::flag_is_set(AP_Notify::Flag::LEAK_DETECTED);
         if (flags.leak_detected) {
             play_tone(AP_NOTIFY_TONE_LEAK_DETECTED);
         } else {
@@ -438,8 +444,8 @@ void AP_ToneAlarm::update()
     }
 
     // notify the user when ekf failsafe is triggered
-    if (flags.failsafe_ekf != AP_Notify::flags.failsafe_ekf) {
-        flags.failsafe_ekf = AP_Notify::flags.failsafe_ekf;
+    if (flags.failsafe_ekf != AP_Notify::flag_is_set(AP_Notify::Flag::EKF_FAILSAFE)) {
+        flags.failsafe_ekf = AP_Notify::flag_is_set(AP_Notify::Flag::EKF_FAILSAFE);
         if (flags.failsafe_ekf) {
             play_tone(AP_NOTIFY_TONE_EKF_ALERT);
         }

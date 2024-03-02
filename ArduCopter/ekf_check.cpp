@@ -42,7 +42,7 @@ void Copter::ekf_check()
     if (g.fs_ekf_thresh <= 0.0f) {
         ekf_check_state.fail_count = 0;
         ekf_check_state.bad_variance = false;
-        AP_Notify::flags.ekf_bad = ekf_check_state.bad_variance;
+        AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, ekf_check_state.bad_variance);
         failsafe_ekf_off_event();   // clear failsafe
         return;
     }
@@ -105,7 +105,7 @@ void Copter::ekf_check()
     }
 
     // set AP_Notify flags
-    AP_Notify::flags.ekf_bad = ekf_check_state.bad_variance;
+    AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, ekf_check_state.bad_variance);
 
     // To-Do: add ekf variances to extended status
 }
@@ -202,7 +202,7 @@ void Copter::failsafe_ekf_event()
     }
 
     // set true if ekf action is triggered
-    AP_Notify::flags.failsafe_ekf = true;
+    AP_Notify::set_flag(AP_Notify::Flag::EKF_FAILSAFE, true);
     gcs().send_text(MAV_SEVERITY_CRITICAL, "EKF Failsafe: changed to %s Mode", flightmode->name());
 }
 
@@ -215,8 +215,8 @@ void Copter::failsafe_ekf_off_event(void)
     }
 
     failsafe.ekf = false;
-    if (AP_Notify::flags.failsafe_ekf) {
-        AP_Notify::flags.failsafe_ekf = false;
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::EKF_FAILSAFE)) {
+        AP_Notify::set_flag(AP_Notify::Flag::EKF_FAILSAFE, false);
         gcs().send_text(MAV_SEVERITY_CRITICAL, "EKF Failsafe Cleared");
     }
     LOGGER_WRITE_ERROR(LogErrorSubsystem::FAILSAFE_EKFINAV, LogErrorCode::FAILSAFE_RESOLVED);

@@ -34,9 +34,6 @@ void Blimp::set_failsafe_radio(bool b)
             // ------------------------
             failsafe_radio_on_event();
         }
-
-        // update AP_Notify
-        AP_Notify::flags.failsafe_radio = b;
     }
 }
 
@@ -47,5 +44,5 @@ void Blimp::set_failsafe_gcs(bool b)
     failsafe.gcs = b;
 
     // update AP_Notify
-    AP_Notify::flags.failsafe_gcs = b;
+    AP_Notify::set_flag(AP_Notify::Flag::GCS_FAILSAFE, b);
 }

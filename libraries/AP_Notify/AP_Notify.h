@@ -110,6 +110,50 @@ public:
         Notify_Buzz_UAVCAN                  = (1 << 2), // UAVCAN Alarm
     };
 
+
+    enum class Flag {
+        INITIALISING,
+        RADIO_FAILSAFE,
+        GCS_FAILSAFE,
+        BATTERY_FAILSAFE,
+        EKF_FAILSAFE,
+        PRE_ARMS_OK,
+        COMPASS_CAL_RUNNING,
+        ARMED,
+        TEMP_CAL_RUNNING,
+        EKF_BAD,
+        FIRMWARE_UPDATE,
+        PARACHUTE_RELEASED,
+        POWERING_OFF,
+        GYRO_CALIBRATED,
+        FLYING,
+        ESC_CALIBRATION,
+        GPS_FUSION,
+        HAVE_POS_ABS,
+        GPS_GLITCHING,
+        VEHICLE_LOST,
+        LEAK_DETECTED,
+        PRE_ARM_GPS_CHECK,
+        SAVE_TRIM,
+        VIDEO_RECORDING,
+        WAITING_FOR_THROW,
+        AUTOPILOT_MODE,
+    };
+
+    static bool flag_is_set(Flag flag);
+    static void set_flag(Flag flag, bool value);
+
+    static void set_flight_mode(uint8_t flight_mode) { flags.flight_mode = flight_mode; }
+    static uint8_t flight_mode() { return flags.flight_mode; }
+
+    static void set_gps_status(uint8_t status) { flags.gps_status = status; }
+    static uint8_t gps_status() { return flags.gps_status; }
+
+    static void set_gps_num_sats(uint8_t num_sats) { flags.gps_num_sats = num_sats; }
+    static uint8_t gps_num_sats() { return flags.gps_num_sats; }
+
+private:
+
     /// notify_flags_type - bitmask of notification flags
     struct notify_flags_and_values_type {
         bool initialising;        // true if initialising and the vehicle should not be moved
@@ -143,6 +187,12 @@ public:
         bool gyro_calibrated;     // true if calibrated gyro/acc
     };
 
+    // The notify flags and values are static to allow direct class access
+    // without declaring the object.
+    static struct notify_flags_and_values_type flags;
+
+public:
+
     /// notify_events_type - bitmask of active events.
     //      Notify library is responsible for setting back to zero after notification has been completed
     struct notify_events_type {
@@ -170,7 +220,6 @@ public:
 
     // The notify flags and values are static to allow direct class access
     // without declaring the object.
-    static struct notify_flags_and_values_type flags;
     static struct notify_events_type events;
 
     // initialisation

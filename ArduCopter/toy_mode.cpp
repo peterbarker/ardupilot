@@ -904,7 +904,7 @@ void ToyMode::blink_update(void)
 
     // full on when we can see the TX, except for battery failsafe,
     // when we blink rapidly
-    if (copter.motors->armed() && AP_Notify::flags.failsafe_battery) {
+    if (copter.motors->armed() && AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE) {
         pattern = BLINK_8;
     } else if (!copter.motors->armed() && (blink_disarm > 0)) {
         pattern = BLINK_8;

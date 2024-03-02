@@ -1154,8 +1154,9 @@ void AP_GPS::update(void)
 
 #ifndef HAL_BUILD_AP_PERIPH
     // update notify with gps status. We always base this on the primary_instance
-    AP_Notify::flags.gps_status = state[primary_instance].status;
-    AP_Notify::flags.gps_num_sats = state[primary_instance].num_sats;
+    auto &notify = AP::notify();
+    notify.set_gps_status(state[primary_instance].status);
+    notify.set_gps_num_sats(state[primary_instance].num_sats);
 #endif
 }
 

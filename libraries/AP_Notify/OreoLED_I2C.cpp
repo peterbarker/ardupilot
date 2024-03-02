@@ -131,7 +131,7 @@ bool OreoLED_I2C::slow_counter()
 // Returns true if firmware update in progress. False if not
 bool OreoLED_I2C::mode_firmware_update()
 {
-    if (AP_Notify::flags.firmware_update) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::FIRMWARE_UPDATE)) {
         set_macro(OREOLED_INSTANCE_ALL, OREOLED_PARAM_MACRO_COLOUR_CYCLE);
         return true;
     } else {
@@ -143,7 +143,7 @@ bool OreoLED_I2C::mode_firmware_update()
 // Makes all LEDs rapidly strobe blue while gyros initialize.
 bool OreoLED_I2C::mode_init()
 {
-    if (AP_Notify::flags.initialising) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::INITIALISING)) {
         set_rgb(OREOLED_INSTANCE_ALL, OREOLED_PATTERN_STROBE, 0, 0, 255,0,0,0,PERIOD_SUPER,0);
         return true;
     } else {
@@ -156,13 +156,13 @@ bool OreoLED_I2C::mode_init()
 // LEDs perform alternating Red X pattern
 bool OreoLED_I2C::mode_failsafe_radio()
 {
-    if (AP_Notify::flags.failsafe_radio) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE)) {
         set_rgb(OREOLED_FRONTLEFT, OREOLED_PATTERN_STROBE, 255, 0, 0,0,0,0,PERIOD_SLOW,0);
         set_rgb(OREOLED_FRONTRIGHT, OREOLED_PATTERN_STROBE, 255, 0, 0,0,0,0,PERIOD_SLOW,PO_ALTERNATE);
         set_rgb(OREOLED_BACKLEFT, OREOLED_PATTERN_STROBE, 255, 0, 0,0,0,0,PERIOD_SLOW,PO_ALTERNATE);
         set_rgb(OREOLED_BACKRIGHT, OREOLED_PATTERN_STROBE, 255, 0, 0,0,0,0,PERIOD_SLOW,0);
     }
-    return AP_Notify::flags.failsafe_radio;
+    return AP_Notify::flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE);
 }
 
 
@@ -170,13 +170,13 @@ bool OreoLED_I2C::mode_failsafe_radio()
 // LEDs perform alternating yellow X pattern
 bool OreoLED_I2C::mode_failsafe_gcs()
 {
-    if (AP_Notify::flags.failsafe_gcs) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::GCS_FAILSAFE)) {
         set_rgb(OREOLED_FRONTLEFT, OREOLED_PATTERN_STROBE, 255, 50, 0,0,0,0,PERIOD_SLOW,0);
         set_rgb(OREOLED_FRONTRIGHT, OREOLED_PATTERN_STROBE, 255, 50, 0,0,0,0,PERIOD_SLOW,PO_ALTERNATE);
         set_rgb(OREOLED_BACKLEFT, OREOLED_PATTERN_STROBE, 255, 50, 0,0,0,0,PERIOD_SLOW,PO_ALTERNATE);
         set_rgb(OREOLED_BACKRIGHT, OREOLED_PATTERN_STROBE, 255, 50, 0,0,0,0,PERIOD_SLOW,0);
     }
-    return AP_Notify::flags.failsafe_gcs;
+    return AP_Notify::flag_is_set(AP_Notify::Flag::GCS_FAILSAFE);
 }
 
 
@@ -185,13 +185,13 @@ bool OreoLED_I2C::mode_failsafe_gcs()
 // Returns true GPS or EKF problem, returns false if all ok
 bool OreoLED_I2C::set_standard_colors()
 {
-    if (!(AP_Notify::flags.gps_fusion)) {
+    if (!(AP_Notify::flag_is_set(AP_Notify::Flag::GPS_FUSION))) {
         _rear_color_r = 255;
         _rear_color_g = 50;
         _rear_color_b = 0;
         return true;
 
-    } else if (AP_Notify::flags.ekf_bad) {
+    } else if (AP_Notify::flag_is_set(AP_Notify::Flag::EKF_BAD)) {
         _rear_color_r = 255;
         _rear_color_g = 0;
         _rear_color_b = 255;
@@ -211,7 +211,7 @@ bool OreoLED_I2C::set_standard_colors()
 // Fast strobe alternating front/back
 bool OreoLED_I2C::mode_failsafe_batt()
 {
-    if (AP_Notify::flags.failsafe_battery) {
+    if (AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)) {
 
         switch (_oreo_theme) {
         case OreoLED_Aircraft:
@@ -236,7 +236,7 @@ bool OreoLED_I2C::mode_failsafe_batt()
             break;
         }
     }
-    return AP_Notify::flags.failsafe_battery;
+    return AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE);
 }
 
 
@@ -249,7 +249,7 @@ bool OreoLED_I2C::mode_auto_flight()
     case OreoLED_Aircraft:
         set_rgb(OREOLED_FRONTLEFT, OREOLED_PATTERN_STROBE, 255, 0, 0,0,0,0,PERIOD_SUPER,0);
         set_rgb(OREOLED_FRONTRIGHT, OREOLED_PATTERN_STROBE, 0, 255, 0,0,0,0,PERIOD_SUPER,0);
-        if ((AP_Notify::flags.pre_arm_check && AP_Notify::flags.pre_arm_gps_check) || AP_Notify::flags.armed) {
+        if ((AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK) && AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARM_GPS_CHECK)) || AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
             set_rgb(OREOLED_BACKLEFT, OREOLED_PATTERN_STROBE, _rear_color_r, _rear_color_g, _rear_color_b,0,0,0,PERIOD_SUPER,PO_ALTERNATE);
             set_rgb(OREOLED_BACKRIGHT, OREOLED_PATTERN_STROBE, _rear_color_r, _rear_color_g, _rear_color_b,0,0,0,PERIOD_SUPER,PO_ALTERNATE);
         } else {
@@ -273,7 +273,7 @@ bool OreoLED_I2C::mode_auto_flight()
         break;
     }
 
-    return AP_Notify::flags.autopilot_mode;
+    return AP_Notify::flag_is_set(AP_Notify::Flag::AUTOPILOT_MODE);
 }
 
 
@@ -286,7 +286,7 @@ bool OreoLED_I2C::mode_pilot_flight()
     case OreoLED_Aircraft:
         set_rgb(OREOLED_FRONTLEFT, OREOLED_PATTERN_SOLID, 255, 0, 0);
         set_rgb(OREOLED_FRONTRIGHT, OREOLED_PATTERN_SOLID, 0, 255, 0);
-        if ((AP_Notify::flags.pre_arm_check && AP_Notify::flags.pre_arm_gps_check) || AP_Notify::flags.armed) {
+        if ((AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK) && AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARM_GPS_CHECK)) || AP_Notify::flag_is_set(AP_Notify::Flag::ARMED)) {
             set_rgb(OREOLED_BACKLEFT, OREOLED_PATTERN_STROBE, _rear_color_r, _rear_color_g, _rear_color_b,0,0,0,PERIOD_FAST,0);
             set_rgb(OREOLED_BACKRIGHT, OREOLED_PATTERN_STROBE, _rear_color_r, _rear_color_g, _rear_color_b,0,0,0,PERIOD_FAST,PO_ALTERNATE);
         } else {

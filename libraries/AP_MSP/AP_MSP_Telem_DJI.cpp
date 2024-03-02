@@ -61,7 +61,10 @@ void AP_MSP_Telem_DJI::hide_osd_items(void)
 
     if (msp->_msp_status.flashing_on) {
         // flash flightmode on failsafe
-        if (notify.flags.failsafe_battery || notify.flags.failsafe_gcs || notify.flags.failsafe_radio || notify.flags.ekf_bad) {
+        if (notify.flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE) ||
+            notify.flag_is_set(AP_Notify::Flag::GCS_FAILSAFE) ||
+            notify.flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE) ||
+            notify.flag_is_set(AP_Notify::Flag::EKF_BAD)) {
             BIT_CLEAR(osd_hidden_items_bitmask, OSD_FLYMODE);
         }
     }
@@ -73,7 +76,10 @@ uint32_t AP_MSP_Telem_DJI::get_osd_flight_mode_bitmask(void)
     const AP_Notify& notify = AP::notify();
 
     // check failsafe
-    if (notify.flags.failsafe_battery || notify.flags.failsafe_gcs || notify.flags.failsafe_radio || notify.flags.ekf_bad ) {
+    if (notify.flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE) ||
+        notify.flag_is_set(AP_Notify::Flag::GCS_FAILSAFE) ||
+        notify.flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE) ||
+        notify.flag_is_set(AP_Notify::Flag::EKF_BAD)) {
         BIT_SET(mode_mask, DJI_FLAG_FS);
     }
     return mode_mask;

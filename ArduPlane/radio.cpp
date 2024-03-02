@@ -294,7 +294,6 @@ void Plane::control_failsafe()
         if (failsafe.throttle_counter == 10) {
             gcs().send_text(MAV_SEVERITY_WARNING, "Throttle failsafe %s", "on");
             failsafe.rc_failsafe = true;
-            AP_Notify::flags.failsafe_radio = true;
         }
         if (failsafe.throttle_counter > 10) {
             failsafe.throttle_counter = 10;
@@ -310,7 +309,6 @@ void Plane::control_failsafe()
             gcs().send_text(MAV_SEVERITY_WARNING, "Throttle failsafe %s", "off");
         } else if(failsafe.throttle_counter == 0) {
             failsafe.rc_failsafe = false;
-            AP_Notify::flags.failsafe_radio = false;
         }
     }
 }

@@ -313,8 +313,8 @@ void AP_ADSB_uAvionix_UCP::send_Transponder_Control()
     // if enabled via param ADSB_OPTIONS, use squawk 7400 while in any Loss-Comms related failsafe
     // https://www.faa.gov/documentLibrary/media/Notice/N_JO_7110.724_5-2-9_UAS_Lost_Link_2.pdf
     const AP_Notify& notify = AP::notify();
-    if (((_frontend._options & uint32_t(AP_ADSB::AdsbOption::Squawk_7400_FS_RC)) && notify.flags.failsafe_radio) ||
-        ((_frontend._options & uint32_t(AP_ADSB::AdsbOption::Squawk_7400_FS_GCS)) && notify.flags.failsafe_gcs)) {
+    if (((_frontend._options & uint32_t(AP_ADSB::AdsbOption::Squawk_7400_FS_RC)) && notify.flag_is_set(AP_Notify::Flag::RADIO_FAILSAFE)) ||
+        ((_frontend._options & uint32_t(AP_ADSB::AdsbOption::Squawk_7400_FS_GCS)) && notify.flag_is_set(AP_Notify::Flag::GCS_FAILSAFE))) {
         msg.squawkCode = 7400;
     } else {
         msg.squawkCode = _frontend.out_state.ctrl.squawkCode;
