@@ -168,8 +168,8 @@ void Sub::exit_mode(Mode *&old_flightmode, Mode *&new_flightmode){
 // notify_flight_mode - sets notify object based on current flight mode.  Only used for OreoLED notify device
 void Sub::notify_flight_mode()
 {
-    AP_Notify::flags.autopilot_mode = flightmode->is_autopilot();
-    AP_Notify::flags.flight_mode = (uint8_t)control_mode;
+    AP_Notify::set_flag(AP_Notify::Flag::AUTOPILOT_MODE, flightmode->is_autopilot());
+    AP_Notify::set_flight_mode((uint8_t)control_mode);
     notify.set_flight_mode_str(flightmode->name4());
 }
 

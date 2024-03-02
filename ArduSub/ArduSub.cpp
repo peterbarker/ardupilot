@@ -273,9 +273,9 @@ void Sub::one_hz_loop()
 {
     bool arm_check = arming.pre_arm_checks(false);
     ap.pre_arm_check = arm_check;
-    AP_Notify::flags.pre_arm_check = arm_check;
-    AP_Notify::flags.pre_arm_gps_check = position_ok();
-    AP_Notify::flags.flying = motors.armed();
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARMS_OK, arm_check);
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, position_ok());
+    AP_Notify::set_flag(AP_Notify::Flag::FLYING, motors.armed());
 
 #if HAL_LOGGING_ENABLED
     if (should_log(MASK_LOG_ANY)) {

@@ -100,7 +100,7 @@ bool AP_Arming_Sub::arm(AP_Arming::Method method, bool do_arming_checks)
     sub.mainloop_failsafe_disable();
 
     // notify that arming will occur (we do this early to give plenty of warning)
-    AP_Notify::flags.armed = true;
+    AP_Notify::set_flag(AP_Notify::Flag::ARMED, true);
     // call notify update a few times to ensure the message gets out
     for (uint8_t i=0; i<=10; i++) {
         AP::notify().update();

@@ -104,7 +104,7 @@ void Sub::failsafe_ekf_check()
     if (g.fs_ekf_action == FS_EKF_ACTION_DISABLED) {
         last_ekf_good_ms = AP_HAL::millis();
         failsafe.ekf = false;
-        AP_Notify::flags.ekf_bad = false;
+        AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, false);
         return;
     }
 
@@ -118,14 +118,14 @@ void Sub::failsafe_ekf_check()
     if (compass_variance < g.fs_ekf_thresh && vel_variance < g.fs_ekf_thresh) {
         last_ekf_good_ms = AP_HAL::millis();
         failsafe.ekf = false;
-        AP_Notify::flags.ekf_bad = false;
+        AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, false);
         return;
     }
 
     // Bad EKF for 2 solid seconds triggers failsafe
     if (AP_HAL::millis() < last_ekf_good_ms + 2000) {
         failsafe.ekf = false;
-        AP_Notify::flags.ekf_bad = false;
+        AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, false);
         return;
     }
 
@@ -135,7 +135,7 @@ void Sub::failsafe_ekf_check()
     }
 
     failsafe.ekf = true;
-    AP_Notify::flags.ekf_bad = true;
+    AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, true);
 
     LOGGER_WRITE_ERROR(LogErrorSubsystem::EKFCHECK, LogErrorCode::EKFCHECK_BAD_VARIANCE);
 
@@ -272,12 +272,12 @@ void Sub::failsafe_leak_check()
         if (failsafe.leak) {
             LOGGER_WRITE_ERROR(LogErrorSubsystem::FAILSAFE_LEAK, LogErrorCode::FAILSAFE_RESOLVED);
         }
-        AP_Notify::flags.leak_detected = false;
+        AP_Notify::set_flag(AP_Notify::Flag::LEAK_DETECTED, false);
         failsafe.leak = false;
         return;
     }
 
-    AP_Notify::flags.leak_detected = status;
+    AP_Notify::set_flag(AP_Notify::Flag::LEAK_DETECTED, status);
 
     uint32_t tnow = AP_HAL::millis();
 
