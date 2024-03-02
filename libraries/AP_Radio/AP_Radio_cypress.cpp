@@ -1541,13 +1541,13 @@ void AP_Radio_cypress::send_telem_packet(void)
     struct telem_packet_cypress pkt;
 
     t_status.flags = 0;
-    t_status.flags |= AP_Notify::flags.gps_status >= 3?TELEM_FLAG_GPS_OK:0;
-    t_status.flags |= AP_Notify::flags.pre_arm_check?TELEM_FLAG_ARM_OK:0;
-    t_status.flags |= AP_Notify::flags.failsafe_battery?0:TELEM_FLAG_BATT_OK;
+    t_status.flags |= AP_Notify::gps_status() >= 3?TELEM_FLAG_GPS_OK:0;
+    t_status.flags |= AP_Notify::flag_is_set(AP_Notify::Flag::PRE_ARMS_OK) ?TELEM_FLAG_ARM_OK:0;
+    t_status.flags |= AP_Notify::flag_is_set(AP_Notify::Flag::BATTERY_FAILSAFE)?0:TELEM_FLAG_BATT_OK;
     t_status.flags |= hal.util->get_soft_armed()?TELEM_FLAG_ARMED:0;
-    t_status.flags |= AP_Notify::flags.have_pos_abs?TELEM_FLAG_POS_OK:0;
-    t_status.flags |= AP_Notify::flags.video_recording?TELEM_FLAG_VIDEO:0;
-    t_status.flight_mode = AP_Notify::flags.flight_mode;
+    t_status.flags |= AP_Notify::flag_is_set(AP_Notify::Flag::HAVE_POS_ABS)?TELEM_FLAG_POS_OK:0;
+    t_status.flags |= AP_Notify::flag_is_set(AP_Notify::Flag::VIDEO_RECORDING)?TELEM_FLAG_VIDEO:0;
+    t_status.flight_mode = AP_Notify::flight_mode();
     t_status.tx_max = get_tx_max_power();
     t_status.note_adjust = get_tx_buzzer_adjust();
 
