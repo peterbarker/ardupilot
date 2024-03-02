@@ -1042,11 +1042,13 @@ bool AP_Arming::system_checks(bool report)
         }
 #endif
     }
+#if AP_INTERNALERROR_ENABLED
     if (AP::internalerror().errors() != 0) {
         AP::internalerror().errors_as_string((uint8_t*)buffer, ARRAY_SIZE(buffer));
         check_failed(report, "Internal errors 0x%x l:%u %s", (unsigned int)AP::internalerror().errors(), AP::internalerror().last_error_line(), buffer);
         return false;
     }
+#endif
 
     if (!hal.gpio->arming_checks(sizeof(buffer), buffer)) {
         check_failed(report, "%s", buffer);
