@@ -140,56 +140,25 @@ public:
         AUTOPILOT_MODE,
     };
 
-    static bool flag_is_set(Flag flag);
-    static void set_flag(Flag flag, bool value);
+    static bool flag_is_set(Flag flag) { return flags & (1U << (uint8_t)flag); }
+    static void set_flag(Flag flag, bool value) { flags |= (1U << (uint8_t)flag); }
 
-    static void set_flight_mode(uint8_t flight_mode) { flags.flight_mode = flight_mode; }
-    static uint8_t flight_mode() { return flags.flight_mode; }
+    static void set_flight_mode(uint8_t flight_mode) { _flight_mode = flight_mode; }
+    static uint8_t flight_mode() { return _flight_mode; }
 
-    static void set_gps_status(uint8_t status) { flags.gps_status = status; }
-    static uint8_t gps_status() { return flags.gps_status; }
+    static void set_gps_status(uint8_t status) { _gps_status = status; }
+    static uint8_t gps_status() { return _gps_status; }
 
-    static void set_gps_num_sats(uint8_t num_sats) { flags.gps_num_sats = num_sats; }
-    static uint8_t gps_num_sats() { return flags.gps_num_sats; }
+    static void set_gps_num_sats(uint8_t num_sats) { _gps_num_sats = num_sats; }
+    static uint8_t gps_num_sats() { return _gps_num_sats; }
 
 private:
 
-    /// notify_flags_type - bitmask of notification flags
-    struct notify_flags_and_values_type {
-        bool initialising;        // true if initialising and the vehicle should not be moved
-        uint8_t gps_status;       // see the GPS_0 = no gps, 1 = no lock, 2 = 2d lock, 3 = 3d lock, 4 = dgps lock, 5 = rtk lock
-        uint8_t gps_num_sats;     // number of sats
-        uint8_t flight_mode;      // flight mode
-        bool armed;               // 0 = disarmed, 1 = armed
-        bool flying;              // 0 = not flying, 1 = flying/driving/diving/tracking
-        bool pre_arm_check;       // true if passing pre arm checks
-        bool pre_arm_gps_check;   // true if passing pre arm gps checks
-        bool save_trim;           // true if gathering trim data
-        bool esc_calibration;     // true if calibrating escs
-        bool failsafe_radio;      // true if radio failsafe
-        bool failsafe_battery;    // true if battery failsafe
-        bool failsafe_gcs;        // true if GCS failsafe
-        bool failsafe_ekf;        // true if ekf failsafe
-        bool parachute_release;   // true if parachute is being released
-        bool ekf_bad;             // true if ekf is reporting problems
-        bool autopilot_mode;      // true if vehicle is in an autopilot flight mode (only used by OreoLEDs)
-        bool firmware_update;     // true just before vehicle firmware is updated
-        bool compass_cal_running; // true if a compass calibration is running
-        bool leak_detected;       // true if leak detected
-        bool gps_fusion;          // true if the GPS is in use by EKF, usable for flight
-        bool gps_glitching;       // true f the GPS is believed to be glitching is affecting navigation accuracy
-        bool have_pos_abs;        // true if absolute position is available
-        bool vehicle_lost;        // true when lost copter tone is requested (normally only used for copter)
-        bool waiting_for_throw;   // true when copter is in THROW mode and waiting to detect the user hand launch
-        bool powering_off;        // true when the vehicle is powering off
-        bool video_recording;     // true when the vehicle is recording video
-        bool temp_cal_running;    // true if a temperature calibration is running
-        bool gyro_calibrated;     // true if calibrated gyro/acc
-    };
+    static uint8_t _gps_status;       // see the GPS_0 = no gps, 1 = no lock, 2 = 2d lock, 3 = 3d lock, 4 = dgps lock, 5 = rtk lock
+    static uint8_t _gps_num_sats;     // number of sats
+    static uint8_t _flight_mode;      // flight mode
 
-    // The notify flags and values are static to allow direct class access
-    // without declaring the object.
-    static struct notify_flags_and_values_type flags;
+    static uint32_t flags;
 
 public:
 

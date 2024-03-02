@@ -254,8 +254,11 @@ AP_Notify::AP_Notify()
 }
 
 // static flags, to allow for direct class update from device drivers
-struct AP_Notify::notify_flags_and_values_type AP_Notify::flags;
 struct AP_Notify::notify_events_type AP_Notify::events;
+uint32_t AP_Notify::flags;
+uint8_t AP_Notify::_gps_status;
+uint8_t AP_Notify::_flight_mode;
+uint8_t AP_Notify::_gps_num_sats;
 
 NotifyDevice *AP_Notify::_devices[CONFIG_NOTIFY_DEVICES_MAX];
 uint8_t AP_Notify::_num_devices;
@@ -569,150 +572,6 @@ int8_t AP_Notify::get_rgb_led_brightness_percent() const
         return 66;
     case RGB_LED_HIGH:
         return 100;
-    }
-}
-
-bool AP_Notify::flag_is_set(AP_Notify::Flag flag)
-{
-    switch (flag) {
-    case Flag::INITIALISING:
-        return flags.initialising;
-    case Flag::RADIO_FAILSAFE:
-        return flags.failsafe_radio;
-    case Flag::GCS_FAILSAFE:
-        return flags.failsafe_gcs;
-    case Flag::BATTERY_FAILSAFE:
-        return flags.failsafe_battery;
-    case Flag::EKF_FAILSAFE:
-        return flags.failsafe_ekf;
-    case Flag::PRE_ARMS_OK:
-        return flags.pre_arm_check;
-    case Flag::COMPASS_CAL_RUNNING:
-        return flags.compass_cal_running;
-    case Flag::ARMED:
-        return flags.armed;
-    case Flag::TEMP_CAL_RUNNING:
-        return flags.temp_cal_running;
-    case Flag::EKF_BAD:
-        return flags.ekf_bad;
-    case Flag::FIRMWARE_UPDATE:
-        return flags.firmware_update;
-    case Flag::PARACHUTE_RELEASED:
-        return flags.parachute_release;
-    case Flag::POWERING_OFF:
-        return flags.powering_off;
-    case Flag::FLYING:
-        return flags.flying;
-    case Flag::GYRO_CALIBRATED:
-        return flags.gyro_calibrated;
-    case Flag::ESC_CALIBRATION:
-        return flags.esc_calibration;
-    case Flag::GPS_GLITCHING:
-        return flags.gps_glitching;
-    case Flag::GPS_FUSION:
-        return flags.gps_fusion;
-    case Flag::VEHICLE_LOST:
-        return flags.vehicle_lost;
-    case Flag::HAVE_POS_ABS:
-        return flags.have_pos_abs;
-    case Flag::LEAK_DETECTED:
-        return flags.leak_detected;
-    case Flag::PRE_ARM_GPS_CHECK:
-        return flags.pre_arm_gps_check;
-    case Flag::SAVE_TRIM:
-        return flags.save_trim;
-    case Flag::VIDEO_RECORDING:
-        return flags.video_recording;
-    case Flag::WAITING_FOR_THROW:
-        return flags.waiting_for_throw;
-    case Flag::AUTOPILOT_MODE:
-        return flags.autopilot_mode;
-    }
-
-    return false;
-}
-
-void AP_Notify::set_flag(AP_Notify::Flag flag, bool value)
-{
-    switch (flag) {
-    case Flag::INITIALISING:
-        flags.initialising = value;
-        break;
-    case Flag::RADIO_FAILSAFE:
-        flags.failsafe_radio = value;
-        break;
-    case Flag::GCS_FAILSAFE:
-        flags.failsafe_gcs = value;
-        break;
-    case Flag::BATTERY_FAILSAFE:
-        flags.failsafe_battery = value;
-        break;
-    case Flag::EKF_FAILSAFE:
-        flags.failsafe_ekf = value;
-        break;
-    case Flag::PRE_ARMS_OK:
-        flags.pre_arm_check = value;
-        break;
-    case Flag::COMPASS_CAL_RUNNING:
-        flags.compass_cal_running = value;
-        break;
-    case Flag::ARMED:
-        flags.armed = value;
-        break;
-    case Flag::TEMP_CAL_RUNNING:
-        flags.temp_cal_running = value;
-        break;
-    case Flag::EKF_BAD:
-        flags.ekf_bad = value;
-        break;
-    case Flag::FIRMWARE_UPDATE:
-        flags.firmware_update = value;
-        break;
-    case Flag::PARACHUTE_RELEASED:
-        flags.parachute_release = value;
-        break;
-    case Flag::POWERING_OFF:
-        flags.powering_off = value;
-        break;
-    case Flag::FLYING:
-        flags.flying = value;
-        break;
-    case Flag::GYRO_CALIBRATED:
-        flags.gyro_calibrated = value;
-        break;
-    case Flag::ESC_CALIBRATION:
-        flags.esc_calibration = value;
-        break;
-    case Flag::GPS_GLITCHING:
-        flags.gps_glitching = value;
-        break;
-    case Flag::GPS_FUSION:
-        flags.gps_fusion = value;
-        break;
-    case Flag::VEHICLE_LOST:
-        flags.vehicle_lost = value;
-        break;
-    case Flag::HAVE_POS_ABS:
-        flags.have_pos_abs = value;
-        break;
-    case Flag::LEAK_DETECTED:
-        flags.leak_detected = value;
-        break;
-    case Flag::PRE_ARM_GPS_CHECK:
-        flags.pre_arm_gps_check = value;
-        break;
-    case Flag::SAVE_TRIM:
-        flags.save_trim = value;
-        break;
-    case Flag::VIDEO_RECORDING:
-        flags.video_recording = value;
-        break;
-    case Flag::WAITING_FOR_THROW:
-        flags.waiting_for_throw = value;
-        break;
-    case Flag::AUTOPILOT_MODE:
-        flags.autopilot_mode = value;
-        break;
     }
 }
 
