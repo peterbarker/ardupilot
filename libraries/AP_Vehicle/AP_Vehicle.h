@@ -526,7 +526,9 @@ private:
     bool done_safety_init;
 
 
+#if AP_INTERNALERROR_ENABLED
     uint32_t _last_internal_errors;  // backup of AP_InternalError::internal_errors bitmask
+#endif
 
 #if AP_CUSTOMROTATIONS_ENABLED
     AP_CustomRotations custom_rotations;
