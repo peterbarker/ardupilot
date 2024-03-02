@@ -117,7 +117,7 @@ void AP_Arming_Rover::update_soft_armed()
 bool AP_Arming_Rover::arm(AP_Arming::Method method, const bool do_arming_checks)
 {
     if (!AP_Arming::arm(method, do_arming_checks)) {
-        AP_Notify::events.arming_failed = true;
+        AP_Notify::event(AP_Notify::Event::ARMING_FAILED);
         return false;
     }
 

@@ -146,7 +146,7 @@ bool AP_Arming_Blimp::gps_checks(bool display_failure)
 {
     // run mandatory gps checks first
     if (!mandatory_gps_checks(display_failure)) {
-        AP_Notify::flags.pre_arm_gps_check = false;
+        AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, false);
         return false;
     }
 
@@ -156,31 +156,31 @@ bool AP_Arming_Blimp::gps_checks(bool display_failure)
 
     // return true if GPS is not required
     if (!mode_requires_gps) {
-        AP_Notify::flags.pre_arm_gps_check = true;
+        AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, true);
         return true;
     }
 
     // return true immediately if gps check is disabled
     if (!check_enabled(ARMING_CHECK_GPS)) {
-        AP_Notify::flags.pre_arm_gps_check = true;
+        AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, true);
         return true;
     }
 
     // warn about hdop separately - to prevent user confusion with no gps lock
     if (blimp.gps.get_hdop() > blimp.g.gps_hdop_good) {
         check_failed(ARMING_CHECK_GPS, display_failure, "High GPS HDOP");
-        AP_Notify::flags.pre_arm_gps_check = false;
+        AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, false);
         return false;
     }
 
     // call parent gps checks
     if (!AP_Arming::gps_checks(display_failure)) {
-        AP_Notify::flags.pre_arm_gps_check = false;
+        AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, false);
         return false;
     }
 
     // if we got here all must be ok
-    AP_Notify::flags.pre_arm_gps_check = true;
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, true);
     return true;
 }
 
@@ -266,7 +266,7 @@ bool AP_Arming_Blimp::mandatory_checks(bool display_failure)
 {
     // call mandatory gps checks and update notify status because regular gps checks will not run
     bool result = mandatory_gps_checks(display_failure);
-    AP_Notify::flags.pre_arm_gps_check = result;
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, result);
 
     // call mandatory alt check
     if (!alt_checks(display_failure)) {
@@ -279,7 +279,7 @@ bool AP_Arming_Blimp::mandatory_checks(bool display_failure)
 void AP_Arming_Blimp::set_pre_arm_check(bool b)
 {
     blimp.ap.pre_arm_check = b;
-    AP_Notify::flags.pre_arm_check = b;
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARMS_OK, b);
 }
 
 bool AP_Arming_Blimp::arm(const AP_Arming::Method method, const bool do_arming_checks)
@@ -299,7 +299,7 @@ bool AP_Arming_Blimp::arm(const AP_Arming::Method method, const bool do_arming_c
     }
 
     if (!AP_Arming::arm(method, do_arming_checks)) {
-        AP_Notify::events.arming_failed = true;
+        AP_Notify::event(AP_Notify::Event::ARMING_FAILED);
         in_arm_motors = false;
         return false;
     }
@@ -310,7 +310,7 @@ bool AP_Arming_Blimp::arm(const AP_Arming::Method method, const bool do_arming_c
 #endif
 
     // notify that arming will occur (we do this early to give plenty of warning)
-    AP_Notify::flags.armed = true;
+    AP_Notify::set_flag(AP_Notify::Flag::ARMED, true);
     // call notify update a few times to ensure the message gets out
     for (uint8_t i=0; i<=10; i++) {
         AP::notify().update();

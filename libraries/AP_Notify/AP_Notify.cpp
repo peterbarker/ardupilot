@@ -266,7 +266,16 @@ uint8_t AP_Notify::_num_devices;
 
 void AP_Notify::set_flag(AP_Notify::Flag flag, bool value)
 {
-    flags |= (1U << (uint8_t)value);
+    const uint32_t mask = 1U << (uint8_t)value;
+    const bool current = (flags & mask) != 0;
+    if (current == value) {
+        return;
+    }
+    if (value) {
+        flags |= mask;
+    } else {
+        flags &= ~mask;
+    }
 
     // trigger events for some flags:
     Event ev;

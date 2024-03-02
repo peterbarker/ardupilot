@@ -211,7 +211,7 @@ void Blimp::one_hz_loop()
     // update assigned functions and enable auxiliary servos
     SRV_Channels::enable_aux_servos();
 
-    AP_Notify::flags.flying = !ap.land_complete;
+    AP_Notify::set_flag(AP_Notify::Flag::FLYING, !ap.land_complete);
 
     blimp.pid_pos_yaw.set_notch_sample_rate(AP::scheduler().get_filtered_loop_rate_hz());
 }

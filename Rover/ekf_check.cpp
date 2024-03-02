@@ -36,7 +36,7 @@ void Rover::ekf_check()
     if (!arming.is_armed() || (g.fs_ekf_thresh <= 0.0f)) {
         ekf_check_state.fail_count = 0;
         ekf_check_state.bad_variance = false;
-        AP_Notify::flags.ekf_bad = ekf_check_state.bad_variance;
+        AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, false);
         failsafe_ekf_off_event();   // clear failsafe
         return;
     }
@@ -80,7 +80,7 @@ void Rover::ekf_check()
     }
 
     // set AP_Notify flags
-    AP_Notify::flags.ekf_bad = ekf_check_state.bad_variance;
+    AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, ekf_check_state.bad_variance);
 }
 
 // returns true if the ekf's variance are over the tolerance

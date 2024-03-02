@@ -35,7 +35,7 @@ public:
     {
         if (arm != _armed) {
             _armed = arm;
-            AP_Notify::flags.armed = arm;
+            AP_Notify::set_flag(AP_Notify::Flag::ARMED, arm);
         }
 
     }

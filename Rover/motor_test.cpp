@@ -135,7 +135,7 @@ MAV_RESULT Rover::mavlink_motor_test_start(const GCS_MAVLINK &gcs_chan, AP_Motor
             g.fs_crash_check.set(0);
 
             // turn on notify leds
-            AP_Notify::flags.esc_calibration = true;
+            AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, true);
         }
     }
 
@@ -173,7 +173,7 @@ void Rover::motor_test_stop()
     g.fs_crash_check.load();
 
     // turn off notify leds
-    AP_Notify::flags.esc_calibration = false;
+    AP_Notify::set_flag(AP_Notify::Flag::ESC_CALIBRATION, false);
 
     // flag test is complete
     motor_test = false;

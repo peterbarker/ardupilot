@@ -41,7 +41,7 @@ void Blimp::ekf_check()
     if (!motors->armed() || (g.fs_ekf_thresh <= 0.0f)) {
         ekf_check_state.fail_count = 0;
         ekf_check_state.bad_variance = false;
-        AP_Notify::flags.ekf_bad = ekf_check_state.bad_variance;
+        AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, false);
         failsafe_ekf_off_event();   // clear failsafe
         return;
     }
@@ -94,7 +94,7 @@ void Blimp::ekf_check()
     }
 
     // set AP_Notify flags
-    AP_Notify::flags.ekf_bad = ekf_check_state.bad_variance;
+    AP_Notify::set_flag(AP_Notify::Flag::EKF_BAD, ekf_check_state.bad_variance);
 
     // To-Do: add ekf variances to extended status
 }

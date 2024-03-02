@@ -96,7 +96,7 @@ void Blimp::init_ardupilot()
         set_mode(Mode::Number::MANUAL, ModeReason::UNAVAILABLE);
     } else {
         // alert pilot to mode change
-        AP_Notify::events.failsafe_mode_change = 1;
+        AP_Notify::event(AP_Notify::Event::FAILSAFE_MODE_CHANGE);
     }
 
     // flag that initialisation has completed

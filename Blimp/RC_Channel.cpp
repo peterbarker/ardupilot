@@ -24,7 +24,7 @@ void RC_Channel_Blimp::mode_switch_changed(modeswitch_pos_t new_pos)
     if (!blimp.set_mode((Mode::Number)blimp.flight_modes[new_pos].get(), ModeReason::RC_COMMAND)) {
         // alert user to mode change failure
         if (blimp.ap.initialised) {
-            AP_Notify::events.user_mode_change_failed = 1;
+            AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE_FAILED);
         }
         return;
     }
@@ -32,7 +32,7 @@ void RC_Channel_Blimp::mode_switch_changed(modeswitch_pos_t new_pos)
     // play a tone
     // alert user to mode change (except if autopilot is just starting up)
     if (blimp.ap.initialised) {
-        AP_Notify::events.user_mode_change = 1;
+        AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE);
     }
 }
 
@@ -82,9 +82,9 @@ void RC_Channel_Blimp::do_aux_function_change_mode(const Mode::Number mode,
         const bool success = blimp.set_mode(mode, ModeReason::RC_COMMAND);
         if (blimp.ap.initialised) {
             if (success) {
-                AP_Notify::events.user_mode_change = 1;
+                AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE);
             } else {
-                AP_Notify::events.user_mode_change_failed = 1;
+                AP_Notify::event(AP_Notify::Event::USER_MODE_CHANGE_FAILED);
             }
         }
         break;
@@ -141,7 +141,7 @@ void Blimp::save_trim()
 void Blimp::auto_trim_cancel()
 {
     auto_trim_counter = 0;
-    AP_Notify::flags.save_trim = false;
+    AP_Notify::set_flag(AP_Notify::Flag::SAVE_TRIM, false);
     gcs().send_text(MAV_SEVERITY_INFO, "AutoTrim cancelled");
 }
 
@@ -155,7 +155,7 @@ void Blimp::auto_trim()
         }
 
         // flash the leds
-        AP_Notify::flags.save_trim = true;
+        AP_Notify::set_flag(AP_Notify::Flag::SAVE_TRIM, true);
 
         if (!auto_trim_started) {
             if (ap.land_complete) {
@@ -185,7 +185,7 @@ void Blimp::auto_trim()
 
         // on last iteration restore leds and accel gains to normal
         if (auto_trim_counter == 0) {
-            AP_Notify::flags.save_trim = false;
+            AP_Notify::set_flag(AP_Notify::Flag::SAVE_TRIM, false);
             gcs().send_text(MAV_SEVERITY_INFO, "AutoTrim: Trims saved");
         }
     }

@@ -445,10 +445,10 @@ void Rover::one_second_loop(void)
     SRV_Channels::enable_aux_servos();
 
     // update notify flags
-    AP_Notify::flags.pre_arm_check = arming.pre_arm_checks(false);
-    AP_Notify::flags.pre_arm_gps_check = true;
-    AP_Notify::flags.armed = arming.is_armed();
-    AP_Notify::flags.flying = hal.util->get_soft_armed();
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARMS_OK, arming.pre_arm_checks(false));
+    AP_Notify::set_flag(AP_Notify::Flag::PRE_ARM_GPS_CHECK, true);
+    AP_Notify::set_flag(AP_Notify::Flag::ARMED, arming.is_armed());
+    AP_Notify::set_flag(AP_Notify::Flag::FLYING, hal.util->get_soft_armed());
 
     // cope with changes to mavlink system ID
     mavlink_system.sysid = g.sysid_this_mav;
