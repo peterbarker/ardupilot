@@ -9,6 +9,40 @@
  *   6) If the time lapsed since the last timecheck is greater than 0.2 seconds, return false and reset the timer
  *   NOTE : This function relies on the TECS 50Hz processing for its acceleration measure.
  */
+
+
+bool Plane::auto_takeoff_attitude_is_good(void) const
+{
+    if (flight_option_enabled(FlightOptions::DISABLE_TOFF_ATTITUDE_CHK)) {
+        return true;
+    }
+
+#if HAL_QUADPLANE_ENABLED
+    // disable attitude check on tailsitters
+    if (quadplane.tailsitter.enabled()) {
+        return true;
+    }
+#endif
+
+    // Check aircraft attitude for bad launch
+    if (ahrs.pitch_sensor <= -3000 || ahrs.pitch_sensor >= 4500) {
+        return false;
+    }
+
+#if AP_INVERTED_FLIGHT_ENABLED
+    // skip roll check if upside down
+    if (fly_inverted()) {
+        return true;
+    }
+#endif
+
+    if (labs(ahrs.roll_sensor) > 3000) {
+        return false;
+    }
+
+    return true;
+}
+
 bool Plane::auto_takeoff_check(void)
 {
     // this is a more advanced check that relies on TECS
@@ -54,12 +88,6 @@ bool Plane::auto_takeoff_check(void)
         return false;
     }
 
-    bool do_takeoff_attitude_check = !(flight_option_enabled(FlightOptions::DISABLE_TOFF_ATTITUDE_CHK));
-#if HAL_QUADPLANE_ENABLED
-    // disable attitude check on tailsitters
-    do_takeoff_attitude_check &= !quadplane.tailsitter.enabled();
-#endif
-
     if (!takeoff_state.launchTimerStarted && !is_zero(g.takeoff_throttle_min_accel)) {
         // we are requiring an X acceleration event to launch
         float xaccel = TECS_controller.get_VXdot();
@@ -104,18 +132,10 @@ bool Plane::auto_takeoff_check(void)
         goto no_launch;
     }
 
-    if (do_takeoff_attitude_check) {
-        // Check aircraft attitude for bad launch
-        if (ahrs.pitch_sensor <= -3000 || ahrs.pitch_sensor >= 4500 ||
-            (
-#if AP_INVERTED_FLIGHT_ENABLED
-                !fly_inverted() &&
-#endif
-                labs(ahrs.roll_sensor) > 3000)) {
+    if (!takeoff_attitude_is_good()) {
             gcs().send_text(MAV_SEVERITY_WARNING, "Bad launch AUTO");
             takeoff_state.accel_event_counter = 0;
             goto no_launch;
-        }
     }
 
     // Check ground speed and time delay

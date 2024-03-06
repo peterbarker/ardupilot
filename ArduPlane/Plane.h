@@ -1134,6 +1134,7 @@ private:
 
     // takeoff.cpp
     bool auto_takeoff_check(void);
+    bool auto_takeoff_attitude_is_good(void) const;
     void takeoff_calc_roll(void);
     void takeoff_calc_pitch(void);
     void takeoff_calc_throttle(const bool use_max_throttle=false);
