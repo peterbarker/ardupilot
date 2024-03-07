@@ -30,14 +30,14 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
     // notify user of a fatal startup error related to available sensors. 
-    static void config_error(const char *reason, ...) FMT_PRINTF(1, 2) NORETURN;
+    void config_error(const char *reason, ...) FMT_PRINTF(1, 2) NORETURN;
 
     // notify user of a non-fatal startup error related to allocation failures.
-    static void allocation_error(const char *reason, ...) FMT_PRINTF(1, 2) NORETURN;
+    void allocation_error(const char *reason, ...) FMT_PRINTF(1, 2) NORETURN;
 
     // permit other libraries (in particular, GCS_MAVLink) to detect
     // that we're never going to boot properly:
-    static bool in_config_error(void) { return _in_error_loop; }
+    bool in_config_error(void) { return _in_error_loop; }
 
     // valid types for BRD_TYPE: these values need to be in sync with the
     // values from the param description
@@ -86,7 +86,7 @@ public:
     // ask if IOMCU is enabled. This is a uint8_t to allow
     // developer debugging by setting BRD_IO_ENABLE=100 to avoid the
     // crc check of IO firmware on startup
-    static uint8_t io_enabled(void) {
+    uint8_t io_enabled(void) {
 #if HAL_WITH_IO_MCU
         return _singleton?uint8_t(_singleton->state.io_enable.get()):0;
 #else
@@ -170,27 +170,27 @@ public:
 #endif
 
     // return true if ftp is disabled
-    static bool ftp_disabled(void) {
+    bool ftp_disabled(void) {
         return _singleton?(_singleton->_options & DISABLE_FTP)!=0:1;
     }
 
     // return true if watchdog enabled
-    static bool watchdog_enabled(void) {
+    bool watchdog_enabled(void) {
         return _singleton?(_singleton->_options & BOARD_OPTION_WATCHDOG)!=0:HAL_WATCHDOG_ENABLED_DEFAULT;
     }
 
     // return true if flash should be unlocked
-    static bool unlock_flash(void) {
+    bool unlock_flash(void) {
         return _singleton && (_singleton->_options & UNLOCK_FLASH) != 0;
     }
 
     // return true if flash should be write protected
-    static bool protect_flash(void) {
+    bool protect_flash(void) {
         return _singleton && (_singleton->_options & WRITE_PROTECT_FLASH) != 0;
     }
 
     // return true if bootloader should be write protected
-    static bool protect_bootloader(void) {
+    bool protect_bootloader(void) {
         return _singleton && (_singleton->_options & WRITE_PROTECT_BOOTLOADER) != 0;
     }
 
@@ -248,7 +248,7 @@ private:
 #endif
 
 #if AP_FEATURE_BOARD_DETECT
-    static enum px4_board_type px4_configured_board;
+    enum px4_board_type px4_configured_board;
 
     void board_setup_drivers(void);
     bool spi_check_register(const char *devname, uint8_t regnum, uint8_t value, uint8_t read_flag = 0x80);
@@ -270,7 +270,7 @@ private:
     // common method to throw errors
     static void throw_error(const char *err_str, const char *fmt, va_list arg) NORETURN;
 
-    static bool _in_error_loop;
+    bool _in_error_loop;
 
 #if HAL_HAVE_IMU_HEATER
     struct {
