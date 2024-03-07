@@ -1652,12 +1652,15 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
 #endif
 
     // do nothing for these functions
+#if HAL_MOUNT_ENABLED
     case AUX_FUNC::MOUNT1_ROLL:
     case AUX_FUNC::MOUNT1_PITCH:
     case AUX_FUNC::MOUNT1_YAW:
     case AUX_FUNC::MOUNT2_ROLL:
     case AUX_FUNC::MOUNT2_PITCH:
     case AUX_FUNC::MOUNT2_YAW:
+#endif
+#if AP_SCRIPTING_ENABLED
     case AUX_FUNC::SCRIPTING_1:
     case AUX_FUNC::SCRIPTING_2:
     case AUX_FUNC::SCRIPTING_3:
@@ -1666,6 +1669,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
     case AUX_FUNC::SCRIPTING_6:
     case AUX_FUNC::SCRIPTING_7:
     case AUX_FUNC::SCRIPTING_8:
+#endif
         break;
 
     case AUX_FUNC::LOWEHEISER_THROTTLE:

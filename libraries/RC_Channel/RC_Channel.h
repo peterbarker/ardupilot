@@ -11,6 +11,17 @@
 #include <AP_Math/AP_Math.h>
 #include <AP_Common/Bitmask.h>
 
+#include <AP_Camera/AP_Camera_config.h>
+#include <AP_RangeFinder/AP_RangeFinder_config.h>
+#include <AC_Sprayer/AC_Sprayer_config.h>
+#include <AP_Gripper/AP_Gripper_config.h>
+#include <AP_Parachute/AP_Parachute_config.h>
+#include <AP_ServoRelayEvents/AP_ServoRelayEvents_config.h>
+#include <AP_Winch/AP_Winch_config.h>
+#include <AP_Torqeedo/AP_Torqeedo_config.h>
+#include <AP_OpticalFlow/AP_OpticalFlow_config.h>
+#include <AP_Compass/AP_Compass_config.h>
+
 #define NUM_RC_CHANNELS 16
 
 /// @class	RC_Channel
@@ -110,34 +121,57 @@ public:
         SIMPLE_MODE =          3, // change to simple mode
         RTL =                  4, // change to RTL flight mode
         SAVE_TRIM =            5, // save current position as level
+#if AP_MISSION_ENABLED
         SAVE_WP =              7, // save mission waypoint or RTL if in auto mode
+#endif
+#if AP_CAMERA_ENABLED
         CAMERA_TRIGGER =       9, // trigger camera servo or relay
+#endif
+#if AP_RANGEFINDER_ENABLED
         RANGEFINDER =         10, // allow enabling or disabling rangefinder in flight which helps avoid surface tracking when you are far above the ground
+#endif
+#if AP_FENCE_ENABLED
         FENCE =               11, // allow enabling or disabling fence in flight
+#endif
         RESETTOARMEDYAW =     12, // UNUSED
         SUPERSIMPLE_MODE =    13, // change to simple mode in middle, super simple at top
         ACRO_TRAINER =        14, // low = disabled, middle = leveled, high = leveled and limited
+#if HAL_SPRAYER_ENABLED
         SPRAYER =             15, // enable/disable the crop sprayer
+#endif
         AUTO =                16, // change to auto flight mode
         AUTOTUNE =            17, // auto tune
         LAND =                18, // change to LAND flight mode
+#if AP_GRIPPER_ENABLED
         GRIPPER =             19, // Operate cargo grippers low=off, middle=neutral, high=on
+#endif
+#if HAL_PARACHUTE_ENABLED
         PARACHUTE_ENABLE  =   21, // Parachute enable/disable
         PARACHUTE_RELEASE =   22, // Parachute release
         PARACHUTE_3POS =      23, // Parachute disable, enable, release with 3 position switch
+#endif
+#if AP_MISSION_ENABLED
         MISSION_RESET =       24, // Reset auto mission to start from first command
+#endif
         ATTCON_FEEDFWD =      25, // enable/disable the roll and pitch rate feed forward
         ATTCON_ACCEL_LIM =    26, // enable/disable the roll, pitch and yaw accel limiting
+#if HAL_MOUNT_ENABLED
         RETRACT_MOUNT1 =      27, // Retract Mount1
+#endif
+#if AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
+
         RELAY =               28, // Relay pin on/off (only supports first relay)
+#endif
         LANDING_GEAR =        29, // Landing gear controller
         LOST_VEHICLE_SOUND =  30, // Play lost vehicle sound
         MOTOR_ESTOP =         31, // Emergency Stop Switch
         MOTOR_INTERLOCK =     32, // Motor On/Off switch
         BRAKE =               33, // Brake flight mode
+#if AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
         RELAY2 =              34, // Relay2 pin on/off
         RELAY3 =              35, // Relay3 pin on/off
         RELAY4 =              36, // Relay4 pin on/off
+#endif
         THROW =               37, // change to THROW flight mode
         AVOID_ADSB =          38, // enable AP_Avoidance library
         PRECISION_LOITER =    39, // enable precision loiter
@@ -145,8 +179,10 @@ public:
         ARMDISARM_UNUSED =    41, // UNUSED
         SMART_RTL =           42, // change to SmartRTL flight mode
         INVERTED  =           43, // enable inverted flight
+#if AP_WINCH_ENABLED
         WINCH_ENABLE =        44, // winch enable/disable
         WINCH_CONTROL =       45, // winch control
+#endif
         RC_OVERRIDE_ENABLE =  46, // enable RC Override
         USER_FUNC1 =          47, // user function #1
         USER_FUNC2 =          48, // user function #2
@@ -167,8 +203,10 @@ public:
         SAILBOAT_TACK =       63, // rover sailboat tack
         REVERSE_THROTTLE =    64, // reverse throttle input
         GPS_DISABLE  =        65, // disable GPS for testing
+#if AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
         RELAY5 =              66, // Relay5 pin on/off
         RELAY6 =              67, // Relay6 pin on/off
+#endif
         STABILIZE =           68, // stabilize mode
         POSHOLD   =           69, // poshold mode
         ALTHOLD   =           70, // althold mode
@@ -202,11 +240,15 @@ public:
         TRAINING            = 98, // mode training
         AUTO_RTL =            99, // AUTO RTL via DO_LAND_START
 
+#if AP_INERTIALSENSOR_KILL_IMU_ENABLED
         // entries from 100-150  are expected to be developer
         // options used for testing
         KILL_IMU1 =          100, // disable first IMU (for IMU failure testing)
         KILL_IMU2 =          101, // disable second IMU (for IMU failure testing)
+#endif
+#if AP_CAMERA_ENABLED
         CAM_MODE_TOGGLE =    102, // Momentary switch to cycle camera modes
+#endif
         EKF_LANE_SWITCH =    103, // trigger lane switch attempt
         EKF_YAW_RESET =      104, // trigger yaw reset attempt
         GPS_DISABLE_YAW =    105, // disable GPS yaw for testing
@@ -214,7 +256,9 @@ public:
         FW_AUTOTUNE =          107, // fixed wing auto tune
         QRTL =               108, // QRTL mode
         CUSTOM_CONTROLLER =  109,  // use Custom Controller
+#if AP_INERTIALSENSOR_KILL_IMU_ENABLED
         KILL_IMU3 =          110, // disable third IMU (for IMU failure testing)
+#endif
         LOWEHEISER_STARTER = 111,  // allows for manually running starter
         AHRS_TYPE =          112, // change AHRS_EKF_TYPE
 
@@ -228,26 +272,40 @@ public:
         ARMDISARM =          153, // arm or disarm vehicle
         ARMDISARM_AIRMODE =  154, // arm or disarm vehicle enabling airmode
         TRIM_TO_CURRENT_SERVO_RC = 155, // trim to current servo and RC
+#if HAL_TORQEEDO_ENABLED
         TORQEEDO_CLEAR_ERR = 156, // clear torqeedo error
+#endif
         EMERGENCY_LANDING_EN = 157, //Force long FS action to FBWA for landing out of range
+#if AP_OPTICALFLOW_ENABLED
         OPTFLOW_CAL =        158, // optical flow calibration
+#endif
         FORCEFLYING =        159, // enable or disable land detection for GPS based manual modes preventing land detection and maintainting set_throttle_mix_max
         WEATHER_VANE_ENABLE = 160, // enable/disable weathervaning
         TURBINE_START =      161, // initialize turbine start sequence
         FFT_NOTCH_TUNE =     162, // FFT notch tuning function
+#if HAL_MOUNT_ENABLED
         MOUNT_LOCK =         163, // Mount yaw lock vs follow
+#endif
+#if HAL_LOGGING_ENABLED
         LOG_PAUSE =          164, // Pauses logging if under logging rate control
+#endif
         ARM_EMERGENCY_STOP = 165, // ARM on high, MOTOR_ESTOP on low
+#if AP_CAMERA_ENABLED
         CAMERA_REC_VIDEO =   166, // start recording on high, stop recording on low
         CAMERA_ZOOM =        167, // camera zoom high = zoom in, middle = hold, low = zoom out
         CAMERA_MANUAL_FOCUS = 168,// camera manual focus.  high = long shot, middle = stop focus, low = close shot
         CAMERA_AUTO_FOCUS =  169, // camera auto focus
+#endif  // AP_CAMERA_ENABLED
         QSTABILIZE =         170, // QuadPlane QStabilize mode
+#if COMPASS_CAL_ENABLED
         MAG_CAL =            171, // Calibrate compasses (disarmed only)
+#endif
         BATTERY_MPPT_ENABLE = 172,// Battery MPPT Power enable. high = ON, mid = auto (controlled by mppt/batt driver), low = OFF. This effects all MPPTs.
         PLANE_AUTO_LANDING_ABORT = 173, // Abort Glide-slope or VTOL landing during payload place or do_land type mission items
+#if AP_CAMERA_ENABLED
         CAMERA_IMAGE_TRACKING = 174, // camera image tracking
         CAMERA_LENS =        175, // camera lens selection
+#endif
         VFWD_THR_OVERRIDE =  176, // force enabled VTOL forward throttle method
 
 
@@ -261,17 +319,20 @@ public:
         FWD_THR =            209, // VTOL manual forward throttle
         AIRBRAKE =           210, // manual airbrake control
         WALKING_HEIGHT =     211, // walking robot height input
+#if HAL_MOUNT_ENABLED
         MOUNT1_ROLL =        212, // mount1 roll input
         MOUNT1_PITCH =       213, // mount1 pitch input
         MOUNT1_YAW =         214, // mount1 yaw input
         MOUNT2_ROLL =        215, // mount2 roll input
         MOUNT2_PITCH =       216, // mount3 pitch input
         MOUNT2_YAW =         217, // mount4 yaw input
+#endif
         LOWEHEISER_THROTTLE= 218,  // allows for throttle on slider
 
         // inputs 248-249 are reserved for the Skybrush fork at
         // https://github.com/skybrush-io/ardupilot
 
+#if AP_SCRIPTING_ENABLED
         // inputs for the use of onboard lua scripting
         SCRIPTING_1 =        300,
         SCRIPTING_2 =        301,
@@ -281,6 +342,7 @@ public:
         SCRIPTING_6 =        305,
         SCRIPTING_7 =        306,
         SCRIPTING_8 =        307,
+#endif  // AP_SCRIPTING_ENABLED
 
         // this must be higher than any aux function above
         AUX_FUNCTION_MAX =   308,
