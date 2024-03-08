@@ -916,7 +916,6 @@ class sitl_periph_universal(sitl_periph):
 
 class sitl_periph_gps(sitl_periph):
     def configure_env(self, cfg, env):
-        cfg.env.AP_PERIPH = 1
         super(sitl_periph_gps, self).configure_env(cfg, env)
         env.DEFINES.update(
             HAL_BUILD_AP_PERIPH = 1,
@@ -925,6 +924,51 @@ class sitl_periph_gps(sitl_periph):
             APJ_BOARD_ID = 101,
 
             HAL_PERIPH_ENABLE_GPS = 1,
+        )
+
+class sitl_periph_powerstack(sitl_periph):
+    def configure_env(self, cfg, env):
+        super(sitl_periph_powerstack, self).configure_env(cfg, env)
+        env.DEFINES.update(
+            HAL_BUILD_AP_PERIPH = 1,
+            PERIPH_FW = 1,
+            CAN_APP_NODE_NAME = '"org.ardupilot.ap_periph_powerstack"',
+            APJ_BOARD_ID = 1142,
+
+            AP_FRSKY_TELEM_ENABLED = 0,
+            AP_RCTELEMETRY_ENABLED = 0,
+            HAL_MSP_ENABLED = 0,
+
+            HAL_PERIPH_ENABLE_FSO_POWER_STACK = 1,
+            HAL_PERIPH_ENABLE_BATTERY = 1,
+
+            AP_DAC_ENABLED = 1,
+
+            FSO_SWITCH_MAIN_PIN = 190,
+            FSO_SWITCH_PAYLOAD_PIN = 191,
+
+            FSO_FAN_TACH1_PIN = 200,
+            FSO_FAN_TACH2_PIN = 201,
+            FSO_FAN_TACH3_PIN = 202,
+            FSO_FAN_TACH4_PIN = 203,
+
+            FSO_PAYLOAD_1_EN_PIN = 220,
+            FSO_PAYLOAD_2_EN_PIN = 221,
+            FSO_PAYLOAD_3_EN_PIN = 222,
+            FSO_PAYLOAD_4_EN_PIN = 223,
+
+            FSO_LED_MAIN_PIN = 230,
+            FSO_LED_PAYLOAD_PIN = 231,
+            FSO_LED_DEBUG_PIN = 232,
+
+            FSO_MAIN_PC_PIN = 240,
+            FSO_BAT_1_EN_PIN = 241,
+            FSO_BAT_2_EN_PIN = 242,
+            FSO_PAYLOAD_HV_EN_PIN = 243,
+            FSO_PAYLOAD_HV_PC_PIN = 244,
+
+            AP_SIM_FSO_POWERSTACK_ENABLED = 1,
+            AP_SIM_DAC_TI_DACx3204_ENABLED = 1,
         )
 
 class esp32(Board):
