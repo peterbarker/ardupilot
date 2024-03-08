@@ -47,10 +47,9 @@
 #endif
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
-extern const HAL_SITL &hal;
-#else
-extern const AP_HAL::HAL &hal;
+extern const HAL_SITL &hal_sitl;
 #endif
+extern const AP_HAL::HAL &hal;
 
 extern AP_Periph_FW periph;
 
@@ -1485,7 +1484,7 @@ void AP_Periph_FW::process1HzTasks(uint64_t timestamp_usec)
 #endif
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
-    if (hal.run_in_maintenance_mode()) {
+    if (hal_sitl.run_in_maintenance_mode()) {
         node_status.mode = UAVCAN_PROTOCOL_NODESTATUS_MODE_MAINTENANCE;
     } else
 #endif
@@ -1776,7 +1775,7 @@ void AP_Periph_FW::can_update()
     }
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
-    if (!hal.run_in_maintenance_mode())
+    if (!hal_sitl.run_in_maintenance_mode())
 #endif
     {
 #ifdef HAL_PERIPH_ENABLE_MAG
