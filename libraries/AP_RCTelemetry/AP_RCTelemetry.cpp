@@ -19,6 +19,10 @@
 
 #include "AP_RCTelemetry.h"
 
+#include "AP_RCTelemetry_config.h"
+
+#if AP_RCTELEMETRY_ENABLED
+
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Common/AP_FWVersion.h>
 #include <GCS_MAVLink/GCS.h>
@@ -339,3 +343,5 @@ float AP_RCTelemetry::get_nav_alt_m(Location::AltFrame frame)
     }
     return current_height;
 }
+
+#endif  // AP_RCTELEMETRY_ENABLED
