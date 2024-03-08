@@ -14,6 +14,10 @@
 */
 #pragma once
 
+#include "AP_RCTelemetry_config.h"
+
+#if AP_RCTELEMETRY_ENABLED
+
 #include <AP_HAL/Semaphores.h>
 #include <AP_HAL/utility/RingBuffer.h>
 #include <AP_Math/AP_Math.h>
@@ -152,3 +156,5 @@ private:
     void check_sensor_status_flags(void);
     void check_ekf_status(void);
 };
+
+#endif  // AP_RCTELEMETRY_ENABLED

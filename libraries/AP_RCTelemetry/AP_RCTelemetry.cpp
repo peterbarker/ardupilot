@@ -19,6 +19,10 @@
 
 #include "AP_RCTelemetry.h"
 
+#include "AP_RCTelemetry_config.h"
+
+#if AP_RCTELEMETRY_ENABLED
+
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Common/AP_FWVersion.h>
 #include <GCS_MAVLink/GCS.h>
@@ -293,3 +297,5 @@ uint32_t AP_RCTelemetry::sensor_status_flags() const
 
     return ~health & enabled & present;
 }
+
+#endif  // AP_RCTELEMETRY_ENABLED
