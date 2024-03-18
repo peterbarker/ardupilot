@@ -38,6 +38,7 @@
 #include "SIM_MS5611.h"
 #include "SIM_QMC5883L.h"
 #include "SIM_TI_DACx3204.h"
+#include "SIM_INA238.h"
 
 #include <signal.h>
 
@@ -90,11 +91,20 @@ static QMC5883L qmc5883l;
 static TI_DACx3204 dac_x3204;
 #endif
 
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+static INA238 fso_ina238[6];
+#endif
+
 struct i2c_device_at_address {
     uint8_t bus;
     uint8_t addr;
     I2CDevice &device;
 } i2c_devices[] {
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+    { 0, 0x41, fso_ina238[0] },
+    { 0, 0x44, fso_ina238[1] },
+    { 0, 0x45, fso_ina238[2] },
+#endif
     { 0, 0x70, maxsonari2cxl },   // RNGFNDx_TYPE = 2, RNGFNDx_ADDR = 112
     { 0, 0x60, mcp9600 }, // 0x60 is low address
     { 0, 0x71, maxsonari2cxl_2 }, // RNGFNDx_TYPE = 2, RNGFNDx_ADDR = 113
@@ -105,6 +115,11 @@ struct i2c_device_at_address {
     { 1, 0x38, ignored }, // NCP5623
     { 1, 0x39, ignored }, // NCP5623C
     { 1, 0x40, ignored }, // KellerLD
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+    { 1, 0x41, fso_ina238[3] },
+    { 1, 0x44, fso_ina238[4] },
+    { 1, 0x45, fso_ina238[5] },
+#endif
     { 1, 0x76, ms5525 },  // MS5525: ARSPD_TYPE = 4
     { 1, 0x77, tsys01 },
     { 1, 0x0B, rotoye },        // Rotoye: BATTx_MONITOR 19, BATTx_I2C_ADDR 13
@@ -115,7 +130,7 @@ struct i2c_device_at_address {
     { 2, 0x30, lp5562 },        // LP5562 RGB LED driver
 #endif
 #if AP_SIM_DAC_TI_DACx3204_ENABLED
-    { 2, 0x4A, dac_x3204 },  // TI DAC, addr is (0b1001 << 3) | 0b011 (p49)
+    { 1, 0x48, dac_x3204 },  // TI DAC, see p49 for addressing details
 #endif
 #if AP_SIM_LM2755_ENABLED
     { 2, 0x67, lm2755 },        // LM2755 RGB LED driver
@@ -155,6 +170,11 @@ void I2C::init(SITL::Aircraft &aircraft)
             }
         }
     }
+
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+    aircraft.fso_powerstack.set_dac(dac_x3204);
+    aircraft.fso_powerstack.set_ina(fso_ina238, ARRAY_SIZE(fso_ina238));
+#endif
 }
 
 void I2C::update(const class Aircraft &aircraft)

@@ -33,6 +33,7 @@
 #include "SIM_Loweheiser.h"
 #include "SIM_FETtecOneWireESC.h"
 #include "SIM_I2C.h"
+#include "SIM_FSO_PowerStack.h"
 #include "SIM_Buzzer.h"
 #include "SIM_Battery.h"
 #include <Filter/Filter.h>
@@ -165,6 +166,10 @@ public:
     float get_battery_temperature() const { return battery.get_temperature(); }
 
     ADSB *adsb;
+
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+    FSO_PowerStack fso_powerstack;
+#endif
 
 protected:
     SIM *sitl;

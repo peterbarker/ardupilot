@@ -1,5 +1,9 @@
 #pragma once
 
+#include "SIM_config.h"
+
+#if AP_SIM_DAC_TI_DACx3204_ENABLED
+
 // simulator for Texas Instruments DACx3204 devices
 
 // TODO: support broadcast mode (how?!!?!?!)
@@ -58,6 +62,37 @@ public:
 
     void update(const class Aircraft &aircraft) override;
 
+    class DAC {
+    public:
+        DAC(uint16_t &margin_high,
+            uint16_t &margin_low,
+            uint16_t &vout_cmp_config,
+            uint16_t &vout_misc_config,
+            uint16_t &vout_mode_config,
+            uint16_t &vout_func_config,
+            uint16_t &data);
+
+        void reset();
+        void update();
+        bool data_reg_written;
+
+        float get_voltage() const { return output; }
+
+    private:
+        uint16_t &margin_high;
+        uint16_t &margin_low;
+        uint16_t &vout_cmp_config;
+        uint16_t &vout_misc_config;
+        uint16_t &vout_mode_config;
+        uint16_t &vout_func_config;
+        uint16_t &data;
+
+        float output;
+    };
+
+
+    DAC *get_dac(uint8_t i) { return dacs[i]; }
+
 protected:
 
     void set_register(uint8_t reg, uint16_t value) {
@@ -86,28 +121,9 @@ private:
     const uint16_t common_trigger_reset_bits_mask { 0b1111 << 8 };
     const uint16_t common_trigger_reset_bits_reset_value { 0b1010 };
 
-    class DAC {
-    public:
-        DAC(uint16_t &margin_high,
-            uint16_t &margin_low,
-            uint16_t &vout_cmp_config,
-            uint16_t &vout_misc_config,
-            uint16_t &vout_mode_config,
-            uint16_t &vout_func_config);
-
-        void reset();
-        void update();
-
-    private:
-        uint16_t &margin_high;
-        uint16_t &margin_low;
-        uint16_t &vout_cmp_config;
-        uint16_t &vout_misc_config;
-        uint16_t &vout_mode_config;
-        uint16_t &vout_func_config;
-    };
-
     DAC *dacs[4];
 };
 
 } // namespace SITL
+
+#endif  // AP_SIM_DAC_TI_DACx3204_ENABLED

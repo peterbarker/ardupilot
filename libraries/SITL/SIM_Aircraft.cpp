@@ -81,6 +81,9 @@ void Aircraft::init() {
     if (i2c) {
         i2c->init(*this);
     }
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+    fso_powerstack.init();
+#endif
 }
 
 void Aircraft::set_start_location(const Location &start_loc, const float start_yaw)
@@ -985,6 +988,11 @@ void Aircraft::update_external_payload(const struct sitl_input &input)
     if (i2c) {
         i2c->update(*this);
     }
+
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+    // FSO Powerstack
+    fso_powerstack.update(*this);
+#endif
 
     // update buzzer
     if (buzzer && buzzer->is_enabled()) {
