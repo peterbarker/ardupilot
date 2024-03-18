@@ -90,6 +90,15 @@ public:
         }
     }
 
+    // toggle given bitnumber
+    void toggle(uint16_t bit) {
+        if (get(bit)) {
+            clear(bit);
+        } else {
+            set(bit);
+        }
+    }
+
     // clear all bits
     void clearall(void) {
         memset(bits, 0, numwords*sizeof(bits[0]));
