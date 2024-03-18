@@ -77,6 +77,12 @@ Aircraft::Aircraft(const char *frame_str) :
     }
 }
 
+void Aircraft::init() {
+    if (i2c) {
+        i2c->init(*this);
+    }
+}
+
 void Aircraft::set_start_location(const Location &start_loc, const float start_yaw)
 {
     home = start_loc;

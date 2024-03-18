@@ -132,7 +132,7 @@ struct i2c_device_at_address {
 #endif
 };
 
-void I2C::init()
+void I2C::init(SITL::Aircraft &aircraft)
 {
     for (auto &i : i2c_devices) {
         i.device.init();

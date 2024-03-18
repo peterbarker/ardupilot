@@ -51,6 +51,8 @@ class Aircraft {
 public:
     Aircraft(const char *frame_str);
 
+    void init();
+
     // called directly after constructor:
     virtual void set_start_location(const Location &start_loc, const float start_yaw);
 
