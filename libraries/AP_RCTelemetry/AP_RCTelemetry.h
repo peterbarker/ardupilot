@@ -18,6 +18,7 @@
 #include <AP_HAL/utility/RingBuffer.h>
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
+#include <GCS_MAVLink/GCS_config.h>
 
 #define TELEM_PAYLOAD_STATUS_CAPACITY          5 // size of the message buffer queue (max number of messages waiting to be sent)
 
@@ -33,8 +34,10 @@ public:
     /* Do not allow copies */
     CLASS_NO_COPY(AP_RCTelemetry);
 
+#if HAL_GCS_ENABLED
     // add statustext message to message queue
     virtual void queue_message(MAV_SEVERITY severity, const char *text);
+#endif
 
     // scheduler entry helpers
     void enable_scheduler_entry(const uint8_t slot) {
