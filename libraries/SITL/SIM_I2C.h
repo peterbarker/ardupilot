@@ -29,7 +29,7 @@ class I2C {
 public:
     I2C() {}
 
-    void init();
+    void init(class Aircraft &aircraft);
 
     // update i2c state
     void update(const class Aircraft &aircraft);
