@@ -18,12 +18,13 @@ public:
     /* return true if USB cable is connected */
     bool usb_connected(void) override;
 
-    bool valid_pin(uint8_t pin) const override { return pin < 16; }
-    
+    // note that only the first 16 pins will appear in the magic parameter
+    bool valid_pin(uint8_t pin) const override { return true; }
+
 private:
     SITL_State *_sitlState;
 
-    uint8_t pin_mode_is_write;
+    Bitmask<256> pin_mode_is_write;
 };
 
 class HALSITL::DigitalSource : public AP_HAL::DigitalSource {
