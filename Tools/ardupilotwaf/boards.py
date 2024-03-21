@@ -773,6 +773,9 @@ class sitl(Board):
         if cfg.options.sitl_rgbled:
             env.CXXFLAGS += ['-DWITH_SITL_RGBLED']
 
+        if cfg.options.enable_powerstack_sfml:
+            env.CXXFLAGS += ['-DAP_SIM_POWERSTACK_SFML_ENABLED']
+
         if cfg.options.enable_sfml_audio:
             if not cfg.check_SFML_Audio(env):
                 cfg.fatal("Failed to find SFML Audio libraries")

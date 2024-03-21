@@ -4,8 +4,14 @@
 
 #ifdef AP_SIM_FSO_POWERSTACK_ENABLED
 
+#ifndef AP_SIM_POWERSTACK_SFML_ENABLED
+#define AP_SIM_POWERSTACK_SFML_ENABLED 0
+#endif
+
+#if AP_SIM_POWERSTACK_SFML_ENABLED
 #include <stdint.h>
 #include <pthread.h>
+#endif
 
 namespace SITL {
 
@@ -24,12 +30,14 @@ public:
 
 private:
 
-    static constexpr uint8_t height = 50;
+    static constexpr uint8_t height = 200;
     static constexpr uint8_t width = height;
 
+#if AP_SIM_POWERSTACK_SFML_ENABLED
     pthread_t thread;
     static void *update_thread_start(void *obj);
     void update_thread(void);
+#endif
 
     uint32_t last_fan_toggle_us;
 

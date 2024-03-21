@@ -359,6 +359,10 @@ configuration in order to save typing.
                  default=False,
                  help="Enable SFML audio library")
 
+    g.add_option('--enable-powerstack-sfml', action='store_true',
+                 default=False,
+                 help="Enable PowerStack visuals")
+
     g.add_option('--osd', action='store_true',
                  default=False,
                  help="Enable OSD support")
