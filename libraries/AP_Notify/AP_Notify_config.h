@@ -2,6 +2,10 @@
 
 #include <AP_HAL/AP_HAL_Boards.h>
 
+#ifndef AP_NOTIFY_ENABLED
+#define AP_NOTIFY_ENABLED 1
+#endif
+
 #include <GCS_MAVLink/GCS_config.h>
 #if HAL_GCS_ENABLED
 #include <GCS_MAVLink/GCS_MAVLink.h>
