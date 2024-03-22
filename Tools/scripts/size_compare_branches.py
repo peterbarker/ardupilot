@@ -811,11 +811,14 @@ class SizeCompareBranches(object):
                 master_size = os.path.getsize(master_path)
                 new_size = os.path.getsize(new_path)
             except FileNotFoundError:
-                elf_filename = result_master["vehicle"][vehicle]["elf_filename"]
-                master_path = os.path.join(master_bin_dir, elf_filename)
-                new_path = os.path.join(new_bin_dir, elf_filename)
-                master_size = os.path.getsize(master_path)
-                new_size = os.path.getsize(new_path)
+                try:
+                    elf_filename = result_master["vehicle"][vehicle]["elf_filename"]
+                    master_path = os.path.join(master_bin_dir, elf_filename)
+                    new_path = os.path.join(new_bin_dir, elf_filename)
+                    master_size = os.path.getsize(master_path)
+                    new_size = os.path.getsize(new_path)
+                except KeyError:
+                    pass
 
             identical = self.files_are_identical(master_path, new_path)
 
