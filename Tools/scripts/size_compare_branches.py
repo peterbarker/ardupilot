@@ -72,7 +72,9 @@ class SizeCompareBranches(object):
                  extra_hwdef_branch=[],
                  extra_hwdef_master=[],
                  parallel_copies=None,
-                 jobs=None):
+                 jobs=None,
+                 compare_hwdef_h_files=False,
+                 ):
 
         if branch is None:
             branch = self.find_current_git_branch_or_sha1()
@@ -94,6 +96,7 @@ class SizeCompareBranches(object):
         self.show_unchanged = show_unchanged
         self.parallel_copies = parallel_copies
         self.jobs = jobs
+        self.compare_hwdef_h_files = compare_hwdef_h_files
 
         if self.bin_dir is None:
             self.bin_dir = self.find_bin_dir()
@@ -336,7 +339,15 @@ class SizeCompareBranches(object):
         '''pretty-print progress'''
         print("SCB: %s" % string)
 
-    def build_branch_into_dir(self, board, branch, vehicle, outdir, source_dir=None, extra_hwdef=None, jobs=None):
+    def configure_branch_into_dir(self,
+                                  board,
+                                  branch,
+                                  vehicle,
+                                  outdir,
+                                  source_dir=None,
+                                  extra_hwdef=None,
+                                  jobs=None,
+                                  bootloader=False):
         self.run_git(["checkout", branch], show_output=False, source_dir=source_dir)
         self.run_git(["submodule", "update", "--recursive"], show_output=False, source_dir=source_dir)
         build_dir = "build"
@@ -344,6 +355,10 @@ class SizeCompareBranches(object):
             build_dir = os.path.join(source_dir, "build")
         shutil.rmtree(build_dir, ignore_errors=True)
         waf_configure_args = ["configure", "--board", board]
+
+        if bootloader:
+            waf_configure_args.append('--bootloader')
+
         if self.waf_consistent_builds:
             waf_configure_args.append("--consistent-builds")
 
@@ -359,21 +374,45 @@ class SizeCompareBranches(object):
             waf_configure_args.extend(["-j", str(jobs)])
 
         self.run_waf(waf_configure_args, show_output=False, source_dir=source_dir)
-        # we can't run `./waf copter blimp plane` without error, so do
-        # them one-at-a-time:
-        for v in vehicle:
-            if v == 'bootloader':
-                # need special configuration directive
-                continue
-            self.run_waf([v], show_output=False, source_dir=source_dir)
-        for v in vehicle:
-            if v != 'bootloader':
-                continue
-            if board in self.bootloader_blacklist:
-                continue
-            # need special configuration directive
-            bootloader_waf_configure_args = copy.copy(waf_configure_args)
-            bootloader_waf_configure_args.append('--bootloader')
+
+    def run_build_task(self, task, source_dir=None, jobs=None):
+        board = task.board
+        commitish = task.commitish
+        outdir = task.outdir
+        vehicles_to_build = task.vehicles_to_build
+        extra_hwdef_file = task.extra_hwdef_file
+
+        if task.compare_hwdef_h_files:
+            if 'bootloader' in vehicles_to_build and len(vehicles_to_build) > 1:
+                raise ValueError("can't compare bootlaoder and non-bootloader hwdef.h at the same time!")
+
+        self.progress(f"Building {task}")
+        shutil.rmtree(outdir, ignore_errors=True)
+
+        self.configure_branch_into_dir(
+            board,
+            commitish,
+            vehicles_to_build,
+            outdir,
+            source_dir=source_dir,
+            extra_hwdef=self.extra_hwdef_file(extra_hwdef_file),
+            jobs=jobs,
+        )
+
+        if not task.compare_hwdef_h_files:
+            # build non-bootloader vehicles:
+            new_vehicles_to_build = vehicles_to_build
+            try:
+                del new_vehicles_to_build['bootloader']
+            except KeyError:
+                pass
+            # we can't run `./waf copter blimp plane` without error, so do
+            # them one-at-a-time:
+            for v in new_vehicles_to_build:
+                self.run_waf([v], show_output=False, source_dir=source_dir)
+
+        # configure for bootloader:
+        if 'bootloader' in vehicles_to_build and board not in self.bootloader_blacklist:
             # hopefully temporary hack so you can build bootloader
             # after building other vehicles without a clean:
             dsdl_generated_path = os.path.join('build', board, "modules", "DroneCAN", "libcanard", "dsdlc_generated")
@@ -381,8 +420,21 @@ class SizeCompareBranches(object):
             if source_dir is not None:
                 dsdl_generated_path = os.path.join(source_dir, dsdl_generated_path)
             shutil.rmtree(dsdl_generated_path, ignore_errors=True)
-            self.run_waf(bootloader_waf_configure_args, show_output=False, source_dir=source_dir)
-            self.run_waf([v], show_output=False, source_dir=source_dir)
+
+            self.configure_branch_into_dir(
+                board,
+                commitish,
+                vehicles_to_build,
+                outdir,
+                source_dir=source_dir,
+                extra_hwdef=self.extra_hwdef_file(extra_hwdef_file),
+                jobs=jobs,
+                bootloader=True,
+            )
+
+            if not task.compare_hwdef_h_files:
+                self.run_waf(['bootloader'], show_output=False, source_dir=source_dir)
+
         self.run_program("rsync", ["rsync", "-ap", "build/", outdir], cwd=source_dir)
         if source_dir is not None:
             pathlib.Path(outdir, "scb_sourcepath.txt").write_text(source_dir)
@@ -507,6 +559,15 @@ class SizeCompareBranches(object):
             self.master_commit = self.find_git_branch_merge_base(self.branch, self.master_branch)
             self.progress("Using merge base (%s)" % self.master_commit)
 
+        class Task():
+            def __init__(self, board, commitish, outdir, vehicles_to_build, extra_hwdef_file, compare_hwdef_h_files=False):
+                self.board = board
+                self.commitish = commitish
+                self.outdir = outdir
+                self.vehicles_to_build = vehicles_to_build
+                self.extra_hwdef_file = extra_hwdef_file
+                self.compare_hwdef_h_files = compare_hwdef_h_files
+
         # create an array of tasks to run:
         tasks = []
         for board in self.board:
@@ -515,9 +576,23 @@ class SizeCompareBranches(object):
             vehicles_to_build = self.vehicles_to_build_for_board_info(board_info)
 
             outdir_1 = os.path.join(tmpdir, "out-master-%s" % (board,))
-            tasks.append((board, self.master_commit, outdir_1, vehicles_to_build, self.extra_hwdef_master))
+            tasks.append(Task(
+                board,
+                self.master_commit,
+                outdir_1,
+                vehicles_to_build,
+                self.extra_hwdef_master,
+                compare_hwdef_h_files=self.compare_hwdef_h_files,
+            ))
             outdir_2 = os.path.join(tmpdir, "out-branch-%s" % (board,))
-            tasks.append((board, self.branch, outdir_2, vehicles_to_build, self.extra_hwdef_branch))
+            tasks.append(Task(
+                board,
+                self.branch,
+                outdir_2,
+                vehicles_to_build,
+                self.extra_hwdef_branch,
+                compare_hwdef_h_files=self.compare_hwdef_h_files,
+            ))
         self.tasks = tasks
 
         if self.parallel_copies is not None:
@@ -672,23 +747,12 @@ class SizeCompareBranches(object):
 
         return f.name
 
-    def run_build_task(self, task, source_dir=None, jobs=None):
-        (board, commitish, outdir, vehicles_to_build, extra_hwdef_file) = task
-
-        self.progress(f"Building {task}")
-        shutil.rmtree(outdir, ignore_errors=True)
-        self.build_branch_into_dir(
-            board,
-            commitish,
-            vehicles_to_build,
-            outdir,
-            source_dir=source_dir,
-            extra_hwdef=self.extra_hwdef_file(extra_hwdef_file),
-            jobs=jobs,
-        )
-
     def gather_results_for_task(self, task):
-        (board, commitish, outdir, vehicles_to_build, extra_hwdef_file) = task
+        board = task.board
+        commitish = task.commitish
+        outdir = task.outdir
+        vehicles_to_build = task.vehicles_to_build
+        # extra_hwdef_file = task.extra_hwdef_file
 
         result = {
             "board": board,
@@ -704,7 +768,11 @@ class SizeCompareBranches(object):
 
             result["vehicle"][vehicle] = {}
             v = result["vehicle"][vehicle]
-            v["bin_filename"] = self.vehicle_map[vehicle] + '.bin'
+
+            if task.compare_hwdef_h_files:
+                v["bin_filename"] = "hwdef.h"
+            else:
+                v["bin_filename"] = self.vehicle_map[vehicle] + '.bin'
 
             elf_dirname = "bin"
             if vehicle == 'bootloader':
@@ -718,10 +786,13 @@ class SizeCompareBranches(object):
                     self.progress("Have source trees")
                 except FileNotFoundError:
                     pass
-            v["bin_dir"] = os.path.join(elf_basedir, board, "bin")
-            elf_dir = os.path.join(elf_basedir, board, elf_dirname)
-            v["elf_dir"] = elf_dir
-            v["elf_filename"] = self.vehicle_map[vehicle]
+            if task.compare_hwdef_h_files:
+                v["bin_dir"] = os.path.join(elf_basedir, board)
+            else:
+                v["bin_dir"] = os.path.join(elf_basedir, board, "bin")
+                elf_dir = os.path.join(elf_basedir, board, elf_dirname)
+                v["elf_dir"] = elf_dir
+                v["elf_filename"] = self.vehicle_map[vehicle]
 
         return result
 
@@ -832,6 +903,11 @@ if __name__ == '__main__':
                       default=False,
                       help="Build all vehicles")
     parser.add_option("",
+                      "--compare-hwdef-h-files",
+                      action='store_true',
+                      default=False,
+                      help="Do not build vehicles, compare before/after hwdef.h files instead of binaries")
+    parser.add_option("",
                       "--parallel-copies",
                       type=int,
                       default=None,
@@ -873,5 +949,6 @@ if __name__ == '__main__':
         show_unchanged=not cmd_opts.hide_unchanged,
         parallel_copies=cmd_opts.parallel_copies,
         jobs=cmd_opts.jobs,
+        compare_hwdef_h_files=cmd_opts.compare_hwdef_h_files,
     )
     x.run()
