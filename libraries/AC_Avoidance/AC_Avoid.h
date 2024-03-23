@@ -41,6 +41,8 @@ public:
         return _singleton;
     }
 
+    void update();
+
     // return true if any avoidance feature is enabled
     bool enabled() const { return _enabled != AC_AVOID_DISABLED; }
 
@@ -57,6 +59,18 @@ public:
     // This method limits velocity and calculates backaway velocity from various supported fences
     // Also limits vertical velocity using adjust_velocity_z method
     void adjust_velocity_fence(float kP, float accel_cmss, Vector3f &desired_vel_cms, Vector3f &backup_vel, float kP_z, float accel_cmss_z, float dt);
+
+#if AP_TERRAIN_AVAILABLE
+    // This method limits vertical velocity based on data from from
+    // the terrain from the terrain database.
+    void adjust_velocity_terrain(float kP, float accel_cmss, Vector3f &desired_vel_cms, Vector3f &backup_vel, float kP_z, float accel_cmss_z, float dt);
+#endif
+
+#if AP_TERRAIN_AVAILABLE
+    bool requires_terrain() const {
+        return is_positive(_terrain.margin_z);
+    }
+#endif
 
     // adjust desired horizontal speed so that the vehicle stops before the fence or object
     // accel (maximum acceleration/deceleration) is in m/s/s
@@ -115,6 +129,12 @@ public:
 
     static const struct AP_Param::GroupInfo var_info[];
 
+    // prearm checks
+    bool pre_arm_checks(char *failure_msg, const uint8_t failure_msg_len) const;
+
+    void update_terrain_enabled() {
+        _terrain.update_enabled();
+    }
 private:
     // behaviour types (see BEHAVE parameter)
     enum BehaviourType {
@@ -127,6 +147,9 @@ private:
      * This helps reduce jerks and sudden movements in the vehicle
      */
     void limit_accel(const Vector3f &original_vel, Vector3f &modified_vel, float dt);
+
+    void adjust_velocity_fence_z(float kP, float accel_cmss, float& climb_rate_cms, float& backup_speed, float dt);
+    void adjust_velocity_terrain_z(float kP, float accel_cmss, float& climb_rate_cms, float& backup_speed, float dt);
 
     /*
      * Adjusts the desired velocity for the circular fence.
@@ -219,6 +242,17 @@ private:
     AP_Float _alt_min;          // alt below which Proximity based avoidance is turned off
     AP_Float _accel_max;        // maximum acceleration while simple avoidance is active
     AP_Float _backup_deadzone;  // distance beyond AVOID_MARGIN parameter, after which vehicle will backaway from obstacles
+
+    class Terrain {
+    public:
+        AP_Float lookahead_time; // time to look ahead to guess what the terrain under us is going to look like
+        AP_Float margin_z; // distance to stay above terrain
+        bool enabled() const;
+        void update_enabled();
+        bool calculate_enable_state(bool &new_state) const;
+    private:
+        bool _enabled;
+    } _terrain;
 
     bool _proximity_enabled = true; // true if proximity sensor based avoidance is enabled (used to allow pilot to enable/disable)
     bool _proximity_alt_enabled = true; // true if proximity sensor based avoidance is enabled based on altitude

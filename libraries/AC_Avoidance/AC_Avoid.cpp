@@ -17,6 +17,8 @@
 
 #if AP_AVOIDANCE_ENABLED
 
+extern const AP_HAL::HAL &hal;
+
 #include "AC_Avoid.h"
 #include <AP_AHRS/AP_AHRS.h>     // AHRS library
 #include <AC_Fence/AC_Fence.h>         // Failsafe fence library
@@ -24,6 +26,7 @@
 #include <AP_Beacon/AP_Beacon.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
+#include <AP_Arming/AP_Arming.h>
 #include <stdio.h>
 
 #if !APM_BUILD_TYPE(APM_BUILD_ArduPlane)
@@ -111,6 +114,22 @@ const AP_Param::GroupInfo AC_Avoid::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("BACKUP_DZ", 9, AC_Avoid, _backup_deadzone, 0.10f),
 
+    // @Param: TERR_LA_T
+    // @DisplayName: Time to forward-project vehicle velocity to avoid upcoming terrain
+    // @Description: Time to forward-project vehicle velocity to avoid upcoming terrain
+    // @Units: s
+    // @Range: 0 20
+    // @User: Standard
+    AP_GROUPINFO("TERR_LA_T", 10, AC_Avoid, _terrain.lookahead_time, 0.0f),
+
+    // @Param: TERR_MRGN_Z
+    // @DisplayName: distance to stay away from terrain
+    // @Description: distance vehicle will try to stay away from the terrain
+    // @Units: m
+    // @Range: 0 100
+    // @User: Standard
+    AP_GROUPINFO("TERR_MGN_Z", 11, AC_Avoid, _terrain.margin_z, 0.0f),
+
     AP_GROUPEND
 };
 
@@ -175,12 +194,68 @@ void AC_Avoid::adjust_velocity_fence(float kP, float accel_cmss, Vector3f &desir
     float desired_velocity_z_cms = desired_vel_cms.z;
     float desired_backup_vel_z = 0.0f;
     adjust_velocity_z(kP_z, accel_cmss_z, desired_velocity_z_cms, desired_backup_vel_z, dt);
+    adjust_velocity_z(kP_z, accel_cmss_z, desired_velocity_z_cms, desired_backup_vel_z, dt);
 
     // Desired backup velocity is sum of maximum velocity component in each quadrant 
     const Vector2f desired_backup_vel_xy = quad_1_back_vel + quad_2_back_vel + quad_3_back_vel + quad_4_back_vel;
     backup_vel = Vector3f{desired_backup_vel_xy.x, desired_backup_vel_xy.y, desired_backup_vel_z};
     desired_vel_cms = Vector3f{desired_velocity_xy_cms.x, desired_velocity_xy_cms.y, desired_velocity_z_cms};
 }
+
+#if AP_TERRAIN_AVAILABLE
+/*
+* limits vertical velocity using adjust_velocity_z
+*/
+void AC_Avoid::adjust_velocity_terrain_z(float kP, float accel_cmss, float& climb_rate_cms, float& backup_speed, float dt)
+{
+    if (!_terrain.enabled()) {
+        return;
+    }
+
+    const auto &ahrs = AP::ahrs();
+
+    Location loc;
+    if (!ahrs.get_location(loc)) {
+        // we don't know where we are
+        return;
+    }
+
+    // guess where we'll be in lookahead_time_s
+    Vector3f vel_ned;
+    if (!ahrs.get_velocity_NED(vel_ned)) {
+        // we don't know how fast we're going...
+        // carry on, we'll just assume we're stationary.
+    }
+
+    // note that "d" is probably non-zero, but that the terrain
+    // database probably doesn't care.
+    const Vector3p vel_ned_p{
+        vel_ned.x,
+        vel_ned.y,
+        vel_ned.z,
+    };
+    loc.offset(vel_ned_p * _terrain.lookahead_time);
+
+    float terrain_relative_alt;
+    const auto *terrain = AP::terrain();
+    if (terrain == nullptr) {
+        return;
+    }
+    if (!AP::terrain()->height_above_terrain_at_location(loc, terrain_relative_alt, true)) {
+        // terrain database has failed us *again*
+        return;
+    }
+
+    const float metres_above_desired_height = terrain_relative_alt - _terrain.margin_z;
+    if (metres_above_desired_height < 0) {
+        // we're low.  Don't panic, just back away slowly.  Maintain
+        // eye contact at all times.
+        // desired_vel_cms.z is desired velocity *up*
+        // note metres->cm
+        climb_rate_cms += metres_above_desired_height * kP * -1 * 100;
+    }
+}
+#endif  // AP_TERRAIN_AVAILABLE
 
 /*
 * Adjusts the desired velocity so that the vehicle can stop
@@ -362,7 +437,19 @@ void AC_Avoid::adjust_velocity_z(float kP, float accel_cmss, float& climb_rate_c
     if (_enabled == AC_AVOID_DISABLED) {
         return;
     }
-    
+
+#if AP_FENCE_ENABLED
+    adjust_velocity_fence_z(kP, accel_cmss, climb_rate_cms, backup_speed, dt);
+#endif
+#if AP_TERRAIN_AVAILABLE
+    adjust_velocity_terrain_z(kP, accel_cmss, climb_rate_cms, backup_speed, dt);
+#endif
+#endif  // AP_AVOID_ENABLE_Z
+}
+
+#if AP_FENCE_ENABLED
+void AC_Avoid::adjust_velocity_fence_z(float kP, float accel_cmss, float& climb_rate_cms, float& backup_speed, float dt)
+{
     // do not adjust climb_rate if level or descending
     if (climb_rate_cms <= 0.0f) {
         return;
@@ -1423,6 +1510,84 @@ float AC_Avoid::distance_to_lean_pct(float dist_m)
     }
     // inverted but linear response
     return 1.0f - (dist_m / _dist_max);
+}
+
+bool AC_Avoid::Terrain::calculate_enable_state(bool &new_state) const
+{
+    const bool armed = AP::arming().is_armed();
+
+    uint8_t pos_uint8;
+    if (!rc().get_aux_cached(RC_Channel::AUX_FUNC::AVOID_TERRAIN, pos_uint8)) {
+        return false;
+    }
+    RC_Channel::AuxSwitchPos pos = (RC_Channel::AuxSwitchPos)pos_uint8;
+
+    float terrain_relative_alt;
+    if (!AP::terrain()->height_above_terrain(terrain_relative_alt, true)) {
+        return false;
+    }
+
+    switch (pos) {
+    case RC_Channel::AuxSwitchPos::LOW:
+        new_state = false;
+        break;
+    case RC_Channel::AuxSwitchPos::MIDDLE:
+        if (armed) {
+            if (terrain_relative_alt > margin_z) {
+                new_state = true;
+            } else {
+                new_state = _enabled;
+            }
+            break;
+        }
+        new_state = false;
+        break;
+    case RC_Channel::AuxSwitchPos::HIGH:
+        new_state = true;
+        break;
+    }
+
+    return true;;
+}
+
+void AC_Avoid::Terrain::update_enabled()
+{
+    bool new_enable;
+    if (!calculate_enable_state(new_enable)) {
+        return;
+    }
+    if (new_enable == _enabled) {
+        return;
+    }
+    const char *state = new_enable ? "enabled" : "disabled";
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Terrain Avoidance %s", state);
+    _enabled = new_enable;
+}
+
+void AC_Avoid::update()
+{
+    _terrain.update_enabled();
+}
+
+bool AC_Avoid::Terrain::enabled() const
+{
+    return _enabled;
+}
+
+bool AC_Avoid::pre_arm_checks(char *failure_msg, const uint8_t failure_msg_len) const
+{
+    if (_terrain.enabled()) {
+        hal.util->snprintf(failure_msg, failure_msg_len, "Terrain avoidance enabled");
+        return false;
+    }
+    if (is_positive(_terrain.margin_z)) {
+        bool new_state;
+        if (!_terrain.calculate_enable_state(new_state)) {
+            hal.util->snprintf(failure_msg, failure_msg_len, "Terrain avoidance awaiting data");
+            return false;
+        }
+    }
+    return true;
 }
 
 // returns the maximum positive and negative roll and pitch percentages (in -1 ~ +1 range) based on the proximity sensor
