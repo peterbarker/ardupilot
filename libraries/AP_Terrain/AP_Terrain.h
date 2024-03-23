@@ -167,6 +167,9 @@ public:
     */
     bool height_above_terrain(float &terrain_altitude, bool extrapolate = false);
 
+    // return height above supplied location, otherwise like height_above_terrain
+    bool height_above_terrain_at_location(const Location &loc, float &terrain_altitude, bool extrapolate = false);
+
     /*
       calculate lookahead rise in terrain. This returns extra altitude
       needed to clear upcoming terrain in meters

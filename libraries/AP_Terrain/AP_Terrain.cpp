@@ -242,9 +242,13 @@ bool AP_Terrain::height_above_terrain(float &terrain_altitude, bool extrapolate)
         // we don't know where we are
         return false;
     }
+    return height_above_terrain_at_location(current_loc, terrain_altitude, extrapolate);
+}
 
+bool AP_Terrain::height_above_terrain_at_location(const Location &loc, float &terrain_altitude, bool extrapolate)
+{
     float theight_loc;
-    if (!height_amsl(current_loc, theight_loc)) {
+    if (!height_amsl(loc, theight_loc)) {
         if (!extrapolate) {
             return false;
         }
@@ -256,7 +260,7 @@ bool AP_Terrain::height_above_terrain(float &terrain_altitude, bool extrapolate)
     }
 
     int32_t height_amsl_cm = 0;
-    UNUSED_RESULT(current_loc.get_alt_cm(Location::AltFrame::ABSOLUTE, height_amsl_cm));
+    UNUSED_RESULT(loc.get_alt_cm(Location::AltFrame::ABSOLUTE, height_amsl_cm));
 
     terrain_altitude = height_amsl_cm*0.01 - theight_loc;
     return true;
