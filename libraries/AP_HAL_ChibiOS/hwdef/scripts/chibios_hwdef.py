@@ -2522,7 +2522,7 @@ Please run: Tools/scripts/build_bootloaders.py %s
         f = open(hwdat, 'w')
         f.write('\n'.join(self.all_lines))
         f.close()
-        if not self.is_periph_fw():
+        if not self.is_periph_fw() and False:
             self.romfs["hwdef.dat"] = hwdat
 
     def write_defaulting_define(self, f, name, value):
