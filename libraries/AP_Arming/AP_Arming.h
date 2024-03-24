@@ -7,6 +7,7 @@
 #include "AP_Arming_config.h"
 #include "AP_InertialSensor/AP_InertialSensor_config.h"
 #include "AP_Proximity/AP_Proximity_config.h"
+#include <AC_Avoidance/AC_Avoidance_config.h>
 
 class AP_Arming {
 public:
@@ -238,6 +239,10 @@ protected:
 
 #if HAL_PROXIMITY_ENABLED
     virtual bool proximity_checks(bool report) const;
+#endif
+
+#if AP_AVOIDANCE_ENABLED
+    bool avoidance_checks(bool report) const;
 #endif
 
     bool servo_checks(bool report) const;

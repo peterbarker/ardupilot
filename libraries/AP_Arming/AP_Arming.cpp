@@ -56,6 +56,7 @@
 #include <AP_Scheduler/AP_Scheduler.h>
 #include <AP_KDECAN/AP_KDECAN.h>
 #include <AP_Vehicle/AP_Vehicle.h>
+#include <AC_Avoidance/AC_Avoid.h>
 
 #if HAL_MAX_CAN_PROTOCOL_DRIVERS
   #include <AP_CANManager/AP_CANManager.h>
@@ -1099,6 +1100,12 @@ bool AP_Arming::terrain_database_required() const
         return true;
     }
 #endif
+#if AP_AVOIDANCE_ENABLED
+    const auto *avoid = AP::ac_avoid();
+    if (avoid != nullptr && avoid->requires_terrain()) {
+        return true;
+    }
+#endif
     return false;
 }
 
@@ -1159,6 +1166,24 @@ bool AP_Arming::proximity_checks(bool report) const
     return true;
 }
 #endif  // HAL_PROXIMITY_ENABLED
+
+#if AP_AVOIDANCE_ENABLED
+bool AP_Arming::avoidance_checks(bool report) const
+{
+    char fail_msg[50] = {};
+    const auto *ac_avoid = AP::ac_avoid();
+    if (ac_avoid == nullptr) {
+        check_failed(ARMING_CHECK_SYSTEM, report, "ac_avoid is nullptr");
+        return false;
+    }
+
+    if (!ac_avoid->pre_arm_checks(fail_msg, ARRAY_SIZE(fail_msg))) {
+        check_failed(ARMING_CHECK_SYSTEM, report, "%s", fail_msg);
+        return false;
+    }
+    return true;
+}
+#endif  // AP_AVOIDANCE_ENABLED
 
 #if HAL_MAX_CAN_PROTOCOL_DRIVERS && HAL_CANMANAGER_ENABLED
 bool AP_Arming::can_checks(bool report)
@@ -1566,6 +1591,9 @@ bool AP_Arming::pre_arm_checks(bool report)
 #endif
 #if HAL_PROXIMITY_ENABLED
         &  proximity_checks(report)
+#endif
+#if AP_AVOIDANCE_ENABLED
+        &  avoidance_checks(report)
 #endif
 #if HAL_RUNCAM_ENABLED
         &  camera_checks(report)
