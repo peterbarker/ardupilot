@@ -674,6 +674,7 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
         break;
     case AUX_FUNC::AVOID_ADSB:
     case AUX_FUNC::AVOID_PROXIMITY:
+    case AUX_FUNC::AVOID_TERRAIN:
     case AUX_FUNC::FENCE:
     case AUX_FUNC::GPS_DISABLE:
     case AUX_FUNC::GPS_DISABLE_YAW:
@@ -739,6 +740,7 @@ const RC_Channel::LookupTable RC_Channel::lookuptable[] = {
     { AUX_FUNC::RELAY4,"Relay4"},
     { AUX_FUNC::PRECISION_LOITER,"PrecisionLoiter"},
     { AUX_FUNC::AVOID_PROXIMITY,"AvoidProximity"},
+    { AUX_FUNC::AVOID_TERRAIN,"AvoidTerrain"},
     { AUX_FUNC::WINCH_ENABLE,"WinchEnable"},
     { AUX_FUNC::WINCH_CONTROL,"WinchControl"},
     { AUX_FUNC::CLEAR_WP,"ClearWaypoint"},
@@ -1215,9 +1217,7 @@ void RC_Channel::do_aux_function_fft_notch_tune(const AuxSwitchPos ch_flag)
 
 bool RC_Channel::run_aux_function(AUX_FUNC ch_option, AuxSwitchPos pos, AuxFuncTriggerSource source)
 {
-#if AP_SCRIPTING_ENABLED
     rc().set_aux_cached(ch_option, pos);
-#endif
     const bool ret = do_aux_function(ch_option, pos);
 
 #if HAL_LOGGING_ENABLED
@@ -1609,6 +1609,18 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
             }
             break;
         }
+        break;
+    }
+#endif
+
+#if AP_AVOIDANCE_ENABLED
+        // (cached) AVOID_TERRAIN is polled by AC_Avoid:
+    case AUX_FUNC::AVOID_TERRAIN: {
+        auto *avoid = AP::ac_avoid();
+        if (avoid == nullptr) {
+            break;
+        }
+        avoid->update_terrain_enabled();
         break;
     }
 #endif
