@@ -10670,6 +10670,76 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
         self.reboot_sitl()  # unlock home position
 
+    def TerrainAvoidance(self):
+        '''test AC_Avoid's terrain avoidance behaviour'''
+        self.set_parameters({
+            'AVOID_ENABLE': 1,
+            'AVOID_TERR_MGN_Z': 30,
+            'TERRAIN_ENABLE': 1,
+            'RC11_OPTION': 190,
+        })
+        # start somewhere with at least a little bit of interesting terrain:
+        self.customise_SITL_commandline([
+            "--home", 'SpringValley2',
+        ])
+
+        self.start_subtest("Ensure prearm check")
+        self.set_rc(11, 2000)
+        self.assert_prearm_failure("Terrain avoidance awaiting data", other_prearm_failures_fatal=False, timeout=30)
+        self.assert_prearm_failure("Terrain Avoidance enabled", other_prearm_failures_fatal=False, timeout=30)
+
+        self.context_push()
+        self.context_collect('STATUSTEXT')
+        self.set_rc(11, 1500)  # this is the auto-enable position
+
+        self.wait_statustext("Terrain Avoidance disabled", check_context=True)
+        self.context_pop()
+
+        self.start_subtest("Arm and wait for vehicle to climb above minimum terrain altitude, ensure it auto-enabled")
+        self.change_mode('LOITER')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.set_rc(3, 2000)
+
+        self.wait_statustext("Terrain Avoidance enabled", timeout=60)
+
+        self.start_subtest("Ensure can't descend within margin_z of terrain")
+        self.set_rc(3, 1000)
+
+        self.wait_altitude(27, 30, relative=True, minimum_duration=20)
+
+        self.start_subtest("Ensure can descend after disabling")
+        self.set_rc(11, 1000)
+        self.wait_altitude(0, 20, relative=True)
+
+        self.start_subtest("Check re-enabling pops us back up above the avoidance margin")
+        self.set_rc(11, 2000)
+        self.wait_altitude(27, 30, relative=True, minimum_duration=20)
+
+        self.start_subtest("Make sure LAND mode can land the vehicle despite avoidance being enabled")
+        self.change_mode('LAND')
+        self.wait_disarmed()
+
+        self.assert_prearm_failure("Terrain avoidance enabled", other_prearm_failures_fatal=False, timeout=30)
+
+        self.start_subtest("Test enabling while below margin_z")
+        self.set_rc(11, 1500)
+        self.change_mode('LOITER')
+        self.zero_throttle()
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.set_rc(3, 1700)
+        self.wait_altitude(10, 15, relative=True, timeout=120)
+        self.set_rc(3, 1500)
+        self.wait_altitude(10, 15, relative=True, minimum_duration=10)
+        self.set_rc(11, 2000)
+        self.wait_altitude(27, 32, relative=True, minimum_duration=20)
+
+        self.start_subtest("Test RC failsafe can land the vehicle")
+        self.set_parameter("SIM_RC_FAIL", 1)
+        self.wait_disarmed()
+        self.set_parameter("SIM_RC_FAIL", 0)
+
     def tests2b(self):  # this block currently around 9.5mins here
         '''return list of all tests'''
         ret = ([
@@ -10743,6 +10813,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.MAV_CMD_SET_EKF_SOURCE_SET,
             self.MAV_CMD_NAV_TAKEOFF,
             self.MAV_CMD_NAV_TAKEOFF_command_int,
+            self.TerrainAvoidance,
         ])
         return ret
 
