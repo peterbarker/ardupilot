@@ -1,0 +1,2 @@
+module load kmlread
+kml load FB867.kml
