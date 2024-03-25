@@ -874,6 +874,9 @@ def start_mavproxy(opts, stuff):
     if opts.mcast:
         cmd.extend(["--master", "mcast:"])
 
+    if opts.mavproxy_script:
+        cmd.extend(["--cmd", f"script {opts.mavproxy_script}"])
+
     # returns a valid IP of the host windows computer if we're WSL2.
     # This is run before the loop so it only runs once
     wsl2_host_ip_str = wsl2_host_ip()
@@ -1217,6 +1220,10 @@ group_sim.add_option("-m", "--mavproxy-args",
                      default=None,
                      type='string',
                      help="additional arguments to pass to mavproxy.py")
+group_sim.add_option("--mavproxy-script",
+                     default=None,
+                     type='string',
+                     help="have MAVProxy run script at startup")
 group_sim.add_option("", "--scrimmage-args",
                      default=None,
                      type='string',
