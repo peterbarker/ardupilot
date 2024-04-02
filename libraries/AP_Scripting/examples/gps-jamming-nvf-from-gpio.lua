@@ -6,6 +6,7 @@
 pin = 53  -- AUX4
 
 gpio:pinMode(pin,0)  -- input
+gpio:write(pin, 0)  -- external device must pull device *high* to assert
 
 local old_value = false
 
