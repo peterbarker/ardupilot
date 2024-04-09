@@ -342,8 +342,8 @@ bool RC_Channel_Plane::do_aux_function(const AUX_FUNC ch_option, const AuxSwitch
         break;
 #endif
 
-    case AUX_FUNC::ARSPD_CALIBRATE:
 #if AP_AIRSPEED_AUTOCAL_ENABLE
+    case AUX_FUNC::ARSPD_CALIBRATE:
         switch (ch_flag) {
         case AuxSwitchPos::HIGH:
             plane.airspeed.set_calibration_enabled(true);
@@ -354,8 +354,8 @@ bool RC_Channel_Plane::do_aux_function(const AUX_FUNC ch_option, const AuxSwitch
             plane.airspeed.set_calibration_enabled(false);
             break;
         }
-#endif
         break;
+#endif
 
     case AUX_FUNC::LANDING_FLARE:
         do_aux_function_flare(ch_flag);

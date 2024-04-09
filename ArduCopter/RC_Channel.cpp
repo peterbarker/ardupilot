@@ -366,9 +366,9 @@ bool RC_Channel_Copter::do_aux_function(const AUX_FUNC ch_option, const AuxSwitc
             copter.ap.motor_interlock_switch = (ch_flag == AuxSwitchPos::HIGH || ch_flag == AuxSwitchPos::MIDDLE);
 #endif
             break;
-			
+
+#if FRAME_CONFIG == HELI_FRAME
         case AUX_FUNC::TURBINE_START:
-#if FRAME_CONFIG == HELI_FRAME     
            switch (ch_flag) {
                 case AuxSwitchPos::HIGH:
                     copter.motors->set_turb_start(true);
@@ -380,9 +380,9 @@ bool RC_Channel_Copter::do_aux_function(const AUX_FUNC ch_option, const AuxSwitc
                     copter.motors->set_turb_start(false);
                     break;
            }
-#endif
            break;
-		 
+#endif
+
         case AUX_FUNC::BRAKE:
 #if MODE_BRAKE_ENABLED == ENABLED
             do_aux_function_change_mode(Mode::Number::BRAKE, ch_flag);

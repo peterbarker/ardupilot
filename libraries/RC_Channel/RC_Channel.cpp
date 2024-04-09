@@ -624,7 +624,9 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
     switch (ch_option) {
     // the following functions do not need to be initialised:
     case AUX_FUNC::ARMDISARM:
+#if AP_BATTERY_ENABLED
     case AUX_FUNC::BATTERY_MPPT_ENABLE:
+#endif
     case AUX_FUNC::CAMERA_TRIGGER:
     case AUX_FUNC::CLEAR_WP:
     case AUX_FUNC::COMPASS_LEARN:
@@ -632,18 +634,31 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
     case AUX_FUNC::DO_NOTHING:
     case AUX_FUNC::LANDING_GEAR:
     case AUX_FUNC::LOST_VEHICLE_SOUND:
+#if AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
     case AUX_FUNC::RELAY:
     case AUX_FUNC::RELAY2:
     case AUX_FUNC::RELAY3:
     case AUX_FUNC::RELAY4:
     case AUX_FUNC::RELAY5:
     case AUX_FUNC::RELAY6:
+#endif
+#if HAL_VISUALODOM_ENABLED
     case AUX_FUNC::VISODOM_ALIGN:
+#endif
+#if AP_AHRS_ENABLED
     case AUX_FUNC::EKF_LANE_SWITCH:
     case AUX_FUNC::EKF_YAW_RESET:
+#endif
+#if HAL_GENERATOR_ENABLED
     case AUX_FUNC::GENERATOR: // don't turn generator on or off initially
+#endif
+#if AP_AHRS_ENABLED
     case AUX_FUNC::EKF_POS_SOURCE:
+#endif
+#if HAL_TORQEEDO_ENABLED
     case AUX_FUNC::TORQEEDO_CLEAR_ERR:
+#endif
+#if AP_SCRIPTING_ENABLED
     case AUX_FUNC::SCRIPTING_1:
     case AUX_FUNC::SCRIPTING_2:
     case AUX_FUNC::SCRIPTING_3:
@@ -652,11 +667,16 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
     case AUX_FUNC::SCRIPTING_6:
     case AUX_FUNC::SCRIPTING_7:
     case AUX_FUNC::SCRIPTING_8:
+#endif  // AP_SCRIPTING_ENABLED
 #if AP_VIDEOTX_ENABLED
     case AUX_FUNC::VTX_POWER:
 #endif
+#if AP_OPTICALFLOW_CALIBRATOR_ENABLED
     case AUX_FUNC::OPTFLOW_CAL:
+#endif
+#if FRAME_CONFIG == HELI_FRAME
     case AUX_FUNC::TURBINE_START:
+#endif
     case AUX_FUNC::MOUNT1_ROLL:
     case AUX_FUNC::MOUNT1_PITCH:
     case AUX_FUNC::MOUNT1_YAW:
@@ -673,10 +693,14 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
     case AUX_FUNC::LOWEHEISER_THROTTLE:
         break;
     case AUX_FUNC::AVOID_ADSB:
+#if AP_AVOIDANCE_ENABLED && !APM_BUILD_TYPE(APM_BUILD_ArduPlane)
     case AUX_FUNC::AVOID_PROXIMITY:
+#endif
     case AUX_FUNC::FENCE:
+#if AP_GPS_ENABLED
     case AUX_FUNC::GPS_DISABLE:
     case AUX_FUNC::GPS_DISABLE_YAW:
+#endif
 #if AP_GRIPPER_ENABLED
     case AUX_FUNC::GRIPPER:
 #endif
@@ -685,14 +709,22 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
     case AUX_FUNC::KILL_IMU2:
     case AUX_FUNC::KILL_IMU3:
 #endif
+#if AP_MISSION_ENABLED
     case AUX_FUNC::MISSION_RESET:
+#endif
     case AUX_FUNC::MOTOR_ESTOP:
     case AUX_FUNC::RC_OVERRIDE_ENABLE:
+#if HAL_RUNCAM_ENABLED
     case AUX_FUNC::RUNCAM_CONTROL:
     case AUX_FUNC::RUNCAM_OSD_CONTROL:
+#endif
     case AUX_FUNC::SPRAYER:
+#if AP_AIRSPEED_ENABLED
     case AUX_FUNC::DISABLE_AIRSPEED_USE:
+#endif
+#if HAL_GYROFFT_ENABLED
     case AUX_FUNC::FFT_NOTCH_TUNE:
+#endif
 #if HAL_MOUNT_ENABLED
     case AUX_FUNC::RETRACT_MOUNT1:
     case AUX_FUNC::MOUNT_LOCK:
@@ -721,58 +753,100 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
 #if AP_RC_CHANNEL_AUX_FUNCTION_STRINGS_ENABLED
 
 const RC_Channel::LookupTable RC_Channel::lookuptable[] = {
+#if AP_MISSION_ENABLED
     { AUX_FUNC::SAVE_WP,"SaveWaypoint"},
-    { AUX_FUNC::CAMERA_TRIGGER,"CameraTrigger"},
-    { AUX_FUNC::RANGEFINDER,"Rangefinder"},
-    { AUX_FUNC::FENCE,"Fence"},
-    { AUX_FUNC::SPRAYER,"Sprayer"},
-    { AUX_FUNC::PARACHUTE_ENABLE,"ParachuteEnable"},
-    { AUX_FUNC::PARACHUTE_RELEASE,"ParachuteRelease"},
-    { AUX_FUNC::PARACHUTE_3POS,"Parachute3Position"},
     { AUX_FUNC::MISSION_RESET,"MissionReset"},
-    { AUX_FUNC::RETRACT_MOUNT1,"RetractMount1"},
-    { AUX_FUNC::RELAY,"Relay1"},
-    { AUX_FUNC::MOTOR_ESTOP,"MotorEStop"},
-    { AUX_FUNC::MOTOR_INTERLOCK,"MotorInterlock"},
-    { AUX_FUNC::RELAY2,"Relay2"},
-    { AUX_FUNC::RELAY3,"Relay3"},
-    { AUX_FUNC::RELAY4,"Relay4"},
-    { AUX_FUNC::PRECISION_LOITER,"PrecisionLoiter"},
-    { AUX_FUNC::AVOID_PROXIMITY,"AvoidProximity"},
-    { AUX_FUNC::WINCH_ENABLE,"WinchEnable"},
-    { AUX_FUNC::WINCH_CONTROL,"WinchControl"},
     { AUX_FUNC::CLEAR_WP,"ClearWaypoint"},
-    { AUX_FUNC::COMPASS_LEARN,"CompassLearn"},
-    { AUX_FUNC::SAILBOAT_TACK,"SailboatTack"},
-    { AUX_FUNC::GPS_DISABLE,"GPSDisable"},
-    { AUX_FUNC::GPS_DISABLE_YAW,"GPSDisableYaw"},
-    { AUX_FUNC::DISABLE_AIRSPEED_USE,"DisableAirspeedUse"},
-    { AUX_FUNC::RELAY5,"Relay5"},
-    { AUX_FUNC::RELAY6,"Relay6"},
-    { AUX_FUNC::SAILBOAT_MOTOR_3POS,"SailboatMotor"},
-    { AUX_FUNC::SURFACE_TRACKING,"SurfaceTracking"},
-    { AUX_FUNC::RUNCAM_CONTROL,"RunCamControl"},
-    { AUX_FUNC::RUNCAM_OSD_CONTROL,"RunCamOSDControl"},
-    { AUX_FUNC::VISODOM_ALIGN,"VisOdomAlign"},
-    { AUX_FUNC::AIRMODE, "AirMode"},
-    { AUX_FUNC::CAM_MODE_TOGGLE,"CamModeToggle"},
-    { AUX_FUNC::GENERATOR,"Generator"},
-    { AUX_FUNC::BATTERY_MPPT_ENABLE,"Battery MPPT Enable"},
-    { AUX_FUNC::ARSPD_CALIBRATE,"Calibrate Airspeed"},
-    { AUX_FUNC::TORQEEDO_CLEAR_ERR, "Torqeedo Clear Err"},
-    { AUX_FUNC::EMERGENCY_LANDING_EN, "Emergency Landing"},
-    { AUX_FUNC::WEATHER_VANE_ENABLE, "Weathervane"},
-    { AUX_FUNC::TURBINE_START, "Turbine Start"},
-    { AUX_FUNC::FFT_NOTCH_TUNE, "FFT Notch Tuning"},
-    { AUX_FUNC::MOUNT_LOCK, "MountLock"},
-    { AUX_FUNC::LOG_PAUSE, "Pause Stream Logging"},
+#endif
+#if AP_CAMERA_ENABLED
+    { AUX_FUNC::CAMERA_TRIGGER,"CameraTrigger"},
     { AUX_FUNC::CAMERA_REC_VIDEO, "Camera Record Video"},
     { AUX_FUNC::CAMERA_ZOOM, "Camera Zoom"},
     { AUX_FUNC::CAMERA_MANUAL_FOCUS, "Camera Manual Focus"},
     { AUX_FUNC::CAMERA_AUTO_FOCUS, "Camera Auto Focus"},
     { AUX_FUNC::CAMERA_IMAGE_TRACKING, "Camera Image Tracking"},
     { AUX_FUNC::CAMERA_LENS, "Camera Lens"},
+    { AUX_FUNC::CAM_MODE_TOGGLE,"CamModeToggle"},
+#endif
+#if AP_RANGEFINDER_ENABLED
+    { AUX_FUNC::RANGEFINDER,"Rangefinder"},
+#endif
+#if AP_FENCE_ENABLED
+    { AUX_FUNC::FENCE,"Fence"},
+#endif
+#if HAL_SPRAYER_ENABLED
+    { AUX_FUNC::SPRAYER,"Sprayer"},
+#endif
+#if HAL_PARACHUTE_ENABLED
+    { AUX_FUNC::PARACHUTE_ENABLE,"ParachuteEnable"},
+    { AUX_FUNC::PARACHUTE_RELEASE,"ParachuteRelease"},
+    { AUX_FUNC::PARACHUTE_3POS,"Parachute3Position"},
+#endif
+#if HAL_MOUNT_ENABLED
+    { AUX_FUNC::RETRACT_MOUNT1,"RetractMount1"},
+    { AUX_FUNC::MOUNT_LOCK, "MountLock"},
     { AUX_FUNC::MOUNT_LRF_ENABLE, "Mount LRF Enable"},
+#endif
+    { AUX_FUNC::MOTOR_ESTOP,"MotorEStop"},
+    { AUX_FUNC::MOTOR_INTERLOCK,"MotorInterlock"},
+#if AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
+    { AUX_FUNC::RELAY,"Relay1"},
+    { AUX_FUNC::RELAY2,"Relay2"},
+    { AUX_FUNC::RELAY3,"Relay3"},
+    { AUX_FUNC::RELAY4,"Relay4"},
+    { AUX_FUNC::RELAY5,"Relay5"},
+    { AUX_FUNC::RELAY6,"Relay6"},
+#endif
+    { AUX_FUNC::PRECISION_LOITER,"PrecisionLoiter"},
+#if AP_AVOIDANCE_ENABLED && !APM_BUILD_TYPE(APM_BUILD_ArduPlane)
+    { AUX_FUNC::AVOID_PROXIMITY,"AvoidProximity"},
+#endif
+#if AP_WINCH_ENABLED
+    { AUX_FUNC::WINCH_ENABLE,"WinchEnable"},
+    { AUX_FUNC::WINCH_CONTROL,"WinchControl"},
+#endif
+#if AP_COMPASS_ENABLED
+    { AUX_FUNC::COMPASS_LEARN,"CompassLearn"},
+#endif
+    { AUX_FUNC::SAILBOAT_TACK,"SailboatTack"},
+#if AP_GPS_ENABLED
+    { AUX_FUNC::GPS_DISABLE,"GPSDisable"},
+    { AUX_FUNC::GPS_DISABLE_YAW,"GPSDisableYaw"},
+#endif
+#if AP_AIRSPEED_ENABLED
+    { AUX_FUNC::DISABLE_AIRSPEED_USE,"DisableAirspeedUse"},
+    { AUX_FUNC::ARSPD_CALIBRATE,"Calibrate Airspeed"},
+#endif
+    { AUX_FUNC::SAILBOAT_MOTOR_3POS,"SailboatMotor"},
+    { AUX_FUNC::SURFACE_TRACKING,"SurfaceTracking"},
+#if HAL_RUNCAM_ENABLED
+    { AUX_FUNC::RUNCAM_CONTROL,"RunCamControl"},
+    { AUX_FUNC::RUNCAM_OSD_CONTROL,"RunCamOSDControl"},
+#endif
+#if HAL_VISUALODOM_ENABLED
+    { AUX_FUNC::VISODOM_ALIGN,"VisOdomAlign"},
+#endif
+    { AUX_FUNC::AIRMODE, "AirMode"},
+#if HAL_GENERATOR_ENABLED
+    { AUX_FUNC::GENERATOR,"Generator"},
+#endif
+#if AP_BATTERY_ENABLED
+    { AUX_FUNC::BATTERY_MPPT_ENABLE,"Battery MPPT Enable"},
+#endif
+#if HAL_TORQEEDO_ENABLED
+    { AUX_FUNC::TORQEEDO_CLEAR_ERR, "Torqeedo Clear Err"},
+#endif
+    { AUX_FUNC::EMERGENCY_LANDING_EN, "Emergency Landing"},
+    { AUX_FUNC::WEATHER_VANE_ENABLE, "Weathervane"},
+#if FRAME_CONFIG == HELI_FRAME
+    { AUX_FUNC::TURBINE_START, "Turbine Start"},
+#endif
+#if HAL_GYROFFT_ENABLED
+    { AUX_FUNC::FFT_NOTCH_TUNE, "FFT Notch Tuning"},
+#endif
+#if HAL_LOGGING_ENABLED
+    { AUX_FUNC::LOG_PAUSE, "Pause Stream Logging"},
+#endif
 };
 
 /* lookup the announcement for switch change */
@@ -862,9 +936,9 @@ void RC_Channel::do_aux_function_armdisarm(const AuxSwitchPos ch_flag)
     }
 }
 
+#if HAL_ADSB_ENABLED
 void RC_Channel::do_aux_function_avoid_adsb(const AuxSwitchPos ch_flag)
 {
-#if HAL_ADSB_ENABLED
     AP_Avoidance *avoidance = AP::ap_avoidance();
     if (avoidance == nullptr) {
         return;
@@ -889,12 +963,12 @@ void RC_Channel::do_aux_function_avoid_adsb(const AuxSwitchPos ch_flag)
     avoidance->disable();
     LOGGER_WRITE_EVENT(LogEvent::AVOIDANCE_ADSB_DISABLE);
     GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "ADSB Avoidance Disabled");
-#endif
 }
+#endif  // HAL_ADSB_ENABLED
 
+#if AP_AVOIDANCE_ENABLED && !APM_BUILD_TYPE(APM_BUILD_ArduPlane)
 void RC_Channel::do_aux_function_avoid_proximity(const AuxSwitchPos ch_flag)
 {
-#if AP_AVOIDANCE_ENABLED && !APM_BUILD_TYPE(APM_BUILD_ArduPlane)
     AC_Avoid *avoid = AP::ac_avoid();
     if (avoid == nullptr) {
         return;
@@ -911,8 +985,8 @@ void RC_Channel::do_aux_function_avoid_proximity(const AuxSwitchPos ch_flag)
         avoid->proximity_avoidance_enable(false);
         break;
     }
-#endif // !APM_BUILD_ArduPlane
 }
+#endif // !APM_BUILD_ArduPlane
 
 #if AP_CAMERA_ENABLED
 void RC_Channel::do_aux_function_camera_trigger(const AuxSwitchPos ch_flag)
@@ -1017,9 +1091,9 @@ bool RC_Channel::do_aux_function_camera_lens(const AuxSwitchPos ch_flag)
 }
 #endif // AP_CAMERA_ENABLED
 
+#if HAL_RUNCAM_ENABLED
 void RC_Channel::do_aux_function_runcam_control(const AuxSwitchPos ch_flag)
 {
-#if HAL_RUNCAM_ENABLED
     AP_RunCam *runcam = AP::runcam();
     if (runcam == nullptr) {
         return;
@@ -1036,12 +1110,10 @@ void RC_Channel::do_aux_function_runcam_control(const AuxSwitchPos ch_flag)
         runcam->stop_recording();
         break;
     }
-#endif
 }
 
 void RC_Channel::do_aux_function_runcam_osd_control(const AuxSwitchPos ch_flag)
 {
-#if HAL_RUNCAM_ENABLED
     AP_RunCam *runcam = AP::runcam();
     if (runcam == nullptr) {
         return;
@@ -1056,8 +1128,8 @@ void RC_Channel::do_aux_function_runcam_osd_control(const AuxSwitchPos ch_flag)
         runcam->exit_osd();
         break;
     }
-#endif
 }
+#endif  // HAL_RUNCAM_ENABLED
 
 #if AP_FENCE_ENABLED
 // enable or disable the fence
@@ -1197,9 +1269,9 @@ void RC_Channel::do_aux_function_mission_reset(const AuxSwitchPos ch_flag)
 }
 #endif
 
+#if HAL_GYROFFT_ENABLED
 void RC_Channel::do_aux_function_fft_notch_tune(const AuxSwitchPos ch_flag)
 {
-#if HAL_GYROFFT_ENABLED
     AP_GyroFFT *fft = AP::fft();
     if (fft == nullptr) {
         return;
@@ -1214,8 +1286,8 @@ void RC_Channel::do_aux_function_fft_notch_tune(const AuxSwitchPos ch_flag)
         fft->stop_notch_tune();
         break;
     }
-#endif
 }
+#endif
 
 bool RC_Channel::run_aux_function(AUX_FUNC ch_option, AuxSwitchPos pos, AuxFuncTriggerSource source)
 {
@@ -1272,9 +1344,11 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
         do_aux_function_rc_override_enable(ch_flag);
         break;
 
+#if AP_AVOIDANCE_ENABLED && !APM_BUILD_TYPE(APM_BUILD_ArduPlane)
     case AUX_FUNC::AVOID_PROXIMITY:
         do_aux_function_avoid_proximity(ch_flag);
         break;
+#endif
 
 #if AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
     case AUX_FUNC::RELAY:
@@ -1297,6 +1371,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
         break;
 #endif  // AP_SERVORELAYEVENTS_ENABLED && AP_RELAY_ENABLED
 
+#if HAL_RUNCAM_ENABLED
     case AUX_FUNC::RUNCAM_CONTROL:
         do_aux_function_runcam_control(ch_flag);
         break;
@@ -1304,21 +1379,28 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
     case AUX_FUNC::RUNCAM_OSD_CONTROL:
         do_aux_function_runcam_osd_control(ch_flag);
         break;
+#endif  // HAL_RUNCAM_ENABLED
 
+#if AP_MISSION_ENABLED
     case AUX_FUNC::CLEAR_WP:
         do_aux_function_clear_wp(ch_flag);
         break;
     case AUX_FUNC::MISSION_RESET:
         do_aux_function_mission_reset(ch_flag);
         break;
+#endif
 
+#if HAL_ADSB_ENABLED
     case AUX_FUNC::AVOID_ADSB:
         do_aux_function_avoid_adsb(ch_flag);
         break;
+#endif
 
+#if HAL_GYROFFT_ENABLED
     case AUX_FUNC::FFT_NOTCH_TUNE:
         do_aux_function_fft_notch_tune(ch_flag);
         break;
+#endif
 
 #if HAL_GENERATOR_ENABLED
     case AUX_FUNC::GENERATOR:
@@ -1354,12 +1436,14 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
         }
         break;
 
+#if AP_COMPASS_ENABLED
     case AUX_FUNC::COMPASS_LEARN:
         if (ch_flag == AuxSwitchPos::HIGH) {
             Compass &compass = AP::compass();
             compass.set_learn_type(Compass::LEARN_INFLIGHT, false);
         }
         break;
+#endif
 
 #if AP_LANDINGGEAR_ENABLED
     case AUX_FUNC::LANDING_GEAR: {
@@ -1382,6 +1466,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
     }
 #endif
 
+#if AP_GPS_ENABLED
     case AUX_FUNC::GPS_DISABLE:
         AP::gps().force_disable(ch_flag == AuxSwitchPos::HIGH);
 #if HAL_EXTERNAL_AHRS_ENABLED
@@ -1392,6 +1477,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
     case AUX_FUNC::GPS_DISABLE_YAW:
         AP::gps().set_force_disable_yaw(ch_flag == AuxSwitchPos::HIGH);
         break;
+#endif
 
 #if AP_AIRSPEED_ENABLED
     case AUX_FUNC::DISABLE_AIRSPEED_USE: {
@@ -1440,6 +1526,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
         break;
 #endif
 
+#if AP_AHRS_ENABLED
     case AUX_FUNC::EKF_POS_SOURCE: {
         uint8_t source_set = 0;
         switch (ch_flag) {
@@ -1460,6 +1547,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Using EKF Source Set %u", source_set+1);
         break;
     }
+#endif  // AP_AHRS_ENABLED
 
 #if AP_OPTICALFLOW_CALIBRATOR_ENABLED
     case AUX_FUNC::OPTFLOW_CAL: {
@@ -1638,6 +1726,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
         break;
     }
 
+#if AP_AHRS_ENABLED
     case AUX_FUNC::EKF_LANE_SWITCH:
         // used to test emergency lane switch
         AP::ahrs().check_lane_switch();
@@ -1647,14 +1736,13 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
         // used to test emergency yaw reset
         AP::ahrs().request_yaw_reset();
         break;
-
-    case AUX_FUNC::AHRS_TYPE: {
-#if HAL_NAVEKF3_AVAILABLE && HAL_EXTERNAL_AHRS_ENABLED
-        AP::ahrs().set_ekf_type(ch_flag==AuxSwitchPos::HIGH? AP_AHRS::EKFType::EXTERNAL : AP_AHRS::EKFType::THREE);
 #endif
+
+#if HAL_NAVEKF3_AVAILABLE && HAL_EXTERNAL_AHRS_ENABLED
+    case AUX_FUNC::AHRS_TYPE:
+        AP::ahrs().set_ekf_type(ch_flag==AuxSwitchPos::HIGH? AP_AHRS::EKFType::EXTERNAL : AP_AHRS::EKFType::THREE);
         break;
-    }
-        
+#endif
 
 #if HAL_TORQEEDO_ENABLED
     // clear torqeedo error
@@ -1676,6 +1764,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
     case AUX_FUNC::MOUNT2_ROLL:
     case AUX_FUNC::MOUNT2_PITCH:
     case AUX_FUNC::MOUNT2_YAW:
+#if AP_SCRIPTING_ENABLED
     case AUX_FUNC::SCRIPTING_1:
     case AUX_FUNC::SCRIPTING_2:
     case AUX_FUNC::SCRIPTING_3:
@@ -1684,6 +1773,7 @@ bool RC_Channel::do_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch
     case AUX_FUNC::SCRIPTING_6:
     case AUX_FUNC::SCRIPTING_7:
     case AUX_FUNC::SCRIPTING_8:
+#endif
         break;
 
     case AUX_FUNC::LOWEHEISER_THROTTLE:
