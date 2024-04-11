@@ -5589,9 +5589,9 @@ void GCS_MAVLINK::send_attitude() const
     mavlink_msg_attitude_send(
         chan,
         AP_HAL::millis(),
-        ahrs.get_roll(),
-        ahrs.get_pitch(),
-        ahrs.get_yaw(),
+        ahrs.get_roll_rad(),
+        ahrs.get_pitch_rad(),
+        ahrs.get_yaw_rad(),
         omega.x,
         omega.y,
         omega.z);
@@ -5772,9 +5772,9 @@ void GCS_MAVLINK::send_water_depth() const
             loc.lat,            // latitude of vehicle
             loc.lng,            // longitude of vehicle
             loc.alt * 0.01f,    // altitude of vehicle (MSL)
-            ahrs.get_roll(),    // roll in radians
-            ahrs.get_pitch(),   // pitch in radians
-            ahrs.get_yaw(),     // yaw in radians
+            ahrs.get_roll_rad(),    // roll in radians
+            ahrs.get_pitch_rad(),   // pitch in radians
+            ahrs.get_yaw_rad(),     // yaw in radians
             s->distance(),    // distance in meters
             temp_C);            // temperature in degC
     }

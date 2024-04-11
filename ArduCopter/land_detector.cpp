@@ -74,7 +74,7 @@ void Copter::update_land_detector()
 
         // check if landing
         const bool landing = flightmode->is_landing();
-        bool motor_at_lower_limit = (flightmode->has_manual_throttle() && (motors->get_below_land_min_coll() || heli_flags.coll_stk_low) && fabsf(ahrs.get_roll()) < M_PI/2.0f)
+        bool motor_at_lower_limit = (flightmode->has_manual_throttle() && (motors->get_below_land_min_coll() || heli_flags.coll_stk_low) && fabsf(ahrs.get_roll_rad()) < M_PI/2.0f)
 #if MODE_AUTOROTATE_ENABLED == ENABLED
                                     || (flightmode->mode_number() == Mode::Number::AUTOROTATE && motors->get_below_land_min_coll())
 #endif
