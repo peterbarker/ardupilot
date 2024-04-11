@@ -472,7 +472,10 @@ bool AP_OABendyRuler::calc_margin_from_circular_fence(const Location &start, con
     }
 
     // calculate start and end point's distance from home
-    const Location &ahrs_home = AP::ahrs().get_home();
+    Location ahrs_home;
+    if (!AP::ahrs().get_home(ahrs_home)) {
+        // rumble on with an all-zeroes home!
+    }
     const float start_dist_sq = ahrs_home.get_distance_NE(start).length_squared();
     const float end_dist_sq = ahrs_home.get_distance_NE(end).length_squared();
 

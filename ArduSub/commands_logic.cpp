@@ -291,7 +291,11 @@ void Sub::do_surface(const AP_Mission::Mission_Command& cmd)
 
 void Sub::do_RTL()
 {
-    mode_auto.auto_wp_start(ahrs.get_home());
+    Location home;
+    if (!ahrs.get_home(home)) {
+        // .... well, let's just hope this doesn't happen...
+    }
+    mode_auto.auto_wp_start(home);
 }
 
 // do_loiter_unlimited - start loitering with no end conditions

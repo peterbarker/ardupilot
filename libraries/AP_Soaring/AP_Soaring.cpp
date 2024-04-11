@@ -178,7 +178,9 @@ SoaringController::SoaringController(AP_TECS &tecs, const AP_FixedWing &parms) :
 
 void SoaringController::get_target(Location &wp)
 {
-    wp = AP::ahrs().get_home();
+    if (!AP::ahrs().get_home(wp)) {
+        // close eyes, continue....
+    }
     wp.offset(_position_x_filter.get(), _position_y_filter.get());
 }
 

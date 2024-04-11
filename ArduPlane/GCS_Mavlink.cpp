@@ -740,7 +740,10 @@ void GCS_MAVLINK_Plane::handle_change_alt_request(AP_Mission::Mission_Command &c
 {
     plane.next_WP_loc.alt = cmd.content.location.alt;
     if (cmd.content.location.relative_alt) {
-        plane.next_WP_loc.alt += plane.home.alt;
+        Location home;
+        if (plane.ahrs.get_home(home)) {
+            plane.next_WP_loc.alt += home.alt;
+        }
     }
     plane.next_WP_loc.relative_alt = false;
     plane.next_WP_loc.terrain_alt = cmd.content.location.terrain_alt;
@@ -848,7 +851,9 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_do_reposition(const mavlink_com
 
         // add home alt if needed
         if (requested_position.relative_alt) {
-            requested_position.alt += plane.home.alt;
+            Location home;
+            UNUSED_RESULT(plane.ahrs.get_home(home));
+            requested_position.alt += home.alt;
             requested_position.relative_alt = 0;
         }
 
@@ -922,7 +927,9 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_guided_slew_commands(const mavl
 
          // the requested alt data might be relative or absolute
         float new_target_alt = packet.z * 100;
-        float new_target_alt_rel = packet.z * 100 + plane.home.alt;
+        Location home;
+        UNUSED_RESULT(plane.ahrs.get_home(home));
+        float new_target_alt_rel = packet.z * 100 + home.alt;
 
          // only global/relative/terrain frames are supported
         switch(packet.frame) {
@@ -1350,8 +1357,10 @@ void GCS_MAVLINK_Plane::handle_set_position_target_local_ned(const mavlink_messa
 
         // just do altitude for now
         plane.next_WP_loc.alt += -packet.z*100.0;
+        Location home;
+        UNUSED_RESULT(plane.ahrs.get_home(home));
         gcs().send_text(MAV_SEVERITY_INFO, "Change alt to %.1f",
-                        (double)((plane.next_WP_loc.alt - plane.home.alt)*0.01));
+                        (double)((plane.next_WP_loc.alt - home.alt)*0.01));
     }
 
 void GCS_MAVLINK_Plane::handle_set_position_target_global_int(const mavlink_message_t &msg)

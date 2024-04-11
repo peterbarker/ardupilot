@@ -30,7 +30,11 @@ void Plane::adjust_altitude_target()
 
 void Plane::check_home_alt_change(void)
 {
-    int32_t home_alt_cm = ahrs.get_home().alt;
+    Location home;
+    if (!ahrs.get_home(home)) {
+        // ignore this problem....
+    }
+    int32_t home_alt_cm = home.alt;
     if (home_alt_cm != auto_state.last_home_alt_cm && hal.util->get_soft_armed()) {
         // cope with home altitude changing
         const int32_t alt_change_cm = home_alt_cm - auto_state.last_home_alt_cm;
@@ -106,6 +110,8 @@ int32_t Plane::get_RTL_altitude_cm() const
     if (g.RTL_altitude < 0) {
         return current_loc.alt;
     }
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
     return g.RTL_altitude*100 + home.alt;
 }
 
@@ -207,6 +213,9 @@ void Plane::set_target_altitude_current_adjusted(void)
  */
 void Plane::set_target_altitude_location(const Location &loc)
 {
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
+
     target_altitude.amsl_cm = loc.alt;
     if (loc.relative_alt) {
         target_altitude.amsl_cm += home.alt;
@@ -260,6 +269,8 @@ int32_t Plane::relative_target_altitude_cm(void)
         return relative_home_height*100;
     }
 #endif
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
     int32_t relative_alt = target_altitude.amsl_cm - home.alt;
     relative_alt += mission_alt_offset()*100;
     relative_alt += rangefinder_correction() * 100;
@@ -383,6 +394,9 @@ void Plane::check_fbwb_altitude(void)
     }
 #endif
 
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
+
     if (should_check_max) {
         target_altitude.amsl_cm = MIN(target_altitude.amsl_cm, home.alt + max_alt_cm);
     }
@@ -452,6 +466,9 @@ void Plane::set_offset_altitude_location(const Location &start_loc, const Locati
  */
 bool Plane::above_location_current(const Location &loc)
 {
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
+
 #if AP_TERRAIN_AVAILABLE
     float terrain_alt;
     if (loc.terrain_alt && 
@@ -532,9 +549,12 @@ float Plane::mission_alt_offset(void)
  */
 float Plane::height_above_target(void)
 {
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
+
     float target_alt = next_WP_loc.alt*0.01;
     if (!next_WP_loc.relative_alt) {
-        target_alt -= ahrs.get_home().alt*0.01f;
+        target_alt -= home.alt * 0.01f;
     }
 
 #if AP_TERRAIN_AVAILABLE
@@ -546,7 +566,7 @@ float Plane::height_above_target(void)
     }
 #endif
 
-    return (adjusted_altitude_cm()*0.01f - ahrs.get_home().alt*0.01f) - target_alt;
+    return (adjusted_altitude_cm()*0.01f - home.alt*0.01f) - target_alt;
 }
 
 /*

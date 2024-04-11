@@ -145,16 +145,18 @@ bool Location::get_alt_cm(AltFrame desired_frame, int32_t &ret_alt_cm) const
         case AltFrame::ABSOLUTE:
             alt_abs = alt;
             break;
-        case AltFrame::ABOVE_HOME:
+        case AltFrame::ABOVE_HOME: {
 #if AP_AHRS_ENABLED
-            if (!AP::ahrs().home_is_set()) {
+            Location home;
+            if (!AP::ahrs().get_home(home)) {
                 return false;
             }
-            alt_abs = alt + AP::ahrs().get_home().alt;
+            alt_abs = alt + home.alt;
 #else
             return false;
 #endif  // AP_AHRS_ENABLED
             break;
+        }
         case AltFrame::ABOVE_ORIGIN:
 #if AP_AHRS_ENABLED
             {
@@ -179,16 +181,18 @@ bool Location::get_alt_cm(AltFrame desired_frame, int32_t &ret_alt_cm) const
         case AltFrame::ABSOLUTE:
             ret_alt_cm = alt_abs;
             return true;
-        case AltFrame::ABOVE_HOME:
+        case AltFrame::ABOVE_HOME: {
 #if AP_AHRS_ENABLED
-            if (!AP::ahrs().home_is_set()) {
+            Location home;
+            if (!AP::ahrs().get_home(home)) {
                 return false;
             }
-            ret_alt_cm = alt_abs - AP::ahrs().get_home().alt;
+            ret_alt_cm = alt_abs - home.alt;
 #else
             return false;
 #endif  // AP_AHRS_ENABLED
             return true;
+        }
         case AltFrame::ABOVE_ORIGIN:
 #if AP_AHRS_ENABLED
             {

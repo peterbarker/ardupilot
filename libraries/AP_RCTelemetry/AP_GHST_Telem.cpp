@@ -287,8 +287,8 @@ void AP_GHST_Telem::calc_gps2()
     WITH_SEMAPHORE(_ahrs.get_semaphore());
     Location loc;
 
-    if (_ahrs.get_location(loc) && _ahrs.home_is_set()) {
-        const Location &home_loc = _ahrs.get_home();
+    Location home_loc;
+    if (_ahrs.get_location(loc) && _ahrs.get_home(home_loc)) {
         _telem.gps2.home_dist = home_loc.get_distance(loc) / 10; // 10m
         _telem.gps2.home_heading = loc.get_bearing_to(home_loc) / 10; // deci-degrees
     } else {

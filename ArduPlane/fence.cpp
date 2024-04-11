@@ -77,6 +77,8 @@ void Plane::fence_check()
             if (fence.get_return_rally() != 0 || fence_act == AC_FENCE_ACTION_RTL_AND_LAND) {
                 loc = calc_best_rally_or_home_location(current_loc, get_RTL_altitude_cm());
             } else {
+                Location home;
+                UNUSED_RESULT(ahrs.get_home(home));
                 //return to fence return point, not a rally point
                 if (fence.get_return_altitude() > 0) {
                     // fly to the return point using _retalt

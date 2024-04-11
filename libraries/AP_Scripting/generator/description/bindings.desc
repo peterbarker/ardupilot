@@ -33,7 +33,7 @@ singleton AP_AHRS method get_pitch float
 singleton AP_AHRS method get_yaw float
 singleton AP_AHRS method get_location boolean Location'Null
 singleton AP_AHRS method get_location alias get_position
-singleton AP_AHRS method get_home Location
+singleton AP_AHRS method get_home boolean Location'Null
 singleton AP_AHRS method get_gyro Vector3f
 singleton AP_AHRS method get_accel Vector3f
 singleton AP_AHRS method get_hagl boolean float'Null
@@ -45,7 +45,7 @@ singleton AP_AHRS method get_velocity_NED boolean Vector3f'Null
 singleton AP_AHRS method get_relative_position_NED_home boolean Vector3f'Null
 singleton AP_AHRS method get_relative_position_NED_origin boolean Vector3f'Null
 singleton AP_AHRS method get_relative_position_D_home void float'Ref
-singleton AP_AHRS method home_is_set boolean
+-- singleton AP_AHRS method home_is_set boolean
 singleton AP_AHRS method healthy boolean
 singleton AP_AHRS method airspeed_estimate boolean float'Null
 singleton AP_AHRS method get_vibration Vector3f

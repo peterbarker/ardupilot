@@ -110,7 +110,9 @@ bool ModeGuided::handle_guided_request(Location target_loc)
 {
     // add home alt if needed
     if (target_loc.relative_alt) {
-        target_loc.alt += plane.home.alt;
+        Location home;
+        UNUSED_RESULT(ahrs.get_home(home));
+        target_loc.alt += home.alt;
         target_loc.relative_alt = 0;
     }
 

@@ -386,6 +386,8 @@ void Plane::do_takeoff(const AP_Mission::Mission_Command& cmd)
         // if the mission doesn't specify a pitch use 4 degrees
         auto_state.takeoff_pitch_cd = 400;
     }
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
     auto_state.takeoff_altitude_rel_cm = next_WP_loc.alt - home.alt;
     next_WP_loc.lat = home.lat + 10;
     next_WP_loc.lng = home.lng + 10;
@@ -511,6 +513,9 @@ void Plane::do_continue_and_change_alt(const AP_Mission::Mission_Command& cmd)
         bearing = ahrs.yaw_sensor * 0.01f;
         next_WP_loc.offset_bearing(bearing, 1000); // push it out 1km
     }
+
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
 
     next_WP_loc.alt = cmd.content.location.alt + home.alt;
     condition_value = cmd.p1;
@@ -1039,7 +1044,9 @@ bool Plane::verify_landing_vtol_approach(const AP_Mission::Mission_Command &cmd)
                 nav_controller->update_loiter(cmd.content.location, abs_radius, direction);
                 if (plane.reached_loiter_target()) {
                     // decend to Q RTL alt
-                    plane.do_RTL(plane.home.alt + plane.quadplane.qrtl_alt*100UL);
+                    Location home;
+                    UNUSED_RESULT(ahrs.get_home(home));
+                    plane.do_RTL(home.alt + plane.quadplane.qrtl_alt*100UL);
                     plane.loiter_angle_reset();
                     vtol_approach_s.approach_stage = LOITER_TO_ALT;
                 }

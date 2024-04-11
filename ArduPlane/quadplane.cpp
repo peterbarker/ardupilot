@@ -3668,7 +3668,9 @@ bool QuadPlane::verify_vtol_land(void)
                 plane.set_next_WP(plane.mission.get_current_nav_cmd().content.location);
             } else {
                 plane.set_next_WP(plane.next_WP_loc);
-                plane.next_WP_loc.alt = ahrs.get_home().alt;
+                Location home;
+                UNUSED_RESULT(ahrs.get_home(home));
+                plane.next_WP_loc.alt = home.alt;
             }
         }
     }

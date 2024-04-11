@@ -1041,7 +1041,11 @@ bool AP_AHRS_DCM::get_location(Location &loc) const
         gps.status() >= AP_GPS::GPS_OK_FIX_3D) {
         loc.alt = gps.location().alt;
     } else {
-        loc.alt = baro.get_altitude() * 100 + AP::ahrs().get_home().alt;
+        loc.alt = baro.get_altitude() * 100;
+        Location home;
+        if (AP::ahrs().get_home(home)) {
+            loc.alt += home.alt;
+        }
     }
     loc.relative_alt = 0;
     loc.terrain_alt = 0;
@@ -1247,12 +1251,12 @@ bool AP_AHRS_DCM::pre_arm_check(bool requires_position, char *failure_msg, uint8
 */
 bool AP_AHRS_DCM::get_origin(Location &ret) const
 {
-    ret = last_origin;
-    if (ret.is_zero()) {
-        // use home if we never have had an origin
-        ret = AP::ahrs().get_home();
+    if (!last_origin.is_zero()) {
+        ret = last_origin;
+        return true;
     }
-    return !ret.is_zero();
+    // use home if we never have had an origin
+    return AP::ahrs().get_home(ret);
 }
 
 bool AP_AHRS_DCM::get_relative_position_NED_origin(Vector3f &posNED) const

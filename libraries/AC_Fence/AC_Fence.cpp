@@ -621,7 +621,11 @@ bool AC_Fence::check_destination_within_fence(const Location& loc)
 
     // Circular fence check
     if ((get_enabled_fences() & AC_FENCE_TYPE_CIRCLE)) {
-        if (AP::ahrs().get_home().get_distance(loc) > _circle_radius) {
+        Location home;
+        if (!AP::ahrs().get_home(home)) {
+            return false;
+        }
+        if (home.get_distance(loc) > _circle_radius) {
             return false;
         }
     }

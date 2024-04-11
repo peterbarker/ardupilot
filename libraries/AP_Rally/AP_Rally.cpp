@@ -169,7 +169,12 @@ bool AP_Rally::find_nearest_rally_point(const Location &current_loc, RallyLocati
 Location AP_Rally::calc_best_rally_or_home_location(const Location &current_loc, float rtl_home_alt_amsl_cm) const
 {
     // if no valid rally point, return home position:
-    Location return_loc { AP::ahrs().get_home() };
+    Location return_loc;
+    if (!AP::ahrs().get_home(return_loc)) {
+        // wow, let's just ignore this and rumble on.  Worst that can
+        // happen is that the vehicle tries to fly to 0,0,0....
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+    }
     return_loc.set_alt_cm(rtl_home_alt_amsl_cm, Location::AltFrame::ABSOLUTE);
 
     RallyLocation ral_loc;

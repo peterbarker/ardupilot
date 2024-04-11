@@ -456,11 +456,12 @@ void Plane::update_GPS_10Hz(void)
                 ground_start_count = 5;
 
             } else if (!hal.util->was_watchdog_reset()) {
-                if (!set_home_persistently(gps.location())) {
+                const auto loc = gps.location();
+                if (!set_home_persistently(loc)) {
                     // silently ignore failure...
                 }
 
-                next_WP_loc = prev_WP_loc = home;
+                next_WP_loc = prev_WP_loc = loc;
 
                 ground_start_count = 0;
             }
@@ -592,6 +593,8 @@ void Plane::update_alt()
             // ensure we do the initial climb in RTL. We add an extra
             // 10m in the demanded height to push TECS to climb
             // quickly
+            Location home;
+            UNUSED_RESULT(ahrs.get_home(home));
             tecs_target_alt_cm = MAX(tecs_target_alt_cm, prev_WP_loc.alt - home.alt) + (g2.rtl_climb_min+10)*100;
         }
 
@@ -821,7 +824,9 @@ bool Plane::set_target_location(const Location &target_loc)
     }
     // add home alt if needed
     if (loc.relative_alt) {
-        loc.alt += plane.home.alt;
+        Location home;
+        UNUSED_RESULT(ahrs.get_home(home));
+        loc.alt += home.alt;
         loc.relative_alt = 0;
     }
     plane.set_guided_WP(loc);

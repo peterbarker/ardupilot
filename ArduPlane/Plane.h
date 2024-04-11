@@ -715,10 +715,6 @@ private:
     // A value used in condition commands.  For example the rate at which to change altitude.
     int16_t condition_rate;
 
-    // 3D Location vectors
-    // Location structure defined in AP_Common
-    const Location &home = ahrs.get_home();
-
     // The location of the previous waypoint.  Used for track following and altitude ramp calculations
     Location prev_WP_loc {};
 

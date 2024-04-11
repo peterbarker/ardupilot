@@ -521,9 +521,9 @@ public:
 
     // get the home location. This is const to prevent any changes to
     // home without telling AHRS about the change
-    const Location &get_home(void) const {
-        return _home;
-    }
+    // const Location &get_home(void) const {
+    //     return _home;
+    // }
 
     // functions to handle locking of home.  Some vehicles use this to
     // allow GCS to lock in a home location.
@@ -537,6 +537,16 @@ public:
     // returns true if home is set
     bool home_is_set(void) const {
         return _home_is_set;
+    }
+
+    // get the home location. This is const to prevent any changes to
+    // home without telling AHRS about the change
+    bool get_home(Location &loc) const {
+        if (!_home_is_set) {
+            return false;
+        }
+        loc = _home;
+        return true;
     }
 
     // set the home location in 10e7 degrees. This should be called

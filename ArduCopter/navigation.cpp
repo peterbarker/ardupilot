@@ -11,8 +11,9 @@ void Copter::run_nav_updates(void)
 // distance between vehicle and home in cm
 uint32_t Copter::home_distance()
 {
-    if (position_ok()) {
-        _home_distance = current_loc.get_distance(ahrs.get_home()) * 100;
+    Location home;
+    if (position_ok() && ahrs.get_home(home)) {
+        _home_distance = current_loc.get_distance(home) * 100;
     }
     return _home_distance;
 }
@@ -20,8 +21,9 @@ uint32_t Copter::home_distance()
 // The location of home in relation to the vehicle in centi-degrees
 int32_t Copter::home_bearing()
 {
-    if (position_ok()) {
-        _home_bearing = current_loc.get_bearing_to(ahrs.get_home());
+    Location home;
+    if (position_ok() && ahrs.get_home(home)) {
+        _home_bearing = current_loc.get_bearing_to(home);
     }
     return _home_bearing;
 }

@@ -163,8 +163,12 @@ bool AP_Terrain::height_amsl(const Location &loc, float &height, bool corrected)
 
     height = avg;
 
-    if (loc.lat == ahrs.get_home().lat &&
-        loc.lng == ahrs.get_home().lng) {
+    Location home;
+    if (!ahrs.get_home(home)) {
+        // ignore this error, what could possibly go wrong?
+    }
+    if (loc.lat == home.lat &&
+        loc.lng == home.lng) {
         // remember home altitude as a special case
         home_height = height;
         home_loc = loc;
@@ -195,7 +199,12 @@ bool AP_Terrain::height_terrain_difference_home(float &terrain_difference, bool 
     const AP_AHRS &ahrs = AP::ahrs();
 
     float height_home, height_loc;
-    if (!height_amsl(ahrs.get_home(), height_home)) {
+    Location home;
+    if (!ahrs.get_home(home)) {
+        // we don't have a home
+        return false;
+    }
+    if (!height_amsl(home, height_home)) {
         // we don't know the height of home
         return false;
     }
@@ -291,7 +300,8 @@ bool AP_Terrain::height_relative_home_equivalent(float terrain_altitude,
       adjust for height of home above terrain height at home
      */
     const AP_AHRS &ahrs = AP::ahrs();
-    const auto &home = ahrs.get_home();
+    Location home;
+    UNUSED_RESULT(ahrs.get_home(home));
     int32_t home_height_amsl_cm = 0;
     UNUSED_RESULT(home.get_alt_cm(Location::AltFrame::ABSOLUTE, home_height_amsl_cm));
 
@@ -363,7 +373,11 @@ void AP_Terrain::update(void)
 
     // try to ensure the home location is populated
     float height;
-    height_amsl(ahrs.get_home(), height);
+    Location home;
+    if (!ahrs.get_home(home)) {
+        // it's probably all-zeroes...
+    }
+    height_amsl(home, height);
 
     // update the cached current location height
     Location loc;

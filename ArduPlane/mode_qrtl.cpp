@@ -14,7 +14,10 @@ bool ModeQRTL::_enter()
     submode = SubMode::RTL;
     plane.prev_WP_loc = plane.current_loc;
 
-    int32_t RTL_alt_abs_cm = plane.home.alt + quadplane.qrtl_alt*100UL;
+    Location home;
+    UNUSED_RESULT(plane.ahrs.get_home(home));
+
+    int32_t RTL_alt_abs_cm = home.alt + quadplane.qrtl_alt*100UL;
     if (quadplane.motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED) {
         // VTOL motors are active, either in VTOL flight or assisted flight
         Location destination = plane.calc_best_rally_or_home_location(plane.current_loc, RTL_alt_abs_cm);
@@ -130,7 +133,9 @@ void ModeQRTL::run()
                 submode = SubMode::RTL;
                 plane.prev_WP_loc = plane.current_loc;
 
-                int32_t RTL_alt_abs_cm = plane.home.alt + quadplane.qrtl_alt*100UL;
+                Location home;
+                UNUSED_RESULT(ahrs.get_home(home));
+                int32_t RTL_alt_abs_cm = home.alt + quadplane.qrtl_alt*100UL;
                 Location destination = plane.calc_best_rally_or_home_location(plane.current_loc, RTL_alt_abs_cm);
                 const float dist = plane.current_loc.get_distance(destination);
                 const float radius = get_VTOL_return_radius();
@@ -160,7 +165,9 @@ void ModeQRTL::run()
             quadplane.vtol_position_controller();
             if (poscontrol.get_state() > QuadPlane::QPOS_POSITION2) {
                 // change target altitude to home alt
-                plane.next_WP_loc.alt = plane.home.alt;
+                Location home;
+                UNUSED_RESULT(ahrs.get_home(home));
+                plane.next_WP_loc.alt = home.alt;
             }
             if (poscontrol.get_state() >= QuadPlane::QPOS_POSITION2) {
                 // start landing logic

@@ -390,9 +390,9 @@ float Sub::get_alt_rel() const
     // get relative position
     float posD;
     if (ahrs.get_relative_position_D_origin(posD)) {
-        if (ahrs.home_is_set()) {
+        Location home;
+        if (ahrs.get_home(home)) {
             // adjust to the home position
-            auto home = ahrs.get_home();
             posD -= static_cast<float>(home.alt) * 0.01f;
         }
     } else {

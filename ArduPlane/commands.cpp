@@ -42,6 +42,8 @@ void Plane::set_next_WP(const Location &loc)
     // convert relative alt to absolute alt
     if (next_WP_loc.relative_alt) {
         next_WP_loc.relative_alt = false;
+        Location home;
+        UNUSED_RESULT(ahrs.get_home(home));
         next_WP_loc.alt += home.alt;
     }
 

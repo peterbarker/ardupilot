@@ -130,8 +130,15 @@ bool ModeThermal::exit_heading_aligned() const
         AP_Mission::Mission_Command current_nav_cmd = plane.mission.get_current_nav_cmd();
         return plane.mode_loiter.isHeadingLinedUp(plane.next_WP_loc, current_nav_cmd.content.location);
     }
-    case Mode::Number::FLY_BY_WIRE_B:
-        return (!AP::ahrs().home_is_set() || plane.mode_loiter.isHeadingLinedUp(plane.next_WP_loc, AP::ahrs().get_home()));
+    case Mode::Number::FLY_BY_WIRE_B: {
+        Location home;
+        if (!plane.ahrs.get_home(home)) {
+            // sure, whatever.  We don't really know what's going on,
+            // but shouldn't hold up the caller...
+            return true;
+        }
+        return plane.mode_loiter.isHeadingLinedUp(plane.next_WP_loc, home);
+    }
     case Mode::Number::CRUISE:
         int32_t target_heading_cd;
         return (!plane.mode_cruise.get_target_heading_cd(target_heading_cd) || plane.mode_loiter.isHeadingLinedUp_cd(target_heading_cd));

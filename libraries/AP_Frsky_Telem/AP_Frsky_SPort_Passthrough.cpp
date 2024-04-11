@@ -612,17 +612,18 @@ uint32_t AP_Frsky_SPort_Passthrough::calc_home(void)
     Location home_loc;
     bool got_position = false;
     float _relative_home_altitude = 0;
+    bool home_is_set;
 
     {
         AP_AHRS &_ahrs = AP::ahrs();
         WITH_SEMAPHORE(_ahrs.get_semaphore());
         got_position = _ahrs.get_location(loc);
-        home_loc = _ahrs.get_home();
+        home_is_set = _ahrs.get_home(home_loc);
     }
 
     if (got_position) {
         // check home_loc is valid
-        if (home_loc.lat != 0 || home_loc.lng != 0) {
+        if (home_is_set) {
             // distance between vehicle and home_loc in meters
             home = prep_number(roundf(home_loc.get_distance(loc)), 3, 2);
             // angle from front of vehicle to the direction of home_loc in 3 degree increments (just in case, limit to 127 (0x7F) since the value is stored on 7 bits)

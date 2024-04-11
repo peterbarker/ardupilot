@@ -2839,11 +2839,10 @@ void GCS_MAVLINK::send_named_float(const char *name, float value) const
 #if AP_AHRS_ENABLED
 void GCS_MAVLINK::send_home_position() const
 {
-    if (!AP::ahrs().home_is_set()) {
+    Location home;
+    if (!AP::ahrs().get_home(home)) {
         return;
     }
-
-    const Location &home = AP::ahrs().get_home();
 
     // get home position from origin
     Vector3f home_pos_ned;
@@ -4680,7 +4679,8 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_set_mode(const mavlink_command_int_t &
 #if AP_AHRS_ENABLED
 MAV_RESULT GCS_MAVLINK::handle_command_get_home_position(const mavlink_command_int_t &packet)
 {
-    if (!AP::ahrs().home_is_set()) {
+    Location home;
+    if (!AP::ahrs().get_home(home)) {
         return MAV_RESULT_FAILED;
     }
     if (!try_send_message(MSG_HOME)) {

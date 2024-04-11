@@ -436,10 +436,7 @@ void AP_OSD::update_stats()
         AP_AHRS &ahrs = AP::ahrs();
         WITH_SEMAPHORE(ahrs.get_semaphore());
         v = ahrs.groundspeed_vector();
-        home_is_set = ahrs.get_location(loc) && ahrs.home_is_set();
-        if (home_is_set) {
-            home_loc = ahrs.get_home();
-        }
+        home_is_set = ahrs.get_location(loc) && ahrs.get_home(home_loc);
         ahrs.get_relative_position_D_home(alt);
         have_airspeed_estimate = ahrs.airspeed_estimate(aspd_mps);
     }

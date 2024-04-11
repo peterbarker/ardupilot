@@ -770,7 +770,9 @@ bool AP_Mission::read_cmd_from_storage(uint16_t index, Mission_Command& cmd) con
     if (index == 0) {
         cmd = {};
         cmd.id = MAV_CMD_NAV_WAYPOINT;
-        cmd.content.location = AP::ahrs().get_home();
+        if (!AP::ahrs().get_home(cmd.content.location)) {
+            // ignore this error; home will be 0,0,0
+        }
         return true;
     }
     if (index >= (unsigned)_cmd_total || index >= _commands_max) {
@@ -934,7 +936,9 @@ void AP_Mission::write_home_to_storage()
 {
     Mission_Command home_cmd = {};
     home_cmd.id = MAV_CMD_NAV_WAYPOINT;
-    home_cmd.content.location = AP::ahrs().get_home();
+    if (!AP::ahrs().get_home(home_cmd.content.location)) {
+        // location will remain at all-zeroes...
+    }
     write_cmd_to_storage(0,home_cmd);
 }
 

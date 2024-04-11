@@ -187,18 +187,18 @@ void AP_MSP_Telem_Backend::update_home_pos(home_state_t &home_state)
     AP_AHRS &_ahrs = AP::ahrs();
     WITH_SEMAPHORE(_ahrs.get_semaphore());
     Location loc;
-    float alt;
-    if (_ahrs.get_location(loc) && _ahrs.home_is_set()) {
-        const Location &home_loc = _ahrs.get_home();
+    Location home_loc;
+    home_state.home_is_set = _ahrs.get_home(home_loc);
+    if (_ahrs.get_location(loc) && home_state.home_is_set) {
         home_state.home_distance_m = home_loc.get_distance(loc);
         home_state.home_bearing_cd = loc.get_bearing_to(home_loc);
     } else {
         home_state.home_distance_m = 0;
         home_state.home_bearing_cd = 0;
     }
+    float alt;
     _ahrs.get_relative_position_D_home(alt);
     home_state.rel_altitude_cm = -alt * 100;
-    home_state.home_is_set = _ahrs.home_is_set();
 }
 
 #if AP_GPS_ENABLED

@@ -58,8 +58,9 @@ void Rover::update_home()
 
     barometer.update_calibration();
 
-    if (ahrs.home_is_set() &&
-        loc.get_distance(ahrs.get_home()) < DISTANCE_HOME_MINCHANGE) {
+    Location home;
+    if (ahrs.get_home(home) &&
+        loc.get_distance(home) < DISTANCE_HOME_MINCHANGE) {
         // insufficiently moved from current home - don't change it
         return;
     }

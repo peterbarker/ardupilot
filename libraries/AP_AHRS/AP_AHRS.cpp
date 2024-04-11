@@ -3550,10 +3550,9 @@ bool AP_AHRS::get_location_from_origin_offset(Location &loc, const Vector3p &off
 // vehicle's home location
 bool AP_AHRS::get_location_from_home_offset(Location &loc, const Vector3p &offset_ned) const
 {
-    if (!home_is_set()) {
+    if (!get_home(loc)) {
         return false;
     }
-    loc = get_home();
     loc.offset(offset_ned);
 
     return true;

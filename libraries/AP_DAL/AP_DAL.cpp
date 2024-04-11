@@ -61,7 +61,9 @@ void AP_DAL::start_frame(AP_DAL::FrameType frametype)
     // update RFRN data
     const log_RFRN old = _RFRN;
     _RFRN.armed = hal.util->get_soft_armed();
-    _home = ahrs.get_home();
+    if (!ahrs.get_home(_home)) {
+        // ignore this error...
+    }
     _RFRN.lat = _home.lat;
     _RFRN.lng = _home.lng;
     _RFRN.alt = _home.alt;

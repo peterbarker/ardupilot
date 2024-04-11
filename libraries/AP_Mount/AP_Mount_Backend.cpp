@@ -864,10 +864,11 @@ uint16_t AP_Mount_Backend::get_gimbal_device_flags() const
 bool AP_Mount_Backend::get_angle_target_to_home(MountTarget& angle_rad) const
 {
     // exit immediately if home is not set
-    if (!AP::ahrs().home_is_set()) {
+    Location home;
+    if (!AP::ahrs().get_home(home)) {
         return false;
     }
-    return get_angle_target_to_location(AP::ahrs().get_home(), angle_rad);
+    return get_angle_target_to_location(home, angle_rad);
 }
 
 // get angle targets (in radians) to a vehicle with sysid of  _target_sysid
