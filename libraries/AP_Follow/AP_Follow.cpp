@@ -216,7 +216,7 @@ bool AP_Follow::get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_w
 
     // change to altitude above home if relative altitude is being used
     if (target_loc.relative_alt == 1) {
-        current_loc.alt -= AP::ahrs().get_home().alt;
+        current_loc.change_alt_frame(Location::AltFrame::ABOVE_HOME);
     }
 
     // calculate difference
