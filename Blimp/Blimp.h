@@ -442,6 +442,11 @@ private:
     Mode *mode_from_mode_num(const Mode::Number mode);
     void exit_mode(Mode *&old_flightmode, Mode *&new_flightmode);
 
+#if AP_GPS_ENABLED
+    // Do GPS init
+    uint32_t gps_log_bit() const override { return MASK_LOG_GPS; }
+#endif
+
 public:
     void failsafe_check();      // failsafe.cpp
 };

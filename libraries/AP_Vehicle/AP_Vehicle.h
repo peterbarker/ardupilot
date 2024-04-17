@@ -322,6 +322,8 @@ protected:
     // sensor drivers
 #if AP_GPS_ENABLED
     AP_GPS gps;
+    virtual void update_gps();
+    virtual uint32_t gps_log_bit() const { return -1; }
 #endif
 #if AP_BARO_ENABLED
     AP_Baro barometer;

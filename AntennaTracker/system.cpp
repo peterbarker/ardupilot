@@ -24,10 +24,6 @@ void Tracker::init_ardupilot()
     AP::compass().set_log_bit(MASK_LOG_COMPASS);
     AP::compass().init();
 
-    // GPS Initialization
-    gps.set_log_gps_bit(MASK_LOG_GPS);
-    gps.init();
-
     ahrs.init();
     ahrs.set_fly_forward(false);
 

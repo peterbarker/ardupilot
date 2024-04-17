@@ -881,6 +881,11 @@ private:
     void set_mode_land_with_pause(ModeReason reason);
     bool landing_with_GPS();
 
+#if AP_GPS_ENABLED
+    // Do GPS init
+    uint32_t gps_log_bit() const override { return MASK_LOG_GPS; }
+#endif
+
     // motor_test.cpp
     void motor_test_output();
     bool mavlink_motor_control_check(const GCS_MAVLINK &gcs_chan, bool check_rc, const char* mode);

@@ -28,9 +28,9 @@ void Tracker::compass_save() {
 /*
   read the GPS
  */
-void Tracker::update_GPS(void)
+void Tracker::update_gps(void)
 {
-    gps.update();
+    AP_Vehicle::update_gps();
 
     static uint32_t last_gps_msg_ms;
     static uint8_t ground_start_count = 5;

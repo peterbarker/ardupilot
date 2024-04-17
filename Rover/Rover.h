@@ -443,6 +443,11 @@ public:
     uint8_t get_frame_type() const { return g2.frame_type.get(); }
     AP_WheelRateControl& get_wheel_rate_control() { return g2.wheel_rate_control; }
 
+#if AP_GPS_ENABLED
+    // Do GPS init
+    uint32_t gps_log_bit() const override { return MASK_LOG_GPS; }
+#endif
+
     // Simple mode
     float simple_sin_yaw;
 };

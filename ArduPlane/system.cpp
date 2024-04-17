@@ -62,10 +62,6 @@ void Plane::init_ardupilot()
     airspeed.set_log_bit(MASK_LOG_IMU);
 #endif
 
-    // GPS Initialization
-    gps.set_log_gps_bit(MASK_LOG_GPS);
-    gps.init();
-
     init_rc_in();               // sets up rc channels from radio
 
 #if HAL_MOUNT_ENABLED

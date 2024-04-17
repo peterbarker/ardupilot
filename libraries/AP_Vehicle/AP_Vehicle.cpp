@@ -291,6 +291,12 @@ const AP_Param::GroupInfo AP_Vehicle::var_info[] = {
     AP_SUBGROUPINFO(barometer, "BARO", 32, AP_Vehicle, AP_Baro),
 #endif
 
+#if AP_GPS_ENABLED
+    // @Group: GPS
+    // @Path: ../AP_GPS/AP_GPS.cpp
+    AP_SUBGROUPINFO(gps, "GPS", 33, AP_Vehicle, AP_GPS),
+#endif
+
     AP_GROUPEND
 };
 
@@ -417,6 +423,11 @@ void AP_Vehicle::setup()
 #if AP_BARO_ENABLED
     barometer.init();
     barometer.set_log_baro_bit(baro_log_bit());
+#endif
+
+#if AP_GPS_ENABLED
+    gps.init();
+    gps.set_log_gps_bit(gps_log_bit());
 #endif
 
     // init_ardupilot is where the vehicle does most of its initialisation.
@@ -608,6 +619,9 @@ SCHED_TASK_CLASS arguments:
 const AP_Scheduler::Task AP_Vehicle::scheduler_tasks[] = {
 #if HAL_GYROFFT_ENABLED
     FAST_TASK_CLASS(AP_GyroFFT,    &vehicle.gyro_fft,       sample_gyros),
+#endif
+#if AP_GPS_ENABLED
+    SCHED_TASK(update_gps,               50, 200,  9),
 #endif
 #if AP_BARO_ENABLED
     SCHED_TASK(update_barometer,         10, 200, 40),
@@ -1139,6 +1153,15 @@ bool AP_Vehicle::block_GCS_mode_change(uint8_t mode_num, const uint8_t *mode_lis
 void AP_Vehicle::update_barometer()
 {
     barometer.update();
+}
+#endif
+
+#if AP_BARO_ENABLED
+// provide a method which the sub-classes can override to do things
+// immediately after the barometer is read:
+void AP_Vehicle::update_gps()
+{
+    gps.update();
 }
 #endif
 

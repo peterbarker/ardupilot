@@ -1031,8 +1031,12 @@ private:
                              uint32_t &log_bit) override;
     void ahrs_update();
     void update_speed_height(void);
-    void update_GPS_50Hz(void);
+    void update_gps(void) override;  // called immediately after GPS is read
     void update_GPS_10Hz(void);
+#if AP_GPS_ENABLED
+    // Do GPS init
+    uint32_t gps_log_bit() const override { return MASK_LOG_GPS; }
+#endif
     void update_compass(void);
     void update_barometer(void) override;
 #if AP_ADVANCEDFAILSAFE_ENABLED

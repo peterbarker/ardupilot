@@ -179,7 +179,11 @@ private:
     void update_ahrs();
     void compass_save();
     void update_compass(void);
-    void update_GPS(void);
+#if AP_GPS_ENABLED
+    // Do GPS init
+    uint32_t gps_log_bit() const override { return MASK_LOG_GPS; }
+    void update_gps(void) override;
+#endif
     void handle_battery_failsafe(const char* type_str, const int8_t action);
 
     // servos.cpp

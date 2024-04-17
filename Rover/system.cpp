@@ -51,10 +51,6 @@ void Rover::init_ardupilot()
     g2.beacon.init();
 #endif
 
-    // Do GPS init
-    gps.set_log_gps_bit(MASK_LOG_GPS);
-    gps.init();
-
     ins.set_log_raw_bit(MASK_LOG_IMU_RAW);
 
     init_rc_in();            // sets up rc channels deadzone
