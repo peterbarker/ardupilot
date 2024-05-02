@@ -222,6 +222,12 @@ public:
     // return protocol name as a string
     const char *protocol_name(void) const;
 
+    // return detected protocol.  In the case that backend can provide
+    // information on what *it* is decoding that will be returned by
+    // this method.  As opposed to "protocol_name" which will be the
+    // backend name e.g. "IOMCU".
+    const char *detected_protocol_name() const;
+
     // return detected protocol
     enum rcprotocol_t protocol_detected(void) const {
         return _detected_protocol;
@@ -286,6 +292,10 @@ private:
 
     // allowed RC protocols mask (first bit means "all")
     uint32_t rc_protocols_mask;
+
+    rcprotocol_t _last_detected_protocol;
+    bool _last_detected_using_uart;
+    void announce_detected();
 
 #endif  // AP_RCPROTCOL_ENABLED
 
