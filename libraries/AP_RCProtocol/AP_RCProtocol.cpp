@@ -460,7 +460,7 @@ const char *AP_RCProtocol::detected_protocol_name() const
         return ((AP_RCProtocol_IOMCU*)(backend[AP_RCProtocol::IOMCU]))->get_rc_protocol();
 #endif
     default:
-        return protocol_name();
+        return protocol_name_from_protocol(_detected_protocol);
     }
 }
 
@@ -699,14 +699,6 @@ const char *AP_RCProtocol::protocol_name_from_protocol(rcprotocol_t protocol)
 }
 
 #if AP_RCPROTOCOL_ENABLED
-/*
-  return protocol name
- */
-const char *AP_RCProtocol::protocol_name(void) const
-{
-    return protocol_name_from_protocol(_detected_protocol);
-}
-
 /*
   add a uart to decode
  */

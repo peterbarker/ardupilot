@@ -219,9 +219,6 @@ public:
     int16_t get_RSSI(void) const;
     int16_t get_rx_link_quality(void) const;
 
-    // return protocol name as a string
-    const char *protocol_name(void) const;
-
     // return detected protocol.  In the case that backend can provide
     // information on what *it* is decoding that will be returned by
     // this method.  As opposed to "protocol_name" which will be the
