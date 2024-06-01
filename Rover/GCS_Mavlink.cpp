@@ -626,6 +626,7 @@ const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
     MAV_STREAM_TERMINATOR // must have this at end of stream_entries
 };
 
+#if ROVER_MODE_GUIDED_ENABLED
 bool GCS_MAVLINK_Rover::handle_guided_request(AP_Mission::Mission_Command &cmd)
 {
     if (!rover.control_mode->in_guided_mode()) {
@@ -636,6 +637,7 @@ bool GCS_MAVLINK_Rover::handle_guided_request(AP_Mission::Mission_Command &cmd)
     // make any new wp uploaded instant (in case we are already in Guided mode)
     return rover.mode_guided.set_desired_location(cmd.content.location);
 }
+#endif  // ROVER_MODE_GUIDED_ENABLED
 
 MAV_RESULT GCS_MAVLINK_Rover::_handle_command_preflight_calibration(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
@@ -668,19 +670,23 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_packet(const mavlink_command_in
         }
         return MAV_RESULT_ACCEPTED;
 
+#if ROVER_MODE_GUIDED_ENABLED
     case MAV_CMD_DO_REPOSITION:
         return handle_command_int_do_reposition(packet);
+#endif
 
     case MAV_CMD_DO_SET_REVERSE:
         // param1 : Direction (0=Forward, 1=Reverse)
         rover.control_mode->set_reversed(is_equal(packet.param1,1.0f));
         return MAV_RESULT_ACCEPTED;
 
+#if ROVER_MODE_RTL_ENABLED
     case MAV_CMD_NAV_RETURN_TO_LAUNCH:
         if (rover.set_mode(rover.mode_rtl, ModeReason::GCS_COMMAND)) {
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_FAILED;
+#endif
 
     case MAV_CMD_DO_MOTOR_TEST:
         // param1 : motor sequence number (a number from 1 to max number of motors on the vehicle)
@@ -693,13 +699,15 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_packet(const mavlink_command_in
                                               static_cast<int16_t>(packet.param3),
                                               packet.param4);
 
+#if ROVER_MODE_AUTO_ENABLED
     case MAV_CMD_MISSION_START:
         if (rover.set_mode(rover.mode_auto, ModeReason::GCS_COMMAND)) {
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_FAILED;
+#endif
 
-#if AP_MAVLINK_MAV_CMD_NAV_SET_YAW_SPEED_ENABLED
+#if AP_MAVLINK_MAV_CMD_NAV_SET_YAW_SPEED_ENABLED && ROVER_MODE_GUIDED_ENABLED
     case MAV_CMD_NAV_SET_YAW_SPEED:
         send_received_message_deprecation_warning("MAV_CMD_NAV_SET_YAW_SPEED");
         return handle_command_nav_set_yaw_speed(packet, msg);
@@ -710,6 +718,7 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_packet(const mavlink_command_in
     }
 }
 
+#if ROVER_MODE_GUIDED_ENABLED
 #if AP_MAVLINK_MAV_CMD_NAV_SET_YAW_SPEED_ENABLED
 MAV_RESULT GCS_MAVLINK_Rover::handle_command_nav_set_yaw_speed(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
@@ -732,7 +741,7 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_nav_set_yaw_speed(const mavlink_com
         }
         return MAV_RESULT_ACCEPTED;
 }
-#endif
+#endif  // AP_MAVLINK_MAV_CMD_NAV_SET_YAW_SPEED_ENABLED
 
 MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_do_reposition(const mavlink_command_int_t &packet)
 {
@@ -773,11 +782,13 @@ MAV_RESULT GCS_MAVLINK_Rover::handle_command_int_do_reposition(const mavlink_com
 
     return MAV_RESULT_ACCEPTED;
 }
+#endif  // ROVER_MODE_GUIDED_ENABLED
 
 void GCS_MAVLINK_Rover::handle_message(const mavlink_message_t &msg)
 {
     switch (msg.msgid) {
 
+#if ROVER_MODE_GUIDED_ENABLED
     case MAVLINK_MSG_ID_SET_ATTITUDE_TARGET:
         handle_set_attitude_target(msg);
         break;
@@ -789,6 +800,7 @@ void GCS_MAVLINK_Rover::handle_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT:
         handle_set_position_target_global_int(msg);
         break;
+#endif
 
     default:
         GCS_MAVLINK::handle_message(msg);
@@ -802,6 +814,7 @@ void GCS_MAVLINK_Rover::handle_manual_control_axes(const mavlink_manual_control_
     manual_override(rover.channel_throttle, packet.z, 1000, 2000, tnow);
 }
 
+#if ROVER_MODE_GUIDED_ENABLED
 void GCS_MAVLINK_Rover::handle_set_attitude_target(const mavlink_message_t &msg)
 {
     // decode packet
@@ -1054,6 +1067,7 @@ void GCS_MAVLINK_Rover::handle_set_position_target_global_int(const mavlink_mess
         rover.mode_guided.set_desired_turn_rate_and_speed(target_turn_rate_cds, 0.0f);
     }
 }
+#endif  // ROVER_MODE_GUIDED_ENABLED
 
 /*
   handle a LANDING_TARGET command. The timestamp has been jitter corrected

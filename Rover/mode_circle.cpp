@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if ROVER_MODE_CIRCLE_ENABLED
+
 #define AR_CIRCLE_ACCEL_DEFAULT         1.0 // default acceleration in m/s/s if not specified by user
 #define AR_CIRCLE_RADIUS_MIN            0.5 // minimum radius in meters
 #define AR_CIRCLE_REACHED_EDGE_DIST     0.2 // vehicle has reached edge if within 0.2m
@@ -271,3 +273,5 @@ void ModeCircle::check_config_radius()
         gcs().send_text(MAV_SEVERITY_WARNING, "Circle: radius increased to TURN_RADIUS (%4.1f)", (double)rover.g2.turn_radius);
     }
 }
+
+#endif  // ROVER_MODE_CIRCLE_ENABLED

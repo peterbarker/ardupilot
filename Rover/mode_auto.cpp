@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if ROVER_MODE_AUTO_ENABLED
+
 #define AUTO_GUIDED_SEND_TARGET_MS 1000
 
 bool ModeAuto::_enter()
@@ -1060,3 +1062,5 @@ bool ModeAuto::verify_nav_script_time()
     return false;
 }
 #endif
+
+#endif  // ROVER_MODE_AUTO_ENABLED

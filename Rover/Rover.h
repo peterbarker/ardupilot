@@ -99,11 +99,11 @@ public:
     friend class ModeManual;
     friend class ModeRTL;
     friend class ModeSmartRTL;
-#if MODE_FOLLOW_ENABLED == ENABLED
+#if ROVER_MODE_FOLLOW_ENABLED
     friend class ModeFollow;
 #endif
     friend class ModeSimple;
-#if MODE_DOCK_ENABLED == ENABLED
+#if ROVER_MODE_DOCK_ENABLED
     friend class ModeDock;
 #endif
 
@@ -242,20 +242,40 @@ private:
     bool motor_test;
 
     ModeInitializing mode_initializing;
+#if ROVER_MODE_HOLD_ENABLED
     ModeHold mode_hold;
+#endif
+#if ROVER_MODE_MANUAL_ENABLED
     ModeManual mode_manual;
+#endif
+#if ROVER_MODE_ACRO_ENABLED
     ModeAcro mode_acro;
+#endif
+#if ROVER_MODE_GUIDED_ENABLED
     ModeGuided mode_guided;
+#endif
+#if ROVER_MODE_AUTO_ENABLED
     ModeAuto mode_auto;
+#endif
+#if ROVER_MODE_LOITER_ENABLED
     ModeLoiter mode_loiter;
+#endif
+#if ROVER_MODE_STEERING_ENABLED
     ModeSteering mode_steering;
+#endif
+#if ROVER_MODE_RTL_ENABLED
     ModeRTL mode_rtl;
+#endif
+#if ROVER_MODE_SMARTRTL_ENABLED
     ModeSmartRTL mode_smartrtl;
-#if MODE_FOLLOW_ENABLED == ENABLED
+#endif
+#if ROVER_MODE_FOLLOW_ENABLED
     ModeFollow mode_follow;
 #endif
+#if ROVER_MODE_SIMPLE_ENABLED
     ModeSimple mode_simple;
-#if MODE_DOCK_ENABLED == ENABLED
+#endif
+#if ROVER_MODE_DOCK_ENABLED
     ModeDock mode_dock;
 #endif
 
@@ -269,16 +289,18 @@ private:
     cruise_learn_t cruise_learn;
 
     // Rover.cpp
-#if AP_SCRIPTING_ENABLED || AP_EXTERNAL_CONTROL_ENABLED
+#if AP_SCRIPTING_ENABLED || AP_EXTERNAL_CONTROL_ENABLED && ROVER_MODE_GUIDED_ENABLED
     bool set_target_location(const Location& target_loc) override;
 #endif
 
 #if AP_SCRIPTING_ENABLED
+#if ROVER_MODE_GUIDED_ENABLED
     bool set_target_velocity_NED(const Vector3f& vel_ned) override;
     bool set_steering_and_throttle(float steering, float throttle) override;
-    bool get_steering_and_throttle(float& steering, float& throttle) override;
     // set desired turn rate (degrees/sec) and speed (m/s). Used for scripting
     bool set_desired_turn_rate_and_speed(float turn_rate, float speed) override;
+#endif
+    bool get_steering_and_throttle(float& steering, float& throttle) override;
     bool set_desired_speed(float speed) override;
     bool get_control_output(AP_Vehicle::ControlOutput control_output, float &control_value) override;
     bool nav_scripting_enable(uint8_t mode) override;
@@ -393,7 +415,11 @@ private:
     bool set_mode(Mode::Number new_mode, ModeReason reason);
     uint8_t get_mode() const override { return (uint8_t)control_mode->mode_number(); }
     bool current_mode_requires_mission() const override {
+#if ROVER_MODE_AUTO_ENABLED
         return control_mode == &mode_auto;
+#else
+        return false;
+#endif
     }
 
     void startup_INS(void);
@@ -409,10 +435,18 @@ private:
 
     enum class FailsafeAction: int8_t {
         None          = 0,
+#if ROVER_MODE_RTL_ENABLED
         RTL           = 1,
+#endif
+#if ROVER_MODE_HOLD_ENABLED
         Hold          = 2,
+#endif
+#if ROVER_MODE_SMARTRTL_ENABLED
         SmartRTL      = 3,
+#endif
+#if ROVER_MODE_SMARTRTL_ENABLED && ROVER_MODE_HOLD_ENABLED
         SmartRTL_Hold = 4,
+#endif
         Terminate     = 5
     };
 
@@ -421,14 +455,22 @@ private:
     };
 
     static constexpr int8_t _failsafe_priorities[] = {
-                                                       (int8_t)FailsafeAction::Terminate,
-                                                       (int8_t)FailsafeAction::Hold,
-                                                       (int8_t)FailsafeAction::RTL,
-                                                       (int8_t)FailsafeAction::SmartRTL_Hold,
-                                                       (int8_t)FailsafeAction::SmartRTL,
-                                                       (int8_t)FailsafeAction::None,
-                                                       -1 // the priority list must end with a sentinel of -1
-                                                      };
+        (int8_t)FailsafeAction::Terminate,
+#if ROVER_MODE_HOLD_ENABLED
+        (int8_t)FailsafeAction::Hold,
+#endif
+#if ROVER_MODE_RTL_ENABLED
+        (int8_t)FailsafeAction::RTL,
+#endif
+#if ROVER_MODE_SMARTRTL_ENABLED && ROVER_MODE_HOLD_ENABLED
+        (int8_t)FailsafeAction::SmartRTL_Hold,
+#endif
+#if ROVER_MODE_SMARTRTL_ENABLED
+        (int8_t)FailsafeAction::SmartRTL,
+#endif
+        (int8_t)FailsafeAction::None,
+        -1 // the priority list must end with a sentinel of -1
+    };
     static_assert(_failsafe_priorities[ARRAY_SIZE(_failsafe_priorities) - 1] == -1,
                   "_failsafe_priorities is missing the sentinel");
 

@@ -340,7 +340,7 @@ public:
     AP_Proximity proximity;
 #endif
 
-#if MODE_DOCK_ENABLED == ENABLED
+#if ROVER_MODE_DOCK_ENABLED
     // we need a pointer to the mode for the G2 table
     class ModeDock *mode_dock_ptr;
 #endif
@@ -433,7 +433,9 @@ public:
     // FS GCS timeout trigger time
     AP_Float fs_gcs_timeout;
 
+#if ROVER_MODE_CIRCLE_ENABLED
     class ModeCircle mode_circle;
+#endif
 };
 
 extern const AP_Param::Info var_info[];

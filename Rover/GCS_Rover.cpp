@@ -11,18 +11,26 @@ uint8_t GCS_Rover::sysid_this_mav() const
 
 bool GCS_Rover::simple_input_active() const
 {
+#if ROVER_MODE_SIMPLE_ENABLED
     if (rover.control_mode != &rover.mode_simple) {
         return false;
     }
     return (rover.g2.simple_type == ModeSimple::Simple_InitialHeading);
+#else
+    return false;
+#endif
 }
 
 bool GCS_Rover::supersimple_input_active() const
 {
+#if ROVER_MODE_SIMPLE_ENABLED
     if (rover.control_mode != &rover.mode_simple) {
         return false;
     }
     return (rover.g2.simple_type == ModeSimple::Simple_CardinalDirections);
+#else
+    return false;
+#endif
 }
 
 void GCS_Rover::update_vehicle_sensor_status_flags(void)
