@@ -115,7 +115,9 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
     SCHED_TASK(fence_check,            10,    200,  84),
 #endif
     SCHED_TASK(ekf_check,              10,    100,  87),
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
     SCHED_TASK_CLASS(ModeSmartRTL,        &rover.mode_smartrtl,    save_position,   3,  200,  90),
+#endif
     SCHED_TASK(one_second_loop,         1,   1500,  96),
 #if HAL_SPRAYER_ENABLED
     SCHED_TASK_CLASS(AC_Sprayer,          &rover.g2.sprayer,       update,          3,  90,  99),
@@ -147,7 +149,7 @@ void Rover::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
     log_bit = MASK_LOG_PM;
 }
 
-constexpr int8_t Rover::_failsafe_priorities[7];
+constexpr int8_t Rover::_failsafe_priorities[];
 
 Rover::Rover(void) :
     AP_Vehicle(),
@@ -158,6 +160,7 @@ Rover::Rover(void) :
 }
 
 #if AP_SCRIPTING_ENABLED || AP_EXTERNAL_CONTROL_ENABLED
+#if AP_ROVER_MODE_GUIDED_ENABLED
 // set target location (for use by external control and scripting)
 bool Rover::set_target_location(const Location& target_loc)
 {
@@ -168,9 +171,11 @@ bool Rover::set_target_location(const Location& target_loc)
 
     return mode_guided.set_desired_location(target_loc);
 }
+#endif  // AP_ROVER_MODE_GUIDED_ENABLED
 #endif //AP_SCRIPTING_ENABLED || AP_EXTERNAL_CONTROL_ENABLED
 
 #if AP_SCRIPTING_ENABLED
+#if AP_ROVER_MODE_GUIDED_ENABLED
 // set target velocity (for use by scripting)
 bool Rover::set_target_velocity_NED(const Vector3f& vel_ned, bool align_yaw_to_target)
 {
@@ -203,6 +208,7 @@ bool Rover::set_steering_and_throttle(float steering, float throttle)
     mode_guided.set_steering_and_throttle(steering, throttle);
     return true;
 }
+#endif  // AP_ROVER_MODE_GUIDED_ENABLED
 
 // get steering and throttle (-1 to +1) (for use by scripting)
 bool Rover::get_steering_and_throttle(float& steering, float& throttle)
@@ -212,6 +218,7 @@ bool Rover::get_steering_and_throttle(float& steering, float& throttle)
     return true;
 }
 
+#if AP_ROVER_MODE_GUIDED_ENABLED
 // set desired turn rate (degrees/sec) and speed (m/s). Used for scripting
 bool Rover::set_desired_turn_rate_and_speed(float turn_rate, float speed)
 {
@@ -224,6 +231,7 @@ bool Rover::set_desired_turn_rate_and_speed(float turn_rate, float speed)
     mode_guided.set_desired_turn_rate_and_speed(turn_rate * 100.0f, speed);
     return true;
 }
+#endif
 
 // set desired nav speed (m/s). Used for scripting.
 bool Rover::set_desired_speed(float speed)

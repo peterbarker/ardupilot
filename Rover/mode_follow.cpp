@@ -1,6 +1,6 @@
 #include "Rover.h"
 
-#if MODE_FOLLOW_ENABLED
+#if AP_ROVER_MODE_FOLLOW_ENABLED
 // initialize follow mode
 bool ModeFollow::_enter()
 {
@@ -103,4 +103,4 @@ bool ModeFollow::set_desired_speed(float speed)
     return true;
 }
 
-#endif // MODE_FOLLOW_ENABLED
+#endif // AP_ROVER_MODE_FOLLOW_ENABLED

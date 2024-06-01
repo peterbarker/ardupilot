@@ -70,41 +70,58 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
     if ((failsafe.triggered == 0) &&
         (failsafe.bits != 0) &&
         (millis() - failsafe.start_time > g.fs_timeout * 1000) &&
+#if AP_ROVER_MODE_RTL_ENABLED
         (control_mode != &mode_rtl) &&
-        ((control_mode != &mode_hold || (g2.fs_options & (uint32_t)Failsafe_Options::Failsafe_Option_Active_In_Hold)))) {
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED
+        ((control_mode != &mode_hold || (g2.fs_options & (uint32_t)Failsafe_Options::Failsafe_Option_Active_In_Hold))) &&
+#endif
+        true) {
         failsafe.triggered = failsafe.bits;
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "%s Failsafe", type_str);
 
         // clear rc overrides
         RC_Channels::clear_overrides();
 
+#if AP_ROVER_MODE_AUTO_ENABLED
         if ((control_mode == &mode_auto) &&
             ((failsafe_type == FAILSAFE_EVENT_THROTTLE && g.fs_throttle_enabled == FS_THR_ENABLED_CONTINUE_MISSION) ||
              (failsafe_type == FAILSAFE_EVENT_GCS && g.fs_gcs_enabled == FS_GCS_ENABLED_CONTINUE_MISSION))) {
             // continue with mission in auto mode
             GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Failsafe - Continuing Auto Mode");
-        } else {
+            return;
+        }
+#endif
+
             switch ((FailsafeAction)g.fs_action.get()) {
             case FailsafeAction::None:
                 break;
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
             case FailsafeAction::SmartRTL:
                 if (set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
                     break;
                 }
                 FALLTHROUGH;
+#endif
+#if AP_ROVER_MODE_RTL_ENABLED
             case FailsafeAction::RTL:
                 if (set_mode(mode_rtl, ModeReason::FAILSAFE)) {
                     break;
                 }
                 FALLTHROUGH;
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED
             case FailsafeAction::Hold:
                 set_mode(mode_hold, ModeReason::FAILSAFE);
                 break;
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED && AP_ROVER_MODE_SMARTRTL_ENABLED
             case FailsafeAction::SmartRTL_Hold:
                 if (!set_mode(mode_smartrtl, ModeReason::FAILSAFE)) {
                     set_mode(mode_hold, ModeReason::FAILSAFE);
                 }
                 break;
+#endif  // AP_ROVER_MODE_HOLD_ENABLED && AP_ROVER_MODE_SMARTRTL_ENABLED
             case FailsafeAction::Loiter_Hold:
                 if (!set_mode(mode_loiter, ModeReason::FAILSAFE)) {
                     set_mode(mode_hold, ModeReason::FAILSAFE);
@@ -114,7 +131,6 @@ void Rover::failsafe_trigger(uint8_t failsafe_type, const char* type_str, bool o
                 arming.disarm(AP_Arming::Method::FAILSAFE_ACTION_TERMINATE);
                 break;
             }
-        }
     }
 }
 
@@ -123,29 +139,37 @@ void Rover::handle_battery_failsafe(const char* type_str, const int8_t action)
         switch ((FailsafeAction)action) {
             case FailsafeAction::None:
                 break;
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
             case FailsafeAction::SmartRTL:
                 if (set_mode(mode_smartrtl, ModeReason::BATTERY_FAILSAFE)) {
                     break;
                 }
                 FALLTHROUGH;
+#endif
+#if AP_ROVER_MODE_RTL_ENABLED
             case FailsafeAction::RTL:
                 if (set_mode(mode_rtl, ModeReason::BATTERY_FAILSAFE)) {
                     break;
                 }
                 FALLTHROUGH;
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED
             case FailsafeAction::Hold:
                 set_mode(mode_hold, ModeReason::BATTERY_FAILSAFE);
                 break;
+#endif  // AP_ROVER_MODE_HOLD_ENABLED
             case FailsafeAction::Loiter_Hold:
                 if (!set_mode(mode_loiter, ModeReason::BATTERY_FAILSAFE)) {
                     set_mode(mode_hold, ModeReason::BATTERY_FAILSAFE);
                 }
                 break;
+#if AP_ROVER_MODE_HOLD_ENABLED && AP_ROVER_MODE_SMARTRTL_ENABLED
             case FailsafeAction::SmartRTL_Hold:
                 if (!set_mode(mode_smartrtl, ModeReason::BATTERY_FAILSAFE)) {
                     set_mode(mode_hold, ModeReason::BATTERY_FAILSAFE);
                 }
                 break;
+#endif
             case FailsafeAction::Terminate:
 #if AP_ROVER_ADVANCED_FAILSAFE_ENABLED
                 char battery_type_str[17];

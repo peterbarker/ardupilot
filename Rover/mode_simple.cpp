@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_MODE_SIMPLE_ENABLED
+
 void ModeSimple::init_heading()
 {
     _initial_heading_cd = ahrs.yaw_sensor;
@@ -30,3 +32,5 @@ void ModeSimple::update()
     calc_steering_to_heading(desired_heading_cd);
     calc_throttle(desired_speed, true);
 }
+
+#endif  // AP_ROVER_MODE_SIMPLE_ENABLED

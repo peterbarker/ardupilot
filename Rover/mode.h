@@ -12,21 +12,45 @@ public:
     // Auto Pilot modes
     // ----------------
     enum class Number : uint8_t {
+#if AP_ROVER_MODE_MANUAL_ENABLED
         MANUAL       = 0,
+#endif
+#if AP_ROVER_MODE_ACRO_ENABLED
         ACRO         = 1,
+#endif
+#if AP_ROVER_MODE_STEERING_ENABLED
         STEERING     = 3,
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED
         HOLD         = 4,
+#endif
+#if AP_ROVER_MODE_LOITER_ENABLED
         LOITER       = 5,
+#endif
+#if AP_ROVER_MODE_FOLLOW_ENABLED
         FOLLOW       = 6,
+#endif
+#if AP_ROVER_MODE_SIMPLE_ENABLED
         SIMPLE       = 7,
-#if MODE_DOCK_ENABLED
+#endif
+#if AP_ROVER_MODE_DOCK_ENABLED
         DOCK         = 8,
 #endif
+#if AP_ROVER_MODE_CIRCLE_ENABLED
         CIRCLE       = 9,
+#endif
+#if AP_ROVER_MODE_AUTO_ENABLED
         AUTO         = 10,
+#endif
+#if AP_ROVER_MODE_RTL_ENABLED
         RTL          = 11,
+#endif
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
         SMART_RTL    = 12,
+#endif
+#if AP_ROVER_MODE_GUIDED_ENABLED
         GUIDED       = 15,
+#endif
         INITIALISING = 16,
         // Mode number 30 reserved for "offboard" for external/lua control.
     };
@@ -218,6 +242,7 @@ protected:
 };
 
 
+#if AP_ROVER_MODE_ACRO_ENABLED
 class ModeAcro : public Mode
 {
 public:
@@ -238,8 +263,9 @@ public:
     // sailboats in acro mode support user manually initiating tacking from transmitter
     void handle_tack_request() override;
 };
+#endif  // AP_ROVER_MODE_ACRO_ENABLED
 
-
+#if AP_ROVER_MODE_AUTO_ENABLED
 class ModeAuto : public Mode
 {
 public:
@@ -405,7 +431,9 @@ private:
     // Mission change detector
     AP_Mission_ChangeDetector mis_change_detector;
 };
+#endif  // AP_ROVER_MODE_AUTO_ENABLED
 
+#if AP_ROVER_MODE_CIRCLE_ENABLED
 class ModeCircle : public Mode
 {
 public:
@@ -505,7 +533,9 @@ protected:
     float dist_to_edge_m;   // distance to edge of circle in meters (equivalent to crosstrack error)
     bool tracking_back;     // true if the vehicle is trying to track back onto the circle
 };
+#endif  // AP_ROVER_MODE_CIRCLE_ENABLED
 
+#if AP_ROVER_MODE_GUIDED_ENABLED
 class ModeGuided : public Mode
 {
 public:
@@ -611,8 +641,9 @@ protected:
         Location start_loc; // starting location for checking horiz_max limit
     } limit;
 };
+#endif  // AP_ROVER_MODE_GUIDED_ENABLED
 
-
+#if AP_ROVER_MODE_HOLD_ENABLED
 class ModeHold : public Mode
 {
 public:
@@ -630,7 +661,9 @@ public:
     bool requires_position() const override { return false; }
     bool requires_velocity() const override { return false; }
 };
+#endif  // AP_ROVER_MODE_HOLD_ENABLED
 
+#if AP_ROVER_MODE_LOITER_ENABLED
 class ModeLoiter : public Mode
 {
 public:
@@ -662,7 +695,9 @@ protected:
     Location _destination;      // target location to hold position around
     float _desired_speed;       // desired speed (ramped down from initial speed to zero)
 };
+#endif  // AP_ROVER_MODE_LOITER_ENABLED
 
+#if AP_ROVER_MODE_MANUAL_ENABLED
 class ModeManual : public Mode
 {
 public:
@@ -685,8 +720,9 @@ protected:
 
     void _exit() override;
 };
+#endif  // AP_ROVER_MODE_MANUAL_ENABLED
 
-
+#if AP_ROVER_MODE_RTL_ENABLED
 class ModeRTL : public Mode
 {
 public:
@@ -721,7 +757,9 @@ protected:
     bool _loitering;        // true if loitering at end of RTL
 
 };
+#endif  // AP_ROVER_MODE_RTL_ENABLED
 
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
 class ModeSmartRTL : public Mode
 {
 public:
@@ -765,9 +803,9 @@ protected:
     bool _load_point;
     bool _loitering;        // true if loitering at end of SRTL
 };
+#endif  // AP_ROVER_MODE_SMARTRTL_ENABLED
 
-
-
+#if AP_ROVER_MODE_STEERING_ENABLED
 class ModeSteering : public Mode
 {
 public:
@@ -792,6 +830,7 @@ private:
 
     float _desired_lat_accel;   // desired lateral acceleration calculated from pilot steering input
 };
+#endif  // AP_ROVER_MODE_STEERING_ENABLED
 
 class ModeInitializing : public Mode
 {
@@ -813,7 +852,8 @@ protected:
     bool _enter() override { return false; };
 };
 
-#if MODE_FOLLOW_ENABLED
+
+#if AP_ROVER_MODE_FOLLOW_ENABLED
 class ModeFollow : public Mode
 {
 public:
@@ -848,8 +888,9 @@ protected:
 
     float _desired_speed;       // desired speed in m/s
 };
-#endif
+#endif  // AP_ROVER_MODE_FOLLOW_ENABLED
 
+#if AP_ROVER_MODE_SIMPLE_ENABLED
 class ModeSimple : public Mode
 {
 public:
@@ -872,8 +913,9 @@ private:
     float _initial_heading_cd;  // vehicle heading (in centi-degrees) at moment vehicle was armed
     float _desired_heading_cd;  // latest desired heading (in centi-degrees) from pilot
 };
+#endif  // AP_ROVER_MODE_SIMPLE_ENABLED
 
-#if MODE_DOCK_ENABLED
+#if AP_ROVER_MODE_DOCK_ENABLED
 class ModeDock : public Mode
 {
 public:
@@ -923,4 +965,4 @@ protected:
     bool _docking_complete = false;     // flag to mark docking complete when we are close enough to the dock
     bool _loitering = false; // true if we are loitering after mission completion
 };
-#endif
+#endif  // AP_ROVER_MODE_DOCK_ENABLED

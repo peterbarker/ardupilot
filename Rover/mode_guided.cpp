@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_MODE_GUIDED_ENABLED
+
 bool ModeGuided::_enter()
 {
     // initialise submode to stop or loiter
@@ -445,3 +447,5 @@ bool ModeGuided::use_scurves_for_navigation() const
 {
     return ((g2.guided_options.get() & uint32_t(Options::SCurvesUsedForNavigation)) != 0);
 }
+
+#endif  // AP_ROVER_MODE_GUIDED_ENABLED

@@ -192,6 +192,20 @@ BUILD_OPTIONS = [
     Feature('Mission', 'MISSION_NAV_PAYLOAD_PLACE', 'AP_MISSION_NAV_PAYLOAD_PLACE_ENABLED', 'Enable NAV_PAYLOAD_PLACE', 0, None),  # noqa
     Feature('Copter', 'AC_PAYLOAD_PLACE_ENABLED', 'AC_PAYLOAD_PLACE_ENABLED', 'Enable Copter Payload Place', 0, 'MISSION_NAV_PAYLOAD_PLACE'),  # noqa
 
+    Feature('Rover', 'ROVER_MODE_ACRO', 'AP_ROVER_MODE_ACRO_ENABLED', 'Enable Acro Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_AUTO', 'AP_ROVER_MODE_AUTO_ENABLED', 'Enable Auto Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_CIRCLE', 'AP_ROVER_MODE_CIRCLE_ENABLED', 'Enable Circle Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_DOCK', 'AP_ROVER_MODE_DOCK_ENABLED', 'Enable Dock Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_FOLLOW', 'AP_ROVER_MODE_FOLLOW_ENABLED', 'Enable Follow Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_GUIDED', 'AP_ROVER_MODE_GUIDED_ENABLED', 'Enable Guided Mode', 0, None),
+    #    Feature('Rover', 'AP_ROVER_MODE_HOLD', 'AP_ROVER_MODE_HOLD_ENABLED', 'Enable Hold Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_LOITER', 'AP_ROVER_MODE_LOITER_ENABLED', 'Enable Loiter Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_MANUAL', 'AP_ROVER_MODE_MANUAL_ENABLED', 'Enable Manual Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_RTL', 'AP_ROVER_MODE_RTL_ENABLED', 'Enable RTL Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_SIMPLE', 'AP_ROVER_MODE_SIMPLE_ENABLED', 'Enable Simple Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_SMARTRTL', 'AP_ROVER_MODE_SMARTRTL_ENABLED', 'Enable SmartRTL Mode', 0, None),
+    Feature('Rover', 'ROVER_MODE_STEERING', 'AP_ROVER_MODE_STEERING_ENABLED', 'Enable Steering Mode', 0, None),
+
     Feature('Compass', 'AK09916', 'AP_COMPASS_AK09916_ENABLED', 'Enable AK0991x compasses', 1, None),
     Feature('Compass', 'AK8963', 'AP_COMPASS_AK8963_ENABLED', 'Enable AK8963 compasses', 1, None),
     Feature('Compass', 'BMM150', 'AP_COMPASS_BMM150_ENABLED', 'Enable BMM150 compasses', 1, None),

@@ -6,6 +6,23 @@
   Rover parameter definitions
 */
 
+
+#ifndef ROVER_INITIAL_MODE
+#if AP_ROVER_MODE_MANUAL_ENABLED
+#define ROVER_INITIAL_MODE Mode::Number::MANUAL
+#else
+#define ROVER_INITIAL_MODE Mode::Number::HOLD
+#endif
+#endif
+
+#ifndef ROVER_DEFAULT_RC_MODE
+#if AP_ROVER_MODE_MANUAL_ENABLED
+#define ROVER_DEFAULT_RC_MODE Mode::Number::MANUAL
+#else
+#define ROVER_DEFAULT_RC_MODE Mode::Number::HOLD
+#endif
+#endif
+
 const AP_Param::Info Rover::var_info[] = {
     // @Param: FORMAT_VERSION
     // @DisplayName: Eeprom format version number
@@ -31,7 +48,7 @@ const AP_Param::Info Rover::var_info[] = {
     // @Description: This selects the mode to start in on boot. This is useful for when you want to start in AUTO mode on boot without a receiver. Usually used in combination with when AUTO_TRIGGER_PIN or AUTO_KICKSTART.
     // @CopyValuesFrom: MODE1
     // @User: Advanced
-    GSCALAR(initial_mode,        "INITIAL_MODE",     (int8_t)Mode::Number::MANUAL),
+    GSCALAR(initial_mode,        "INITIAL_MODE",     (uint8_t)ROVER_INITIAL_MODE),
 
     // SYSID_THISMAV was here
 
@@ -159,38 +176,38 @@ const AP_Param::Info Rover::var_info[] = {
     // @Values: 0:Manual,1:Acro,3:Steering,4:Hold,5:Loiter,6:Follow,7:Simple,8:Dock,9:Circle,10:Auto,11:RTL,12:SmartRTL,15:Guided
     // @User: Standard
     // @Description: Driving mode for switch position 1 (910 to 1230 and above 2049)
-    GSCALAR(mode1,           "MODE1",         (int8_t)Mode::Number::MANUAL),
+    GSCALAR(mode1,           "MODE1",         (uint8_t)ROVER_DEFAULT_RC_MODE),
 
     // @Param: MODE2
     // @DisplayName: Mode2
     // @Description: Driving mode for switch position 2 (1231 to 1360)
     // @CopyValuesFrom: MODE1
     // @User: Standard
-    GSCALAR(mode2,           "MODE2",         (int8_t)Mode::Number::MANUAL),
+    GSCALAR(mode2,           "MODE2",         (uint8_t)ROVER_DEFAULT_RC_MODE),
 
     // @Param: MODE3
     // @CopyFieldsFrom: MODE1
     // @DisplayName: Mode3
     // @Description: Driving mode for switch position 3 (1361 to 1490)
-    GSCALAR(mode3,           "MODE3",         (int8_t)Mode::Number::MANUAL),
+    GSCALAR(mode3,           "MODE3",         (uint8_t)ROVER_DEFAULT_RC_MODE),
 
     // @Param: MODE4
     // @CopyFieldsFrom: MODE1
     // @DisplayName: Mode4
     // @Description: Driving mode for switch position 4 (1491 to 1620)
-    GSCALAR(mode4,           "MODE4",         (int8_t)Mode::Number::MANUAL),
+    GSCALAR(mode4,           "MODE4",         (uint8_t)ROVER_DEFAULT_RC_MODE),
 
     // @Param: MODE5
     // @CopyFieldsFrom: MODE1
     // @DisplayName: Mode5
     // @Description: Driving mode for switch position 5 (1621 to 1749)
-    GSCALAR(mode5,           "MODE5",         (int8_t)Mode::Number::MANUAL),
+    GSCALAR(mode5,           "MODE5",         (uint8_t)ROVER_DEFAULT_RC_MODE),
 
     // @Param: MODE6
     // @CopyFieldsFrom: MODE1
     // @DisplayName: Mode6
     // @Description: Driving mode for switch position 6 (1750 to 2049)
-    GSCALAR(mode6,           "MODE6",         (int8_t)Mode::Number::MANUAL),
+    GSCALAR(mode6,           "MODE6",         (uint8_t)ROVER_DEFAULT_RC_MODE),
 
     // variables not in the g class which contain EEPROM saved variables
 
@@ -293,9 +310,11 @@ const AP_Param::Info Rover::var_info[] = {
     GOBJECTN(ahrs.EKF3, NavEKF3, "EK3_", NavEKF3),
 #endif
 
+#if AP_ROVER_MODE_AUTO_ENABLED
     // @Group: MIS_
     // @Path: ../libraries/AP_Mission/AP_Mission.cpp
     GOBJECTN(mode_auto.mission, mission, "MIS_", AP_Mission),
+#endif  // AP_ROVER_MODE_AUTO_ENABLED
 
 #if AP_RSSI_ENABLED
     // @Group: RSSI_
@@ -607,7 +626,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("MANUAL_OPTIONS", 53, ParametersG2, manual_options, 0),
 
-#if MODE_DOCK_ENABLED
+#if AP_ROVER_MODE_DOCK_ENABLED
     // @Group: DOCK
     // @Path: mode_dock.cpp
     AP_SUBGROUPPTR(mode_dock_ptr, "DOCK", 54, ParametersG2, ModeDock),
@@ -630,9 +649,11 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("FS_GCS_TIMEOUT", 56, ParametersG2, fs_gcs_timeout, 5),
 
+#if AP_ROVER_MODE_CIRCLE_ENABLED
     // @Group: CIRC
     // @Path: mode_circle.cpp
     AP_SUBGROUPINFO(mode_circle, "CIRC", 57, ParametersG2, ModeCircle),
+#endif
 
     AP_GROUPEND
 };
@@ -682,7 +703,7 @@ ParametersG2::ParametersG2(void)
 #if HAL_PROXIMITY_ENABLED
     proximity(),
 #endif
-#if MODE_DOCK_ENABLED
+#if AP_ROVER_MODE_DOCK_ENABLED
     mode_dock_ptr(&rover.mode_dock),
 #endif
 #if AP_AVOIDANCE_ENABLED

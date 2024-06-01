@@ -117,7 +117,7 @@ void Rover::init_ardupilot()
 
     startup_INS();
 
-#if AP_MISSION_ENABLED
+#if AP_ROVER_MODE_AUTO_ENABLED
     // initialise mission library
     mode_auto.mission.init();
 #if HAL_LOGGING_ENABLED
@@ -145,10 +145,12 @@ void Rover::init_ardupilot()
 
     rover.g2.sailboat.init();
 
+#if AP_ROVER_MODE_AUTO_ENABLED
     // boat should loiter after completing a mission to avoid drifting off
     if (is_boat()) {
         rover.g2.mis_done_behave.set_default(uint8_t(ModeAuto::DoneBehaviour::LOITER));
     }
+#endif
 
     // flag that initialisation has completed
     initialised = true;
@@ -188,19 +190,65 @@ bool Rover::gcs_mode_enabled(const Mode::Number mode_num) const
 {
     // List of modes that can be blocked, index is bit number in parameter bitmask
     static const uint8_t mode_list [] {
+#if AP_ROVER_MODE_MANUAL_ENABLED
         (uint8_t)Mode::Number::MANUAL,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_ACRO_ENABLED
         (uint8_t)Mode::Number::ACRO,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_STEERING_ENABLED
         (uint8_t)Mode::Number::STEERING,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_LOITER_ENABLED
         (uint8_t)Mode::Number::LOITER,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_FOLLOW_ENABLED
         (uint8_t)Mode::Number::FOLLOW,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_SIMPLE_ENABLED
         (uint8_t)Mode::Number::SIMPLE,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_CIRCLE_ENABLED
         (uint8_t)Mode::Number::CIRCLE,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_AUTO_ENABLED
         (uint8_t)Mode::Number::AUTO,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_RTL_ENABLED
         (uint8_t)Mode::Number::RTL,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
         (uint8_t)Mode::Number::SMART_RTL,
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_GUIDED_ENABLED
         (uint8_t)Mode::Number::GUIDED,
-#if MODE_DOCK_ENABLED
+#else
+        255,
+#endif
+#if AP_ROVER_MODE_DOCK_ENABLED
         (uint8_t)Mode::Number::DOCK
+#else
+        255,
 #endif
     };
 

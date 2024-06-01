@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_MODE_MANUAL_ENABLED
+
 void ModeManual::_exit()
 {
     // clear lateral when exiting manual mode
@@ -36,3 +38,5 @@ void ModeManual::update()
     g2.motors.set_steering(desired_steering, (g2.manual_options & ManualOptions::SPEED_SCALING));
     g2.motors.set_lateral(desired_lateral);
 }
+
+#endif  // AP_ROVER_MODE_MANUAL_ENABLED

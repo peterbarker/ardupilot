@@ -144,8 +144,10 @@ bool AP_Arming_Rover::arm(AP_Arming::Method method, const bool do_arming_checks)
     // Set the SmartRTL home location. If activated, SmartRTL will ultimately try to land at this point
     rover.g2.smart_rtl.set_home(true);
 
+#if AP_ROVER_MODE_SIMPLE_ENABLED
     // initialize simple mode heading
     rover.mode_simple.init_heading();
+#endif
 
     // save home heading for use in sail vehicles
     rover.g2.windvane.record_home_heading();
@@ -173,10 +175,12 @@ bool AP_Arming_Rover::disarm(const AP_Arming::Method method, bool do_disarm_chec
     if (!AP_Arming::disarm(method, do_disarm_checks)) {
         return false;
     }
+#if AP_ROVER_MODE_AUTO_ENABLED
     if (rover.control_mode != &rover.mode_auto) {
         // reset the mission on disarm if we are not in auto
         rover.mode_auto.mission.reset();
     }
+#endif
 
     update_soft_armed();
 

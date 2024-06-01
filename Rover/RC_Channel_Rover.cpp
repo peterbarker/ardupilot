@@ -98,6 +98,7 @@ void RC_Channel_Rover::do_aux_function_change_mode(Mode &mode,
     }
 }
 
+#if AP_ROVER_MODE_AUTO_ENABLED
 void RC_Channel_Rover::add_waypoint_for_current_loc()
 {
     // create new mission command
@@ -114,6 +115,7 @@ void RC_Channel_Rover::add_waypoint_for_current_loc()
         hal.console->printf("Added waypoint %u", (unsigned)rover.mode_auto.mission.num_commands());
     }
 }
+#endif  // AP_ROVER_MODE_AUTO_ENABLED
 
 void RC_Channel_Rover::do_aux_function_sailboat_motor_3pos(const AuxSwitchPos ch_flag)
 {
@@ -138,6 +140,7 @@ bool RC_Channel_Rover::do_aux_function(const AuxFuncTrigger &trigger)
     switch (ch_option) {
     case AUX_FUNC::DO_NOTHING:
         break;
+#if AP_ROVER_MODE_AUTO_ENABLED
     case AUX_FUNC::SAVE_WP:
         if (ch_flag == AuxSwitchPos::HIGH) {
             // do nothing if in AUTO mode
@@ -157,6 +160,7 @@ bool RC_Channel_Rover::do_aux_function(const AuxFuncTrigger &trigger)
             add_waypoint_for_current_loc();
         }
         break;
+#endif  // AP_ROVER_MODE_AUTO_ENABLED
 
     // learn cruise speed and throttle
     case AUX_FUNC::LEARN_CRUISE:
@@ -165,66 +169,88 @@ bool RC_Channel_Rover::do_aux_function(const AuxFuncTrigger &trigger)
         }
         break;
 
+#if AP_ROVER_MODE_MANUAL_ENABLED
     // set mode to Manual
     case AUX_FUNC::MANUAL:
         do_aux_function_change_mode(rover.mode_manual, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_ACRO_ENABLED
     // set mode to Acro
     case AUX_FUNC::ACRO:
         do_aux_function_change_mode(rover.mode_acro, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_STEERING_ENABLED
     // set mode to Steering
     case AUX_FUNC::STEERING:
         do_aux_function_change_mode(rover.mode_steering, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_HOLD_ENABLED
     // set mode to Hold
     case AUX_FUNC::HOLD:
         do_aux_function_change_mode(rover.mode_hold, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_AUTO_ENABLED
     // set mode to Auto
     case AUX_FUNC::AUTO:
         do_aux_function_change_mode(rover.mode_auto, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_RTL_ENABLED
     // set mode to RTL
     case AUX_FUNC::RTL:
         do_aux_function_change_mode(rover.mode_rtl, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
     // set mode to SmartRTL
     case AUX_FUNC::SMART_RTL:
         do_aux_function_change_mode(rover.mode_smartrtl, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_GUIDED_ENABLED
     // set mode to Guided
     case AUX_FUNC::GUIDED:
         do_aux_function_change_mode(rover.mode_guided, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_LOITER_ENABLED
     // Set mode to LOITER
     case AUX_FUNC::LOITER:
         do_aux_function_change_mode(rover.mode_loiter, ch_flag);
         break;
+#endif
 
-#if MODE_FOLLOW_ENABLED
+#if AP_ROVER_MODE_FOLLOW_ENABLED
     // Set mode to Follow
     case AUX_FUNC::FOLLOW:
         do_aux_function_change_mode(rover.mode_follow, ch_flag);
         break;
 #endif
 
+#if AP_ROVER_MODE_SIMPLE_ENABLED
     // set mode to Simple
     case AUX_FUNC::SIMPLE:
         do_aux_function_change_mode(rover.mode_simple, ch_flag);
         break;
+#endif
 
+#if AP_ROVER_MODE_CIRCLE_ENABLED
     case AUX_FUNC::CIRCLE:
         do_aux_function_change_mode(rover.g2.mode_circle, ch_flag);
         break;
+#endif
 
     // trigger sailboat tack
     case AUX_FUNC::SAILBOAT_TACK:
@@ -240,8 +266,13 @@ bool RC_Channel_Rover::do_aux_function(const AuxFuncTrigger &trigger)
     // save steering trim
     case AUX_FUNC::TRIM_TO_CURRENT_SERVO_RC:
         if (!rover.g2.motors.have_skid_steering() && rover.arming.is_armed() &&
-            (rover.control_mode != &rover.mode_loiter)
-            && (rover.control_mode != &rover.mode_hold) && ch_flag == AuxSwitchPos::HIGH) {
+#if AP_ROVER_MODE_LOITER_ENABLED
+            (rover.control_mode != &rover.mode_loiter) &&
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED
+            (rover.control_mode != &rover.mode_hold) &&
+#endif
+            ch_flag == AuxSwitchPos::HIGH) {
             SRV_Channels::set_trim_to_servo_out_for(SRV_Channel::k_steering);
             GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Steering trim saved!");
         }

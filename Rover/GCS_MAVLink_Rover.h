@@ -8,6 +8,7 @@
 #endif
 
 #include "defines.h"
+#include "config.h"
 
 class GCS_MAVLINK_Rover : public GCS_MAVLINK
 {
@@ -40,7 +41,9 @@ protected:
 private:
 
     void handle_message(const mavlink_message_t &msg) override;
+#if AP_ROVER_MODE_GUIDED_ENABLED
     bool handle_guided_request(AP_Mission::Mission_Command &cmd) override;
+#endif
     bool try_send_message(enum ap_message id) override;
 
     void handle_manual_control_axes(const mavlink_manual_control_t &packet, const uint32_t tnow) override;
