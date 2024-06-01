@@ -1,6 +1,6 @@
 #include "Rover.h"
 
-#if MODE_DOCK_ENABLED
+#if AP_ROVER_MODE_DOCK_ENABLED
 
 const AP_Param::GroupInfo ModeDock::var_info[] = {
     // @Param: _SPEED
@@ -255,4 +255,4 @@ bool ModeDock::calc_dock_pos_rel_vehicle_NE(Vector2f &dock_pos_rel_vehicle) cons
     dock_pos_rel_vehicle = _dock_pos_rel_origin_cm - current_pos_m * 100.0f;
     return true;
 }
-#endif // MODE_DOCK_ENABLED
+#endif // AP_ROVER_MODE_DOCK_ENABLED

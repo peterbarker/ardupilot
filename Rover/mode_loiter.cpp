@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_MODE_LOITER_ENABLED
+
 bool ModeLoiter::_enter()
 {
     // set _destination to reasonable stopping point
@@ -78,3 +80,5 @@ bool ModeLoiter::get_desired_location(Location& destination) const
     destination = _destination;
     return true;
 }
+
+#endif  // AP_ROVER_MODE_LOITER_ENABLED

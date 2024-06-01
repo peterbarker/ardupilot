@@ -516,48 +516,70 @@ Mode *Rover::mode_from_mode_num(const enum Mode::Number num)
 {
     Mode *ret = nullptr;
     switch (num) {
+#if AP_ROVER_MODE_MANUAL_ENABLED
     case Mode::Number::MANUAL:
         ret = &mode_manual;
         break;
+#endif
+#if AP_ROVER_MODE_ACRO_ENABLED
     case Mode::Number::ACRO:
         ret = &mode_acro;
         break;
+#endif
+#if AP_ROVER_MODE_STEERING_ENABLED
     case Mode::Number::STEERING:
         ret = &mode_steering;
         break;
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED
     case Mode::Number::HOLD:
         ret = &mode_hold;
         break;
+#endif
+#if AP_ROVER_MODE_LOITER_ENABLED
     case Mode::Number::LOITER:
         ret = &mode_loiter;
         break;
-#if MODE_FOLLOW_ENABLED
+#endif
+#if AP_ROVER_MODE_FOLLOW_ENABLED
     case Mode::Number::FOLLOW:
         ret = &mode_follow;
         break;
 #endif
+#if AP_ROVER_MODE_SIMPLE_ENABLED
     case Mode::Number::SIMPLE:
         ret = &mode_simple;
         break;
+#endif
+#if AP_ROVER_MODE_CIRCLE_ENABLED
     case Mode::Number::CIRCLE:
         ret = &g2.mode_circle;
         break;
+#endif
+#if AP_ROVER_MODE_AUTO_ENABLED
     case Mode::Number::AUTO:
         ret = &mode_auto;
         break;
+#endif
+#if AP_ROVER_MODE_RTL_ENABLED
     case Mode::Number::RTL:
         ret = &mode_rtl;
         break;
+#endif
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
     case Mode::Number::SMART_RTL:
         ret = &mode_smartrtl;
         break;
+#endif
+#if AP_ROVER_MODE_GUIDED_ENABLED
     case Mode::Number::GUIDED:
         ret = &mode_guided;
         break;
+#endif
     case Mode::Number::INITIALISING:
         ret = &mode_initializing;
         break;
-#if MODE_DOCK_ENABLED
+#if AP_ROVER_MODE_DOCK_ENABLED
     case Mode::Number::DOCK:
         ret = (Mode *)g2.mode_dock_ptr;
         break;

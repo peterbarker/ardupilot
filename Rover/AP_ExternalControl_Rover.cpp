@@ -2,12 +2,12 @@
   external control library for rover
  */
 
+#include "Rover.h"
 
 #include "AP_ExternalControl_Rover.h"
 #if AP_EXTERNAL_CONTROL_ENABLED
 
-#include "Rover.h"
-
+#if AP_ROVER_MODE_GUIDED_ENABLED
 /*
   set linear velocity and yaw rate. Pass NaN for yaw_rate_rads to not control yaw
   velocity is in earth frame, NED, m/s
@@ -39,5 +39,6 @@ bool AP_ExternalControl_Rover::ready_for_external_control()
 {
     return rover.control_mode->in_guided_mode() && rover.arming.is_armed();
 }
+#endif  // AP_ROVER_MODE_GUIDED_ENABLED
 
 #endif // AP_EXTERNAL_CONTROL_ENABLED

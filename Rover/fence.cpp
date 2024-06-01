@@ -24,31 +24,41 @@ void Rover::fence_check()
                 switch ((FailsafeAction)fence.get_action()) {
                 case FailsafeAction::None:
                     break;
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
                 case FailsafeAction::SmartRTL:
                     if (set_mode(mode_smartrtl, ModeReason::FENCE_BREACHED)) {
                         break;
                     }
                     FALLTHROUGH;
+#endif
+#if AP_ROVER_MODE_RTL_ENABLED
                 case FailsafeAction::RTL:
                     if (set_mode(mode_rtl, ModeReason::FENCE_BREACHED)) {
                         break;
                     }
                     FALLTHROUGH;
+#endif
+#if AP_ROVER_MODE_HOLD_ENABLED
                 case FailsafeAction::Hold:
                     set_mode(mode_hold, ModeReason::FENCE_BREACHED);
                     break;
+#endif
+#if AP_ROVER_MODE_SMARTRTL_ENABLED && AP_ROVER_MODE_HOLD_ENABLED
                 case FailsafeAction::SmartRTL_Hold:
                     if (!set_mode(mode_smartrtl, ModeReason::FENCE_BREACHED)) {
                         set_mode(mode_hold, ModeReason::FENCE_BREACHED);
                     }
                     break;
+#endif
                 case FailsafeAction::Terminate:
                     arming.disarm(AP_Arming::Method::FENCEBREACH);
                     break;
                 }
             } else {
+#if AP_ROVER_MODE_HOLD_ENABLED
                 // if more than 100m outside the fence just force to HOLD
                 set_mode(mode_hold, ModeReason::FENCE_BREACHED);
+#endif
             }
         }
         LOGGER_WRITE_ERROR(LogErrorSubsystem::FAILSAFE_FENCE, LogErrorCode(new_breaches));

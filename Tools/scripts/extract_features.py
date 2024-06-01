@@ -263,6 +263,7 @@ class ExtractFeatures(object):
             ('AP_RSSI_ENABLED', r'AP_RSSI::init'),
 
             ('AP_ROVER_ADVANCED_FAILSAFE_ENABLED', r'Rover::afs_fs_check'),
+            ('AP_ROVER_MODE_{modename}_ENABLED', r'Rover::Mode(?P<modename>.*)::update'),
         ]
 
     def progress(self, msg):

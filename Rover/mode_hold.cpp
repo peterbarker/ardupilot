@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_MODE_HOLD_ENABLED
+
 void ModeHold::update()
 {
     float throttle = 0.0f;
@@ -16,3 +18,5 @@ void ModeHold::update()
     g2.motors.set_throttle(throttle);
     g2.motors.set_steering(0.0f);
 }
+
+#endif  // AP_ROVER_MODE_HOLD_ENABLED

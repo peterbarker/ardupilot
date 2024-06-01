@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_MODE_RTL_ENABLED
+
 bool ModeRTL::_enter()
 {
     // refuse RTL if home has not been set
@@ -82,3 +84,5 @@ bool ModeRTL::set_desired_speed(float speed)
 {
     return g2.wp_nav.set_speed_max(speed);
 }
+
+#endif  // AP_ROVER_MODE_RTL_ENABLED

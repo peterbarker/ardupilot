@@ -1,5 +1,7 @@
 #include "Rover.h"
 
+#if AP_ROVER_MODE_SMARTRTL_ENABLED
+
 bool ModeSmartRTL::_enter()
 {
     // SmartRTL requires EKF (not DCM)
@@ -135,3 +137,5 @@ void ModeSmartRTL::save_position()
     const bool save_pos = (rover.control_mode != &rover.mode_smartrtl);
     g2.smart_rtl.update(true, save_pos);
 }
+
+#endif  // AP_ROVER_MODE_SMARTRTL_ENABLED
