@@ -25,6 +25,8 @@ Mode::Mode(void) :
     G_Dt(copter.G_Dt)
 { };
 
+PayloadPlace Mode::payload_place;
+
 // return the static controller object corresponding to supplied mode
 Mode *Copter::mode_from_mode_num(const Mode::Number mode)
 {
@@ -130,6 +132,12 @@ Mode *Copter::mode_from_mode_num(const Mode::Number mode)
 #if MODE_GUIDED_NOGPS_ENABLED == ENABLED
         case Mode::Number::GUIDED_NOGPS:
             ret = &mode_guided_nogps;
+            break;
+#endif
+
+#if MODE_SHIP_OPS_ENABLED == ENABLED
+        case Mode::Number::SHIP_OPS:
+            ret = (Mode *)g2.mode_shipops_ptr;
             break;
 #endif
 
