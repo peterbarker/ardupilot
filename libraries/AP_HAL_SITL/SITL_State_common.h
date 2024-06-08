@@ -100,6 +100,10 @@ public:
     float voltage2_pin_voltage;  // pin 15
     float current2_pin_voltage;  // pin 14
 
+    bool use_rtscts(void) const {
+        return _use_rtscts;
+    }
+
     uint16_t pwm_input[SITL_RC_INPUT_CHANNELS];
     bool new_rc_input;
     uint16_t pwm_output[SITL_NUM_CHANNELS];
@@ -258,6 +262,8 @@ protected:
     SITL::SIM *_sitl;
 
     void update_voltage_current(struct sitl_input &input, float throttle);
+
+    bool _use_rtscts;
 };
 
 #endif // CONFIG_HAL_BOARD == HAL_BOARD_SITL
