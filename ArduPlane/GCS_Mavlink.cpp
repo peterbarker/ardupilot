@@ -736,14 +736,14 @@ bool GCS_MAVLINK_Plane::handle_guided_request(AP_Mission::Mission_Command &cmd)
   handle a request to change current WP altitude. This happens via a
   callback from handle_mission_item()
  */
-void GCS_MAVLINK_Plane::handle_change_alt_request(AP_Mission::Mission_Command &cmd)
+void GCS_MAVLINK_Plane::handle_change_alt_request(const Location &location)
 {
-    plane.next_WP_loc.alt = cmd.content.location.alt;
-    if (cmd.content.location.relative_alt) {
+    plane.next_WP_loc.alt = location.alt;
+    if (location.relative_alt) {
         plane.next_WP_loc.alt += plane.home.alt;
     }
     plane.next_WP_loc.relative_alt = false;
-    plane.next_WP_loc.terrain_alt = cmd.content.location.terrain_alt;
+    plane.next_WP_loc.terrain_alt = location.terrain_alt;
     plane.reset_offset_altitude();
 }
 
@@ -1375,13 +1375,12 @@ void GCS_MAVLINK_Plane::handle_set_position_target_global_int(const mavlink_mess
         const uint16_t alt_mask = 0b1111111111111011; // (z mask at bit 3)
             
         bool msg_valid = true;
-        AP_Mission::Mission_Command cmd = {0};
-        
+        Location location;
         if (pos_target.type_mask & alt_mask)
         {
-            cmd.content.location.alt = pos_target.alt * 100;
-            cmd.content.location.relative_alt = false;
-            cmd.content.location.terrain_alt = false;
+            location.alt = pos_target.alt * 100;
+            location.relative_alt = false;
+            location.terrain_alt = false;
             switch (pos_target.coordinate_frame) 
             {
                 case MAV_FRAME_GLOBAL:
@@ -1389,12 +1388,12 @@ void GCS_MAVLINK_Plane::handle_set_position_target_global_int(const mavlink_mess
                     break; //default to MSL altitude
                 case MAV_FRAME_GLOBAL_RELATIVE_ALT:
                 case MAV_FRAME_GLOBAL_RELATIVE_ALT_INT:
-                    cmd.content.location.relative_alt = true;
+                    location.relative_alt = true;
                     break;
                 case MAV_FRAME_GLOBAL_TERRAIN_ALT:
                 case MAV_FRAME_GLOBAL_TERRAIN_ALT_INT:
-                    cmd.content.location.relative_alt = true;
-                    cmd.content.location.terrain_alt = true;
+                    location.relative_alt = true;
+                    location.terrain_alt = true;
                     break;
                 default:
                     gcs().send_text(MAV_SEVERITY_WARNING, "Invalid coord frame in SET_POSTION_TARGET_GLOBAL_INT");
@@ -1403,7 +1402,7 @@ void GCS_MAVLINK_Plane::handle_set_position_target_global_int(const mavlink_mess
             }    
 
             if (msg_valid) {
-                handle_change_alt_request(cmd);
+                handle_change_alt_request(location);
             }
         } // end if alt_mask       
     }
