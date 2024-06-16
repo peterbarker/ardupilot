@@ -11533,6 +11533,19 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
         self.context_pop()
         self.do_RTL()
+
+    def MAV_STATE_BOOT(self):
+        '''check mav state is boot during init'''
+        self.context_push()
+        self.context_collect('HEARTBEAT')
+        self.set_parameter("BRD_BOOT_DELAY", 30)
+        self.reboot_sitl()
+        heartbeats = self.context_collection('HEARTBEAT')
+        count = len(list(filter(lambda hb : hb.system_status == mavutil.mavlink.MAV_STATE_BOOT, heartbeats)))
+        self.progress(f"Saw {count} MAV_STATE_BOOT heartbeats")
+        if count == 0:
+            raise NotAchievedException('Never saw heartbeat with MAV_STATE_BOOT')
+        self.context_pop()
         self.reboot_sitl()
 
     def assert_home_position_not_set(self):
@@ -11660,6 +11673,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.Clamp,
             self.GripperReleaseOnThrustLoss,
             self.REQUIRE_POSITION_FOR_ARMING,
+            self.MAV_STATE_BOOT,
         ])
         return ret
 
