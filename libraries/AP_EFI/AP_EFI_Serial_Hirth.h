@@ -21,6 +21,7 @@
 #if AP_EFI_SERIAL_HIRTH_ENABLED
 #include "AP_EFI.h"
 #include "AP_EFI_Backend.h"
+#include <AP_Math/crc.h>
 
 /*!
  * class definition for Hirth 4103 ECU
@@ -31,28 +32,6 @@ public:
 
     void update() override;
 
-    enum class Error_Excess_Temp_Bitfield : uint16_t {
-        CHT_1_LOW = 1U<<0, // true if CHT1 is too low
-        CHT_1_HIGH = 1U<<1, // true if CHT1 is too high
-        CHT_1_ENRC_ACTIVE = 1U<<2, // true if CHT1 Enrichment is active
-        CHT_2_LOW = 1U<<3, // true if CHT2 is too low
-        CHT_2_HIGH = 1U<<4, // true if CHT2 is too high
-        CHT_2_ENRC_ACTIVE = 1U<<5, // true if CHT2 Enrichment is active
-        EGT_1_LOW = 1U<<6, // true if EGT1 is too low
-        EGT_1_HIGH = 1U<<7, // true if EGT1 is too high
-        EGT_1_ENRC_ACTIVE = 1U<<8, // true if EGT1 Enrichment is active
-        EGT_2_LOW = 1U<<9, // true if EGT2 is too low
-        EGT_2_HIGH = 1U<<10, // true if EGT2 is too high
-        EGT_2_ENRC_ACTIVE = 1U<<11, // true if EGT2 Enrichment is active
-    };
-
-    enum class Sensor_Status_Bitfield : uint8_t {
-        ENGINE_TEMP_SENSOR_OK = 1U<<1, // true if engine temperature sensor is OK
-        AIR_TEMP_SENSOR_OK = 1U<<2, // true if air temperature sensor is OK
-        AIR_PRESSURE_SENSOR_OK = 1U<<3, // true if intake air pressure sensor is OK
-        THROTTLE_SENSOR_OK = 1U<<4, // true if throttle sensor is OK
-    };
-
 private:
     // serial port instance
     AP_HAL::UARTDriver *port;
@@ -62,18 +41,8 @@ private:
     uint32_t last_packet_ms;
     uint32_t last_req_send_throttle_ms;
 
-    // raw bytes - max size
-    uint8_t raw_data[256];
-
     // request and response data
-    uint8_t requested_code;
-
-    // meta-data for a response
-    struct {
-        uint8_t quantity;
-        uint8_t code;
-        uint8_t checksum;
-    } res_data;
+    uint8_t queue_id_sent;
 
     // TRUE - Request is sent; waiting for response
     // FALSE - Response is already received
@@ -95,6 +64,36 @@ private:
     uint32_t crc_fail_cnt;
     uint32_t uptime;
     uint32_t ack_fail_cnt;
+
+    template <typename T>
+    class PACKED Packet {
+    public:
+        Packet(uint8_t _code, T _msg) :
+          quantity{sizeof(*this)},
+          code{_code},
+          msg(_msg) {
+              update_checksum();
+          }
+
+        uint8_t quantity;
+        uint8_t code;
+        T msg;
+        uint8_t checksum;
+
+        uint8_t calculate_checksum(uint16_t len) const WARN_IF_UNUSED {
+            return 256-crc_sum_of_bytes(((const uint8_t*)this), len);
+        }
+        uint8_t size() const { return sizeof(*this); }
+        uint16_t calculate_checksum() const WARN_IF_UNUSED {
+            return calculate_checksum(size()-1);
+        }
+        void update_checksum() {
+            checksum = calculate_checksum();
+        }
+        bool validate_checksum() const {
+            return checksum == calculate_checksum();
+        }
+    };
 
     struct PACKED Record1 {
         uint8_t reserved1[2];
@@ -201,12 +200,32 @@ private:
     };
     static_assert(sizeof(Record3) == 100, "incorrect Record3 length");
 
+    struct PACKED HeaderOnly {
+        // sizeof this structure is 1
+    };
+
+    union PACKED PacketUnion {
+        PacketUnion() {}
+        Packet<HeaderOnly> header;  // sizeof() this is 4
+        Packet<Record1> r1;
+        Packet<Record2> r2;
+        Packet<Record3> r3;
+        uint8_t raw_data[103];
+    } u;
+
     void check_response();
     void send_request();
-    void decode_data();
+    template <typename T>
+    bool check_packet(const Packet<T> &);
+    void decode_data(const Packet<Record1> &r1);
+    void decode_data(const Packet<Record2> &r2);
+    void decode_data(const Packet<Record3> &r3);
     bool send_request_status();
     bool send_target_values(uint16_t);
     void log_status();
+    void ack_failed(uint32_t now);
+
+    bool write_all(const uint8_t *date, uint8_t len);
 };
 
 #endif // AP_EFI_SERIAL_HIRTH_ENABLED

@@ -58,6 +58,23 @@
 
 extern const AP_HAL::HAL& hal;
 
+// using Packet<T> is problematic with these as T can't be
+// zero-length; request-status messages have zero-length bodies...
+#define REQUEST_STATUS_1 { QUANTITY_REQUEST_STATUS, CODE_REQUEST_STATUS_1, CHECKSUM_REQUEST_STATUS_1 }
+#define REQUEST_STATUS_2 { QUANTITY_REQUEST_STATUS, CODE_REQUEST_STATUS_2, CHECKSUM_REQUEST_STATUS_2 }
+#define REQUEST_STATUS_3 { QUANTITY_REQUEST_STATUS, CODE_REQUEST_STATUS_3, CHECKSUM_REQUEST_STATUS_3 }
+
+static const struct {
+    uint8_t code;
+    uint8_t request_packet[3];
+    uint8_t expected_response_length;
+} status_requests_queue[3] {
+    { CODE_REQUEST_STATUS_1, REQUEST_STATUS_1, QUANTITY_RESPONSE_STATUS_1 },
+    { CODE_REQUEST_STATUS_2, REQUEST_STATUS_2, QUANTITY_RESPONSE_STATUS_2 },
+    { CODE_REQUEST_STATUS_3, REQUEST_STATUS_3, QUANTITY_RESPONSE_STATUS_3 },
+};
+
+
 /**
  * @brief Constructor with port initialization
  * 
@@ -100,50 +117,91 @@ void AP_EFI_Serial_Hirth::check_response()
         return;
     }
 
+    if (now - last_request_ms > SERIAL_WAIT_TIMEOUT_MS) {
+        ack_failed(now);
+        return;
+    }
+
+    if (expected_bytes > ARRAY_SIZE(u.raw_data) ||
+        expected_bytes < sizeof(u.header)-1) {  // -1 here because of minimum-struct-size
+        // flow-of-control error.
+        ack_failed(now);
+        return;
+    }
+
     const uint32_t num_bytes = port->available();
 
-    // if already requested
-    if (num_bytes >= expected_bytes) {
-        // read data from buffer
-        uint8_t computed_checksum = 0;
-        computed_checksum += res_data.quantity = port->read();
-        computed_checksum += res_data.code = port->read();
+    // we only read whole packets at once:
+    if (num_bytes < expected_bytes) {
+        return;
+    }
 
-        if (res_data.code == requested_code) {
-            for (int i = 0; i < (res_data.quantity - QUANTITY_REQUEST_STATUS); i++) {
-                computed_checksum += raw_data[i] = port->read();
-            }
-        }
+    const auto num_read = port->read(&u.raw_data[0], expected_bytes);
+    if (num_read < expected_bytes) {
+        ack_failed(now);
+        return;
+    }
 
-        res_data.checksum = port->read();
-        if (res_data.checksum != (256 - computed_checksum)) {
-            crc_fail_cnt++;
-            port->discard_input();
-        } else {
-            uptime = now - last_packet_ms;
-            last_packet_ms = now;
-            internal_state.last_updated_ms = now;
-            decode_data();
-            copy_to_frontend();
-            port->discard_input();
-        }
+    // ensure the quantity field is within bounds:
+    if (u.header.quantity > ARRAY_SIZE(u.raw_data)) {
+        // invalid packet
+        ack_failed(now);
+        return;
+    }
 
-        waiting_response = false;
+    bool valid_packet = false;
+    switch (u.header.code) {
+    case CODE_REQUEST_STATUS_1:
+        valid_packet = check_packet(u.r1);
+        break;
+    case CODE_REQUEST_STATUS_2:
+        valid_packet = check_packet(u.r2);
+        break;
+    case CODE_REQUEST_STATUS_3:
+        valid_packet = check_packet(u.r3);
+        break;
+    case CODE_SET_VALUE:
+        valid_packet = true;
+        break;
+    }
+
+    if (!valid_packet) {
+        ack_failed(now);
+        return;
+    }
+
+    // valid packet
+    uptime = now - last_packet_ms;
+    last_packet_ms = now;
+
+    internal_state.last_updated_ms = now;
+    copy_to_frontend();
+    port->discard_input();
+
+    waiting_response = false;
 
 #if HAL_LOGGING_ENABLED
         log_status();
 #endif
-    }
+}
 
-    // reset request if no response for SERIAL_WAIT_TIMEOUT_MS
-    if (waiting_response &&
-        now - last_request_ms > SERIAL_WAIT_TIMEOUT_MS) {
-        waiting_response = false;
-        last_request_ms = now;
-
-        port->discard_input();
-        ack_fail_cnt++;
+template<typename T>
+bool AP_EFI_Serial_Hirth::check_packet(const Packet<T> &packet)
+{
+    if (!packet.validate_checksum()) {
+        return false;
     }
+    decode_data(packet);
+    return true;
+}
+
+void AP_EFI_Serial_Hirth::ack_failed(uint32_t now)
+{
+    waiting_response = false;
+    last_request_ms = now;
+
+    port->discard_input();
+    ack_fail_cnt++;
 }
 
 /**
@@ -203,37 +261,48 @@ void AP_EFI_Serial_Hirth::send_request()
  */
 bool AP_EFI_Serial_Hirth::send_target_values(uint16_t thr)
 {
-    uint8_t computed_checksum = 0;
-    throttle_to_hirth = 0;
-
-    // clear buffer
-    memset(raw_data, 0, ARRAY_SIZE(raw_data));
-
 #if AP_EFI_THROTTLE_LINEARISATION_ENABLED
     // linearise throttle input
     thr = linearise_throttle(thr);
 #endif
 
-    throttle_to_hirth = thr * THROTTLE_POSITION_FACTOR;
+    throttle_to_hirth = MIN(thr * THROTTLE_POSITION_FACTOR, UINT16_MAX);
 
-    uint8_t idx = 0;
+    // FIXME: pack a uint16_t in here with correct endianness
+    struct PACKED SetValues {
+        uint8_t throttle_low;
+        uint8_t throttle_high;
+        uint8_t unknown[18];
+    } set_values {
+        throttle_low: uint8_t(throttle_to_hirth & 0xFF),
+        throttle_high: uint8_t((throttle_to_hirth >> 8) & 0xFF),
+    };
 
-    // set Quantity + Code + "20 bytes of records to set" + Checksum
-    computed_checksum += raw_data[idx++] = QUANTITY_SET_VALUE;
-    computed_checksum += raw_data[idx++] = requested_code = CODE_SET_VALUE;
-    computed_checksum += raw_data[idx++] = throttle_to_hirth & 0xFF;
-    computed_checksum += raw_data[idx++] = (throttle_to_hirth >> 8) & 0xFF;
+    Packet<SetValues> packed_set_values { CODE_SET_VALUE, set_values };
+    assert_storage_size<Packet<SetValues>, QUANTITY_SET_VALUE> unused;  // 23
+    (void)unused;
 
-    // checksum calculation
-    raw_data[QUANTITY_SET_VALUE - 1] = (256 - computed_checksum);
-    
+    if (!write_all((uint8_t*)&packed_set_values, sizeof(packed_set_values))) {
+        return false;
+    }
+
     expected_bytes = QUANTITY_ACK_SET_VALUES;
-    // write data
-    port->write(raw_data, QUANTITY_SET_VALUE);
 
     return true;
 }
 
+bool AP_EFI_Serial_Hirth::write_all(const uint8_t *data, uint8_t len)
+{
+    if (port->txspace() < len) {
+        return false;
+    }
+
+    if (port->write(data, len) != len) {
+        return false;
+    }
+
+    return true;
+}
 
 /**
  * @brief cyclically sends different Status requests to Hirth ECU
@@ -241,43 +310,20 @@ bool AP_EFI_Serial_Hirth::send_target_values(uint16_t thr)
  * @return true - when successful
  * @return false  - not implemented
  */
-bool AP_EFI_Serial_Hirth::send_request_status() {
-
-    uint8_t requested_quantity;
-    uint8_t requested_checksum;
-
-    switch (requested_code)
-    {
-    case CODE_REQUEST_STATUS_1:
-        requested_quantity = QUANTITY_REQUEST_STATUS;
-        requested_code = CODE_REQUEST_STATUS_2;
-        requested_checksum = CHECKSUM_REQUEST_STATUS_2;
-        expected_bytes = QUANTITY_RESPONSE_STATUS_2;
-        break;
-    case CODE_REQUEST_STATUS_2:
-        requested_quantity = QUANTITY_REQUEST_STATUS;
-        requested_code = CODE_REQUEST_STATUS_3;
-        requested_checksum = CHECKSUM_REQUEST_STATUS_3;
-        expected_bytes = QUANTITY_RESPONSE_STATUS_3;
-        break;
-    case CODE_REQUEST_STATUS_3:
-        requested_quantity = QUANTITY_REQUEST_STATUS;
-        requested_code = CODE_REQUEST_STATUS_1;
-        requested_checksum = CHECKSUM_REQUEST_STATUS_1;
-        expected_bytes = QUANTITY_RESPONSE_STATUS_1;
-        break;
-    default:
-        requested_quantity = QUANTITY_REQUEST_STATUS;
-        requested_code = CODE_REQUEST_STATUS_1;
-        requested_checksum = CHECKSUM_REQUEST_STATUS_1;
-        expected_bytes = QUANTITY_RESPONSE_STATUS_1;
-        break;
+bool AP_EFI_Serial_Hirth::send_request_status()
+{
+    queue_id_sent += 1;
+    if (queue_id_sent >= ARRAY_SIZE(status_requests_queue)) {
+        queue_id_sent = 0;
     }
-    raw_data[0] = requested_quantity;
-    raw_data[1] = requested_code;
-    raw_data[2] = requested_checksum;
 
-    port->write(raw_data, QUANTITY_REQUEST_STATUS);
+    auto &entry = status_requests_queue[queue_id_sent];
+
+    if (!write_all(entry.request_packet, sizeof(entry.request_packet))) {
+        return false;
+    }
+
+    expected_bytes = entry.expected_response_length;
 
     return true;
 }
@@ -287,13 +333,9 @@ bool AP_EFI_Serial_Hirth::send_request_status() {
  * @brief parses the response from Hirth ECU and updates the internal state instance
  * 
  */
-void AP_EFI_Serial_Hirth::decode_data()
+void AP_EFI_Serial_Hirth::decode_data(const Packet<Record1> &r1)
 {
-    const uint32_t now = AP_HAL::millis();
-
-    switch (res_data.code) {
-    case CODE_REQUEST_STATUS_1: {
-        struct Record1 *record1 = (Record1*)raw_data;
+        const struct Record1 *record1 = &r1.msg;
 
         internal_state.engine_speed_rpm = record1->rpm;
         internal_state.throttle_out = record1->throttle;
@@ -314,11 +356,13 @@ void AP_EFI_Serial_Hirth::decode_data()
         // add in ADC voltage of MAP sensor > convert to MAP in kPa
         internal_state.intake_manifold_pressure_kpa = record1->voltage_int_air_pressure * (ADC_CALIBRATION * MAP_HPA_PER_VOLT_FACTOR * HPA_TO_KPA);
         internal_state.intake_manifold_temperature = C_TO_KELVIN(record1->air_temperature);
-        break;
-    }
+}
 
-    case CODE_REQUEST_STATUS_2: {
-        struct Record2 *record2 = (Record2*)raw_data;
+void AP_EFI_Serial_Hirth::decode_data(const Packet<Record2> &r2)
+{
+    const uint32_t now = AP_HAL::millis();
+
+        const struct Record2 *record2 = &r2.msg;
 
         // EFI log
         const float fuel_consumption_rate_lph = record2->fuel_consumption * 0.1;
@@ -333,11 +377,11 @@ void AP_EFI_Serial_Hirth::decode_data()
         last_fuel_integration_ms = now;
 
         internal_state.throttle_position_percent = record2->throttle_percent_times_10 * 0.1;
-        break;
-    }
+}
 
-    case CODE_REQUEST_STATUS_3: {
-        struct Record3 *record3 = (Record3*)raw_data;
+void AP_EFI_Serial_Hirth::decode_data(const Packet<Record3> &r3)
+{
+        const struct Record3 *record3 = &r3.msg;
 
         // EFI3 Log
         error_excess_temperature = record3->error_excess_temperature_bitfield;
@@ -347,13 +391,6 @@ void AP_EFI_Serial_Hirth::decode_data()
         internal_state.cylinder_status.cylinder_head_temperature2 = C_TO_KELVIN(record3->excess_temperature_2);
         internal_state.cylinder_status.exhaust_gas_temperature = C_TO_KELVIN(record3->excess_temperature_3);
         internal_state.cylinder_status.exhaust_gas_temperature2 = C_TO_KELVIN(record3->excess_temperature_4);
-        break;
-    }
-        
-    // case CODE_SET_VALUE:
-    //     // Do nothing for now
-    //     break;
-    }
 }
 
 #if HAL_LOGGING_ENABLED
