@@ -817,6 +817,12 @@ bool Copter::get_rate_ef_targets(Vector3f& rate_ef_targets) const
     return true;
 }
 
+// returns true if option is enabled for this vehicle
+bool Copter::option_enabled(FlightOption option) const
+{
+    return (copter.g2.flight_options & uint32_t(option)) != 0;
+}
+
 /*
   constructor for main Copter class
  */
