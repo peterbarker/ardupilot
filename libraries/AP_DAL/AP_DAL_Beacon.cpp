@@ -39,10 +39,13 @@ void AP_DAL_Beacon::start_frame()
     for (uint8_t i=0; i<ARRAY_SIZE(_RBCI); i++) {
         log_RBCI &RBCI = _RBCI[i];
         const log_RBCI old_RBCI = RBCI;
-        RBCI.last_update_ms = bcon->beacon_last_update_ms(i);
-        RBCI.position = bcon->beacon_position(i);
-        RBCI.distance = bcon->beacon_distance(i);
-        RBCI.healthy = bcon->beacon_healthy(i);
+        AP_Beacon::BeaconState beacon_state;
+        if (bcon->get_beacon_data(i, beacon_state)) {
+            RBCI.last_update_ms = beacon_state.last_update_ms();
+            RBCI.position = beacon_state.get_position();
+            RBCI.distance = beacon_state.get_distance();
+            RBCI.healthy = beacon_state.is_healthy();
+        }
 
         WRITE_REPLAY_BLOCK_IFCHANGED(RBCI, RBCI, old_RBCI);
     }
