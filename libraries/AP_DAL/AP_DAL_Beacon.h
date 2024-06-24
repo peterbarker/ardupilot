@@ -27,25 +27,8 @@ public:
         return _RBCH.enabled;
     }
 
-    // return beacon health
-    bool beacon_healthy(uint8_t i) const {
-        return _RBCI[i].healthy;
-    }
-
-    // return last update time from beacon in milliseconds
-    uint32_t beacon_last_update_ms(uint8_t i) const {
-        return _RBCI[i].last_update_ms;
-    }
-
-    // return distance to beacon in meters
-    float beacon_distance(uint8_t i) const {
-        return _RBCI[i].distance;
-    }
-
-    // return NED position of beacon in meters relative to the beacon systems origin
-    const Vector3f &beacon_position(uint8_t i) const {
-        return _RBCI[i].position;
-    }
+    // return all beacon data
+    bool get_beacon_data(uint8_t i, AP_Beacon::BeaconState& state) const;
 
     // return vehicle position in NED from position estimate system's origin in meters
     bool get_vehicle_position_ned(Vector3f& pos, float& accuracy_estimate) const {

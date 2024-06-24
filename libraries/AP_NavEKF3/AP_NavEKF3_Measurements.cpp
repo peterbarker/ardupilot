@@ -937,11 +937,14 @@ void NavEKF3_core::readRngBcnData()
         }
 
         // check that the beacon is healthy and has new data
-        if (beacon->beacon_healthy(index) && beacon->beacon_last_update_ms(index) != rngBcn.lastTime_ms[index]) {
+        AP_Beacon::BeaconState beacon_data;
+        if (beacon->get_beacon_data(index, beacon_data) &&
+            beacon_data.is_healthy() &&
+            beacon_data.last_update_ms() != rngBcn.lastTime_ms[index]) {
             rng_bcn_elements rngBcnDataNew = {};
 
             // set the timestamp, correcting for measurement delay and average intersampling delay due to the filter update rate
-            rngBcn.lastTime_ms[index] = beacon->beacon_last_update_ms(index);
+            rngBcn.lastTime_ms[index] = beacon_data.last_update_ms();
             rngBcnDataNew.time_ms = rngBcn.lastTime_ms[index] - frontend->_rngBcnDelay_ms - localFilterTimeStep_ms/2;
 
             // set the range noise
@@ -949,10 +952,10 @@ void NavEKF3_core::readRngBcnData()
             rngBcnDataNew.rngErr = frontend->_rngBcnNoise;
 
             // set the range measurement
-            rngBcnDataNew.rng = beacon->beacon_distance(index);
+            rngBcnDataNew.rng = beacon_data.get_distance();
 
             // set the beacon position
-            rngBcnDataNew.beacon_posNED = beacon->beacon_position(index).toftype();
+            rngBcnDataNew.beacon_posNED = beacon_data.get_position().toftype();
 
             // identify the beacon identifier
             rngBcnDataNew.beacon_ID = index;

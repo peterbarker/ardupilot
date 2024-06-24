@@ -53,6 +53,7 @@ public:
     // The AP_BeaconState structure is filled in by the backend driver
     struct BeaconState {
         friend class AP_Beacon_Backend;
+        friend class AP_DAL_Beacon;
     public:
         uint16_t get_id() const { return id; }
         bool is_healthy() const { return healthy; }

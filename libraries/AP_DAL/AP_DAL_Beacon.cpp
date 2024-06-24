@@ -51,4 +51,17 @@ void AP_DAL_Beacon::start_frame()
     }
 }
 
+bool AP_DAL_Beacon::get_beacon_data(uint8_t i, AP_Beacon::BeaconState& state) const {
+    if (i >= ARRAY_SIZE(_RBCI)) {
+        return false;
+    }
+    state.id = 0;  // ERP?
+    state.healthy = _RBCI[i].healthy;
+    state.distance = _RBCI[i].distance;
+    state.distance_update_ms = _RBCI[i].last_update_ms;
+    state.position = _RBCI[i].position;
+
+    return true;
+}
+
 #endif
