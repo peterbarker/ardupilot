@@ -202,52 +202,6 @@ bool AP_Beacon::get_beacon_data(uint8_t beacon_instance, struct BeaconState& sta
     return true;
 }
 
-// return individual beacon's id
-uint8_t AP_Beacon::beacon_id(uint8_t beacon_instance) const
-{
-    if (beacon_instance >= num_beacons) {
-        return 0;
-    }
-    return beacon_state[beacon_instance].id;
-}
-
-// return beacon health
-bool AP_Beacon::beacon_healthy(uint8_t beacon_instance) const
-{
-    if (beacon_instance >= num_beacons) {
-        return false;
-    }
-    return beacon_state[beacon_instance].healthy;
-}
-
-// return distance to beacon in meters
-float AP_Beacon::beacon_distance(uint8_t beacon_instance) const
-{
-    if ( beacon_instance >= num_beacons || !beacon_state[beacon_instance].healthy) {
-        return 0.0f;
-    }
-    return beacon_state[beacon_instance].distance;
-}
-
-// return beacon position in meters
-Vector3f AP_Beacon::beacon_position(uint8_t beacon_instance) const
-{
-    if (!device_ready() || beacon_instance >= num_beacons) {
-        Vector3f temp = {};
-        return temp;
-    }
-    return beacon_state[beacon_instance].position;
-}
-
-// return last update time from beacon in milliseconds
-uint32_t AP_Beacon::beacon_last_update_ms(uint8_t beacon_instance) const
-{
-    if (_type == Type::None || beacon_instance >= num_beacons) {
-        return 0;
-    }
-    return beacon_state[beacon_instance].distance_update_ms;
-}
-
 // create fence boundary points
 void AP_Beacon::update_boundary_points()
 {
@@ -263,7 +217,7 @@ void AP_Beacon::update_boundary_points()
     // accumulate beacon points
     Vector2f beacon_points[AP_BEACON_MAX_BEACONS];
     for (uint8_t index = 0; index < num_beacons; index++) {
-        const Vector3f& point_3d = beacon_position(index);
+        const Vector3f& point_3d = beacon_state[index].get_position();
         beacon_points[index].x = point_3d.x;
         beacon_points[index].y = point_3d.y;
     }
@@ -409,15 +363,21 @@ void AP_Beacon::log()
     float accuracy = 0.0f;
     get_vehicle_position_ned(pos, accuracy);
 
+    float distances[4];
+    for(uint8_t i=0; i<MIN(ARRAY_SIZE(distances), num_beacons); i++) {
+        const auto &info = beacon_state[i];
+        distances[i] = info.get_distance();
+    }
+
     const struct log_Beacon pkt_beacon{
        LOG_PACKET_HEADER_INIT(LOG_BEACON_MSG),
        time_us         : AP_HAL::micros64(),
        health          : (uint8_t)healthy(),
        count           : (uint8_t)count(),
-       dist0           : beacon_distance(0),
-       dist1           : beacon_distance(1),
-       dist2           : beacon_distance(2),
-       dist3           : beacon_distance(3),
+       dist0           : distances[0],
+       dist1           : distances[1],
+       dist2           : distances[2],
+       dist3           : distances[3],
        posx            : pos.x,
        posy            : pos.y,
        posz            : pos.z
