@@ -702,14 +702,18 @@ private:
     bool automatic_gyrocal_attempted;
 
     // structure containing all data required for doing gyro calibration:
-    struct GyroCalData {
+    class GyroCalData {
+    public:
+        GyroCalData(uint8_t num_gryos);
+    private:
         uint8_t num_gyros;
-        Vector3f last_average[INS_MAX_INSTANCES], best_avg[INS_MAX_INSTANCES];
+        Vector3f last_average[INS_MAX_INSTANCES]
+        Vector3f best_avg[INS_MAX_INSTANCES];
         Vector3f new_gyro_offset[INS_MAX_INSTANCES];
         float best_diff[INS_MAX_INSTANCES];
         bool converged[INS_MAX_INSTANCES];
 #if HAL_INS_TEMPERATURE_CAL_ENABLE
-        float start_temperature[INS_MAX_INSTANCES] {};
+        float start_temperature[INS_MAX_INSTANCES];
 #endif
     } gyro_cal_data;
 
