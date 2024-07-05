@@ -6,7 +6,7 @@
 bool ModeQLoiter::_enter()
 {
     // initialise loiter
-    loiter_nav->clear_pilot_desired_acceleration();
+    loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
     loiter_nav->init_target();
 
     // set vertical speed and acceleration limits
@@ -81,7 +81,7 @@ void ModeQLoiter::run()
         attitude_control->set_throttle_out(0, true, 0);
         quadplane.relax_attitude_control();
         pos_control->relax_U_controller(0);
-        loiter_nav->clear_pilot_desired_acceleration();
+        loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
         loiter_nav->init_target();
 
         // Stabilize with fixed wing surfaces
@@ -98,7 +98,7 @@ void ModeQLoiter::run()
     }
 
     if (now - quadplane.last_loiter_ms > 500) {
-        loiter_nav->clear_pilot_desired_acceleration();
+        loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
         loiter_nav->init_target();
     }
     quadplane.last_loiter_ms = now;
@@ -112,7 +112,7 @@ void ModeQLoiter::run()
     // process pilot's roll and pitch input
     float target_roll_cd, target_pitch_cd;
     quadplane.get_pilot_desired_lean_angles(target_roll_cd, target_pitch_cd, loiter_nav->get_angle_max_cd(), attitude_control->get_althold_lean_angle_max_cd());
-    loiter_nav->set_pilot_desired_acceleration(target_roll_cd, target_pitch_cd);
+    loiter_nav->set_pilot_desired_acceleration_cd(target_roll_cd, target_pitch_cd);
     
     // run loiter controller
     if (!pos_control->is_active_NE()) {
