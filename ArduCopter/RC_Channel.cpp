@@ -42,6 +42,16 @@ bool RC_Channels_Copter::in_rc_failsafe() const
     return copter.failsafe.radio;
 }
 
+RC_Channel *RC_Channels_Copter::get_failsafe_channel() const
+{
+    return copter.channel_throttle;
+}
+
+uint16_t RC_Channels_Copter::failsafe_channel_failsafe_value() const
+{
+    return (uint16_t)copter.g.failsafe_throttle_value;
+}
+
 bool RC_Channels_Copter::has_valid_input() const
 {
     if (in_rc_failsafe()) {

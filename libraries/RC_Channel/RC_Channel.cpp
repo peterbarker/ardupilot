@@ -283,12 +283,18 @@ bool RC_Channel::get_reverse(void) const
 }
 
 // read input from hal.rcin or overrides
-bool RC_Channel::update(void)
+bool RC_Channel::update(bool rcprotocol_good)
 {
     if (has_override() && !rc().option_is_enabled(RC_Channels::Option::IGNORE_OVERRIDES)) {
         radio_in = override_value;
     } else if (rc().has_had_rc_receiver() && !rc().option_is_enabled(RC_Channels::Option::IGNORE_RECEIVER)) {
         radio_in = hal.rcin->read(ch_in);
+        if (!rcprotocol_good) {
+            // this might seem odd.... but we are still able to update
+            // values from the receiver, so we return here.  The
+            // control values are unchanged. however.
+            return true;
+        }
     } else {
         return false;
     }

@@ -72,7 +72,16 @@ uint8_t RC_Channels::get_radio_in(uint16_t *chans, const uint8_t num_channels)
 // update all the input channels
 bool RC_Channels::read_input(void)
 {
+    bool rcprototcol_good = true;
+
     if (hal.rcin->new_input()) {
+        const auto *failsafe_ch = get_failsafe_channel();
+        if (failsafe_ch != nullptr) {
+            const uint16_t failsafe_ch_value = hal.rcin->read(failsafe_ch->ch_i);
+            if (failsafe_ch_value < failsafe_channel_failsafe_value()) {
+                rcprotocol_good = false;
+            }
+        }
         _has_had_rc_receiver = true;
     } else if (!has_new_overrides) {
         return false;
@@ -86,7 +95,7 @@ bool RC_Channels::read_input(void)
 
     bool success = false;
     for (uint8_t i=0; i<NUM_RC_CHANNELS; i++) {
-        success |= channel(i)->update();
+        success |= channel(i)->update(rcprotocol_good);
     }
 
     return success;

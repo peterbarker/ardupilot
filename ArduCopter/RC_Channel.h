@@ -34,6 +34,8 @@ public:
     bool in_rc_failsafe() const override;
 
     RC_Channel *get_arming_channel(void) const override;
+    RC_Channel *get_failsafe_channel(void) const override;
+    uint16_t failsafe_channel_failsafe_value() const override;
 
     RC_Channel_Copter obj_channels[NUM_RC_CHANNELS];
     RC_Channel_Copter *channel(const uint8_t chan) override {

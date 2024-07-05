@@ -37,9 +37,6 @@ public:
     // get the center stick position expressed as a control_in value
     int16_t     get_control_mid() const;
 
-    // read input from hal.rcin - create a control_in value
-    bool        update(void);
-
     // calculate an angle given dead_zone and trim. This is used by the quadplane code
     // for hover throttle
     int16_t     pwm_to_angle_dz_trim(uint16_t dead_zone, uint16_t trim) const;
@@ -371,6 +368,9 @@ protected:
 
 private:
 
+    // read input from hal.rcin - create a control_in value
+    bool        update(void);
+
     // pwm is stored here
     int16_t     radio_in;
 
@@ -507,6 +507,12 @@ public:
     virtual bool has_valid_input() const { return false; };
 
     virtual RC_Channel *get_arming_channel(void) const { return nullptr; };
+    // failsafe channel will almost always be the channel on which
+    // throttle is coming in:
+    virtual RC_Channel *get_failsafe_channel() const { return nullptr; }
+    // failsafe_channel_failsafe_value should only be used if
+    // get_failsafe_channel returns non-nullptr!
+    virtual uint16_t failsafe_channel_failsafe_value() const { return 0; }
 
     bool gcs_overrides_enabled() const { return _gcs_overrides_enabled; }
     void set_gcs_overrides_enabled(bool enable) {
