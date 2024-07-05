@@ -137,7 +137,7 @@ void AC_Loiter::soften_for_landing()
 
 /// set pilot desired acceleration in centi-degrees
 //   dt should be the time (in seconds) since the last call to this function
-void AC_Loiter::set_pilot_desired_acceleration(float euler_roll_angle_cd, float euler_pitch_angle_cd)
+void AC_Loiter::set_pilot_desired_acceleration_cd(float euler_roll_angle_cd, float euler_pitch_angle_cd)
 {
     const float dt = _attitude_control.get_dt();
     // Convert from centidegrees on public interface to radians
