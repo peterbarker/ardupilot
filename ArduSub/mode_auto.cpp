@@ -451,7 +451,7 @@ bool ModeAuto::auto_terrain_recover_start()
     sub.mission.stop();
 
     // Reset xy target
-    sub.loiter_nav.clear_pilot_desired_acceleration();
+    sub.loiter_nav.set_pilot_desired_acceleration_cd(0, 0);
     sub.loiter_nav.init_target();
 
     // Reset z axis controller
