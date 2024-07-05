@@ -54,7 +54,7 @@ bool ModePosHold::init(bool ignore_checks)
     }
 
     // initialise loiter
-    loiter_nav->clear_pilot_desired_acceleration();
+    loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
     loiter_nav->init_target();
 
     // initialise wind_comp each time PosHold is switched on
@@ -73,7 +73,7 @@ void ModePosHold::run()
 
     // set vertical speed and acceleration limits
     pos_control->set_max_speed_accel_U_cm(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
-    loiter_nav->clear_pilot_desired_acceleration();
+    loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
 
     // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();
@@ -104,7 +104,7 @@ void ModePosHold::run()
         attitude_control->reset_rate_controller_I_terms();
         attitude_control->reset_yaw_target_and_rate(false);
         pos_control->relax_U_controller(0.0f);   // forces throttle output to decay to zero
-        loiter_nav->clear_pilot_desired_acceleration();
+        loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
         loiter_nav->init_target();
 
         // set poshold state to pilot override
@@ -116,7 +116,7 @@ void ModePosHold::run()
         break;
 
     case AltHoldModeState::Landed_Ground_Idle:
-        loiter_nav->clear_pilot_desired_acceleration();
+        loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
         loiter_nav->init_target();
         attitude_control->reset_yaw_target_and_rate();
         init_wind_comp_estimate();
@@ -144,7 +144,7 @@ void ModePosHold::run()
         takeoff.do_pilot_takeoff(target_climb_rate);
 
         // init and update loiter although pilot is controlling lean angles
-        loiter_nav->clear_pilot_desired_acceleration();
+        loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
         loiter_nav->init_target();
 
         // set poshold state to pilot override

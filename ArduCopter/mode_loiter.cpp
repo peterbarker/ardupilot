@@ -9,20 +9,20 @@
 // loiter_init - initialise loiter controller
 bool ModeLoiter::init(bool ignore_checks)
 {
+    float target_roll = 0.0;
+    float target_pitch = 0.0;
+
     if (!copter.failsafe.radio) {
-        float target_roll, target_pitch;
         // apply SIMPLE mode transform to pilot inputs
         update_simple_mode();
 
         // convert pilot input to lean angles
         get_pilot_desired_lean_angles(target_roll, target_pitch, loiter_nav->get_angle_max_cd(), attitude_control->get_althold_lean_angle_max_cd());
-
-        // process pilot's roll and pitch input
-        loiter_nav->set_pilot_desired_acceleration(target_roll, target_pitch);
-    } else {
-        // clear out pilot desired acceleration in case radio failsafe event occurs and we do not switch to RTL for some reason
-        loiter_nav->clear_pilot_desired_acceleration();
     }
+
+    // process pilot's roll and pitch input
+    loiter_nav->set_pilot_desired_acceleration_cd(target_roll, target_pitch);
+
     loiter_nav->init_target();
 
     // initialise the vertical position controller
@@ -62,7 +62,8 @@ bool ModeLoiter::do_precision_loiter()
 
 void ModeLoiter::precision_loiter_xy()
 {
-    loiter_nav->clear_pilot_desired_acceleration();
+    // pilot doesn't get a say when we're doing precision loiter:
+    loiter_nav->set_pilot_desired_acceleration_cd(0, 0);
     Vector2f target_pos, target_vel;
     if (!copter.precland.get_target_position_cm(target_pos)) {
         target_pos = inertial_nav.get_position_xy_cm();
@@ -83,12 +84,13 @@ void ModeLoiter::precision_loiter_xy()
 // should be called at 100hz or more
 void ModeLoiter::run()
 {
-    float target_roll, target_pitch;
-    float target_yaw_rate = 0.0f;
-    float target_climb_rate = 0.0f;
-
     // set vertical speed and acceleration limits
     pos_control->set_max_speed_accel_U_cm(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+
+    float target_yaw_rate = 0.0f;
+    float target_climb_rate = 0.0f;
+    float target_roll = 0.0;
+    float target_pitch = 0.0;
 
     // process pilot inputs unless we are in radio failsafe
     if (!copter.failsafe.radio) {
@@ -98,19 +100,16 @@ void ModeLoiter::run()
         // convert pilot input to lean angles
         get_pilot_desired_lean_angles(target_roll, target_pitch, loiter_nav->get_angle_max_cd(), attitude_control->get_althold_lean_angle_max_cd());
 
-        // process pilot's roll and pitch input
-        loiter_nav->set_pilot_desired_acceleration(target_roll, target_pitch);
-
         // get pilot's desired yaw rate
         target_yaw_rate = get_pilot_desired_yaw_rate();
 
         // get pilot desired climb rate
         target_climb_rate = get_pilot_desired_climb_rate(channel_throttle->get_control_in());
         target_climb_rate = constrain_float(target_climb_rate, -get_pilot_speed_dn(), g.pilot_speed_up);
-    } else {
-        // clear out pilot desired acceleration in case radio failsafe event occurs and we do not switch to RTL for some reason
-        loiter_nav->clear_pilot_desired_acceleration();
     }
+
+    // process pilot's roll and pitch input
+    loiter_nav->set_pilot_desired_acceleration_cd(target_roll, target_pitch);
 
     // relax loiter target if we might be landed
     if (copter.ap.land_complete_maybe) {
