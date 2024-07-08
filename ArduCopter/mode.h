@@ -1552,6 +1552,7 @@ private:
     AP_Float keep_out_CW;
     AP_Float keep_out_CCW;
     AP_Float keep_out_radius;
+    AP_Float deck_radius;
 };
 #endif // MODE_SHIP_OPS_ENABLED
 

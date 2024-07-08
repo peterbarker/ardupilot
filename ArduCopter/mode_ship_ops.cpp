@@ -101,6 +101,14 @@ const AP_Param::GroupInfo ModeShipOperation::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("KOZ_RAD", 12, ModeShipOperation, keep_out_radius, 250.0f),
 
+    // @Param: KOZ_DKR
+    // @DisplayName: Radius in meters of the deck
+    // @Description: Radius in meters of the deck before the keep out zone becomes effective
+    // @Range: 0 1000
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("KOZ_DKR", 13, ModeShipOperation, deck_radius, 10.0f),
+
     AP_GROUPEND
 };
 
@@ -224,6 +232,7 @@ void ModeShipOperation::set_keep_out_zone_mode(KeepOutZoneMode new_keep_out_zone
     keep_out_zone_mode = new_keep_out_zone_mode;
     switch (keep_out_zone_mode) {
     case KeepOutZoneMode::NO_ACTION:
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "ShipOps: KOZ No Action");
         break;
     case KeepOutZoneMode::AVOID_KOZ:
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "ShipOps: Avoiding KOZ");
@@ -298,7 +307,7 @@ void ModeShipOperation::run()
     Vector3f accel_ned;  // accel of lead vehicle
     if (g2.follow.get_target_dist_and_vel_ned(pos_delta_ned_m, pos_delta_with_ofs_ned_m, vel_ned_ms)) {
         vel_ned_ms *= 100.0f;
-        accel_ned.zero(); // follow me should include acceleration so it is kept here for future funcitonality.
+        accel_ned.zero(); // follow me should include acceleration so it is kept here for future functionality.
         // vel_ned_ms does not include the change in heading + offset radius
         Vector3f pos_with_ofs_ned;  // vector to lead vehicle + offset
         pos_with_ofs_ned.xy() = curr_pos_neu_cm.xy() + pos_delta_with_ofs_ned_m.xy() * 100.0;
@@ -313,21 +322,21 @@ void ModeShipOperation::run()
         }
 
         shape_pos_vel_accel_xy(pos_with_ofs_ned.xy().topostype(), vel_ned_ms.xy(), accel_ned.xy(),
-                            ship.pos_ned.xy(), ship.vel_ned.xy(), ship.accel_ned.xy(),
-                            0.0, ship_max_accel_xy * 100.0,
-                            ship_max_jerk_xy * 100.0, G_Dt, false);
+            ship.pos_ned.xy(), ship.vel_ned.xy(), ship.accel_ned.xy(),
+            0.0, ship_max_accel_xy * 100.0,
+            ship_max_jerk_xy * 100.0, G_Dt, false);
         shape_pos_vel_accel(pos_with_ofs_ned.z, vel_ned_ms.z, accel_ned.z,
-                            ship.pos_ned.z, ship.vel_ned.z, ship.accel_ned.z,
-                            0.0, 0.0, 
-                            -ship_max_accel_z * 100.0, ship_max_accel_z * 100.0,
-                            ship_max_jerk_z * 100.0, G_Dt, false);
+            ship.pos_ned.z, ship.vel_ned.z, ship.accel_ned.z,
+            0.0, 0.0, 
+            -ship_max_accel_z * 100.0, ship_max_accel_z * 100.0,
+            ship_max_jerk_z * 100.0, G_Dt, false);
         update_pos_vel_accel_xy(ship.pos_ned.xy(), ship.vel_ned.xy(), ship.accel_ned.xy(), G_Dt, Vector2f(), Vector2f(), Vector2f());
         update_pos_vel_accel(ship.pos_ned.z, ship.vel_ned.z, ship.accel_ned.z, G_Dt, 0.0, 0.0, 0.0);
 
         shape_angle_vel_accel(radians(target_heading_deg), 0.0, 0.0,
-                            ship.heading, ship.heading_rate, ship.heading_accel,
-                            0.0, radians(ship_max_accel_h),
-                            radians(ship_max_jerk_h), G_Dt, false);
+            ship.heading, ship.heading_rate, ship.heading_accel,
+            0.0, radians(ship_max_accel_h),
+            radians(ship_max_jerk_h), G_Dt, false);
         postype_t ship_heading_p = ship.heading;
         update_pos_vel_accel(ship_heading_p, ship.heading_rate, ship.heading_accel, G_Dt, 0.0, 0.0, 0.0);
         ship.heading = wrap_PI(ship_heading_p);
@@ -429,7 +438,8 @@ void ModeShipOperation::run()
             extension_distance_cm = MIN(extension_distance_cm, perch_radius * 100.0 * sinf(0.5 * (2 * M_PI - keep_out_angle_rad * 100.0)));
             Vector2f extension_cm = { extension_distance_cm, 0.0 };
 
-            if (fabsf(wrap_PI(aircraft_bearing_rad - koz_center_heading_rad)) > keep_out_angle_rad / 2.0) {
+            if ((fabsf(wrap_PI(aircraft_bearing_rad - koz_center_heading_rad)) > safe_asin(deck_radius * 100.0 / aircraft_bearing_cm.length()) + keep_out_angle_rad / 2.0) || 
+                    (aircraft_bearing_cm.length() < deck_radius * 100.0) ) {
                 set_keep_out_zone_mode(KeepOutZoneMode::NO_ACTION);
             } else if (aircraft_bearing_cm.length() < keep_out_radius * 100.0) {
                 set_keep_out_zone_mode(KeepOutZoneMode::EXIT_KOZ);
@@ -724,6 +734,19 @@ void ModeShipOperation::run()
     } else {
         attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector(), yaw_cd, yaw_rate_cds);
     }
+    
+    Vector2f    ship_offset = curr_pos_neu_cm.xy() - ship.pos_ned.xy().tofloat();
+    AP::logger().Write("SHP",
+                       "TimeUS,SPX,SPY,SH,SOL,SA",
+                       "smm-m-",
+                       "F00000",
+                       "Qfffff",
+                       AP_HAL::micros64(),
+                       double(ship.pos_ned.x * 0.01f),
+                       double(ship.pos_ned.y * 0.01f),
+                       double(degrees(ship.heading)),
+                       double(ship_offset.length() * 0.01f),
+                       double(degrees(ship_offset.angle()-ship.heading)));
 }
 
 bool ModeShipOperation::is_landing() const
