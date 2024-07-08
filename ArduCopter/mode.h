@@ -7,7 +7,51 @@ class ParametersG2;
 
 class GCS_Copter;
 
+class PayloadPlace {
+public:
+    void init(float _descent_max_cm);
+    void run();
+    void start_descent();
+    bool verify();
+
+    enum class State : uint8_t {
+        Descent_Start,
+        Descent_Measure,
+        Descent_Test,
+        Release,
+        Releasing,
+        Delay,
+        Ascent_Start,
+        Ascent,
+        Done,
+    };
+
+    // these are set by the Mission code:
+    State state = State::Descent_Start; // records state of payload place
+
+    // these methods are called by some of the above methods, but may
+    // be useful separately:
+    void init_horizontal_control();
+    void run_horizontal_control();
+    void init_vertical_control();
+    void run_vertical_control();
+    bool within_rangefinder_release_range() const;
+
+private:
+
+    float descent_max_cm;
+    uint32_t descent_established_time_ms; // milliseconds
+    uint32_t place_start_time_ms; // milliseconds
+    float descent_thrust_sum;
+    LowPassFilterFloat  thrust_filt;
+    uint32_t descent_thrust_sum_count;
+    float descent_start_altitude_cm;
+    float rangefinder_drop_alt_time_ms;
+    float descent_speed_cms;
+};
+
 class Mode {
+    friend class PayloadPlace;
 
 public:
 
@@ -39,6 +83,7 @@ public:
         AUTOROTATE =   26,  // Autonomous autorotation
         AUTO_RTL =     27,  // Auto RTL, this is not a true mode, AUTO will report as this mode if entered to perform a DO_LAND_START Landing sequence
         TURTLE =       28,  // Flip over after crash
+        SHIP_OPS =     29,  // Provides semi-autonomous landing on a moving platform
 
         // Mode number 127 reserved for the "drone show mode" in the Skybrush
         // fork at https://github.com/skybrush-io/ardupilot
@@ -143,6 +188,9 @@ protected:
         land_run_vertical_control(pause_descent);
     }
 
+    // payload place flight behaviour:
+    static PayloadPlace payload_place;
+
     // run normal or precision landing (if enabled)
     // pause_descent is true if vehicle should not descend
     void land_run_normal_or_precland(bool pause_descent = false);
@@ -204,9 +252,9 @@ protected:
         bool triggered(float target_climb_rate) const;
 
         bool running() const { return _running; }
+        float take_off_start_alt;
     private:
         bool _running;
-        float take_off_start_alt;
         float take_off_complete_alt;
     };
 
@@ -423,10 +471,11 @@ private:
 
 };
 
-
 class ModeAuto : public Mode {
 
 public:
+    friend class PayloadPlace;  // in case wp_run is accidentally required
+
     // inherit constructor
     using Mode::Mode;
     Number mode_number() const override { return auto_RTL? Number::AUTO_RTL : Number::AUTO; }
@@ -489,6 +538,7 @@ public:
     virtual bool has_user_takeoff(bool must_navigate) const override { return false; }
 
     void payload_place_start();
+    void payload_place_run();
 
     // for GCS_MAVLink to call:
     bool do_guided(const AP_Mission::Mission_Command& cmd);
@@ -549,12 +599,6 @@ private:
     void nav_attitude_time_run();
 
     Location loc_from_cmd(const AP_Mission::Mission_Command& cmd, const Location& default_loc) const;
-
-    void payload_place_run();
-    bool payload_place_run_should_run();
-    void payload_place_run_hover();
-    void payload_place_run_descent();
-    void payload_place_run_release();
 
     SubMode _mode = SubMode::TAKEOFF;   // controls which auto controller is run
 
@@ -637,21 +681,18 @@ private:
     int32_t condition_value;  // used in condition commands (eg delay, change alt, etc.)
     uint32_t condition_start;
 
+    enum class PayloadPlaceState {
+        FlyToLocation = 0,
+        Placing = 1,
+        Done = 2,
+    };
+    PayloadPlaceState payload_place_state = PayloadPlaceState::FlyToLocation;
+
     enum class State {
         FlyToLocation = 0,
         Descending = 1
     };
     State state = State::FlyToLocation;
-
-    struct {
-        PayloadPlaceStateType state = PayloadPlaceStateType_Descent_Start; // records state of payload place
-        uint32_t descent_established_time_ms; // milliseconds
-        uint32_t place_start_time_ms; // milliseconds
-        float descent_thrust_level;
-        float descent_start_altitude_cm;
-        float descent_speed_cms;
-        float descent_max_cm;
-    } nav_payload_place;
 
     bool waiting_to_start;  // true if waiting for vehicle to be armed or EKF origin before starting mission
 
@@ -1406,6 +1447,114 @@ private:
     };
 
 };
+
+
+#if MODE_SHIP_OPS_ENABLED == ENABLED
+class ModeShipOperation : public Mode {
+
+public:
+    // inherit constructor
+    using Mode::Mode;
+    ModeShipOperation(void);
+    Number mode_number() const override { return Number::SHIP_OPS; }
+
+    bool init(bool ignore_checks) override;
+    void run() override;
+
+    bool requires_GPS() const override { return true; }
+    bool has_manual_throttle() const override { return false; }
+    bool allows_arming(AP_Arming::Method method) const override { return true; };
+    bool is_autopilot() const override { return true; }
+    bool has_user_takeoff(bool must_navigate) const override { return true; }
+
+    bool requires_terrain_failsafe() const override { return false; }
+
+    // for reporting to GCS
+    bool get_wp(Location &loc) const override;
+
+    // SHIP_OPS states
+    enum class SubMode : uint8_t {
+        CLIMB_TO_RTL,
+        RETURN_TO_PERCH,
+        PERCH,
+        OVER_SPOT,
+        LAUNCH_RECOVERY,
+        PAYLOAD_PLACE
+    };
+    SubMode state() { return _state; }
+    const char *state_name(SubMode mode) const;
+    void set_state(SubMode mode);
+
+    // Keep-Out-Zone states
+    enum class KeepOutZoneMode : uint8_t {
+        NO_ACTION,
+        AVOID_KOZ,
+        EXIT_KOZ
+    };
+
+    void set_keep_out_zone_mode(KeepOutZoneMode keep_out_zone_mode);
+    //KeepOutZoneMode keep_out_zone_mode() const { return new_keep_out_zone_mode; }
+
+    // SHIP_OPS states
+    enum class ApproachMode : uint8_t {
+        LAUNCH_RECOVERY,
+        PAYLOAD_PLACE
+    };
+
+    void set_approach_mode(ApproachMode approach_mode);
+    //ApproachMode approach_mode() const { return new_approach_mode; }
+
+    virtual bool is_landing() const override;
+
+    // var_info for holding Parameter information
+    static const struct AP_Param::GroupInfo var_info[];
+    
+protected:
+
+    const char *name() const override { return "SHIP_OPS"; }
+    const char *name4() const override { return "SHIP"; }
+
+private:
+
+    SubMode _state = SubMode::CLIMB_TO_RTL;  // records state of rtl (initial climb, returning home, etc)
+    KeepOutZoneMode keep_out_zone_mode = KeepOutZoneMode::NO_ACTION;  // records state of rtl (initial climb, returning home, etc)
+    ApproachMode approach_mode = ApproachMode::LAUNCH_RECOVERY;  // records state of rtl (initial climb, returning home, etc)
+    uint32_t wp_distance() const override;
+    int32_t wp_bearing() const override;
+
+    uint32_t last_log_ms;   // system time of last time desired velocity was logging
+    float target_climb_rate;   // system time of last time desired velocity was logging
+    Vector3f offset;
+    bool ship_takeoff;
+    bool pilot_correction_active;
+    class Ship {
+    public:
+        void reset(const Vector3f &pos_with_ofs_ned, const Vector3f &vel_ned_ms, float target_heading_deg);
+        Vector3p pos_ned;
+        Vector3f vel_ned;
+        Vector3f accel_ned;
+        float heading;
+        float heading_rate;
+        float heading_accel;
+        bool available;
+    } ship;
+
+    // Ship Operations parameters
+    AP_Float perch_angle;
+    AP_Float perch_radius;
+    AP_Float perch_altitude;
+    AP_Float ship_max_accel_xy;
+    AP_Float ship_max_jerk_xy;
+    AP_Float ship_max_accel_z;
+    AP_Float ship_max_jerk_z;
+    AP_Float ship_max_accel_h;
+    AP_Float ship_max_jerk_h;
+    AP_Float keep_out_CW;
+    AP_Float keep_out_CCW;
+    AP_Float keep_out_radius;
+    AP_Float deck_radius;
+};
+#endif // MODE_SHIP_OPS_ENABLED
 
 
 class ModeSmartRTL : public ModeRTL {

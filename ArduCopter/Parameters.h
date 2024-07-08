@@ -584,6 +584,11 @@ public:
     void *mode_flowhold_ptr;
 #endif
 
+#if MODE_SHIP_OPS_ENABLED == ENABLED
+    // we need a pointer to the mode for the G2 table
+    void *mode_shipops_ptr;
+#endif
+    
 #if MODE_FOLLOW_ENABLED == ENABLED
     // follow
     AP_Follow follow;
@@ -688,9 +693,10 @@ public:
 
     // payload place parameters
     AP_Float pldp_thrust_placed_fraction;
-    AP_Float pldp_range_finder_minimum_m;
+    AP_Float pldp_range_finder_maximum_m;
     AP_Float pldp_delay_s;
     AP_Float pldp_descent_speed_ms;
+    AP_Float pldp_range_finder_drop_m;
 };
 
 extern const AP_Param::Info        var_info[];
