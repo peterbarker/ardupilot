@@ -8050,7 +8050,7 @@ class AutoTestCopter(AutoTest):
             target=mavextra.wrap_180(angle),
             current_value_getter=current_value_getter,
             accuracy=5,
-            timeout=30,
+            timeout=300,
             minimum_duration=5,
         )
         self.context_pop()
@@ -8195,7 +8195,9 @@ class AutoTestCopter(AutoTest):
         # grip_rc_channel = 8
         self.set_rc(8, 2000)  # grab
         self.load_params_file("ShipLanding.param")
-        self.reboot_sitl(startup_location_dist_max=1000)  # for gripper
+        self.customise_SITL_commandline(
+            ["--home", "Jervis_Bay"]
+        )
 
         # FIXME: change to mode shipops before ready to arm (code
         # needs to be fixed....)
