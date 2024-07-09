@@ -8689,7 +8689,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
         perch_alt = self.get_parameter('SHIP_PCH_ALT')
 
-        abs_alt = self.get_altitude(relative=False)
+        # abs_alt = self.get_altitude(relative=False)
 
         self.progress("trigger launch")
         self.set_rc(3, 2000)
