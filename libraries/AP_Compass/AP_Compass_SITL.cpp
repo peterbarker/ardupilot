@@ -6,76 +6,92 @@
 
 extern const AP_HAL::HAL& hal;
 
-AP_Compass_SITL::AP_Compass_SITL()
+// "i" here corresponds to the compass driver instance we're providing
+// data to, offset from zero.
+AP_Compass_SITL::AP_Compass_SITL(uint8_t i)
     : _sitl(AP::sitl())
 {
-    if (_sitl != nullptr) {
-        for (uint8_t i=0; i<MAX_CONNECTED_MAGS; i++) {
-            uint32_t dev_id = _sitl->mag_devid[i];
-            if (dev_id == 0) {
-                continue;
-            }
-            uint8_t instance;
-            if (!register_compass(dev_id, instance)) {
-                continue;
-            } else if (_num_compass<MAX_SITL_COMPASSES) {
-                _compass_instance[_num_compass] = instance;
-                set_dev_id(_compass_instance[_num_compass], dev_id);
+    offsets = &_sitl->mag_ofs[i];
+    diagonals = &_sitl->mag_diag[i];
+    offdiagonals = &_sitl->mag_offdiag[i];
+    orient = &_sitl->mag_orient[i];
+    scaling = &_sitl->mag_scaling[i];
+    fail = &_sitl->mag_fail[i];
 
-                if (_sitl->mag_save_ids) {
-                    // save so the compass always comes up configured in SITL
-                    save_dev_id(_compass_instance[_num_compass]);
-                }
-                set_rotation(instance, ROTATION_NONE);
-                _num_compass++;
-            }
-        }
-
-        // Scroll through the registered compasses, and set the offsets
-        for (uint8_t i=0; i<_num_compass; i++) {
-            if (_compass.get_offsets(i).is_zero()) {
-                _compass.set_offsets(i, _sitl->mag_ofs[i]);
-            }
-        }
-
-        // we want to simulate a calibrated compass by default, so set
-        // scale to 1
-        AP_Param::set_default_by_name("COMPASS_SCALE", 1);
-        AP_Param::set_default_by_name("COMPASS_SCALE2", 1);
-        AP_Param::set_default_by_name("COMPASS_SCALE3", 1);
-
-        // make first compass external
-        set_external(_compass_instance[0], true);
-
-        hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &AP_Compass_SITL::_timer, void));
+    uint32_t dev_id = _sitl->mag_devid[i];
+    if (dev_id == 0) {
+        return;
     }
+    uint8_t instance;
+    if (!register_compass(dev_id, instance)) {
+        return;
+    }
+    _compass_instance = instance;
+    set_dev_id(_compass_instance, dev_id);
+
+    if (_sitl->mag_save_ids) {
+        // save so the compass always comes up configured in SITL
+        save_dev_id(_compass_instance);
+    }
+    set_rotation(_compass_instance, ROTATION_NONE);
+
+    if (_compass.get_offsets(i).is_zero()) {
+        _compass.set_offsets(i, *offsets);
+    }
+
+    // we want to simulate a calibrated compass by default, so set
+    // scale to 1
+    const char *scale_name = nullptr;
+    switch (i) {
+    case 0:
+        scale_name = "COMPASS_SCALE";
+        break;
+    case 1:
+        scale_name = "COMPASS_SCALE2";
+        break;
+    case 2:
+        scale_name = "COMPASS_SCALE3";
+        break;
+    }
+    if (scale_name != nullptr) {
+        AP_Param::set_default_by_name(scale_name, 1);
+    }
+
+    // make first compass external
+    if (i == 0) {
+        set_external(_compass_instance, true);
+    }
+
+    hal.scheduler->register_timer_process(FUNCTOR_BIND(this, &AP_Compass_SITL::_timer, void));
 }
 
 
 /*
   create correction matrix for diagonals and off-diagonals
 */
-void AP_Compass_SITL::_setup_eliptical_correcion(uint8_t i)
+void AP_Compass_SITL::_setup_eliptical_correcion()
 {
-    Vector3f diag = _sitl->mag_diag[i].get();
-    if (diag.is_zero()) {
-        diag = {1,1,1};
+    if (diagonals->get().is_zero()) {
+        diagonals->set(Vector3f{1, 1, 1});
     }
-    const Vector3f &diagonals = diag;
-    const Vector3f &offdiagonals = _sitl->mag_offdiag[i];
-    
-    if (diagonals == _last_dia && offdiagonals == _last_odi) {
+
+    const Vector3f dia = diagonals->get();
+    const Vector3f odi = offdiagonals->get();
+
+    if (dia == _last_dia && odi == _last_odi) {
         return;
     }
-    
-    _eliptical_corr = Matrix3f(diagonals.x,    offdiagonals.x, offdiagonals.y,
-                               offdiagonals.x, diagonals.y,    offdiagonals.z,
-                               offdiagonals.y, offdiagonals.z, diagonals.z);
+
+    _eliptical_corr = Matrix3f(
+        dia.x, odi.x, odi.y,
+        odi.x, dia.y, odi.z,
+        odi.y, odi.z, dia.z
+    );
     if (!_eliptical_corr.invert()) {
         _eliptical_corr.identity();
     }
-    _last_dia = diag;
-    _last_odi = offdiagonals;
+    _last_dia = dia;
+    _last_odi = odi;
 }
 
 void AP_Compass_SITL::_timer()
@@ -125,35 +141,32 @@ void AP_Compass_SITL::_timer()
         new_mag_data = buffer[best_index].data;
     }
 
-    for (uint8_t i=0; i<_num_compass; i++) {
-        _setup_eliptical_correcion(i);
-        Vector3f f = (_eliptical_corr * new_mag_data) - _sitl->mag_ofs[i].get();
+        _setup_eliptical_correcion();
+        Vector3f f = (_eliptical_corr * new_mag_data) - offsets->get();
         // rotate compass
-        f.rotate_inverse((enum Rotation)_sitl->mag_orient[i].get());
+        f.rotate_inverse((enum Rotation)orient->get());
         f.rotate(get_board_orientation());
         // scale the compass to simulate sensor scale factor errors
-        f *= _sitl->mag_scaling[i];
+        f *= scaling->get();
 
-        switch (_sitl->mag_fail[i]) {
+        switch (fail->get()) {
         case 0:
-            accumulate_sample(f, _compass_instance[i], 10);
-            _last_data[i] = f;
+            accumulate_sample(f, _compass_instance, 10);
+            _last_data = f;
             break;
         case 1:
             // no data
             break;
         case 2:
             // frozen compass
-            accumulate_sample(_last_data[i], _compass_instance[i], 10);
+            accumulate_sample(_last_data, _compass_instance, 10);
             break;
         }
-    }
 }
+
 
 void AP_Compass_SITL::read()
 {
-    for (uint8_t i=0; i<_num_compass; i++) {
-        drain_accumulated_samples(_compass_instance[i], nullptr);
-    }
+        drain_accumulated_samples(_compass_instance, nullptr);
 }
 #endif  // AP_COMPASS_SITL_ENABLED

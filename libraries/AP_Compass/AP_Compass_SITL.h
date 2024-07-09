@@ -15,14 +15,20 @@
 
 class AP_Compass_SITL : public AP_Compass_Backend {
 public:
-    AP_Compass_SITL();
+    AP_Compass_SITL(uint8_t i);
 
     void read(void) override;
 
 private:
-    uint8_t _compass_instance[MAX_SITL_COMPASSES];
-    uint8_t _num_compass;
+    uint8_t _compass_instance;
     SITL::SIM *_sitl;
+
+    AP_Vector3f *offsets;
+    AP_Vector3f *diagonals;
+    AP_Vector3f *offdiagonals;
+    AP_Int8 *orient;
+    AP_Float *scaling;
+    AP_Int8 * fail;
 
     // delay buffer variables
     struct readings_compass {
@@ -37,11 +43,11 @@ private:
     void _timer();
     uint32_t _last_sample_time;
 
-    void _setup_eliptical_correcion(uint8_t i);
+    void _setup_eliptical_correcion();
     
     Matrix3f _eliptical_corr;
     Vector3f _last_dia;
     Vector3f _last_odi;
-    Vector3f _last_data[MAX_SITL_COMPASSES];
+    Vector3f _last_data;
 };
 #endif // AP_COMPASS_SITL_ENABLED

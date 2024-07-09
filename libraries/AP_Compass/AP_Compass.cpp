@@ -1337,7 +1337,9 @@ void Compass::_detect_backends(void)
 #endif
 
 #if AP_COMPASS_SITL_ENABLED && !AP_TEST_DRONECAN_DRIVERS
-    ADD_BACKEND(DRIVER_SITL, NEW_NOTHROW AP_Compass_SITL());
+    for (uint8_t i=0; i<MAX_CONNECTED_MAGS; i++) {
+        ADD_BACKEND(DRIVER_SITL, NEW_NOTHROW AP_Compass_SITL(i));
+    }
 #endif
 
 #if AP_COMPASS_DRONECAN_ENABLED
