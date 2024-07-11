@@ -1299,27 +1299,27 @@ void PayloadPlace::run_vertical_control()
     const auto &wp_nav = copter.wp_nav;
     const auto &pos_control = copter.pos_control;
 
-    if (!within_rangefinder_release_range()) {
-        // reset timer
+    switch (state) {
+    case State::Descent_Start:
+    case State::Descent_Measure:
         rangefinder_drop_alt_time_ms = now_ms;
-    } else if (now_ms - rangefinder_drop_alt_time_ms < rangefinder_drop_check_duration_ms) {
-        switch (state) {
-        case State::Descent_Start:
-        case State::Descent_Measure:
-            // do nothing on this loop
-            break;
-        case State::Descent_Test:
+        break;
+    case State::Descent_Test:
+        if (!within_rangefinder_release_range()) {
+            // reset timer
+            rangefinder_drop_alt_time_ms = now_ms;
+        } else if (now_ms - rangefinder_drop_alt_time_ms > rangefinder_drop_check_duration_ms) {
             gcs().send_text(MAV_SEVERITY_INFO, "%s rangefinder trigger", prefix_str);
             state = State::Release;
-            break;
-        case State::Release:
-        case State::Releasing:
-        case State::Delay:
-        case State::Ascent_Start:
-        case State::Ascent:
-        case State::Done:
-            break;
         }
+        break;
+    case State::Release:
+    case State::Releasing:
+    case State::Delay:
+    case State::Ascent_Start:
+    case State::Ascent:
+    case State::Done:
+        break;
     }
 
     switch (state) {
