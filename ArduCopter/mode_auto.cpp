@@ -1242,13 +1242,21 @@ void PayloadPlace::run_vertical_control()
     const uint32_t rangefinder_drop_check_duration_ms = 1000; // how long we have to be below a range finder drop altitude before considering placed
     float thrust_ref = 0.0;
 
-    // Vertical thrust is taken from the attitude controller before angle boost is added
+    auto &g2 = copter.g2;
+    const auto &g = copter.g;
+    auto &inertial_nav = copter.inertial_nav;
     auto *attitude_control = copter.attitude_control;
+    const auto &pos_control = copter.pos_control;
+    const auto &wp_nav = copter.wp_nav;
+
+    // Vertical thrust is taken from the attitude controller before angle boost is added
     const float thrust_level = attitude_control->get_throttle_in();
     const uint32_t now_ms = AP_HAL::millis();
 
+    // relax position target if we might be landed
     // if we discover we've landed then immediately release the load:
     if (copter.ap.land_complete || copter.ap.land_complete_maybe) {
+        pos_control->soften_for_landing_xy();
         switch (state) {
         case State::Descent_Start:
             // do nothing on this loop
@@ -1274,7 +1282,9 @@ void PayloadPlace::run_vertical_control()
         AP::gripper()->valid() && AP::gripper()->released()) {
         switch (state) {
         case State::Descent_Start:
-            gcs().send_text(MAV_SEVERITY_INFO, "%s Manual release", prefix_str);
+            gcs().send_text(MAV_SEVERITY_INFO, "%s Abort: Gripper Open", prefix_str);
+            // Descent_Start has not run so we must also initalise descent_start_altitude_cm
+            descent_start_altitude_cm = inertial_nav.get_position_z_up_cm();
             state = State::Done;
             break;
         case State::Descent_Measure:
@@ -1292,12 +1302,6 @@ void PayloadPlace::run_vertical_control()
         }
     }
 #endif
-
-    auto &inertial_nav = copter.inertial_nav;
-    auto &g2 = copter.g2;
-    const auto &g = copter.g;
-    const auto &wp_nav = copter.wp_nav;
-    const auto &pos_control = copter.pos_control;
 
     switch (state) {
     case State::Descent_Start:
