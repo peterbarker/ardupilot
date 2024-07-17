@@ -6651,7 +6651,7 @@ class AutoTest(ABC):
         if minimum_duration >= timeout:
             raise ValueError("minimum_duration >= timeout")
         if print_diagnostics_as_target_not_range:
-            self.progress("Waiting for %s=%.02f with accuracy %.02f" % (value_name, target + accuracy, accuracy))
+            self.progress("Waiting for %s=%.02f with accuracy %.02f" % (value_name, target, accuracy))
         else:
             self.progress("Waiting for %s between (%s) and (%s)" % (value_name, str(minimum), str(maximum)))
         last_print_time = 0
@@ -6682,7 +6682,7 @@ class AutoTest(ABC):
                         (value_name,
                          last_value,
                          want_or_got,
-                         target + accuracy,
+                         target,
                          accuracy,
                          achieved_duration_bit)
                     )
