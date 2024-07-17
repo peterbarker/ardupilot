@@ -133,8 +133,23 @@ bool ModeShipOperation::init(const bool ignore_checks)
 
     if (!g2.follow.have_target()) {
         // follow does not have a target
-        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "No beacon detected");
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "No Valid Beacon");
         return false;
+    }
+
+    float keep_out_CCW_rad = wrap_2PI(radians(keep_out_CCW));
+    float keep_out_angle_rad = wrap_2PI(radians(keep_out_CW) - keep_out_CCW_rad);
+    float keep_out_CW_rad = keep_out_angle_rad + keep_out_CCW_rad;
+    float koz_center_heading_rad = wrap_2PI(ship.heading + (keep_out_CW_rad + keep_out_CCW_rad) / 2.0);
+    if (is_positive(keep_out_radius)) {
+        if (!is_positive(deck_radius)) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "KOZ_DKR must be positive");
+            return false;
+        }
+        if ((wrap_PI(radians(perch_angle) - koz_center_heading_rad)) <  keep_out_angle_rad / 2.0) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Perch in KOZ");
+            return false;
+        }
     }
 
     // TODO: Must check perch angle is in approach cone.
@@ -234,7 +249,6 @@ void ModeShipOperation::set_keep_out_zone_mode(KeepOutZoneMode new_keep_out_zone
     keep_out_zone_mode = new_keep_out_zone_mode;
     switch (keep_out_zone_mode) {
     case KeepOutZoneMode::NO_ACTION:
-        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "ShipOps: KOZ No Action");
         break;
     case KeepOutZoneMode::AVOID_KOZ:
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "ShipOps: Avoiding KOZ");
@@ -300,6 +314,23 @@ void ModeShipOperation::run()
     if (!AP::ahrs().get_home().get_alt_cm(Location::AltFrame::ABOVE_ORIGIN, alt_home_above_origin_cm)) {
         alt_home_above_origin_cm = 0;
     }
+
+    float keep_out_CCW_rad = wrap_2PI(radians(keep_out_CCW));
+    float keep_out_angle_rad = wrap_2PI(radians(keep_out_CW) - keep_out_CCW_rad);
+    float keep_out_CW_rad = keep_out_angle_rad + keep_out_CCW_rad;
+    float koz_center_heading_rad = wrap_2PI(ship.heading + (keep_out_CW_rad + keep_out_CCW_rad) / 2.0);
+    if (is_positive(keep_out_radius)) {
+        if (!is_positive(deck_radius)) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "KOZ_DKR must be positive");
+            copter.do_failsafe_action(Copter::FailsafeAction::AUTO_DO_LAND_START, ModeReason::UNKNOWN);
+            set_state(SubMode::CLIMB_TO_RTL);
+        }
+        if ((wrap_PI(radians(perch_angle) - koz_center_heading_rad)) <  keep_out_angle_rad / 2.0) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Perch in KOZ");
+            copter.do_failsafe_action(Copter::FailsafeAction::AUTO_DO_LAND_START, ModeReason::UNKNOWN);
+            set_state(SubMode::CLIMB_TO_RTL);
+        }
+    }
     
     // define target location
     const Vector3f &curr_pos_neu_cm = inertial_nav.get_position_neu_cm();
@@ -346,8 +377,10 @@ void ModeShipOperation::run()
         // transform offset and perch to earth frame
         perch_offset.rotate(ship.heading);
     } else {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "No Valid Beacon");
         copter.do_failsafe_action(Copter::FailsafeAction::AUTO_DO_LAND_START, ModeReason::UNKNOWN);
         ship.available = false;
+        set_state(SubMode::CLIMB_TO_RTL);
     }
 
     // Alt Hold State Machine Determination
@@ -429,11 +462,6 @@ void ModeShipOperation::run()
             Vector2f aircraft_vector_cm = curr_pos_neu_cm.xy() - ship.pos_ned.xy().tofloat();
             float aircraft_bearing_rad = aircraft_vector_cm.angle();
 
-            float keep_out_CCW_rad = wrap_2PI(radians(keep_out_CCW));
-            float keep_out_angle_rad = wrap_2PI(radians(keep_out_CW) - keep_out_CCW_rad);
-            float keep_out_CW_rad = keep_out_angle_rad + keep_out_CCW_rad;
-            float koz_center_heading_rad = wrap_2PI(ship.heading + (keep_out_CW_rad + keep_out_CCW_rad) / 2.0);
-
             float extension_distance_cm = stopping_distance(wp_nav->get_default_speed_xy() + vel_ned_ms.xy().length(), 0.5 * pos_control->get_shaping_jerk_xy_cmsss() / wp_nav->get_wp_acceleration(), 0.5 * wp_nav->get_wp_acceleration());
             // We don't want the length to be greater than the gap in the approach zone.
             extension_distance_cm = MIN(extension_distance_cm, keep_out_radius * 100.0 * 0.5 * (2 * M_PI - keep_out_angle_rad));
@@ -441,10 +469,10 @@ void ModeShipOperation::run()
             extension_distance_cm = MAX(extension_distance_cm, perch_radius * 12.5 );
             Vector2f extension_cm = { extension_distance_cm, 0.0 };
 
-            if (aircraft_vector_cm.length() < deck_radius * 100.0) {
+            if (!is_positive(keep_out_radius) || aircraft_vector_cm.length() < deck_radius * 100.0) {
                 // I did this to ensure I can't get a divide by zero but I suspect I could have just use || and been fine.
                 set_keep_out_zone_mode(KeepOutZoneMode::NO_ACTION);
-            } else if (fabsf(wrap_PI(aircraft_bearing_rad - koz_center_heading_rad)) >  keep_out_angle_rad / 2.0 - safe_asin(deck_radius * 100.0 / aircraft_vector_cm.length())) {
+            } else if (fabs(wrap_PI(aircraft_bearing_rad - koz_center_heading_rad)) >  keep_out_angle_rad / 2.0 - safe_asin(deck_radius * 100.0 / aircraft_vector_cm.length())) {
                 set_keep_out_zone_mode(KeepOutZoneMode::NO_ACTION);
             } else if (aircraft_vector_cm.length() < keep_out_radius * 100.0) {
                 set_keep_out_zone_mode(KeepOutZoneMode::EXIT_KOZ);
@@ -481,23 +509,27 @@ void ModeShipOperation::run()
                 // exiting keep out zone
                 Vector2f ship_heading_unit = { 1.0, 0.0 };
                 ship_heading_unit.rotate(ship.heading);
-                float intercept_point_angle = acosf(aircraft_vector_cm * ship_heading_unit / (keep_out_radius * 100.0));
+                float exit_angle_avoid = acosf((aircraft_vector_cm * ship_heading_unit) / (keep_out_radius * 100.0));
+                if (is_negative(wrap_PI(aircraft_bearing_rad - koz_center_heading_rad))) {
+                    exit_angle_avoid *= -1.0;
+                }
+                exit_angle_avoid += ship.heading;
                 // keep_out_radius is in meters so 0.9 * 100 = 90.
-                float turn_ratio = constrain_float((aircraft_vector_cm.length() - keep_out_radius * 90.0) / (keep_out_radius * 10.0), 0.0, 1.0);
+                float turn_ratio_1 = constrain_float((aircraft_vector_cm.length() - keep_out_radius * 50.0) / (keep_out_radius * 50.0), 0.0, 1.0);
+                float turn_ratio_2 = constrain_float((aircraft_vector_cm.length() - keep_out_radius * 90.0) / (keep_out_radius * 10.0), 0.0, 1.0);
+                float exit_angle = turn_ratio_1 * aircraft_bearing_rad + (1.0 - turn_ratio_1) * exit_angle_avoid;
                 // this only sends the aircraft to the back of the boat.
                 // we need this to move the aircraft to the approach vector.
-                if (is_positive(wrap_PI(aircraft_bearing_rad - ship.heading))) {
-                    intercept_point_angle = ship.heading + intercept_point_angle;
-                    // TODO: This is wrong for forward facing entry cones
-                    extension_cm.rotate(ship.heading + (1.0 + turn_ratio) * M_PI / 2);
+                float transition_angle;
+                if (is_positive(wrap_PI(aircraft_bearing_rad - koz_center_heading_rad))) {
+                    transition_angle = exit_angle + turn_ratio_2 * M_PI / 2;
                 } else {
-                    intercept_point_angle = ship.heading - intercept_point_angle;
-                    // TODO: This is wrong for forward facing entry cones
-                    extension_cm.rotate(ship.heading - (1.0 + turn_ratio) * M_PI / 2);
+                    transition_angle = exit_angle - turn_ratio_2 * M_PI / 2;
                 }
+                extension_cm.rotate(transition_angle);
                 offset.xy().zero();
                 offset.xy().x = keep_out_radius * 100.0;
-                offset.xy().rotate(intercept_point_angle);
+                offset.xy().rotate(exit_angle);
                 offset.xy() += extension_cm;
                 break;
             }
@@ -511,7 +543,7 @@ void ModeShipOperation::run()
             offset.z = -perch_height;
             break;
         case SubMode::OVER_SPOT:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::PAYLOAD_PLACE:
             // move over landing Spot at Perch altitude
             offset.zero();
@@ -545,22 +577,23 @@ void ModeShipOperation::run()
             pos_control->input_vel_accel_xy(vel_ned_ms.xy(), accel_ned.xy());
             break;
         case SubMode::RETURN_TO_PERCH:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::PERCH:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::OVER_SPOT:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::LAUNCH_RECOVERY:
-            // FALLTHROUGH
+            // relax horizontal position target if we might be landed
+            // Do not put this in payload place as it does this already
+            if (copter.ap.land_complete_maybe) {
+                pos_control->soften_for_landing_xy();
+            }
+            FALLTHROUGH;
         case SubMode::PAYLOAD_PLACE:
             // move to target position and velocity
             Vector3p pos = ship.pos_ned.topostype();
             pos += offset.topostype();
             Vector2f zero;
-            // relax stop target if we might be landed
-            if (copter.ap.land_complete_maybe) {
-                pos_control->soften_for_landing_xy();
-            }
             pos_control->input_pos_vel_accel_xy(pos.xy(), ship.vel_ned.xy(), zero);
             break;
         }
@@ -568,11 +601,11 @@ void ModeShipOperation::run()
         // vertical navigation
         switch (_state) {
         case SubMode::CLIMB_TO_RTL:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::RETURN_TO_PERCH:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::PERCH:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::OVER_SPOT:
 // include vertical offset
             pos_control->set_alt_target_with_slew(-(ship.pos_ned.z + offset.z));
@@ -623,9 +656,9 @@ void ModeShipOperation::run()
             yaw_rate_cds = pos_control->get_yaw_rate_cds();
             break;
         case SubMode::PERCH:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::OVER_SPOT:
-            // FALLTHROUGH
+            FALLTHROUGH;
         case SubMode::PAYLOAD_PLACE:
             switch (g2.follow.get_yaw_behave()) {
                 case AP_Follow::YAW_BEHAVE_FACE_LEAD_VEHICLE: {
@@ -669,7 +702,7 @@ void ModeShipOperation::run()
         Vector3f pos_error = ship.pos_ned.tofloat() + offset - pos_control->get_pos_target_cm().tofloat();
         bool pos_check;
         // altitude is less than 5% of the Perch height
-        bool alt_check = fabsf(-(ship.pos_ned.z + offset.z) - pos_control->get_pos_target_cm().z) < perch_height * 0.05f;
+        bool alt_check = fabs(-(ship.pos_ned.z + offset.z) - pos_control->get_pos_target_cm().z) < perch_height * 0.05f;
         switch (_state) {
         case SubMode::CLIMB_TO_RTL:
             // check altitude is within 5% of perch_height from RTL altitude
@@ -725,11 +758,7 @@ void ModeShipOperation::run()
             }
             break;
         case SubMode::PAYLOAD_PLACE:
-            // if(payload_place.verify()) {
-            //     set_state(SubMode::OVER_SPOT);
-            //     set_approach_mode(ApproachMode::LAUNCH_RECOVERY);
-            // }
-            if(is_positive(target_climb_rate) || approach_mode != ApproachMode::PAYLOAD_PLACE) {
+             if(payload_place.verify() || is_positive(target_climb_rate) || approach_mode != ApproachMode::PAYLOAD_PLACE) {
                 set_state(SubMode::OVER_SPOT);
             }
             break;
