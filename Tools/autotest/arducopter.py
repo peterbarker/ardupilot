@@ -8250,6 +8250,7 @@ class AutoTestCopter(AutoTest):
         self.wait_servo_channel_value(10, 2000, timeout=120)  # this is the gripper released
         self.progress("Ensuring we are on the deck when release happens")
         self.assert_altitude(abs_alt-5, abs_alt+5)
+        self.set_rc(3, 1500)
 
         self.progress("Waiting for climb-out after releasing load")
         self.wait_altitude(perch_alt-5, perch_alt+5, minimum_duration=5, timeout=60, relative=True)
@@ -8261,6 +8262,7 @@ class AutoTestCopter(AutoTest):
         self.set_rc(3, 1000)
 
         self.wait_disarmed()
+        self.change_mode("GUIDED")
 
         self.context_pop()
 
