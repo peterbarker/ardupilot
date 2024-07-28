@@ -21,7 +21,6 @@ from vehicle_test_suite import AutoTestTimeoutException
 from vehicle_test_suite import NotAchievedException
 from vehicle_test_suite import OldpymavlinkException
 from vehicle_test_suite import PreconditionFailedException
-from vehicle_test_suite import Test
 from vehicle_test_suite import WaitModeTimeout
 
 from pysim import vehicleinfo
@@ -183,6 +182,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
                            timeout=180)
         self.progress("RTL Complete")
 
+    @autotest_test()
     def NeedEKFToArm(self):
         """Ensure the EKF must be healthy for the vehicle to arm."""
         self.progress("Ensuring we need EKF to be healthy to arm")
@@ -576,6 +576,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.progress("Mission OK")
 
+    @autotest_test()
     def DO_REPOSITION(self):
         '''Test mavlink DO_REPOSITION command'''
         self.progress("Takeoff")
@@ -652,6 +653,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.fly_home_land_and_disarm(timeout=180)
 
+    @autotest_test()
     def ExternalPositionEstimate(self):
         '''Test mavlink EXTERNAL_POSITION_ESTIMATE command'''
         if not hasattr(mavutil.mavlink, 'MAV_CMD_EXTERNAL_POSITION_ESTIMATE'):
@@ -739,6 +741,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.progress("flying home")
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def DeepStall(self):
         '''Test DeepStall Landing'''
         # self.fly_deepstall_absolute()
@@ -812,6 +815,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.set_parameter("LAND_TYPE", 0)
         self.fly_home_land_and_disarm(timeout=240)
 
+    @autotest_test()
     def SmartBattery(self):
         '''Test smart battery logging etc'''
         self.set_parameters({
@@ -849,6 +853,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             "TRIM_THROTTLE": self.get_parameter("TRIM_THROTTLE"),
         })
 
+    @autotest_test()
     def DO_CHANGE_SPEED(self):
         '''Test DO_CHANGE_SPEED command/item'''
         self.set_parameters({
@@ -1029,6 +1034,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         #        this is probably too noisy anyway?
         self.wait_disarmed(timeout=timeout)
 
+    @autotest_test()
     def TestFlaps(self):
         """Test flaps functionality."""
         filename = "flaps.txt"
@@ -1122,6 +1128,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
                 self.disarm_vehicle()
             raise ex
 
+    @autotest_test()
     def TestRCRelay(self):
         '''Test Relay RC Channel Option'''
         self.set_parameters({
@@ -1152,6 +1159,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         if off:
             raise NotAchievedException("SIM_PIN_MASK doesn't reflect OFF")
 
+    @autotest_test()
     def TestRCCamera(self):
         '''Test RC Option - Camera Trigger'''
         self.set_parameter("RC12_OPTION", 9) # CameraTrigger
@@ -1188,6 +1196,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Bad absalt (want=%f vs got=%f)" % (original_alt+30, x.alt_msl))
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def ThrottleFailsafe(self):
         '''Fly throttle failsafe'''
         self.change_mode('MANUAL')
@@ -1333,6 +1342,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.reboot_sitl()
 
+    @autotest_test()
     def ThrottleFailsafeFence(self):
         '''Fly fence survives throttle failsafe'''
         fence_bit = mavutil.mavlink.MAV_SYS_STATUS_GEOFENCE
@@ -1382,6 +1392,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Fence not enabled after RC fail")
         self.do_fence_disable() # Ensure the fence is disabled after test
 
+    @autotest_test()
     def GCSFailsafe(self):
         '''Ensure Long-Failsafe works on GCS loss'''
         self.start_subtest("Test Failsafe: RTL")
@@ -1394,6 +1405,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         })
         self.takeoff()
         self.change_mode('LOITER')
+        self.set_parameter('SIM_SPEEDUP', 8)
         self.progress("Disconnecting GCS")
         self.set_heartbeat_rate(0)
         self.wait_mode("RTL", timeout=10)
@@ -1431,6 +1443,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.reboot_sitl()
         self.end_subtest("Completed Parachute Failsafe test")
 
+    @autotest_test()
     def TestGripperMission(self):
         '''Test Gripper mission items'''
         self.context_push()
@@ -1512,6 +1525,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             on_radius_start_heading = None
             circle_time_start = 0
 
+    @autotest_test()
     def MODE_SWITCH_RESET(self):
         '''test the MODE_SWITCH_RESET auxiliary function'''
         self.set_parameters({
@@ -1537,6 +1551,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.set_rc(9, 2000)
         self.wait_mode('FBWA')
 
+    @autotest_test()
     def FenceStatic(self):
         '''Test Basic Fence Functionality'''
         ex = None
@@ -1706,6 +1721,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         if ex is not None:
             raise ex
 
+    @autotest_test()
     def FenceRTL(self):
         '''Test Fence RTL'''
         self.progress("Testing FENCE_ACTION_RTL no rally point")
@@ -1714,6 +1730,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.test_fence_breach_circle_at(self.home_position_as_mav_location(),
                                          disable_on_breach=True)
 
+    @autotest_test()
     def FenceRTLRally(self):
         '''Test Fence RTL Rally'''
         ex = None
@@ -1747,6 +1764,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         if ex is not None:
             raise ex
 
+    @autotest_test()
     def FenceRetRally(self):
         """ Tests the FENCE_RET_RALLY flag, either returning to fence return point,
             or rally point """
@@ -1834,6 +1852,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.do_fence_disable() # Disable fence so we can land
         self.fly_home_land_and_disarm() # Pack it up, we're going home.
 
+    @autotest_test()
     def TerrainRally(self):
         """ Tests terrain follow with a rally point """
         self.context_push()
@@ -1951,6 +1970,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.disarm_vehicle(force=True)
         self.reboot_sitl()
 
+    @autotest_test()
     def Parachute(self):
         '''Test Parachute'''
         self.set_rc(9, 1000)
@@ -1971,6 +1991,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.disarm_vehicle(force=True)
         self.reboot_sitl()
 
+    @autotest_test()
     def ParachuteSinkRate(self):
         '''Test Parachute (SinkRate triggering)'''
         self.set_rc(9, 1000)
@@ -2019,6 +2040,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.check_attitudes_match()
 
+    @autotest_test()
     def MainFlight(self):
         '''Lots of things in one flight'''
         self.change_mode('MANUAL')
@@ -2059,6 +2081,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.run_subtest("Mission test",
                          lambda: self.fly_mission("ap1.txt", strict=False))
 
+    @autotest_test()
     def PitotBlockage(self):
         '''Test detection and isolation of a blocked pitot tube'''
         self.set_parameters({
@@ -2093,6 +2116,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Airspeed Sensor Not Re-Enabled")
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def AIRSPEED_AUTOCAL(self):
         '''Test AIRSPEED_AUTOCAL'''
         self.progress("Ensure no AIRSPEED_AUTOCAL on ground")
@@ -2207,14 +2231,17 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.reboot_sitl()
 
+    @autotest_test()
     def Deadreckoning(self):
         '''Test deadreckoning support'''
         self.deadreckoning_main()
 
+    @autotest_test()
     def DeadreckoningNoAirSpeed(self):
         '''Test deadreckoning support with no airspeed sensor'''
         self.deadreckoning_main(disable_airspeed_sensor=True)
 
+    @autotest_test()
     def ClimbBeforeTurn(self):
         '''Test climb-before-turn'''
         self.wait_ready_to_arm()
@@ -2274,6 +2301,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.fly_home_land_and_disarm(timeout=240)
 
+    @autotest_test()
     def RTL_CLIMB_MIN(self):
         '''Test RTL_CLIMB_MIN'''
         self.wait_ready_to_arm()
@@ -2321,6 +2349,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
     def sample_enable_parameter(self):
         return "Q_ENABLE"
 
+    @autotest_test()
     def RangeFinder(self):
         '''Test RangeFinder Basic Functionality'''
         self.context_push()
@@ -2375,6 +2404,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.change_mode("FBWA") # we don't update PIDs in MANUAL
         super(AutoTestPlane, self).PIDTuning()
 
+    @autotest_test()
     def AuxModeSwitch(self):
         '''Set modes via auxswitches'''
         self.set_parameter("FLTMODE1", 1)  # circle
@@ -2421,6 +2451,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
                 continue
             last_collision = now
 
+    @autotest_test()
     def SimADSB(self):
         '''Tests to ensure simulated ADSB sensor continues to function'''
         self.set_parameters({
@@ -2430,6 +2461,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.reboot_sitl()
         self.assert_receive_message('ADSB_VEHICLE', timeout=30)
 
+    @autotest_test()
     def ADSB(self):
         '''Test ADSB'''
         self.ADSB_f_action_rtl()
@@ -2536,6 +2568,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         if ex is not None:
             raise ex
 
+    @autotest_test()
     def GuidedRequest(self, target_system=1, target_component=1):
         '''Test handling of MISSION_ITEM in guided mode'''
         self.progress("Takeoff")
@@ -2622,6 +2655,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def LOITER(self):
         '''Test Loiter mode'''
         # first test old loiter behavour
@@ -2691,11 +2725,13 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         '''In lockup Plane should copy RC inputs to RC outputs'''
         self.plane_CPUFailsafe()
 
+    @autotest_test()
     def LargeMissions(self):
         '''Test Manipulation of Large missions'''
         self.load_mission("Kingaroy-vlarge.txt", strict=False)
         self.load_mission("Kingaroy-vlarge2.txt", strict=False)
 
+    @autotest_test()
     def Soaring(self):
         '''Test Soaring feature'''
 
@@ -2810,6 +2846,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.progress("Mission OK")
 
+    @autotest_test()
     def SpeedToFly(self):
         '''Test soaring speed-to-fly'''
 
@@ -2943,6 +2980,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.disarm_vehicle(force=True)
         self.reboot_sitl()
 
+    @autotest_test()
     def AirspeedDrivers(self):
         '''Test AirSpeed drivers'''
         airspeed_sensors = [
@@ -2998,6 +3036,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.context_pop()
         self.reboot_sitl()
 
+    @autotest_test()
     def TerrainMission(self):
         '''Test terrain following in mission'''
         self.install_terrain_handlers_context()
@@ -3024,6 +3063,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         if max_alt < 200:
             raise NotAchievedException("Did not follow terrain")
 
+    @autotest_test()
     def Terrain(self):
         '''test AP_Terrain'''
         self.reboot_sitl()  # we know the terrain height at CMAC
@@ -3069,6 +3109,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Expected terrain height=%f got=%f" %
                                        (expected_terrain_height, report.terrain_height))
 
+    @autotest_test()
     def TerrainLoiter(self):
         '''Test terrain following in loiter'''
         self.context_push()
@@ -3194,6 +3235,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             **kwargs
         )
 
+    @autotest_test()
     def WindEstimates(self):
         '''fly non-external AHRS, ensure wind estimate correct'''
         self.set_parameters({
@@ -3216,22 +3258,27 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             )
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def VectorNavEAHRS(self):
         '''Test VectorNav EAHRS support'''
         self.fly_external_AHRS("VectorNav", 1, "ap1.txt")
 
+    @autotest_test()
     def MicroStrainEAHRS5(self):
         '''Test MicroStrain EAHRS series 5 support'''
         self.fly_external_AHRS("MicroStrain5", 2, "ap1.txt")
 
+    @autotest_test()
     def MicroStrainEAHRS7(self):
         '''Test MicroStrain EAHRS series 7 support'''
         self.fly_external_AHRS("MicroStrain7", 7, "ap1.txt")
 
+    @autotest_test()
     def InertialLabsEAHRS(self):
         '''Test InertialLabs EAHRS support'''
         self.fly_external_AHRS("ILabs", 5, "ap1.txt")
 
+    @autotest_test()
     def GpsSensorPreArmEAHRS(self):
         '''Test pre-arm checks related to EAHRS_SENSORS using the MicroStrain7 driver'''
         self.customise_SITL_commandline(["--serial4=sim:MicroStrain7"])
@@ -3287,6 +3334,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
     def get_gyrovec(self, m):
         return Vector3(m.xgyro, m.ygyro, m.zgyro) * 0.001 * math.degrees(1)
 
+    @autotest_test()
     def IMUTempCal(self):
         '''Test IMU temperature calibration'''
         self.progress("Setting up SITL temperature profile")
@@ -3461,6 +3509,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         # parameters).  So wipe the vehicle's eeprom:
         self.reset_SITL_commandline()
 
+    @autotest_test()
     def EKFlaneswitch(self):
         '''Test EKF3 Affinity and Lane Switching'''
 
@@ -3653,6 +3702,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         if ex is not None:
             raise ex
 
+    @autotest_test()
     def FenceAltCeilFloor(self):
         '''Tests the fence ceiling and floor'''
         fence_bit = mavutil.mavlink.MAV_SYS_STATUS_GEOFENCE
@@ -3699,6 +3749,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.fly_home_land_and_disarm(timeout=150)
 
+    @autotest_test()
     def FenceMinAltAutoEnable(self):
         '''Tests autoenablement of the alt min fence and fences on arming'''
         self.set_parameters({
@@ -3743,6 +3794,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.set_current_waypoint(0, check_afterwards=False)
             self.set_rc(3, 1000)    # lower throttle
 
+    @autotest_test()
     def FenceMinAltEnableAutoland(self):
         '''Tests autolanding when alt min fence is enabled'''
         self.set_parameters({
@@ -3786,6 +3838,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.set_current_waypoint(0, check_afterwards=False)
         self.set_rc(3, 1000)    # lower throttle
 
+    @autotest_test()
     def FenceMinAltAutoEnableAbort(self):
         '''Tests autoenablement of the alt min fence and fences on arming'''
         self.set_parameters({
@@ -3840,6 +3893,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.fly_home_land_and_disarm(timeout=150)
         self.wait_disarmed()
 
+    @autotest_test()
     def FenceAutoEnableDisableSwitch(self):
         '''Tests autoenablement of regular fences and manual disablement'''
         self.set_parameters({
@@ -3899,6 +3953,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.change_altitude(self.homeloc.alt + cruise_alt)
         self.fly_home_land_and_disarm(timeout=250)
 
+    @autotest_test(speedup=20)
     def FenceCircleExclusionAutoEnable(self):
         '''Tests autolanding when alt min fence is enabled'''
         self.set_parameters({
@@ -3943,6 +3998,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         # Now check we can land
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def FenceEnableDisableSwitch(self):
         '''Tests enablement and disablement of fences on a switch'''
         fence_bit = mavutil.mavlink.MAV_SYS_STATUS_GEOFENCE
@@ -4010,6 +4066,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.fly_home_land_and_disarm(timeout=250)
         self.do_fence_disable() # Ensure the fence is disabled after test
 
+    @autotest_test()
     def FenceEnableDisableAux(self):
         '''Tests enablement and disablement of fences via aux command'''
         fence_bit = mavutil.mavlink.MAV_SYS_STATUS_GEOFENCE
@@ -4114,6 +4171,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.fly_home_land_and_disarm(timeout=250)
         self.do_fence_disable() # Ensure the fence is disabled after test
 
+    @autotest_test()
     def FenceBreachedChangeMode(self):
         '''Tests manual mode change after fence breach, as set with FENCE_OPTIONS'''
         """ Attempts to change mode while a fence is breached.
@@ -4171,6 +4229,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.do_fence_disable()
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def FenceNoFenceReturnPoint(self):
         '''Tests calculated return point during fence breach when no fence return point present'''
         """ Attempts to change mode while a fence is breached.
@@ -4244,6 +4303,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.do_fence_disable()
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def FenceNoFenceReturnPointInclusion(self):
         '''Tests using home as fence return point when none is present, and no inclusion fence is uploaded'''
         """ Test result when a breach occurs and No fence return point is present and
@@ -4293,6 +4353,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.do_fence_disable()
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def FenceDisableUnderAction(self):
         '''Tests Disabling fence while undergoing action caused by breach'''
         """ Fence breach will cause the vehicle to enter guided mode.
@@ -4344,11 +4405,13 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             run_cmd=run_cmd,
         )
 
+    @autotest_test()
     def MAV_CMD_DO_AUX_FUNCTION(self):
         '''Test triggering Auxiliary Functions via mavlink'''
         self._MAV_CMD_DO_AUX_FUNCTION(run_cmd=self.run_cmd)
         self._MAV_CMD_DO_AUX_FUNCTION(run_cmd=self.run_cmd_int)
 
+    @autotest_test()
     def FlyEachFrame(self):
         '''Fly each supported internal frame'''
         vinfo = vehicleinfo.VehicleInfo()
@@ -4399,6 +4462,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.fly_mission(mission_file, strict=False, quadplane=quadplane, mission_timeout=400.0)
             self.wait_disarmed()
 
+    @autotest_test()
     def RCDisableAirspeedUse(self):
         '''Test RC DisableAirspeedUse option'''
         self.set_parameter("RC9_OPTION", 106)
@@ -4422,6 +4486,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             True,
             True)
 
+    @autotest_test()
     def WatchdogHome(self):
         '''Ensure home is restored after watchdog reset'''
         if self.gdb:
@@ -4472,6 +4537,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         if ex is not None:
             raise ex
 
+    @autotest_test()
     def AUTOTUNE(self):
         '''Test AutoTune mode'''
         self.takeoff(100)
@@ -4524,6 +4590,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.change_mode('FBWA')
         self.fly_home_land_and_disarm(timeout=tdelta+240)
 
+    @autotest_test()
     def AutotuneFiltering(self):
         '''Test AutoTune mode with filter updates disabled'''
         self.set_parameters({
@@ -4536,6 +4603,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         })
         self.AUTOTUNE()
 
+    @autotest_test()
     def LandingDrift(self):
         '''Circuit with baro drift'''
         self.customise_SITL_commandline([], wipe=True)
@@ -4573,6 +4641,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.wait_disarmed(timeout=180)
 
+    @autotest_test()
     def DCMFallback(self):
         '''Really annoy the EKF and force fallback'''
         self.reboot_sitl()
@@ -4599,6 +4668,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.reboot_sitl()
 
+    @autotest_test()
     def ForcedDCM(self):
         '''Switch to DCM mid-flight'''
         self.wait_ready_to_arm()
@@ -4681,6 +4751,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         # need to force disarm as the is_flying flag can trigger with the engine running
         self.disarm_vehicle(force=True)
 
+    @autotest_test()
     def MegaSquirt(self):
         '''test MegaSquirt driver'''
         self.EFITest(
@@ -4688,10 +4759,12 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             check_fuel_flow=False,
         )
 
+    @autotest_test()
     def Hirth(self):
         '''Test Hirth EFI'''
         self.EFITest(8, "Hirth", "hirth")
 
+    @autotest_test()
     def GlideSlopeThresh(self):
         '''Test rebuild glide slope if above and climbing'''
 
@@ -4778,6 +4851,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.progress("Mission OK")
 
+    @autotest_test()
     def MAV_CMD_NAV_LOITER_TURNS(self, target_system=1, target_component=1):
         '''test MAV_CMD_NAV_LOITER_TURNS mission item'''
         alt = 100
@@ -4904,6 +4978,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.fly_home_land_and_disarm(timeout=180)
 
+    @autotest_test()
     def MidAirDisarmDisallowed(self):
         '''Ensure mid-air disarm is not possible'''
         self.takeoff(50)
@@ -4921,6 +4996,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.disarm_vehicle(force=True)
         self.reboot_sitl()
 
+    @autotest_test()
     def AerobaticsScripting(self):
         '''Fixed Wing Aerobatics'''
         applet_script = "Aerobatics/FixedWing/plane_aerobatics.lua"
@@ -5001,6 +5077,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             else:
                 raise NotAchievedException("Missing trick %s" % t)
 
+    @autotest_test()
     def SDCardWPTest(self):
         '''test BRD_SD_MISSION support'''
         spiral_script = "mission_spiral.lua"
@@ -5049,6 +5126,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.wait_ready_to_arm()
         self.reboot_sitl()
 
+    @autotest_test()
     def MANUAL_CONTROL(self):
         '''test MANUAL_CONTROL mavlink message'''
         self.set_parameter("SYSID_MYGCS", self.mav.source_system)
@@ -5236,6 +5314,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         )
         self.disarm_vehicle()
 
+    @autotest_test()
     def MissionJumpTags(self):
         '''test MAV_CMD_JUMP_TAG'''
         self.wait_ready_to_arm()
@@ -5243,6 +5322,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.MissionJumpTags_do_jump_to_bad_tag()
         self.MissionJumpTags_jump_tag_at_end_of_mission()
 
+    @autotest_test()
     def AltResetBadGPS(self):
         '''Tests the handling of poor GPS lock pre-arm alt resets'''
         self.set_parameters({
@@ -5280,6 +5360,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             p3=1,
         )
 
+    @autotest_test()
     def AirspeedCal(self):
         '''test Airspeed calibration'''
 
@@ -5315,6 +5396,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.reboot_sitl()
 
+    @autotest_test()
     def RunMissionScript(self):
         '''Test run_mission.py script'''
         script = os.path.join('Tools', 'autotest', 'run_mission.py')
@@ -5327,6 +5409,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         ])
         self.start_SITL()
 
+    @autotest_test()
     def MAV_CMD_GUIDED_CHANGE_ALTITUDE(self):
         '''test handling of MAV_CMD_GUIDED_CHANGE_ALTITUDE'''
         self.takeoff(30, relative=True)
@@ -5414,11 +5497,13 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.context_pop()
 
+    @autotest_test()
     def MAV_CMD_PREFLIGHT_CALIBRATION(self):
         '''test MAV_CMD_PREFLIGHT_CALIBRATION mavlink handling'''
         self._MAV_CMD_PREFLIGHT_CALIBRATION(self.run_cmd)
         self._MAV_CMD_PREFLIGHT_CALIBRATION(self.run_cmd_int)
 
+    @autotest_test()
     def MAV_CMD_DO_INVERTED_FLIGHT(self):
         '''fly upside-down mission item'''
         alt = 30
@@ -5479,6 +5564,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def MAV_CMD_DO_AUTOTUNE_ENABLE(self):
         '''test enabling autotune via mavlink'''
         self.context_collect('STATUSTEXT')
@@ -5487,6 +5573,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.run_cmd_int(mavutil.mavlink.MAV_CMD_DO_AUTOTUNE_ENABLE, p1=0)
         self.wait_statustext('Stopped autotune', check_context=True)
 
+    @autotest_test()
     def DO_PARACHUTE(self):
         '''test triggering parachute via mavlink'''
         self.set_parameters({
@@ -5521,6 +5608,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.wait_altitude(135, 165, relative=True)
         self.wait_disarmed(timeout=300)
 
+    @autotest_test()
     def MAV_CMD_DO_GO_AROUND(self):
         '''test MAV_CMD_DO_GO_AROUND as a mavlink command'''
         self._MAV_CMD_DO_GO_AROUND(self.run_cmd)
@@ -5540,11 +5628,13 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.wait_text('Terminating due to GCS request', check_context=True)
         self.reboot_sitl()
 
+    @autotest_test()
     def MAV_CMD_DO_FLIGHTTERMINATION(self):
         '''test MAV_CMD_DO_FLIGHTTERMINATION works on Plane'''
         self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd)
         self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd_int)
 
+    @autotest_test()
     def MAV_CMD_DO_LAND_START(self):
         '''test MAV_CMD_DO_LAND_START as mavlink command'''
         self.set_parameters({
@@ -5576,6 +5666,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def MAV_CMD_NAV_ALTITUDE_WAIT(self):
         '''test MAV_CMD_NAV_ALTITUDE_WAIT mission item, wiggling only'''
 
@@ -5635,6 +5726,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.arm_vehicle()
 
+    @autotest_test()
     def InteractTest(self):
         '''just takeoff'''
 
@@ -5654,6 +5746,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.mavproxy.interact()
 
+    @autotest_test()
     def MAV_CMD_MISSION_START(self):
         '''test MAV_CMD_MISSION_START starts AUTO'''
         self.upload_simple_relhome_mission([
@@ -5664,6 +5757,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             run_cmd(mavutil.mavlink.MAV_CMD_MISSION_START)
             self.wait_mode('AUTO')
 
+    @autotest_test()
     def MAV_CMD_NAV_LOITER_UNLIM(self):
         '''test receiving MAV_CMD_NAV_LOITER_UNLIM from GCS'''
         self.takeoff(10)
@@ -5674,6 +5768,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.wait_mode('LOITER')
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def MAV_CMD_NAV_RETURN_TO_LAUNCH(self):
         '''test receiving MAV_CMD_NAV_RETURN_TO_LAUNCH from GCS'''
         self.set_parameter('RTL_AUTOLAND', 1)
@@ -5705,6 +5800,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             m.heading * 0.01  # centidegrees -> degrees
         )
 
+    @autotest_test()
     def SagetechMXS(self):
         '''test Sagetech MXS ADSB device driver'''
         sim_name = "sagetech_mxs"
@@ -5721,6 +5817,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         home = self.home_position_as_mav_location()
         self.assert_distance(home, adsb_vehicle_loc, 0, 10000)
 
+    @autotest_test()
     def MinThrottle(self):
         '''Make sure min throttle does not apply in manual mode and does in FBWA'''
 
@@ -5753,6 +5850,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.drain_mav()
         self.assert_servo_channel_value(3, servo_min)
 
+    @autotest_test()
     def ClimbThrottleSaturation(self):
         '''check what happens when throttle is saturated in GUIDED'''
         self.set_parameters({
@@ -5769,6 +5867,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.disarm_vehicle(force=True)
         self.reboot_sitl()
 
+    @autotest_test()
     def GuidedAttitudeNoGPS(self):
         '''test that guided-attitude still works with no GPS'''
         self.takeoff(50)
@@ -5780,6 +5879,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.fly_home_land_and_disarm()
 
+    @autotest_test()
     def ScriptStats(self):
         '''test script stats logging'''
         self.context_push()
@@ -5840,123 +5940,6 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestPlane, self).tests()
-        ret.extend([
-            self.AuxModeSwitch,
-            self.TestRCCamera,
-            self.TestRCRelay,
-            self.ThrottleFailsafe,
-            self.NeedEKFToArm,
-            self.ThrottleFailsafeFence,
-            self.TestFlaps,
-            self.DO_CHANGE_SPEED,
-            self.DO_REPOSITION,
-            self.GuidedRequest,
-            self.MainFlight,
-            self.TestGripperMission,
-            self.Parachute,
-            self.ParachuteSinkRate,
-            self.DO_PARACHUTE,
-            self.PitotBlockage,
-            self.AIRSPEED_AUTOCAL,
-            self.RangeFinder,
-            self.FenceStatic,
-            self.FenceRTL,
-            self.FenceRTLRally,
-            self.FenceRetRally,
-            self.FenceAltCeilFloor,
-            self.FenceMinAltAutoEnable,
-            self.FenceMinAltEnableAutoland,
-            self.FenceMinAltAutoEnableAbort,
-            self.FenceAutoEnableDisableSwitch,
-            Test(self.FenceCircleExclusionAutoEnable, speedup=20),
-            self.FenceEnableDisableSwitch,
-            self.FenceEnableDisableAux,
-            self.FenceBreachedChangeMode,
-            self.FenceNoFenceReturnPoint,
-            self.FenceNoFenceReturnPointInclusion,
-            self.FenceDisableUnderAction,
-            self.ADSB,
-            self.SimADSB,
-            self.Button,
-            self.FRSkySPort,
-            self.FRSkyPassThroughStatustext,
-            self.FRSkyPassThroughSensorIDs,
-            self.FRSkyMAVlite,
-            self.FRSkyD,
-            self.LTM,
-            self.DEVO,
-            self.AdvancedFailsafe,
-            self.LOITER,
-            self.MAV_CMD_NAV_LOITER_TURNS,
-            self.DeepStall,
-            self.WatchdogHome,
-            self.LargeMissions,
-            self.Soaring,
-            self.Terrain,
-            self.TerrainMission,
-            self.TerrainLoiter,
-            self.VectorNavEAHRS,
-            self.MicroStrainEAHRS5,
-            self.MicroStrainEAHRS7,
-            self.InertialLabsEAHRS,
-            self.GpsSensorPreArmEAHRS,
-            self.Deadreckoning,
-            self.DeadreckoningNoAirSpeed,
-            self.EKFlaneswitch,
-            self.AirspeedDrivers,
-            self.RTL_CLIMB_MIN,
-            self.ClimbBeforeTurn,
-            self.IMUTempCal,
-            self.MAV_CMD_DO_AUX_FUNCTION,
-            self.SmartBattery,
-            self.FlyEachFrame,
-            self.RCDisableAirspeedUse,
-            self.AHRS_ORIENTATION,
-            self.AHRSTrim,
-            self.LandingDrift,
-            self.ForcedDCM,
-            self.DCMFallback,
-            self.MAVFTP,
-            self.AUTOTUNE,
-            self.AutotuneFiltering,
-            self.MegaSquirt,
-            self.Hirth,
-            self.MSP_DJI,
-            self.SpeedToFly,
-            self.GlideSlopeThresh,
-            self.HIGH_LATENCY2,
-            self.MidAirDisarmDisallowed,
-            self.AerobaticsScripting,
-            self.MANUAL_CONTROL,
-            self.RunMissionScript,
-            self.WindEstimates,
-            self.AltResetBadGPS,
-            self.AirspeedCal,
-            self.MissionJumpTags,
-            Test(self.GCSFailsafe, speedup=8),
-            self.SDCardWPTest,
-            self.NoArmWithoutMissionItems,
-            self.MODE_SWITCH_RESET,
-            self.ExternalPositionEstimate,
-            self.SagetechMXS,
-            self.MAV_CMD_GUIDED_CHANGE_ALTITUDE,
-            self.MAV_CMD_PREFLIGHT_CALIBRATION,
-            self.MAV_CMD_DO_INVERTED_FLIGHT,
-            self.MAV_CMD_DO_AUTOTUNE_ENABLE,
-            self.MAV_CMD_DO_GO_AROUND,
-            self.MAV_CMD_DO_FLIGHTTERMINATION,
-            self.MAV_CMD_DO_LAND_START,
-            self.MAV_CMD_NAV_ALTITUDE_WAIT,
-            self.InteractTest,
-            self.MAV_CMD_MISSION_START,
-            self.TerrainRally,
-            self.MAV_CMD_NAV_LOITER_UNLIM,
-            self.MAV_CMD_NAV_RETURN_TO_LAUNCH,
-            self.MinThrottle,
-            self.ClimbThrottleSaturation,
-            self.GuidedAttitudeNoGPS,
-            self.ScriptStats,
-        ])
         ret.extend(self.gather_decorated())
         return ret
 

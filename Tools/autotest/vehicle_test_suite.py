@@ -3647,6 +3647,7 @@ class TestSuite(ABC):
             if bytes1[i] != bytes2[i]:
                 raise NotAchievedException("differ at offset %u" % i)
 
+    @autotest_test(vehicles=['ArduPlane'])
     def HIGH_LATENCY2(self):
         '''test sending of HIGH_LATENCY2'''
 
@@ -8198,6 +8199,7 @@ class TestSuite(ABC):
         # Check fence is not enabled
         self.assert_not_receiving_message('FENCE_STATUS', timeout=timeout)
 
+    @autotest_test(vehicles=['ArduPlane'])
     def NoArmWithoutMissionItems(self):
         '''ensure we can't arm in auto mode without mission items present'''
         # load a trivial mission
@@ -12351,6 +12353,7 @@ switch value'''
     def sample_mission_filename(self):
         return "flaps.txt"
 
+    @autotest_test(vehicles=['ArduPlane'])
     def AdvancedFailsafe(self):
         '''Test Advanced Failsafe'''
         ex = None
@@ -12656,6 +12659,7 @@ switch value'''
                 self.context_pop()
                 self.reboot_sitl()
 
+    @autotest_test(vehicles=['ArduPlane'])
     def AHRSTrim(self):
         '''AHRS trim testing'''
         self.start_subtest("Attitude Correctness")
@@ -12664,6 +12668,7 @@ switch value'''
         self.start_subtest("Preflight Calibration")
         self.ahrstrim_preflight_cal()
 
+    @autotest_test(vehicles=['ArduPlane'])
     def Button(self):
         '''Test Buttons'''
         self.set_parameter("SIM_PIN_MASK", 0)
@@ -13061,6 +13066,7 @@ switch value'''
                     self.progress("  Fulfilled")
                     del wants[want]
 
+    @autotest_test(vehicles=['ArduPlane'])
     def FRSkyPassThroughStatustext(self):
         '''test FRSKy protocol's telem-passthrough functionality'''
         # we disable terrain here as RCTelemetry can queue a lot of
@@ -13156,6 +13162,7 @@ switch value'''
                             self.progress("Got statustext (%s)" % received_text)
                             break
 
+    @autotest_test(vehicles=['ArduPlane'])
     def FRSkyPassThroughSensorIDs(self):
         '''test FRSKy protocol's telem-passthrough functionality (sensor IDs)'''
         self.set_parameters({
@@ -13314,6 +13321,7 @@ switch value'''
                 "Did not receive expected result in command_ack; want=%u got=%u" %
                 (want_result, got_result))
 
+    @autotest_test(vehicles=['ArduPlane'])
     def FRSkyMAVlite(self):
         '''Test FrSky MAVlite serial output'''
         self.set_parameter("SERIAL5_PROTOCOL", 10) # serial5 is FRSky passthrough
@@ -13588,6 +13596,7 @@ switch value'''
             if rpm.rpm1 >= min_rpm:
                 return
 
+    @autotest_test(vehicles=['ArduPlane'])
     def FRSkySPort(self):
         '''Test FrSky SPort mode'''
         self.set_parameter("SERIAL5_PROTOCOL", 4) # serial5 is FRSky sport
@@ -13662,6 +13671,7 @@ switch value'''
             self.zero_throttle()
             self.disarm_vehicle(force=True)
 
+    @autotest_test(vehicles=['ArduPlane'])
     def FRSkyD(self):
         '''Test FrSkyD serial output'''
         self.set_parameter("SERIAL5_PROTOCOL", 3) # serial5 is FRSky output
@@ -13781,6 +13791,7 @@ switch value'''
         # FIXME.  Actually check the field values are correct :-)
         return True
 
+    @autotest_test(vehicles=['ArduPlane'])
     def LTM(self):
         '''Test LTM serial output'''
         self.set_parameter("SERIAL5_PROTOCOL", 25) # serial5 is LTM output
@@ -13823,6 +13834,7 @@ switch value'''
             dd = 0.0
         return math.trunc(dd * 1.0e7)
 
+    @autotest_test(vehicles=['ArduPlane'])
     def DEVO(self):
         '''Test DEVO serial output'''
         self.context_push()
@@ -13896,6 +13908,7 @@ switch value'''
         self.context_pop()
         self.reboot_sitl()
 
+    @autotest_test(vehicles=['ArduPlane'])
     def MSP_DJI(self):
         '''Test MSP DJI serial output'''
         self.set_parameter("SERIAL5_PROTOCOL", 33) # serial5 is MSP DJI output
@@ -13991,6 +14004,7 @@ switch value'''
         )
         return self.current_onboard_log_filepath()
 
+    @autotest_test(vehicles=['ArduPlane'])
     def AHRS_ORIENTATION(self):
         '''test AHRS_ORIENTATION parameter works'''
         self.context_push()
@@ -14230,6 +14244,7 @@ switch value'''
 
         return tmpfile.read()
 
+    @autotest_test(vehicles=['ArduPlane'])
     def MAVFTP(self):
         '''ensure MAVProxy can do MAVFTP to ardupilot'''
         mavproxy = self.start_mavproxy()
