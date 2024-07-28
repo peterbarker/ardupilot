@@ -7448,7 +7448,6 @@ return update()
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestRover, self).tests()
-
         ret.extend([
             self.MAVProxy_SetModeUsingSwitch,
             self.HIGH_LATENCY2,

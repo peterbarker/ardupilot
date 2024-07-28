@@ -822,6 +822,7 @@ def list_subtests_for_vehicle(vehicle_type):
         subtests = tester.tests()
         sorted_list = []
         for subtest in subtests:
+            print(f"seeing {subtest=}")
             if not isinstance(subtest, BaseTest):
                 subtest = Test(subtest)
             sorted_list.append([subtest.name, subtest.description])
