@@ -352,7 +352,7 @@ protected:
     AP_Gripper gripper;
 #endif
 
-#if HAL_IBUS_TELEM_ENABLED
+#if AP_IBUS_TELEM_ENABLED
     AP_IBus_Telem ibus_telem;
 #endif
 

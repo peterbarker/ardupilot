@@ -33,7 +33,7 @@
 
 #include <AP_IBus_Telem/AP_IBus_Telem.h>
 
-#if HAL_IBUS_TELEM_ENABLED
+#if AP_IBUS_TELEM_ENABLED
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Vehicle/AP_Vehicle.h>
@@ -53,18 +53,25 @@ void AP_IBus_Telem::init()
 
 void AP_IBus_Telem::tick(void)
 {
-    ensure_listening();
+    if (!_initialized) {
+        _port->begin(115200);
+        _initialized = true;
+    }
 
     uint16_t available = MIN(_port->available(), 1024U);
     if (available == 0) {
         return;
-    } else {
-        reset_read_state_after_timegap();
     }
 
-    for (uint16_t i = 0; i < available; i++) {
-        const int16_t c = _port->read();
-        if (c < 0) {
+    const uint32_t now = AP_HAL::millis();
+    if ((now - _last_received_message_time_ms) >= PROTOCOL_TIMEGAP) {
+        _read_state = ReadState::READ_LENGTH;
+        _last_received_message_time_ms = now;
+    }
+
+    for (auto i = 0; i < available; i++) {
+        uint8_t c;
+        if (!_port->read(c)) {
             return;
         }
 
@@ -103,23 +110,6 @@ void AP_IBus_Telem::tick(void)
     }
 }
 
-void AP_IBus_Telem::ensure_listening(void)
-{
-    if (!_initialized) {
-        _port->begin(115200);
-        _initialized = true;
-    }
-}
-
-void AP_IBus_Telem::reset_read_state_after_timegap(void)
-{
-    const uint32_t now = AP_HAL::millis();
-    if ((now - _last_received_message_time_ms) >= PROTOCOL_TIMEGAP) {
-        _read_state = ReadState::READ_LENGTH;
-        _last_received_message_time_ms = now;
-    }
-}
-
 void AP_IBus_Telem::handle_incoming_message()
 {
     // Sensor 0 is reserved for the transmitter, so if for some reason it's requested we should ignore it
@@ -129,12 +119,11 @@ void AP_IBus_Telem::handle_incoming_message()
 
     // If we've reached the end of our sensor list, we shouldn't respond; this tells the receiver that there
     // are no more sensors to discover.
-    if (
-        _incoming_sensor_id > sizeof(_sensors) / sizeof(_sensors[0])
-        || !get_sensor_definition(_incoming_sensor_id)->sensor_type
-    ) {
+    if (_incoming_sensor_id > ARRAY_SIZE(_sensors)) {
         return;
     }
+
+    const auto *sensor_definition = &_sensors[_incoming_sensor_id - 1];
 
     switch (_incoming_command) {
     case PROTOCOL_COMMAND_DISCOVER:
@@ -142,11 +131,11 @@ void AP_IBus_Telem::handle_incoming_message()
         break;
 
     case PROTOCOL_COMMAND_TYPE:
-        handle_type_command();
+        handle_type_command(*sensor_definition);
         break;
 
     case PROTOCOL_COMMAND_VALUE:
-        handle_value_command();
+        handle_value_command(*sensor_definition);
         break;
     }
 }
@@ -190,9 +179,8 @@ void AP_IBus_Telem::handle_discover_command()
    * 0xFF: Checksum high byte
    Checksums are 0xFFFF minus the sum of the previous bytes
  */
-void AP_IBus_Telem::handle_type_command()
+void AP_IBus_Telem::handle_type_command(SensorDefinition sensor)
 {
-    _sensor_definition *s = get_sensor_definition(_incoming_sensor_id);
     struct protocol_command_type_response_t {
         uint8_t command_length;
         uint8_t address;
@@ -202,8 +190,8 @@ void AP_IBus_Telem::handle_type_command()
     } packet {
         PROTOCOL_SIX_LENGTH,
         (uint8_t)(PROTOCOL_COMMAND_TYPE | _incoming_sensor_id),
-        s->sensor_type,
-        s->sensor_length
+        sensor.sensor_type,
+        sensor.sensor_length
     };
     populate_checksum((uint8_t*)&packet, sizeof(packet));
     _port->write((uint8_t*)&packet, sizeof(packet));
@@ -225,18 +213,17 @@ void AP_IBus_Telem::handle_type_command()
    * 0xFE: Checksum high byte
    Checksums are 0xFFFF minus the sum of the previous bytes
  */
-void AP_IBus_Telem::handle_value_command()
+void AP_IBus_Telem::handle_value_command(SensorDefinition sensor)
 {
-    _sensor_definition *s = get_sensor_definition(_incoming_sensor_id);
-    const _sensor_value value = get_sensor_value(s->sensor_type);
-    if (s->sensor_length == 2) {
-        handle_2_byte_value_command(s->sensor_type, value);
+    const SensorValue value = get_sensor_value(sensor.sensor_type);
+    if (sensor.sensor_length == 2) {
+        handle_2_byte_value_command(sensor.sensor_type, value);
     } else {
-        handle_4_byte_value_command(s->sensor_type, value);
+        handle_4_byte_value_command(sensor.sensor_type, value);
     }
 }
 
-void AP_IBus_Telem::handle_2_byte_value_command(uint8_t sensor_type, _sensor_value value)
+void AP_IBus_Telem::handle_2_byte_value_command(uint8_t sensor_type, SensorValue value)
 {
     struct protocol_command_2byte_value_response_t {
         uint8_t command_length;
@@ -252,7 +239,7 @@ void AP_IBus_Telem::handle_2_byte_value_command(uint8_t sensor_type, _sensor_val
     _port->write((uint8_t*)&packet, sizeof(packet));
 }
 
-void AP_IBus_Telem::handle_4_byte_value_command(uint8_t sensor_type, _sensor_value value)
+void AP_IBus_Telem::handle_4_byte_value_command(uint8_t sensor_type, SensorValue value)
 {
     struct protocol_command_4byte_value_response_t {
         uint8_t command_length;
@@ -268,14 +255,9 @@ void AP_IBus_Telem::handle_4_byte_value_command(uint8_t sensor_type, _sensor_val
     _port->write((uint8_t*)&packet, sizeof(packet));
 }
 
-AP_IBus_Telem::_sensor_definition* AP_IBus_Telem::get_sensor_definition(uint8_t sensor_id)
+AP_IBus_Telem::SensorValue AP_IBus_Telem::get_sensor_value(uint8_t sensor_type)
 {
-    return &_sensors[sensor_id - 1];
-}
-
-AP_IBus_Telem::_sensor_value AP_IBus_Telem::get_sensor_value(uint8_t sensor_type)
-{
-    _sensor_value value;
+    SensorValue value;
     switch (sensor_type) {
     case IBUS_SENSOR_TYPE_EXTERNAL_VOLTAGE:
         value.uint16 = AP::battery().voltage() * 100;
@@ -392,17 +374,17 @@ AP_IBus_Telem::_sensor_value AP_IBus_Telem::get_sensor_value(uint8_t sensor_type
 
 uint16_t AP_IBus_Telem::get_average_cell_voltage_cV()
 {
-    if (AP::battery().has_cell_voltages()) {
-        const auto &cell_voltages = AP::battery().get_cell_voltages();
-        const uint8_t number_of_cells = sizeof(cell_voltages.cells) / sizeof(cell_voltages.cells[0]);
-        uint32_t voltage_sum = 0;
-        for (uint8_t i = 0; i < number_of_cells; i++) {
-            voltage_sum += cell_voltages.cells[i] * 0.001;
-        }
-        return voltage_sum / number_of_cells * 100;
-    } else {
+    if (!AP::battery().has_cell_voltages()) {
         return 0;
     }
+
+    const auto &cell_voltages = AP::battery().get_cell_voltages();
+    const uint8_t number_of_cells = ARRAY_SIZE(cell_voltages.cells);
+    uint32_t voltage_sum = 0;
+    for (auto i = 0; i < number_of_cells; i++) {
+        voltage_sum += cell_voltages.cells[i] * 0.001;
+    }
+    return voltage_sum / number_of_cells * 100;
 }
 
 uint16_t AP_IBus_Telem::get_current_cAh()
@@ -467,23 +449,29 @@ uint16_t AP_IBus_Telem::get_distance_from_home_m()
 uint16_t AP_IBus_Telem::get_vehicle_mode()
 {
     const AP_AHRS::VehicleClass vehicle_class = AP::ahrs().get_vehicle_class();
-    if (vehicle_class == AP_AHRS::VehicleClass::GROUND) {
-        return get_mapped_vehicle_mode(_ground_vehicle_mode_map, sizeof(_ground_vehicle_mode_map) / sizeof(_mode_map));
-    } else if (vehicle_class == AP_AHRS::VehicleClass::COPTER) {
-        return get_mapped_vehicle_mode(_copter_vehicle_mode_map, sizeof(_copter_vehicle_mode_map) / sizeof(_mode_map));
-    } else if (vehicle_class == AP_AHRS::VehicleClass::FIXED_WING) {
-        return get_mapped_vehicle_mode(_fixed_wing_vehicle_mode_map, sizeof(_fixed_wing_vehicle_mode_map) / sizeof(_mode_map));
-    } else if (vehicle_class == AP_AHRS::VehicleClass::SUBMARINE) {
-        return get_mapped_vehicle_mode(_submarine_vehicle_mode_map, sizeof(_submarine_vehicle_mode_map) / sizeof(_mode_map));
-    }
 
-    return IBUS_VEHICLE_MODE_UNKNOWN;
+    switch (vehicle_class) {
+    case AP_AHRS::VehicleClass::GROUND:
+        return get_mapped_vehicle_mode(_ground_vehicle_mode_map, ARRAY_SIZE(_ground_vehicle_mode_map));
+
+    case AP_AHRS::VehicleClass::COPTER:
+        return get_mapped_vehicle_mode(_copter_vehicle_mode_map, ARRAY_SIZE(_copter_vehicle_mode_map));
+
+    case AP_AHRS::VehicleClass::FIXED_WING:
+        return get_mapped_vehicle_mode(_fixed_wing_vehicle_mode_map, ARRAY_SIZE(_fixed_wing_vehicle_mode_map));
+
+    case AP_AHRS::VehicleClass::SUBMARINE:
+        return get_mapped_vehicle_mode(_submarine_vehicle_mode_map, ARRAY_SIZE(_submarine_vehicle_mode_map));
+
+    default:
+        return IBUS_VEHICLE_MODE_UNKNOWN;
+    }
 }
 
-uint16_t AP_IBus_Telem::get_mapped_vehicle_mode(_mode_map *vehicle_mode_map, uint8_t map_size)
+uint16_t AP_IBus_Telem::get_mapped_vehicle_mode(const ModeMap *vehicle_mode_map, uint8_t map_size)
 {
     const uint8_t vehicle_mode = AP::vehicle()->get_mode();
-    for (uint8_t i = 0; i < map_size; i++) {
+    for (auto i = 0; i < map_size; i++) {
         if (vehicle_mode_map[i].ap_mode == vehicle_mode) {
             return vehicle_mode_map[i].ibus_mode;
         }

@@ -531,7 +531,7 @@ void AP_Vehicle::setup()
     }
 #endif
 
-#if HAL_IBUS_TELEM_ENABLED
+#if AP_IBUS_TELEM_ENABLED
     ibus_telem.init();
 #endif
 }

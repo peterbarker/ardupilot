@@ -23,25 +23,25 @@
 
    * iBUStelemetry
      https://github.com/Hrastovc/iBUStelemetry
- 
+
    * IBusBM
      https://github.com/bmellink/IBusBM
- 
+
    * BetaFlight
      https://github.com/betaflight/betaflight/blob/master/src/main/telemetry/ibus_shared.c
  */
 
 #pragma once
 
-#ifndef HAL_IBUS_TELEM_ENABLED
-#define HAL_IBUS_TELEM_ENABLED 1
+#ifndef AP_IBUS_TELEM_ENABLED
+#define AP_IBUS_TELEM_ENABLED 1
 #endif
 
-#if HAL_IBUS_TELEM_ENABLED
+#if AP_IBUS_TELEM_ENABLED
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/vector3.h>
-#include <AP_RPM/AP_RPM.h>
+#include <AP_RPM/AP_RPM_config.h>
 
 // 2-byte values
 #define IBUS_SENSOR_TYPE_TEMPERATURE          0x01 // Temperature (in 0.1 degrees, where 0=-40'C)
@@ -97,9 +97,7 @@ class AP_IBus_Telem
 public:
     AP_IBus_Telem() {}
 
-    /* Do not allow copies */
-    AP_IBus_Telem(const AP_IBus_Telem &other) = delete;
-    AP_IBus_Telem &operator=(const AP_IBus_Telem &) = delete;
+    CLASS_NO_COPY(AP_IBus_Telem);
 
     void init();
     void listen();
@@ -115,28 +113,25 @@ private:
         int16_t int16;
         int32_t int32;
         uint8_t byte[4];
-    } _sensor_value;
+    } SensorValue;
 
     typedef struct {
         uint8_t sensor_type;   // Sensor type (IBUS_SENSOR_TYPE_* above)
         uint8_t sensor_length; // Data length for defined sensor (can be 2 or 4 bytes)
-    } _sensor_definition;
+    } SensorDefinition;
 
     typedef struct {
         uint8_t ap_mode;
         uint8_t ibus_mode;
-    } _mode_map;
+    } ModeMap;
 
-    void ensure_listening();
-    void reset_read_state_after_timegap();
     void handle_incoming_message();
     void handle_discover_command();
-    void handle_type_command();
-    void handle_value_command();
-    void handle_2_byte_value_command(uint8_t sensor_type, _sensor_value value);
-    void handle_4_byte_value_command(uint8_t sensor_type, _sensor_value value);
-    _sensor_definition* get_sensor_definition(uint8_t sensor_id);
-    _sensor_value get_sensor_value(uint8_t sensor_id);
+    void handle_type_command(SensorDefinition sensor);
+    void handle_value_command(SensorDefinition sensor);
+    void handle_2_byte_value_command(uint8_t sensor_type, SensorValue value);
+    void handle_4_byte_value_command(uint8_t sensor_type, SensorValue value);
+    SensorValue get_sensor_value(uint8_t sensor_id);
     uint16_t get_average_cell_voltage_cV();
     uint16_t get_current_cAh();
     uint8_t get_battery_or_fuel_level_pct();
@@ -145,7 +140,7 @@ private:
     Vector3f get_unbiased_acceleration();
     uint16_t get_distance_from_home_m();
     uint16_t get_vehicle_mode();
-    uint16_t get_mapped_vehicle_mode(_mode_map *vehicle_mode_map, uint8_t map_size);
+    uint16_t get_mapped_vehicle_mode(const ModeMap *vehicle_mode_map, uint8_t map_size);
     void populate_checksum(uint8_t *packet, uint16_t size);
 
     enum class ReadState {
@@ -176,7 +171,7 @@ private:
     // i-BUS will generally only query up to 15 sensors, so subjectively
     // higher-value sensors are sorted to the top to make the most of a
     // small telemetry window. In the future these could be configurable.
-    _sensor_definition _sensors[25] = {
+    static constexpr const SensorDefinition _sensors[] = {
         {.sensor_type = IBUS_SENSOR_TYPE_ARMED, .sensor_length = 2},
         {.sensor_type = IBUS_SENSOR_TYPE_FLIGHT_MODE, .sensor_length = 2},
         {.sensor_type = IBUS_SENSOR_TYPE_GPS_STATUS, .sensor_length = 2},
@@ -222,7 +217,7 @@ private:
        GUIDED       = 15
        INITIALISING = 16
     */
-    _mode_map _ground_vehicle_mode_map[8] = {
+    static constexpr const ModeMap _ground_vehicle_mode_map[] = {
         {.ap_mode = 1, .ibus_mode = IBUS_VEHICLE_MODE_ACRO},
         {.ap_mode = 4, .ibus_mode = IBUS_VEHICLE_MODE_PHOLD},
         {.ap_mode = 5, .ibus_mode = IBUS_VEHICLE_MODE_LOITER},
@@ -261,7 +256,7 @@ private:
        AUTO_RTL     = 27
        TURTLE       = 28
     */
-    _mode_map _copter_vehicle_mode_map[13] = {
+    static constexpr const ModeMap _copter_vehicle_mode_map[] = {
         {.ap_mode = 0, .ibus_mode = IBUS_VEHICLE_MODE_STAB},
         {.ap_mode = 1, .ibus_mode = IBUS_VEHICLE_MODE_ACRO},
         {.ap_mode = 2, .ibus_mode = IBUS_VEHICLE_MODE_AHOLD},
@@ -304,7 +299,7 @@ private:
        THERMAL       = 24
        LOITER_ALT_QLAND = 25
     */
-    _mode_map _fixed_wing_vehicle_mode_map[18] = {
+    static constexpr const ModeMap _fixed_wing_vehicle_mode_map[] = {
         {.ap_mode = 1, .ibus_mode = IBUS_VEHICLE_MODE_CIRCLE},
         {.ap_mode = 2, .ibus_mode = IBUS_VEHICLE_MODE_STAB},
         {.ap_mode = 4, .ibus_mode = IBUS_VEHICLE_MODE_ACRO},
@@ -337,7 +332,7 @@ private:
        MANUAL       = 19
        MOTOR_DETECT = 20
     */
-    _mode_map _submarine_vehicle_mode_map[11] = {
+    static constexpr const ModeMap _submarine_vehicle_mode_map[] = {
         {.ap_mode = 0, .ibus_mode = IBUS_VEHICLE_MODE_STAB},
         {.ap_mode = 1, .ibus_mode = IBUS_VEHICLE_MODE_ACRO},
         {.ap_mode = 2, .ibus_mode = IBUS_VEHICLE_MODE_AHOLD},
