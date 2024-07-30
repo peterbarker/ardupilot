@@ -64,78 +64,80 @@ void AP_IBus_Telem::tick(void)
     }
 
     const uint32_t now = AP_HAL::millis();
-    if ((now - _last_received_message_time_ms) >= PROTOCOL_TIMEGAP) {
-        _read_state = ReadState::READ_LENGTH;
-        _last_received_message_time_ms = now;
+    if ((now - _last_received_message_time_ms) < PROTOCOL_TIMEGAP) {
+        // frame-gap check; bytes arrived within the frame gap, discard them
+        _port->discard_input();
+        return;
     }
 
-    for (auto i = 0; i < available; i++) {
-        uint8_t c;
-        if (!_port->read(c)) {
-            return;
-        }
-
-        switch (_read_state) {
-        case ReadState::READ_LENGTH:
-            if (c != PROTOCOL_INCOMING_MESSAGE_LENGTH) {
-                _read_state = ReadState::DISCARD;
-                break;
-            }
-            _expected_checksum = 0xFFFF - c;
-            _read_state = ReadState::READ_COMMAND;
-            break;
-
-        case ReadState::READ_COMMAND:
-            _incoming_command = c & 0x0f0;
-            _incoming_sensor_id = c & 0x0f;
-            _expected_checksum -= c;
-            _read_state = ReadState::READ_CHECKSUM_HIGH_BYTE;
-            break;
-
-        case ReadState::READ_CHECKSUM_HIGH_BYTE:
-            _incoming_checksum_high_byte = c;
-            _read_state = ReadState::READ_CHECKSUM_LOW_BYTE;
-            break;
-
-        case ReadState::READ_CHECKSUM_LOW_BYTE:
-            if (_expected_checksum == (c << 8) + _incoming_checksum_high_byte) {
-                handle_incoming_message();
-            }
-            _read_state = ReadState::DISCARD;
-            break;
-
-        case ReadState::DISCARD:
-            break;
-        }
+    union {
+        CommandPacket incoming_message;
+        uint8_t buffer[sizeof(CommandPacket)];
+    } u;
+    if (available < sizeof(u.incoming_message)) {
+        // bytes still on the way in, hopefully!
+        return;
     }
+    if (available > sizeof(u.incoming_message)) {
+        // unexpeced number of bytes, we are a frame-gapped parser
+        _port->discard_input();
+        return;
+    }
+
+    // FIXME: does this really belong here?
+    _last_received_message_time_ms = now;
+
+    if (_port->read(u.buffer, sizeof(u.buffer)) != sizeof(u.buffer)) {
+        // short read?!
+        _port->discard_input();
+        return;
+    }
+
+    if (u.incoming_message.message_length != PROTOCOL_INCOMING_MESSAGE_LENGTH) {
+        // invalid message length field
+        return;
+    }
+
+    // validate the checksum:
+    uint16_t calculated_checksum = 0xFFFF;
+    for (uint8_t i=0; i<sizeof(u.buffer)-2; i++) {
+        calculated_checksum -= u.buffer[i];
+    }
+
+    if (u.incoming_message.checksum != calculated_checksum) {
+        // checksum mismatch
+        return;
+    }
+
+    handle_incoming_message(u.incoming_message);
 }
 
-void AP_IBus_Telem::handle_incoming_message()
+void AP_IBus_Telem::handle_incoming_message(const CommandPacket &incoming)
 {
     // Sensor 0 is reserved for the transmitter, so if for some reason it's requested we should ignore it
-    if (_incoming_sensor_id == 0) {
+    if (incoming.sensor_id == 0) {
         return;
     }
 
     // If we've reached the end of our sensor list, we shouldn't respond; this tells the receiver that there
     // are no more sensors to discover.
-    if (_incoming_sensor_id > ARRAY_SIZE(_sensors)) {
+    if (incoming.sensor_id > ARRAY_SIZE(_sensors)) {
         return;
     }
 
-    const auto *sensor_definition = &_sensors[_incoming_sensor_id - 1];
+    const auto *sensor_definition = &_sensors[incoming.sensor_id - 1];
 
-    switch (_incoming_command) {
+    switch (incoming.command << 4) {
     case PROTOCOL_COMMAND_DISCOVER:
-        handle_discover_command();
+        handle_discover_command(incoming);
         break;
 
     case PROTOCOL_COMMAND_TYPE:
-        handle_type_command(*sensor_definition);
+        handle_type_command(incoming, *sensor_definition);
         break;
 
     case PROTOCOL_COMMAND_VALUE:
-        handle_value_command(*sensor_definition);
+        handle_value_command(incoming, *sensor_definition);
         break;
     }
 }
@@ -149,7 +151,7 @@ void AP_IBus_Telem::handle_incoming_message()
 
    To acknowledge a discovery query, we echo the command back.
  */
-void AP_IBus_Telem::handle_discover_command()
+void AP_IBus_Telem::handle_discover_command(const CommandPacket &incoming)
 {
     struct protocol_command_discover_response_t {
         uint8_t command_length;
@@ -157,7 +159,7 @@ void AP_IBus_Telem::handle_discover_command()
         uint16_t checksum;
     } packet {
         PROTOCOL_FOUR_LENGTH,
-        (uint8_t)(PROTOCOL_COMMAND_DISCOVER | _incoming_sensor_id)
+        (uint8_t)(PROTOCOL_COMMAND_DISCOVER | incoming.sensor_id)
     };
     populate_checksum((uint8_t*)&packet, sizeof(packet));
     _port->write((uint8_t*)&packet, sizeof(packet));
@@ -179,7 +181,7 @@ void AP_IBus_Telem::handle_discover_command()
    * 0xFF: Checksum high byte
    Checksums are 0xFFFF minus the sum of the previous bytes
  */
-void AP_IBus_Telem::handle_type_command(SensorDefinition sensor)
+void AP_IBus_Telem::handle_type_command(const CommandPacket &incoming, SensorDefinition sensor)
 {
     struct protocol_command_type_response_t {
         uint8_t command_length;
@@ -189,7 +191,7 @@ void AP_IBus_Telem::handle_type_command(SensorDefinition sensor)
         uint16_t checksum;
     } packet {
         PROTOCOL_SIX_LENGTH,
-        (uint8_t)(PROTOCOL_COMMAND_TYPE | _incoming_sensor_id),
+        (uint8_t)(PROTOCOL_COMMAND_TYPE | incoming.sensor_id),
         sensor.sensor_type,
         sensor.sensor_length
     };
@@ -213,17 +215,17 @@ void AP_IBus_Telem::handle_type_command(SensorDefinition sensor)
    * 0xFE: Checksum high byte
    Checksums are 0xFFFF minus the sum of the previous bytes
  */
-void AP_IBus_Telem::handle_value_command(SensorDefinition sensor)
+void AP_IBus_Telem::handle_value_command(const CommandPacket &incoming, SensorDefinition sensor)
 {
     const SensorValue value = get_sensor_value(sensor.sensor_type);
     if (sensor.sensor_length == 2) {
-        handle_2_byte_value_command(sensor.sensor_type, value);
+        handle_2_byte_value_command(incoming, sensor.sensor_type, value);
     } else {
-        handle_4_byte_value_command(sensor.sensor_type, value);
+        handle_4_byte_value_command(incoming, sensor.sensor_type, value);
     }
 }
 
-void AP_IBus_Telem::handle_2_byte_value_command(uint8_t sensor_type, SensorValue value)
+void AP_IBus_Telem::handle_2_byte_value_command(const CommandPacket &incoming, uint8_t sensor_type, SensorValue value)
 {
     struct protocol_command_2byte_value_response_t {
         uint8_t command_length;
@@ -232,14 +234,14 @@ void AP_IBus_Telem::handle_2_byte_value_command(uint8_t sensor_type, SensorValue
         uint16_t checksum;
     } packet {
         PROTOCOL_SIX_LENGTH,
-        (uint8_t)(PROTOCOL_COMMAND_VALUE | _incoming_sensor_id),
+        (uint8_t)(PROTOCOL_COMMAND_VALUE | incoming.sensor_id),
         {value.byte[0], value.byte[1]}
     };
     populate_checksum((uint8_t*)&packet, sizeof(packet));
     _port->write((uint8_t*)&packet, sizeof(packet));
 }
 
-void AP_IBus_Telem::handle_4_byte_value_command(uint8_t sensor_type, SensorValue value)
+void AP_IBus_Telem::handle_4_byte_value_command(const CommandPacket &incoming, uint8_t sensor_type, SensorValue value)
 {
     struct protocol_command_4byte_value_response_t {
         uint8_t command_length;
@@ -248,7 +250,7 @@ void AP_IBus_Telem::handle_4_byte_value_command(uint8_t sensor_type, SensorValue
         uint16_t checksum;
     } packet {
         PROTOCOL_EIGHT_LENGTH,
-        (uint8_t)(PROTOCOL_COMMAND_VALUE | _incoming_sensor_id),
+        (uint8_t)(PROTOCOL_COMMAND_VALUE | incoming.sensor_id),
         {value.byte[0], value.byte[1], value.byte[2], value.byte[3]}
     };
     populate_checksum((uint8_t*)&packet, sizeof(packet));

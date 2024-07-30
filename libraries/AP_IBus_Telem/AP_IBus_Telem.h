@@ -125,12 +125,19 @@ private:
         uint8_t ibus_mode;
     } ModeMap;
 
-    void handle_incoming_message();
-    void handle_discover_command();
-    void handle_type_command(SensorDefinition sensor);
-    void handle_value_command(SensorDefinition sensor);
-    void handle_2_byte_value_command(uint8_t sensor_type, SensorValue value);
-    void handle_4_byte_value_command(uint8_t sensor_type, SensorValue value);
+    struct PACKED CommandPacket {
+        uint8_t message_length;
+        uint8_t command : 4;
+        uint8_t sensor_id : 4;
+        uint16_t checksum;
+    };
+
+    void handle_incoming_message(const CommandPacket &incoming);
+    void handle_discover_command(const CommandPacket &incoming);
+    void handle_type_command(const CommandPacket &incoming, SensorDefinition sensor);
+    void handle_value_command(const CommandPacket &incoming, SensorDefinition sensor);
+    void handle_2_byte_value_command(const CommandPacket &incoming, uint8_t sensor_type, SensorValue value);
+    void handle_4_byte_value_command(const CommandPacket &incoming, uint8_t sensor_type, SensorValue value);
     SensorValue get_sensor_value(uint8_t sensor_id);
     uint16_t get_average_cell_voltage_cV();
     uint16_t get_current_cAh();
@@ -143,14 +150,6 @@ private:
     uint16_t get_mapped_vehicle_mode(const ModeMap *vehicle_mode_map, uint8_t map_size);
     void populate_checksum(uint8_t *packet, uint16_t size);
 
-    enum class ReadState {
-        READ_LENGTH,
-        READ_COMMAND,
-        READ_CHECKSUM_LOW_BYTE,
-        READ_CHECKSUM_HIGH_BYTE,
-        DISCARD,
-    };
-
     static const uint8_t PROTOCOL_COMMAND_DISCOVER = 0x80; // Command to discover a sensor (lowest 4 bits are sensor)
     static const uint8_t PROTOCOL_COMMAND_TYPE = 0x90;     // Command to request a sensor type (lowest 4 bits are sensor)
     static const uint8_t PROTOCOL_COMMAND_VALUE = 0xA0;    // Command to request a sensor's value (lowest 4 bits are sensor)
@@ -160,12 +159,7 @@ private:
     static const uint8_t PROTOCOL_EIGHT_LENGTH = 0x08;     // indicate that the message has 8 bytes
     static const uint8_t PROTOCOL_INCOMING_MESSAGE_LENGTH = PROTOCOL_FOUR_LENGTH; // All incoming messages are the same length
 
-    ReadState _read_state = ReadState::READ_LENGTH;
     uint32_t _last_received_message_time_ms; // When the last message was received
-    uint8_t _incoming_command;               // The command coming from the receiver
-    uint8_t _incoming_sensor_id;             // The sensor the receiver is talking to us about
-    uint16_t _expected_checksum;             // Checksum calculation
-    uint8_t _incoming_checksum_high_byte;    // Checksum high byte storage
 
     // All the sensors we can accurately provide are listed here.
     // i-BUS will generally only query up to 15 sensors, so subjectively
