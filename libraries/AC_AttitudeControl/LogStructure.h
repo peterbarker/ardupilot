@@ -6,6 +6,7 @@
     LOG_PSCN_MSG, \
     LOG_PSCE_MSG, \
     LOG_PSCD_MSG, \
+    LOG_PSCO_MSG, \
     LOG_ANG_MSG
 
 // @LoggerMessage: PSCN
@@ -57,6 +58,38 @@ struct PACKED log_PSCx {
     float accel_desired;
     float accel_target;
     float accel;
+};
+
+// @LoggerMessage: PSCO
+// @Description: Position Control Offset
+// @Field: TimeUS: Time since system startup
+// @Field: TPON: Target position offset North
+// @Field: PON: Position offset North
+// @Field: TVON: Target velocity offset North
+// @Field: VON: Velocity offset North
+// @Field: TAON: Target acceleration offset North
+// @Field: AON: Acceleration offset North
+// @Field: TPOE: Target position offset East
+// @Field: POE: Position offset East
+// @Field: TVOE: Target velocity offset East
+// @Field: VOE: Velocity offset East
+// @Field: TAOE: Target acceleration offset East
+// @Field: AOE: Acceleration offset East
+struct PACKED log_PSCO {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    float pos_target_offset_north;
+    float pos_offset_north;
+    float vel_target_offset_north;
+    float vel_offset_north;
+    float accel_target_offset_north;
+    float accel_offset_north;
+    float pos_target_offset_east;
+    float pos_offset_east;
+    float vel_target_offset_east;
+    float vel_offset_east;
+    float accel_target_offset_east;
+    float accel_offset_east;
 };
 
 // @LoggerMessage: RATE
@@ -126,6 +159,8 @@ struct PACKED log_ANG {
       "PSCE", PSCx_FMT, "TimeUS,TPE,PE,DVE,TVE,VE,DAE,TAE,AE", PSCx_UNITS, PSCx_MULTS }, \
     { LOG_PSCD_MSG, sizeof(log_PSCx), \
       "PSCD", PSCx_FMT, "TimeUS,TPD,PD,DVD,TVD,VD,DAD,TAD,AD", PSCx_UNITS, PSCx_MULTS }, \
+    { LOG_PSCO_MSG, sizeof(log_PSCO), \
+      "PSCO", "Qffffffffffff", "TimeUS,TPON,PON,TVON,VON,TAON,AON,TPOE,POE,TVOE,VOE,TAOE,AOE", "smmnnoommnnoo", "F000000000000" }, \
     { LOG_RATE_MSG, sizeof(log_Rate), \
         "RATE", "Qfffffffffffff",  "TimeUS,RDes,R,ROut,PDes,P,POut,YDes,Y,YOut,ADes,A,AOut,AOutSlew", "skk-kk-kk-oo--", "F?????????BB--" , true }, \
     { LOG_ANG_MSG, sizeof(log_ANG),\

@@ -40,4 +40,28 @@ void AC_PosControl::Write_PSCD(float pos_target, float pos, float vel_desired, f
     Write_PSCx(LOG_PSCD_MSG, pos_target, pos, vel_desired, vel_target, vel, accel_desired, accel_target, accel);
 }
 
+// a convenience function for writing out the position controller PIDs
+void AC_PosControl::Write_PSCO(const Vector2p& pos_target_offset_ne, const Vector2p& pos_offset_ne,
+                               const Vector2f& vel_target_offset_ne, const Vector2f& vel_offset_ne,
+                               const Vector2f& accel_target_offset_ne, const Vector2f& accel_offset_ne)
+{
+    const struct log_PSCO pkt{
+        LOG_PACKET_HEADER_INIT(LOG_PSCO_MSG),
+            time_us                   : AP_HAL::micros64(),
+            pos_target_offset_north   : pos_target_offset_ne.tofloat().x * 0.01f,
+            pos_offset_north          : pos_offset_ne.tofloat().x * 0.01f,
+            vel_target_offset_north   : vel_target_offset_ne.x * 0.01f,
+            vel_offset_north          : vel_offset_ne.x * 0.01f,
+            accel_target_offset_north : accel_target_offset_ne.x * 0.01f,
+            accel_offset_north        : accel_offset_ne.x * 0.01f,
+            pos_target_offset_east    : pos_target_offset_ne.tofloat().y * 0.01f,
+            pos_offset_east           : pos_offset_ne.tofloat().y * 0.01f,
+            vel_target_offset_east    : vel_target_offset_ne.y * 0.01f,
+            vel_offset_east           : vel_offset_ne.y * 0.01f,
+            accel_target_offset_east  : accel_target_offset_ne.y  * 0.01f,
+            accel_offset_east         : accel_offset_ne.y * 0.01f
+    };
+    AP::logger().WriteBlock(&pkt, sizeof(pkt));
+}
+
 #endif  // HAL_LOGGING_ENABLED
