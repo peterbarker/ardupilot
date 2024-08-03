@@ -96,6 +96,13 @@ static void run_command_on_ownpid(const char *commandname)
         p = progname;
     }
 
+    // work around a bug in dash; its manpage says it searches $PATH
+    // but it does't.  https://github.com/ArduPilot/ardupilot/issues/24245
+    const char *cmd_fmt = "sh %s %d >%s 2>&1";
+    if (getenv("AP_DASH_HACKERY")) {
+        cmd_fmt = "%s %d >%s 2>&1";
+    }
+
     char output_filepath[80];
     snprintf(output_filepath,
              ARRAY_SIZE(output_filepath),
@@ -106,7 +113,7 @@ static void run_command_on_ownpid(const char *commandname)
     char cmd[200];
 	snprintf(cmd,
              sizeof(cmd),
-             "sh %s %d >%s 2>&1",
+             cmd_fmt,
              command_filepath,
              (int)getpid(),
              output_filepath);
