@@ -1526,6 +1526,7 @@ private:
     float target_climb_rate;   // climb rate in cm/s
     Vector3f offset; // position relative to the ship in cm
     bool ship_takeoff; // true if we have initialised ShipOps while landed.
+    bool keep_out_zone_valid = true; // true if the KOZ is valid
     class Ship {
     public:
         void reset(const Vector3f &pos_with_ofs_ned, const Vector3f &vel_ned_ms, float target_heading_deg);

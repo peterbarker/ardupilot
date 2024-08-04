@@ -166,7 +166,7 @@ bool ModeShipOperation::init(const bool ignore_checks)
     
     if (!g2.follow.get_target_dist_and_vel_ned(pos_delta_ned_m, pos_delta_with_ofs_ned_m, vel_ned_ms)) {
         // follow does not have a target
-        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Beacon distance larger than FOLL_DIST_MAX");
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "ShipOps: No valid beacon");
         return false;
     }
 
@@ -235,8 +235,11 @@ const char *ModeShipOperation::state_name(SubMode mode) const
 
 void ModeShipOperation::set_state(SubMode mode)
 {
-    GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "ShipOps: %s",
-                    state_name(mode));
+    if (_state == mode) {
+        // nothing to do
+        return;
+    }
+    GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "ShipOps: %s", state_name(mode));
     _state = mode;
 }
 
@@ -320,16 +323,18 @@ void ModeShipOperation::run()
     float keep_out_CW_rad = keep_out_angle_rad + keep_out_CCW_rad;
     float koz_center_heading_rad = wrap_2PI(ship.heading + (keep_out_CW_rad + keep_out_CCW_rad) / 2.0);
     if (is_positive(keep_out_radius)) {
-        if (!is_positive(deck_radius)) {
-            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "KOZ_DKR must be positive");
-            copter.do_failsafe_action(Copter::FailsafeAction::AUTO_DO_LAND_START, ModeReason::UNKNOWN);
+        bool deck_radius_valid = is_positive(deck_radius);
+        bool approach_arc_valid = wrap_PI(radians(perch_angle) - koz_center_heading_rad) >=  keep_out_angle_rad / 2.0;
+        if (keep_out_zone_valid ~= deck_radius_valid && approach_arc_valid) {
+            if (!deck_radius_valid) {
+                GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Invalid KOZ: KOZ_DKR must be positive");
+            }
+            if (!approach_arc_valid) {
+                GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Invalid KOZ: Perch in KOZ");
+            }
             set_state(SubMode::CLIMB_TO_RTL);
         }
-        if ((wrap_PI(radians(perch_angle) - koz_center_heading_rad)) <  keep_out_angle_rad / 2.0) {
-            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Perch in KOZ");
-            copter.do_failsafe_action(Copter::FailsafeAction::AUTO_DO_LAND_START, ModeReason::UNKNOWN);
-            set_state(SubMode::CLIMB_TO_RTL);
-        }
+        keep_out_zone_valid = deck_radius_valid && approach_arc_valid;
     }
     
     // define target location
@@ -377,8 +382,10 @@ void ModeShipOperation::run()
         // transform offset and perch to earth frame
         perch_offset.rotate(ship.heading);
     } else {
-        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "No Valid Beacon");
-        ship.available = false;
+        if (ship.available) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "No Valid Beacon");
+            ship.available = false;
+        }
         set_state(SubMode::CLIMB_TO_RTL);
     }
 
@@ -705,7 +712,7 @@ void ModeShipOperation::run()
         switch (_state) {
         case SubMode::CLIMB_TO_RTL:
             // check altitude is within 5% of perch_height from RTL altitude
-            if (ship.available && alt_check) {
+            if (ship.available && alt_check && keep_out_zone_valid) {
                 set_state(SubMode::RETURN_TO_PERCH);
             }
             break;
