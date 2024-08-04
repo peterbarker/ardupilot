@@ -378,7 +378,6 @@ void ModeShipOperation::run()
         perch_offset.rotate(ship.heading);
     } else {
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "No Valid Beacon");
-        copter.do_failsafe_action(Copter::FailsafeAction::AUTO_DO_LAND_START, ModeReason::UNKNOWN);
         ship.available = false;
         set_state(SubMode::CLIMB_TO_RTL);
     }
