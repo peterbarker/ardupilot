@@ -532,20 +532,10 @@ float Plane::apply_throttle_limits(float throttle_in)
             // Or (in contrast) to give some extra throttle during the initial climb.
             max_throttle = aparm.takeoff_throttle_max.get();
         }
-        // Do not allow min throttle to go below a lower threshold.
-        // This is typically done to protect against premature stalls close to the ground.
-        const bool use_throttle_range = (aparm.takeoff_options & (uint32_t)AP_FixedWing::TakeoffOption::THROTTLE_RANGE);
-        if (!use_throttle_range || !ahrs.using_airspeed_sensor()) {
-            // Use a constant max throttle throughout the takeoff or when airspeed readings are not available.
-            if (aparm.takeoff_throttle_max.get() == 0) {
-                min_throttle = MAX(min_throttle, aparm.throttle_max.get());
-            } else {
-                min_throttle = MAX(min_throttle, aparm.takeoff_throttle_max.get());
-            }
-        } else if (use_throttle_range) { // Use a throttle range through the takeoff.
-            if (aparm.takeoff_throttle_min.get() != 0) { // This is enabled by TKOFF_MODE==1.
-                min_throttle = MAX(min_throttle, aparm.takeoff_throttle_min.get());
-            }
+        if (aparm.takeoff_throttle_min.get() != 0) {
+            // Replace min throttle with the takeoff min throttle setting.
+            // This is typically done to protect against premature stalls close to the ground.
+            min_throttle = MAX(min_throttle, aparm.takeoff_throttle_min.get());
         }
     } else if (landing.is_flaring()) {
         // Allow throttle cutoff when flaring.
