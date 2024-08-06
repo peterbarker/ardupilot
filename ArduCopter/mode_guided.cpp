@@ -449,7 +449,7 @@ bool ModeGuided::set_destination(const Location& dest_loc, bool use_yaw, float y
             wp_control_start();
         }
 
-        if (!wp_nav->set_wp_destination_loc(dest_loc)) {
+        if (!wp_nav->set_wp_destination_loc(dest_loc, nanf(""))) {
             // failure to set destination can only be because of missing terrain data
             LOGGER_WRITE_ERROR(LogErrorSubsystem::NAVIGATION, LogErrorCode::FAILED_TO_SET_DESTINATION);
             // failure is propagated to GCS with NAK

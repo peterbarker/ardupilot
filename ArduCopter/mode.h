@@ -538,7 +538,7 @@ public:
     bool loiter_start();
     void rtl_start();
     void takeoff_start(const Location& dest_loc);
-    bool wp_start(const Location& dest_loc);
+    bool wp_start(const Location& dest_loc, float speed_xy);
     void land_start();
     void circle_movetoedge_start(const Location &circle_center, float radius_m, bool ccw_turn);
     void circle_start();
@@ -750,6 +750,11 @@ private:
         float up;     // desired speed upwards in m/s. 0 if unset
         float down;   // desired speed downwards in m/s. 0 if unset
     } desired_speed_override;
+
+    // segment_speed - returns an initial speed (in m/s) at which the
+    // segment starting at index should be flown
+    float segment_speed(uint16_t index);
+
 };
 
 #if AUTOTUNE_ENABLED == ENABLED

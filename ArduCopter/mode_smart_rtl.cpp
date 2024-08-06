@@ -19,7 +19,7 @@ bool ModeSmartRTL::init(bool ignore_checks)
         Vector3p stopping_point;
         pos_control->get_stopping_point_xy_cm(stopping_point.xy());
         pos_control->get_stopping_point_z_cm(stopping_point.z);
-        wp_nav->set_wp_destination(stopping_point.tofloat());
+        wp_nav->set_wp_destination(stopping_point.tofloat(), nanf(""));
 
         // initialise yaw to obey user parameter
         auto_yaw.set_mode_to_default(true);

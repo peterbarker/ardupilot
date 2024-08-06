@@ -344,7 +344,7 @@ bool ModeAuto::loiter_start()
     wp_nav->get_wp_stopping_point(stopping_point);
 
     // initialise waypoint controller target to stopping point
-    wp_nav->set_wp_destination(stopping_point);
+    wp_nav->set_wp_destination(stopping_point, nanf(""));
 
     // hold yaw at current heading
     auto_yaw.set_mode(AutoYaw::Mode::HOLD);
@@ -420,7 +420,7 @@ void ModeAuto::takeoff_start(const Location& dest_loc)
 }
 
 // auto_wp_start - initialises waypoint controller to implement flying to a particular destination
-bool ModeAuto::wp_start(const Location& dest_loc)
+bool ModeAuto::wp_start(const Location& dest_loc, float speed_xy)
 {
     // init wpnav and set origin if transitioning from takeoff
     if (!wp_nav->is_active()) {
@@ -431,8 +431,10 @@ bool ModeAuto::wp_start(const Location& dest_loc)
                 stopping_point = takeoff_complete_pos.tofloat();
             }
         }
-        float des_speed_xy_cm = is_positive(desired_speed_override.xy) ? (desired_speed_override.xy * 100) : 0;
-        wp_nav->wp_and_spline_init(des_speed_xy_cm, stopping_point);
+        if (isnan(speed_xy)) {
+            speed_xy = is_positive(desired_speed_override.xy) ? (desired_speed_override.xy) : 0;
+        }
+        wp_nav->wp_and_spline_init(speed_xy * 100, stopping_point);
 
         // override speeds up and down if necessary
         if (is_positive(desired_speed_override.up)) {
@@ -443,7 +445,7 @@ bool ModeAuto::wp_start(const Location& dest_loc)
         }
     }
 
-    if (!wp_nav->set_wp_destination_loc(dest_loc)) {
+    if (!wp_nav->set_wp_destination_loc(dest_loc, speed_xy)) {
         return false;
     }
 
@@ -529,7 +531,7 @@ void ModeAuto::circle_movetoedge_start(const Location &circle_center, float radi
         circle_edge.set_alt_cm(circle_center.alt, circle_center.get_alt_frame());
 
         // initialise wpnav to move to edge of circle
-        if (!wp_nav->set_wp_destination_loc(circle_edge)) {
+        if (!wp_nav->set_wp_destination_loc(circle_edge, nanf(""))) {
             // failure to set destination can only be because of missing terrain data
             copter.failsafe_terrain_on_event();
         }
@@ -1539,7 +1541,8 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     // get waypoint's location from command and send to wp_nav
     const Location target_loc = loc_from_cmd(cmd, default_loc);
 
-    if (!wp_start(target_loc)) {
+    float speed_xy = segment_speed(cmd.index+1);
+    if (!wp_start(target_loc, speed_xy)) {
         // failure to set next destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
@@ -1556,6 +1559,35 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
         copter.failsafe_terrain_on_event();
         return;
     }
+}
+
+// segment_speed - returns an initial speed (in m/s) at which the
+// segment starting at index should be flown
+float ModeAuto::segment_speed(uint16_t index)
+{
+    // if there is a DO_CHANGE_SPEED then we will enter the next
+    // waypoint not just as a location but also tell the waypoint
+    // navigation library how fast to navigate to it.  This is a
+    // special case to avoid the vehicle working its way towards its
+    // current waypoint navigation speed as part of its constant-jerk
+    // calculations before honouring a DO_CHANGE_SPEED.
+
+    AP_Mission::Mission_Command cmd;
+    if (!mission.get_next_do_cmd(index, cmd)) {
+        return nanf("");
+    }
+    if (cmd.id != MAV_CMD_DO_CHANGE_SPEED) {
+        return nanf("");
+    }
+    switch (cmd.content.speed.speed_type) {
+    case SPEED_TYPE_GROUNDSPEED:
+    case SPEED_TYPE_AIRSPEED:
+        break;
+    case SPEED_TYPE_CLIMB_SPEED:
+    case SPEED_TYPE_DESCENT_SPEED:
+        return nanf("");
+    }
+    return cmd.content.speed.target_ms;
 }
 
 // checks the next mission command and adds it as a destination if necessary
@@ -1631,7 +1663,7 @@ void ModeAuto::do_land(const AP_Mission::Mission_Command& cmd)
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Land: no terrain data, using alt-above-home");
         }
 
-        if (!wp_start(target_loc)) {
+        if (!wp_start(target_loc, nanf(""))) {
             // failure to set next destination can only be because of missing terrain data
             copter.failsafe_terrain_on_event();
             return;
@@ -1677,7 +1709,7 @@ void ModeAuto::do_loiter_unlimited(const AP_Mission::Mission_Command& cmd)
     }
 
     // start way point navigator and provide it the desired location
-    if (!wp_start(target_loc)) {
+    if (!wp_start(target_loc, nanf(""))) {
         // failure to set next destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
@@ -1915,6 +1947,7 @@ void ModeAuto::do_yaw(const AP_Mission::Mission_Command& cmd)
 // Do (Now) commands
 /********************************************************************************/
 
+// note that we extract a lot of this same information in segment_speed
 void ModeAuto::do_change_speed(const AP_Mission::Mission_Command& cmd)
 {
     if (cmd.content.speed.target_ms > 0) {
@@ -2012,7 +2045,7 @@ void ModeAuto::do_payload_place(const AP_Mission::Mission_Command& cmd)
             LOGGER_WRITE_ERROR(LogErrorSubsystem::TERRAIN, LogErrorCode::MISSING_TERRAIN_DATA);
             gcs().send_text(MAV_SEVERITY_CRITICAL, "PayloadPlace: no terrain data, using alt-above-home");
         }
-        if (!wp_start(target_loc)) {
+        if (!wp_start(target_loc, nanf(""))) {
             // failure to set next destination can only be because of missing terrain data
             copter.failsafe_terrain_on_event();
             return;
