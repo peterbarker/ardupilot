@@ -104,7 +104,10 @@ public:
     /// set_wp_destination waypoint using location class
     ///     provide the next_destination if known
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-    bool set_wp_destination_loc(const Location& destination);
+    bool set_wp_destination_loc(const Location& destination, float speed_xy);
+    // set_wp_destination_next_loc: supply additional information to
+    //  waypoint controller on the navigation segment past the one
+    //  infered by set_wp_destination_loc.
     bool set_wp_destination_next_loc(const Location& destination);
 
     // get destination as a location.  Altitude frame will be absolute (AMSL) or above terrain
@@ -116,8 +119,9 @@ public:
     virtual bool get_oa_wp_destination(Location& destination) const { return get_wp_destination_loc(destination); }
 
     /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
+    ///     speed_xy is the speed to fly the segment; if NaN current speed will be used
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain
-    virtual bool set_wp_destination(const Vector3f& destination, bool terrain_alt = false);
+    virtual bool set_wp_destination(const Vector3f& destination, float speed_xy, bool terrain_alt = false);
     bool set_wp_destination_next(const Vector3f& destination, bool terrain_alt = false);
 
     /// set waypoint destination using NED position vector from ekf origin in meters

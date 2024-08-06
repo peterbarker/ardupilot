@@ -243,7 +243,7 @@ void AC_WPNav::set_speed_down(float speed_down_cms)
 
 /// set_wp_destination waypoint using location class
 ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-bool AC_WPNav::set_wp_destination_loc(const Location& destination)
+bool AC_WPNav::set_wp_destination_loc(const Location& destination, float speed_xy)
 {
     bool terr_alt;
     Vector3f dest_neu;
@@ -254,7 +254,7 @@ bool AC_WPNav::set_wp_destination_loc(const Location& destination)
     }
 
     // set target as vector from EKF origin
-    return set_wp_destination(dest_neu, terr_alt);
+    return set_wp_destination(dest_neu, speed_xy, terr_alt);
 }
 
 /// set next destination using location class
@@ -288,7 +288,7 @@ bool AC_WPNav::get_wp_destination_loc(Location& destination) const
 /// set_wp_destination - set destination waypoints using position vectors (distance from ekf origin in cm)
 ///     terrain_alt should be true if destination.z is an altitude above terrain (false if alt-above-ekf-origin)
 ///     returns false on failure (likely caused by missing terrain data)
-bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
+bool AC_WPNav::set_wp_destination(const Vector3f& destination, float speed_xy, bool terrain_alt)
 {
     // re-initialise if previous destination has been interrupted
     if (!is_active() || !_flags.reached_destination) {

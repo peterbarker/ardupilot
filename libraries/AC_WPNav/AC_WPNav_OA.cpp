@@ -28,9 +28,9 @@ bool AC_WPNav_OA::get_oa_wp_destination(Location& destination) const
 /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
 ///     terrain_alt should be true if destination.z is a desired altitude above terrain
 ///     returns false on failure (likely caused by missing terrain data)
-bool AC_WPNav_OA::set_wp_destination(const Vector3f& destination, bool terrain_alt)
+bool AC_WPNav_OA::set_wp_destination(const Vector3f& destination, float speed_xy, bool terrain_alt)
 {
-    const bool ret = AC_WPNav::set_wp_destination(destination, terrain_alt);
+    const bool ret = AC_WPNav::set_wp_destination(destination, speed_xy, terrain_alt);
 
     if (ret) {
         // reset object avoidance state
@@ -168,7 +168,7 @@ bool AC_WPNav_OA::update_wpnav()
                     oa_destination_new.linearly_interpolate_alt(origin_oabak_loc, destination_oabak_loc);
 
                     // set new OA adjusted destination
-                    if (!set_wp_destination_loc(oa_destination_new)) {
+                    if (!set_wp_destination_loc(oa_destination_new, nanf(""))) {
                         // trigger terrain failsafe
                         return false;
                     }

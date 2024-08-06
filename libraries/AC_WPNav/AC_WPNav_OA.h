@@ -20,9 +20,10 @@ public:
     bool get_oa_wp_destination(Location& destination) const override;
 
     /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
+    ///     speed_xy is the speed to fly the segment; if NaN current speed will be used
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain
     ///     returns false on failure (likely caused by missing terrain data)
-    bool set_wp_destination(const Vector3f& destination, bool terrain_alt = false) override;
+    bool set_wp_destination(const Vector3f& destination, float speed_xy, bool terrain_alt = false) override;
 
     /// get horizontal distance to destination in cm
     /// always returns distance to final destination (i.e. does not use oa adjusted destination)
