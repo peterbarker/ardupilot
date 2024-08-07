@@ -618,6 +618,13 @@ public:
 
     static bool load_defaults_file(const char *filename, bool last_pass);
 
+    static bool all_defaultfile_parameter_values_used() {
+        return done_all_default_params;
+    }
+    static const char *unused_defaultfile_parameter_name() {
+        return unknown_defaultfile_parameter_name;
+    }
+
 protected:
 
     // store default value in linked list
@@ -675,6 +682,7 @@ private:
       this is true if when scanning a defaults file we find all of the parameters
      */
     static bool done_all_default_params;
+    static char unknown_defaultfile_parameter_name[17];
 
     /*
       structure for built-in defaults file that can be modified using apj_tool.py
