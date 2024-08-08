@@ -482,7 +482,7 @@ void Plane::update_GPS_10Hz(void)
  */
 void Plane::update_control_mode(void)
 {
-    if (control_mode != &mode_auto) {
+    if ((control_mode != &mode_auto) && (control_mode != &mode_takeoff)) {
         // hold_course is only used in takeoff and landing
         steer_state.hold_course_cd = -1;
     }
