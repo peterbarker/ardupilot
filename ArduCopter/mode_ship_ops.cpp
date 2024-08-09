@@ -325,7 +325,7 @@ void ModeShipOperation::run()
     if (is_positive(keep_out_radius)) {
         bool deck_radius_valid = is_positive(deck_radius);
         bool approach_arc_valid = wrap_PI(radians(perch_angle) - koz_center_heading_rad) >=  keep_out_angle_rad / 2.0;
-        if (keep_out_zone_valid ~= deck_radius_valid && approach_arc_valid) {
+        if (keep_out_zone_valid != deck_radius_valid && approach_arc_valid) {
             if (!deck_radius_valid) {
                 GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Invalid KOZ: KOZ_DKR must be positive");
             }
