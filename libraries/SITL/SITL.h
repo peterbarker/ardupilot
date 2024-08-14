@@ -4,6 +4,7 @@
 
 #if AP_SIM_ENABLED
 
+#include <AP_Common/Bitmask.h>
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <AP_Baro/AP_Baro.h>
@@ -251,6 +252,8 @@ public:
     AP_Int8 sfml_joystick_id;
     AP_Int8 sfml_joystick_axis[8];
 #endif
+
+    Bitmask<256> full_pin_mask;
 
     // baro parameters
     class BaroParm {
