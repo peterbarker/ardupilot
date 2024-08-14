@@ -1122,6 +1122,9 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
 #if AP_MAVLINK_MSG_RELAY_STATUS_ENABLED
         { MAVLINK_MSG_ID_RELAY_STATUS, MSG_RELAY_STATUS},
 #endif
+#if AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED
+        { MAVLINK_MSG_ID_FLIGHT_INFORMATION, MSG_FLIGHT_INFORMATION},
+#endif
             };
 
     for (uint8_t i=0; i<ARRAY_SIZE(map); i++) {
@@ -5967,7 +5970,7 @@ void GCS_MAVLINK::send_autopilot_state_for_gimbal_device() const
 #if AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED
 void GCS_MAVLINK::send_flight_information()
 {
-    const uint64_t time_boot_us = AP_HAL::millis64();
+    const uint64_t time_boot_ms = AP_HAL::millis64();
 
     // This field is misnamed as `arming_time_utc` in MAVLink. However, it is
     // not a UTC time, it is the microseconds since boot.
@@ -5980,7 +5983,7 @@ void GCS_MAVLINK::send_flight_information()
             case MAV_LANDED_STATE_TAKEOFF:
             case MAV_LANDED_STATE_LANDING:
                 if (!flight_info.takeoff_time_us) {
-                    flight_info.takeoff_time_us = time_boot_us;
+                    flight_info.takeoff_time_us = time_boot_ms * 1000;
                 }
                 break;
 
@@ -6005,7 +6008,7 @@ void GCS_MAVLINK::send_flight_information()
 
     mavlink_msg_flight_information_send(
         chan,
-        time_boot_us,
+        time_boot_ms,  // note we are shoving a 64-bit integer into 32 bits here
         arm_time_us,
         takeoff_time_us,
         flight_number
