@@ -219,6 +219,8 @@ void FSOPowerStack::Fan::init()
         pin,
         FUNCTOR_BIND_MEMBER(&FSOPowerStack::Fan::handler, void, uint8_t, bool, uint32_t),
         AP_HAL::GPIO::INTERRUPT_RISING);
+
+    last_fan_error_ms = AP_HAL::millis() - 240000;
 }
 
 void FSOPowerStack::init()
@@ -226,7 +228,6 @@ void FSOPowerStack::init()
     for (auto & fan : fans) {
         fan.init();
     }
-    last_fan_error_ms = now_ms - 240000;
 
     float sample_freq = 1.0 / FSO_LOOP_TIME_MS;
     float over_current_tc = FSO_OVER_CURRENT_TC;
@@ -287,6 +288,7 @@ void FSOPowerStack::Fan::update(void)
     }
     freq_hz = 1.0/(dt_avg*1.0e-6);
 
+    const uint32_t now_ms = AP_HAL::millis();
     if (now_ms - last_fan_error_ms < 300000) {
         return;
     }

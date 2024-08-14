@@ -76,6 +76,7 @@ private:
         uint32_t last_pulse_us;
         uint32_t dt_sum;
         uint32_t dt_count;
+        uint32_t last_fan_error_ms;
     } fans[4] {
         { 0, FSO_FAN_TACH1_PIN, fan_1_min_Hz },
         { 1, FSO_FAN_TACH2_PIN, fan_2_min_Hz },
@@ -83,7 +84,6 @@ private:
         { 3, FSO_FAN_TACH4_PIN, fan_4_min_Hz },
     };
 
-    uint32_t last_fan_error_ms;
     uint32_t last_fan_ms;
     void update_fans();
 
