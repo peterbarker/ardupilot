@@ -197,6 +197,7 @@ void SimMCast::multicast_read(void)
     struct SITL::sitl_fdm state;
     while (sock.recv((void*)&state, sizeof(state), 0) != sizeof(state)) {
         // nop
+        usleep(100);
     }
     if (_sitl->state.timestamp_us == 0) {
         printf("Got multicast state input\n");
