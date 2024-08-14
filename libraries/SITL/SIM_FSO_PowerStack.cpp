@@ -55,6 +55,9 @@ void FSO_PowerStack::update_thread(void)
     v0_text.setFillColor(sf::Color(128, 128, 0));
     v0_text.setOutlineColor(sf::Color(128, 128, 0));
 
+    std::vector<sf::Drawable*> elements;
+    elements.push_back(&v0_text);
+
     while (true) {
         {
 #if AP_NOTIFY_ENABLED
@@ -80,9 +83,12 @@ void FSO_PowerStack::update_thread(void)
                 snprintf(v0_string, ARRAY_SIZE(v0_string), "v0: %.02f", v0);
                 v0_text.setString(v0_string);
             }
+
             if (need_redisplay) {
                 w->clear(sf::Color(255,255,255));
-                w->draw(v0_text);
+                for (auto *element : elements) {
+                    w->draw(*element);
+                }
                 w->display();
             }
 
