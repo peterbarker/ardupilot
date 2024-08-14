@@ -948,6 +948,11 @@ class sitl_periph_powerstack(sitl_periph):
 
             AP_DAC_ENABLED = 1,
 
+            FSO_INTERNAL_HC_EN_PIN = 170,
+
+            FSO_H16_EN_PIN = 180,
+            FSO_H16_FAULT_PIN = 181,
+
             FSO_SWITCH_MAIN_PIN = 190,
             FSO_SWITCH_PAYLOAD_PIN = 191,
 
