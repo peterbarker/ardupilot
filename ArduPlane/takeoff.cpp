@@ -121,6 +121,7 @@ bool Plane::auto_takeoff_check(void)
         takeoff_state.launchTimerStarted = false;
         takeoff_state.last_tkoff_arm_time = 0;
         takeoff_state.start_time_ms = now;
+        takeoff_state.throttle_max_timer_ms = now;
         steer_state.locked_course_err = 0; // use current heading without any error offset
         return true;
     }
@@ -242,28 +243,48 @@ void Plane::takeoff_calc_pitch(void)
 }
 
 /*
- * Set the throttle limits to run at during a takeoff.
+ * Calculate the throttle limits to run at during a takeoff.
+ * These limits are meant to be used exclusively by Plane::apply_throttle_limits().
  */
-void Plane::takeoff_calc_throttle(const bool use_max_throttle) {
-    // These limits will take effect at the next run of TECS::update_pitch_throttle().
-    // Set the maximum throttle limit.
+void Plane::takeoff_calc_throttle() {
+    // Initialize the maximum throttle limit.
     if (aparm.takeoff_throttle_max != 0) {
-        TECS_controller.set_throttle_max(0.01f*aparm.takeoff_throttle_max);
+        takeoff_state.throttle_lim_max = aparm.takeoff_throttle_max;
+    } else {
+        takeoff_state.throttle_lim_max = aparm.throttle_max;
     }
 
-    const float current_baro_alt = barometer.get_altitude();
-    const bool below_lvl_alt = current_baro_alt < auto_state.baro_takeoff_alt + mode_takeoff.level_alt;
+    // Initialize the minimum throttle limit.
+    if (aparm.takeoff_throttle_min != 0) {
+        takeoff_state.throttle_lim_min = aparm.takeoff_throttle_min;
+    } else {
+        takeoff_state.throttle_lim_min = aparm.throttle_min;
+    }
 
-    // Set the minimum throttle limit.
-    const bool use_throttle_range = (aparm.takeoff_options & (uint32_t)AP_FixedWing::TakeoffOption::THROTTLE_RANGE);
-    if (!use_throttle_range || !ahrs.using_airspeed_sensor() || below_lvl_alt || use_max_throttle) { // Traditional takeoff throttle limit.
-        float min_throttle = (aparm.takeoff_throttle_max != 0) ? 0.01f*aparm.takeoff_throttle_max : 0.01f*aparm.throttle_max;
-        TECS_controller.set_throttle_min(min_throttle);
-    } else { // TKOFF_MODE == 1, allow for a throttle range.
-        if (aparm.takeoff_throttle_min != 0) { // Override THR_MIN.
-            TECS_controller.set_throttle_min(0.01f*aparm.takeoff_throttle_min);
+    // Raise min to force max throttle for TKOFF_THR_MAX_T after a takeoff.
+    // It only applies if the timer has been started externally.
+    if (takeoff_state.throttle_max_timer_ms != 0) {
+        const uint32_t dt = AP_HAL::millis() - takeoff_state.throttle_max_timer_ms;
+        if (dt*0.001 < aparm.takeoff_throttle_max_t) {
+            takeoff_state.throttle_lim_min = takeoff_state.throttle_lim_max;
+        } else {
+            // Reset the timer for future use.
+            takeoff_state.throttle_max_timer_ms = 0;
         }
     }
+
+    // Enact the TKOFF_OPTIONS logic.
+    const float current_baro_alt = barometer.get_altitude();
+    const bool below_lvl_alt = current_baro_alt < auto_state.baro_takeoff_alt + mode_takeoff.level_alt;
+    // Set the minimum throttle limit.
+    const bool use_throttle_range = (aparm.takeoff_options & (uint32_t)AP_FixedWing::TakeoffOption::THROTTLE_RANGE);
+    if (!use_throttle_range // We don't want to employ a throttle range.
+        || !ahrs.using_airspeed_sensor() // We don't have an airspeed sensor.
+        || below_lvl_alt // We are below TKOFF_LVL_ALT.
+        ) { // Traditional takeoff throttle limit.
+        takeoff_state.throttle_lim_min = takeoff_state.throttle_lim_max;
+    }
+
     calc_throttle();
 }
 

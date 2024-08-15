@@ -119,6 +119,7 @@ void ModeTakeoff::update()
                 gcs().send_text(MAV_SEVERITY_INFO, "Takeoff to %.0fm for %.1fm heading %.1f deg",
                                 alt, dist, direction);
                 plane.takeoff_state.start_time_ms = millis();
+                plane.takeoff_state.throttle_max_timer_ms = millis();
                 takeoff_mode_setup = true;
                 plane.steer_state.hold_course_cd = wrap_360_cd(direction*100); // Necessary to allow Plane::takeoff_calc_roll() to function.
             }

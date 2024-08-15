@@ -813,7 +813,6 @@ protected:
     AP_Int8 level_pitch;
 
     bool takeoff_mode_setup;
-    bool climb_complete;
     Location start_loc;
 
     bool _enter() override;
