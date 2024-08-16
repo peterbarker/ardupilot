@@ -104,7 +104,7 @@ AP_BattMonitor_Sum::read()
     update_consumed(_state, dt_us);
 
     _has_current = (current_count > 0);
-    _has_temperature = (temperature_count > 0);
+    _state.has_temperature = (temperature_count > 0);
     _state.healthy = (voltage_count > 0);
 
     if (_state.healthy) {

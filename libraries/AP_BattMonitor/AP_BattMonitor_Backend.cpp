@@ -306,7 +306,7 @@ bool AP_BattMonitor_Backend::get_temperature(float &temperature) const
 
     temperature = _state.temperature;
 
-    return has_temperature();
+    return _state.has_temperature;
 }
 
 /*

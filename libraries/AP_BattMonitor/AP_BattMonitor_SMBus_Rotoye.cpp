@@ -20,11 +20,9 @@ void AP_BattMonitor_SMBus_Rotoye::read_temp(void) {
     const bool have_temp_external = read_word(BATTMONITOR_SMBUS_TEMP_EXT, t_ext);
 
     if (!have_temp_internal && !have_temp_external) {
-        _has_temperature = (AP_HAL::millis() - _state.temperature_time) <= AP_BATT_MONITOR_TIMEOUT;
+        _state.has_temperature = (AP_HAL::millis() - _state.temperature_time) <= AP_BATT_MONITOR_TIMEOUT;
         return;
     }
-
-    _has_temperature = true;
 
     _state.temperature_time = AP_HAL::millis();
     _state.temperature = KELVIN_TO_C(0.1f * float(MAX(t_int, t_ext)));

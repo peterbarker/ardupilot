@@ -50,11 +50,8 @@ public:
     // returns true if battery monitor provides individual cell voltages
     virtual bool has_cell_voltages() const { return false; }
 
-    // returns true if battery monitor provides temperature
-    virtual bool has_temperature() const { return false; }
-
     // returns true if temperature retrieved successfully
-    virtual bool get_temperature(float &temperature) const;
+    bool get_temperature(float &temperature) const;
 
     // capacity_remaining_pct - returns true if the battery % is available and writes to the percentage argument
     // returns false if the battery is unhealthy, does not have current monitoring, or the pack_capacity is too small
@@ -144,6 +141,7 @@ struct BattMonitorScript_State {
     float consumed_mah=nanf(""); // Total current drawn since start-up in milliampere hours
     float consumed_wh=nanf(""); // Total energy drawn since start-up in watt hours
     float temperature=nanf(""); // Battery temperature in degrees Celsius
+
 };
 #endif // AP_BATTERY_SCRIPTING_ENABLED
 

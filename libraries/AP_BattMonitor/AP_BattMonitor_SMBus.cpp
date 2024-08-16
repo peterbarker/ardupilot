@@ -115,10 +115,10 @@ void AP_BattMonitor_SMBus::read_temp(void)
 {
     uint16_t data;
     if (!read_word(BATTMONITOR_SMBUS_TEMP, data)) {
-        _has_temperature = (AP_HAL::millis() - _state.temperature_time) <= AP_BATT_MONITOR_TIMEOUT;
+        _state.has_temperature = (AP_HAL::millis() - _state.temperature_time) <= AP_BATT_MONITOR_TIMEOUT;
         return;
     }
-    _has_temperature = true;
+    _state.has_temperature = true;
 
     _state.temperature_time = AP_HAL::millis();
     _state.temperature = KELVIN_TO_C(0.1f * data);

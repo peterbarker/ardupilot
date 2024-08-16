@@ -16,7 +16,6 @@ public:
                           AP_BattMonitor_Params &params);
 
     bool has_cell_voltages() const override { return false; }
-    bool has_temperature() const override { return false; }
     bool has_current() const override { return true; }
     bool get_cycle_count(uint16_t &cycles) const override { return false; }
 

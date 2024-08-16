@@ -43,6 +43,7 @@ void AP_BattMonitor_Torqeedo::read(void)
         have_info = true;
         _state.voltage = volts;
         _state.current_amps = current_amps;
+        _state.has_temperature = true;
         _state.temperature = temp_C;
         _state.temperature_time = AP_HAL::millis();
 

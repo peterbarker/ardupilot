@@ -60,6 +60,7 @@ void AP_BattMonitor_Scripting::read()
         _state.consumed_wh = internal_state.consumed_wh;
     }
     if (!isnan(internal_state.temperature)) {
+        _state.has_temperature = true;
         _state.temperature = internal_state.temperature;
     }
 

@@ -299,7 +299,7 @@ void AP_BattMonitor_DroneCAN::read()
     _state.has_state_of_health_pct = _interim_state.has_state_of_health_pct;
     memcpy(_state.cell_voltages.cells, _interim_state.cell_voltages.cells, sizeof(_state.cell_voltages));
 
-    _has_temperature = (AP_HAL::millis() - _state.temperature_time) <= AP_BATT_MONITOR_TIMEOUT;
+    _state.has_temperature = (AP_HAL::millis() - _state.temperature_time) <= AP_BATT_MONITOR_TIMEOUT;
 
     // check if MPPT should be powered on/off depending upon arming state
     if (_mppt.is_detected) {

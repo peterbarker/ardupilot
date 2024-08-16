@@ -15,7 +15,6 @@ public:
     bool has_current() const override { return last_update_us != 0 && !isnan(internal_state.current_amps); }
     bool has_consumed_energy() const override { return has_current(); }
     bool has_cell_voltages() const override { return internal_state.cell_count > 0; }
-    bool has_temperature() const override { return last_update_us != 0 && !isnan(internal_state.temperature); }
     bool capacity_remaining_pct(uint8_t &percentage) const override;
     bool get_cycle_count(uint16_t &cycles) const override;
 

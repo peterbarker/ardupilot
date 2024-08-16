@@ -215,6 +215,9 @@ void AP_BattMonitor_INA2XX::read(void)
     // update total current drawn since startup
     update_consumed(_state, dt_us);
 
+    _state.temperature = temperature;
+    _state.has_temperature = has_temp;
+
     _state.last_time_micros = tnow;
 }
 
@@ -401,15 +404,6 @@ void AP_BattMonitor_INA2XX::timer(void)
     accumulate.volt_sum += voltage;
     accumulate.current_sum += current;
     accumulate.count++;
-}
-
-/*
-  get last temperature
- */
-bool AP_BattMonitor_INA2XX::get_temperature(float &temp) const
-{
-    temp = temperature;
-    return has_temp;
 }
 
 #endif // AP_BATTERY_INA2XX_ENABLED

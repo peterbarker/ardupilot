@@ -31,8 +31,6 @@ public:
     /// capacity_remaining_pct - returns true if the percentage is valid and writes to percentage argument
     bool capacity_remaining_pct(uint8_t &percentage) const override;
 
-    bool has_temperature() const override { return _has_temperature; }
-
     bool has_current() const override { return true; }
 
     // Always have consumed energy, either directly from BatteryInfoAux msg or by cumulative current draw
@@ -94,7 +92,6 @@ private:
     uint16_t _cycle_count;
     float _remaining_capacity_wh;
     float _full_charge_capacity_wh;
-    bool _has_temperature;
     bool _has_cell_voltages;
     bool _has_time_remaining;
     bool _has_battery_info_aux;
