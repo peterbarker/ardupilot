@@ -315,6 +315,10 @@ void AP_Periph_FW::init()
     relay.init();
 #endif
 
+#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+    FSO_power_stack.init();
+#endif
+    
 #if AP_SCRIPTING_ENABLED
     scripting.init();
 #endif
@@ -519,6 +523,10 @@ void AP_Periph_FW::update()
 
 #if AP_PERIPH_BATTERY_BALANCE_ENABLED
     batt_balance_update();
+#endif
+
+#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+    FSO_power_stack.update(battery.last_read_ms == now);
 #endif
     
     static uint32_t fiftyhz_last_update_ms;

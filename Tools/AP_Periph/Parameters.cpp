@@ -751,6 +751,12 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     GSCALAR(servo_command_timeout_ms, "SRV_CMD_TIME_OUT", 200),
 #endif
 
+#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+    // @Group: FSO
+    // @Path: FSOPowerStack.cpp
+    GOBJECT(FSO_power_stack, "AAA",  FSOPowerStack),
+#endif
+
     AP_VAREND
 };
 

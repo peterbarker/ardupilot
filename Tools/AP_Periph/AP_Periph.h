@@ -49,6 +49,10 @@
 #include <SITL/SITL.h>
 #endif
 #include <AP_AHRS/AP_AHRS.h>
+
+#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+#include "FSOPowerStack.h"
+#endif
 #include <AP_DAC/AP_DAC.h>
 
 #if AP_PERIPH_RELAY_ENABLED
@@ -394,6 +398,10 @@ public:
     BattBalance battery_balance;
 #endif
 
+#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+    FSOPowerStack FSO_power_stack;
+#endif
+    
 #if AP_PERIPH_BATTERY_TAG_ENABLED
     BatteryTag battery_tag;
 #endif
