@@ -51,8 +51,12 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_DAC/AP_DAC.h>
 
-#if AP_PERIPH_RELAY_ENABLED
-#if AP_PERIPH_PWM_HARDPOINT_ENABLED
+#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+#include "FSOPowerStack.h"
+#endif
+
+#ifdef AP_PERIPH_ENABLE_RELAY
+#ifdef AP_PERIPH_ENABLE_PWM_HARDPOINT
     #error "Relay and PWM_HARDPOINT both use hardpoint message"
 #endif
 #include <AP_Relay/AP_Relay.h>
@@ -405,7 +409,11 @@ public:
 #if AP_PERIPH_ACTUATOR_TELEM_ENABLED
     ActuatorTelem actuator_telem;
 #endif
-    
+
+#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+    FSOPowerStack FSO_power_stack;
+#endif
+
 #if AP_PERIPH_SERIAL_OPTIONS_ENABLED
     SerialOptions serial_options;
 #endif
