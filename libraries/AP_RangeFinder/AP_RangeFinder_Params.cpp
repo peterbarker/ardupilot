@@ -48,21 +48,21 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("FUNCTION", 5, AP_RangeFinder_Params, function, 0),
 
-    // @Param: MIN_CM
+    // @Param: MIN
     // @DisplayName: Rangefinder minimum distance
-    // @Description: Minimum distance in centimeters that rangefinder can reliably read
-    // @Units: cm
+    // @Description: Minimum distance in metres that rangefinder can reliably read
+    // @Units: m
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MIN_CM",  6, AP_RangeFinder_Params, min_distance_cm, 20),
+    AP_GROUPINFO("MIN",  6, AP_RangeFinder_Params, min_distance, 0.20),
 
-    // @Param: MAX_CM
+    // @Param: MAX
     // @DisplayName: Rangefinder maximum distance
-    // @Description: Maximum distance in centimeters that rangefinder can reliably read
-    // @Units: cm
+    // @Description: Maximum distance in metres that rangefinder can reliably read
+    // @Units: m
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MAX_CM",  7, AP_RangeFinder_Params, max_distance_cm, 700),
+    AP_GROUPINFO("MAX",  7, AP_RangeFinder_Params, max_distance, 7.00),
 
     // @Param: STOP_PIN
     // @DisplayName: Rangefinder stop pin
@@ -139,6 +139,15 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
 
     AP_GROUPEND
 };
+
+
+// PARAMETER_CONVERSION - Added: Aug-2024 for 4.6
+void AP_RangeFinder_Params::convert_min_max_params(void)
+{
+    // ./Tools/autotest/test_param_upgrade.py --vehicle=arducopter --param "RNGFND1_MAX_CM=300->RNGFND1_MAX=3.00" --param "RNGFND2_MIN_CM=678->RNGFND2_MIN=6.78" --param "RNGFNDA_MIN_CM=1->RNGFNDA_MIN=0.01"
+    max_distance.convert_parameter_width(AP_PARAM_INT16, 0.01);
+    min_distance.convert_parameter_width(AP_PARAM_INT16, 0.01);
+}
 
 AP_RangeFinder_Params::AP_RangeFinder_Params(void) {
     AP_Param::setup_object_defaults(this, var_info);

@@ -274,8 +274,10 @@ public:
     float distance_orient(enum Rotation orientation) const;
     uint16_t distance_cm_orient(enum Rotation orientation) const;
     int8_t signal_quality_pct_orient(enum Rotation orientation) const;
-    int16_t max_distance_cm_orient(enum Rotation orientation) const;
-    int16_t min_distance_cm_orient(enum Rotation orientation) const;
+    int32_t max_distance_cm_orient(enum Rotation orientation) const;
+    int32_t min_distance_cm_orient(enum Rotation orientation) const;
+    float max_distance_orient(enum Rotation orientation) const;
+    float min_distance_orient(enum Rotation orientation) const;
     int16_t ground_clearance_cm_orient(enum Rotation orientation) const;
     MAV_DISTANCE_SENSOR get_mav_distance_sensor_type_orient(enum Rotation orientation) const;
     RangeFinder::Status status_orient(enum Rotation orientation) const;
@@ -309,6 +311,8 @@ private:
     HAL_Semaphore detect_sem;
     float estimated_terrain_height;
     Vector3f pos_offset_zero;   // allows returning position offsets of zero for invalid requests
+
+    void convert_params(void);
 
     void detect_instance(uint8_t instance, uint8_t& serial_instance);
 
