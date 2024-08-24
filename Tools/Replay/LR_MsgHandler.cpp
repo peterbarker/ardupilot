@@ -205,8 +205,51 @@ void LR_MsgHandler_RBRI::process_message(uint8_t *msgbytes)
     AP::dal().handle_message(msg);
 }
 
+// RRNH - Replay RaNgefinder Header constructor
+LR_MsgHandler_RRNH::LR_MsgHandler_RRNH(struct log_Format &_f) :
+    LR_MsgHandler(_f)
+{
+    // the checksum here is the checksum of the old "struct log_Format
+    // RRNH" before the type was changed from int16_t to float.  It
+    // corresponds to log_RRNH_with_int16_max_distance, below.
+    if (crc_crc32(0, (uint8_t*)&_f, sizeof(_f)) == 0xDD71C118) {
+        max_distance_int16_to_float_transform_required = true;
+    }
+}
+
 void LR_MsgHandler_RRNH::process_message(uint8_t *msgbytes)
 {
+    if (max_distance_int16_to_float_transform_required) {
+        // this structure was copied out of AP_DAL.cpp before being
+        // modified there.  It is the true value of the same of the
+        // msg in msgbytes.  _end has been trimmed out
+
+        struct log_RRNH_with_int16_t_distance {
+            // this is rotation-pitch-270!
+            int16_t ground_clearance_cm;
+            int16_t max_distance_cm;
+            uint8_t num_sensors;
+        };
+
+        // this is the same structure as found in
+        // AP_DAL/LogStructure.h, sans __end
+        struct log_RRNH_with_float_distance {
+            float max_distance;
+            int16_t ground_clearance_cm;
+            uint8_t num_sensors;
+        };
+        // note that if fields are added to RRNH message then this
+        // will be incorrect!
+        const log_RRNH_with_int16_t_distance &tmp = *((log_RRNH_with_int16_t_distance*)&msgbytes[3]);
+        const log_RRNH msg {
+            max_distance        : tmp.max_distance_cm * 0.01,
+            ground_clearance_cm : tmp.ground_clearance_cm,
+            num_sensors         : tmp.num_sensors,
+        };
+        AP::dal().handle_message(msg);
+        return;
+    }
+
     MSG_CREATE(RRNH, msgbytes);
     AP::dal().handle_message(msg);
 }
