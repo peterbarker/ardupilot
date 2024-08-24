@@ -51,18 +51,18 @@ int16_t AP_DAL_RangeFinder::ground_clearance_cm_orient(enum Rotation orientation
     return _RRNH.ground_clearance_cm;
 }
 
-int16_t AP_DAL_RangeFinder::max_distance_cm_orient(enum Rotation orientation) const
+float AP_DAL_RangeFinder::max_distance_orient(enum Rotation orientation) const
 {
 #if !APM_BUILD_TYPE(APM_BUILD_AP_DAL_Standalone)
     if (orientation != ROTATION_PITCH_270) {
         const auto *rangefinder = AP::rangefinder();
         // the EKF only asks for this from a specific orientation.  Thankfully.
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
-        return rangefinder->max_distance_cm_orient(orientation);
+        return rangefinder->max_distance_orient(orientation);
     }
 #endif
 
-    return _RRNH.max_distance_cm;
+    return _RRNH.max_distance;
 }
 
 void AP_DAL_RangeFinder::start_frame()
@@ -76,7 +76,7 @@ void AP_DAL_RangeFinder::start_frame()
 
     // EKF only asks for this *down*.
     _RRNH.ground_clearance_cm = rangefinder->ground_clearance_cm_orient(ROTATION_PITCH_270);
-    _RRNH.max_distance_cm = rangefinder->max_distance_cm_orient(ROTATION_PITCH_270);
+    _RRNH.max_distance = rangefinder->max_distance_orient(ROTATION_PITCH_270);
 
     WRITE_REPLAY_BLOCK_IFCHANGED(RRNH, _RRNH, old);
 

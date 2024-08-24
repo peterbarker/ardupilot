@@ -159,8 +159,8 @@ struct log_RBRI {
 // @Description: Replay Data Rangefinder Header
 struct log_RRNH {
     // this is rotation-pitch-270!
+    float max_distance;
     int16_t ground_clearance_cm;
-    int16_t max_distance_cm;
     uint8_t num_sensors;
     uint8_t _end;
 };
@@ -405,7 +405,7 @@ struct log_RBOH {
     { LOG_RBRI_MSG, RLOG_SIZE(RBRI),                                   \
       "RBRI", "IfBB", "LastUpdate,Alt,H,I", "---#", "----" }, \
     { LOG_RRNH_MSG, RLOG_SIZE(RRNH),                                   \
-      "RRNH", "hhB", "GCl,MaxD,NumSensors", "???", "???" },  \
+      "RRNH", "fhB", "MaxD,GCl,NumSensors", "mm-", "0B-" },  \
     { LOG_RRNI_MSG, RLOG_SIZE(RRNI),                                   \
       "RRNI", "fffHBBB", "PX,PY,PZ,Dist,Orient,Status,I", "------#", "-------" }, \
     { LOG_RGPH_MSG, RLOG_SIZE(RGPH),                                   \
