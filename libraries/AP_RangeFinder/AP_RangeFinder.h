@@ -272,10 +272,7 @@ public:
     // methods to return a distance on a particular orientation from
     // any sensor which can current supply it
     float distance_orient(enum Rotation orientation) const;
-    uint16_t distance_cm_orient(enum Rotation orientation) const;
     int8_t signal_quality_pct_orient(enum Rotation orientation) const;
-    int32_t max_distance_cm_orient(enum Rotation orientation) const;
-    int32_t min_distance_cm_orient(enum Rotation orientation) const;
     float max_distance_orient(enum Rotation orientation) const;
     float min_distance_orient(enum Rotation orientation) const;
     int16_t ground_clearance_cm_orient(enum Rotation orientation) const;

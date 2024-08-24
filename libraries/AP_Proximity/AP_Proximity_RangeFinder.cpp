@@ -64,9 +64,9 @@ void AP_Proximity_RangeFinder::update(void)
             }
             // check upward facing range finder
             if (sensor->orientation() == ROTATION_PITCH_90) {
-                int16_t distance_upward = sensor->distance_cm();
-                int16_t up_distance_min = sensor->min_distance_cm();
-                int16_t up_distance_max = sensor->max_distance_cm();
+                int16_t distance_upward = sensor->distance() * 100;
+                int16_t up_distance_min = sensor->min_distance() * 100;
+                int16_t up_distance_max = sensor->max_distance() * 100;
                 if ((distance_upward >= up_distance_min) && (distance_upward <= up_distance_max)) {
                     _distance_upward = distance_upward * 0.01f;
                 } else {

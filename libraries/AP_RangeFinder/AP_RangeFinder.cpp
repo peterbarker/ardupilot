@@ -714,11 +714,6 @@ float RangeFinder::distance_orient(enum Rotation orientation) const
     return backend->distance();
 }
 
-uint16_t RangeFinder::distance_cm_orient(enum Rotation orientation) const
-{
-    return distance_orient(orientation) * 100.0;
-}
-
 int8_t RangeFinder::signal_quality_pct_orient(enum Rotation orientation) const
 {
     AP_RangeFinder_Backend *backend = find_instance(orientation);
@@ -726,24 +721,6 @@ int8_t RangeFinder::signal_quality_pct_orient(enum Rotation orientation) const
         return RangeFinder::SIGNAL_QUALITY_UNKNOWN;
     }
     return backend->signal_quality_pct();
-}
-
-int32_t RangeFinder::min_distance_cm_orient(enum Rotation orientation) const
-{
-    AP_RangeFinder_Backend *backend = find_instance(orientation);
-    if (backend == nullptr) {
-        return 0;
-    }
-    return backend->min_distance_cm();
-}
-
-int32_t RangeFinder::max_distance_cm_orient(enum Rotation orientation) const
-{
-    AP_RangeFinder_Backend *backend = find_instance(orientation);
-    if (backend == nullptr) {
-        return 0;
-    }
-    return backend->max_distance_cm();
 }
 
 float RangeFinder::max_distance_orient(enum Rotation orientation) const
@@ -851,7 +828,7 @@ void RangeFinder::Log_RFND() const
                 LOG_PACKET_HEADER_INIT(LOG_RFND_MSG),
                 time_us      : AP_HAL::micros64(),
                 instance     : i,
-                dist         : s->distance_cm(),
+                dist         : uint16_t(s->distance() * 100),
                 status       : (uint8_t)s->status(),
                 orient       : s->orientation(),
                 quality      : s->signal_quality_pct(),

@@ -2817,19 +2817,19 @@ function rangefinder:status_orient(orientation) end
 function rangefinder:ground_clearance_cm_orient(orientation) end
 
 -- desc
----@param orientation integer
----@return integer
-function rangefinder:min_distance_cm_orient(orientation) end
+---@param orientation number
+---@return number
+function rangefinder:min_distance_orient(orientation) end
 
 -- desc
----@param orientation integer
----@return integer
-function rangefinder:max_distance_cm_orient(orientation) end
+---@param orientation number
+---@return number
+function rangefinder:max_distance_orient(orientation) end
 
 -- desc
----@param orientation integer
----@return integer
-function rangefinder:distance_cm_orient(orientation) end
+---@param orientation number
+---@return number
+function rangefinder:distance_orient(orientation) end
 
 -- Current distance measurement signal quality for range finder at this orientation
 ---@param orientation integer
