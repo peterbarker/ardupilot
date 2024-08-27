@@ -208,7 +208,7 @@ void AP_DDS_Client::populate_static_transforms(tf2_msgs_msg_TFMessage& msg)
     msg.transforms_size = 0;
 
     auto &gps = AP::gps();
-    for (uint8_t i = 0; i < GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i = 0; i < GPS_MAX_INSTANCES; i++) {
         const auto gps_type = gps.get_type(i);
         if (gps_type == AP_GPS::GPS_Type::GPS_TYPE_NONE) {
             continue;
