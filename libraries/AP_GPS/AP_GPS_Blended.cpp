@@ -16,16 +16,32 @@
 */
 bool AP_GPS_Blended::_calc_weights(void)
 {
+    // make sure some assumptions we make in this file hold:
+    static_assert(ARRAY_SIZE(_blend_weights) == ARRAY_SIZE(gps.state), "blend weight count appropriate for number of instances");
+    static_assert(ARRAY_SIZE(_blend_weights) == ARRAY_SIZE(gps.timing), "blend weight count appropriate for number of instances");
+
     // zero the blend weights
     memset(&_blend_weights, 0, sizeof(_blend_weights));
 
-
-    static_assert(GPS_MAX_RECEIVERS == 2, "GPS blending only currently works with 2 receivers");
     // Note that the early quit below relies upon exactly 2 instances
     // The time delta calculations below also rely upon every instance being currently detected and being parsed
 
     // exit immediately if not enough receivers to do blending
-    if (gps.state[0].status <= AP_GPS::NO_FIX || gps.state[1].status <= AP_GPS::NO_FIX) {
+    uint8_t good_fix_count = 0;
+    for (uint8_t i=0; i<GPS_MAX_INSTANCES; i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
+        if (gps.state[i].status <= AP_GPS::NO_FIX) {
+            continue;
+        }
+        good_fix_count += 1;
+    }
+
+    if (good_fix_count < 2) {
         return false;
     }
 
@@ -33,7 +49,13 @@ bool AP_GPS_Blended::_calc_weights(void)
     uint32_t max_ms = 0; // newest non-zero system time of arrival of a GPS message
     uint32_t min_ms = -1; // oldest non-zero system time of arrival of a GPS message
     uint32_t max_rate_ms = 0; // largest update interval of a GPS receiver
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i=0; i<GPS_MAX_INSTANCES; i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
         // Find largest and smallest times
         if (gps.state[i].last_gps_time_ms > max_ms) {
             max_ms = gps.state[i].last_gps_time_ms;
@@ -59,7 +81,13 @@ bool AP_GPS_Blended::_calc_weights(void)
     // calculate the sum squared speed accuracy across all GPS sensors
     float speed_accuracy_sum_sq = 0.0f;
     if (gps._blend_mask & BLEND_MASK_USE_SPD_ACC) {
-        for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+        for (uint8_t i=0; i<ARRAY_SIZE(gps.state); i++) {
+            // don't blend blended backends (including ourself...).  This
+            // probably wants to be a "gps.provides_real_sensor_data()"
+            // callback when we add a median-filter backend
+            if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                continue;
+            }
             if (gps.state[i].status >= AP_GPS::GPS_OK_FIX_3D) {
                 if (gps.state[i].have_speed_accuracy && gps.state[i].speed_accuracy > 0.0f) {
                     speed_accuracy_sum_sq += sq(gps.state[i].speed_accuracy);
@@ -75,7 +103,13 @@ bool AP_GPS_Blended::_calc_weights(void)
     // calculate the sum squared horizontal position accuracy across all GPS sensors
     float horizontal_accuracy_sum_sq = 0.0f;
     if (gps._blend_mask & BLEND_MASK_USE_HPOS_ACC) {
-        for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+        for (uint8_t i=0; i<ARRAY_SIZE(gps.state); i++) {
+            // don't blend blended backends (including ourself...).  This
+            // probably wants to be a "gps.provides_real_sensor_data()"
+            // callback when we add a median-filter backend
+            if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                continue;
+            }
             if (gps.state[i].status >= AP_GPS::GPS_OK_FIX_2D) {
                 if (gps.state[i].have_horizontal_accuracy && gps.state[i].horizontal_accuracy > 0.0f) {
                     horizontal_accuracy_sum_sq += sq(gps.state[i].horizontal_accuracy);
@@ -91,7 +125,13 @@ bool AP_GPS_Blended::_calc_weights(void)
     // calculate the sum squared vertical position accuracy across all GPS sensors
     float vertical_accuracy_sum_sq = 0.0f;
     if (gps._blend_mask & BLEND_MASK_USE_VPOS_ACC) {
-        for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+        for (uint8_t i=0; i<ARRAY_SIZE(gps.state); i++) {
+            // don't blend blended backends (including ourself...).  This
+            // probably wants to be a "gps.provides_real_sensor_data()"
+            // callback when we add a median-filter backend
+            if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                continue;
+            }
             if (gps.state[i].status >= AP_GPS::GPS_OK_FIX_3D) {
                 if (gps.state[i].have_vertical_accuracy && gps.state[i].vertical_accuracy > 0.0f) {
                     vertical_accuracy_sum_sq += sq(gps.state[i].vertical_accuracy);
@@ -114,11 +154,17 @@ bool AP_GPS_Blended::_calc_weights(void)
     float sum_of_all_weights = 0.0f;
 
     // calculate a weighting using the reported horizontal position
-    float hpos_blend_weights[GPS_MAX_RECEIVERS] = {};
+    float hpos_blend_weights[ARRAY_SIZE(gps.state)] {};
     if (horizontal_accuracy_sum_sq > 0.0f) {
         // calculate the weights using the inverse of the variances
         float sum_of_hpos_weights = 0.0f;
-        for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+        for (uint8_t i=0; i<ARRAY_SIZE(hpos_blend_weights); i++) {
+            // don't blend blended backends (including ourself...).  This
+            // probably wants to be a "gps.provides_real_sensor_data()"
+            // callback when we add a median-filter backend
+            if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                continue;
+            }
             if (gps.state[i].status >= AP_GPS::GPS_OK_FIX_2D && gps.state[i].horizontal_accuracy >= 0.001f) {
                 hpos_blend_weights[i] = horizontal_accuracy_sum_sq / sq(gps.state[i].horizontal_accuracy);
                 sum_of_hpos_weights += hpos_blend_weights[i];
@@ -126,7 +172,13 @@ bool AP_GPS_Blended::_calc_weights(void)
         }
         // normalise the weights
         if (sum_of_hpos_weights > 0.0f) {
-            for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+            for (uint8_t i=0; i<ARRAY_SIZE(hpos_blend_weights); i++) {
+                // don't blend blended backends (including ourself...).  This
+                // probably wants to be a "gps.provides_real_sensor_data()"
+                // callback when we add a median-filter backend
+                if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                    continue;
+                }
                 hpos_blend_weights[i] = hpos_blend_weights[i] / sum_of_hpos_weights;
             }
             sum_of_all_weights += 1.0f;
@@ -134,11 +186,17 @@ bool AP_GPS_Blended::_calc_weights(void)
     }
 
     // calculate a weighting using the reported vertical position accuracy
-    float vpos_blend_weights[GPS_MAX_RECEIVERS] = {};
+    float vpos_blend_weights[ARRAY_SIZE(gps.state)] {};
     if (vertical_accuracy_sum_sq > 0.0f) {
         // calculate the weights using the inverse of the variances
         float sum_of_vpos_weights = 0.0f;
-        for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+        for (uint8_t i=0; i<ARRAY_SIZE(vpos_blend_weights); i++) {
+            // don't blend blended backends (including ourself...).  This
+            // probably wants to be a "gps.provides_real_sensor_data()"
+            // callback when we add a median-filter backend
+            if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                continue;
+            }
             if (gps.state[i].status >= AP_GPS::GPS_OK_FIX_3D && gps.state[i].vertical_accuracy >= 0.001f) {
                 vpos_blend_weights[i] = vertical_accuracy_sum_sq / sq(gps.state[i].vertical_accuracy);
                 sum_of_vpos_weights += vpos_blend_weights[i];
@@ -146,7 +204,13 @@ bool AP_GPS_Blended::_calc_weights(void)
         }
         // normalise the weights
         if (sum_of_vpos_weights > 0.0f) {
-            for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+            for (uint8_t i=0; i<ARRAY_SIZE(vpos_blend_weights); i++) {
+                // don't blend blended backends (including ourself...).  This
+                // probably wants to be a "gps.provides_real_sensor_data()"
+                // callback when we add a median-filter backend
+                if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                    continue;
+                }
                 vpos_blend_weights[i] = vpos_blend_weights[i] / sum_of_vpos_weights;
             }
             sum_of_all_weights += 1.0f;
@@ -154,11 +218,17 @@ bool AP_GPS_Blended::_calc_weights(void)
     }
 
     // calculate a weighting using the reported speed accuracy
-    float spd_blend_weights[GPS_MAX_RECEIVERS] = {};
+    float spd_blend_weights[ARRAY_SIZE(gps.state)] {};
     if (speed_accuracy_sum_sq > 0.0f) {
         // calculate the weights using the inverse of the variances
         float sum_of_spd_weights = 0.0f;
-        for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+        for (uint8_t i=0; i<ARRAY_SIZE(spd_blend_weights); i++) {
+            // don't blend blended backends (including ourself...).  This
+            // probably wants to be a "gps.provides_real_sensor_data()"
+            // callback when we add a median-filter backend
+            if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                continue;
+            }
             if (gps.state[i].status >= AP_GPS::GPS_OK_FIX_3D && gps.state[i].speed_accuracy >= 0.001f) {
                 spd_blend_weights[i] = speed_accuracy_sum_sq / sq(gps.state[i].speed_accuracy);
                 sum_of_spd_weights += spd_blend_weights[i];
@@ -166,7 +236,7 @@ bool AP_GPS_Blended::_calc_weights(void)
         }
         // normalise the weights
         if (sum_of_spd_weights > 0.0f) {
-            for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+            for (uint8_t i=0; i<ARRAY_SIZE(spd_blend_weights); i++) {
                 spd_blend_weights[i] = spd_blend_weights[i] / sum_of_spd_weights;
             }
             sum_of_all_weights += 1.0f;
@@ -178,7 +248,13 @@ bool AP_GPS_Blended::_calc_weights(void)
     }
 
     // calculate an overall weight
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i=0; i<ARRAY_SIZE(_blend_weights); i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
         _blend_weights[i] = (hpos_blend_weights[i] + vpos_blend_weights[i] + spd_blend_weights[i]) / sum_of_all_weights;
     }
 
@@ -203,7 +279,6 @@ bool AP_GPS_Blended::calc_weights()
 void AP_GPS_Blended::calc_state(void)
 {
     // initialise the blended states so we can accumulate the results using the weightings for each GPS receiver
-    state.instance = GPS_BLENDED_INSTANCE;
     state.status = AP_GPS::NO_FIX;
     state.time_week_ms = 0;
     state.time_week = 0;
@@ -241,12 +316,21 @@ void AP_GPS_Blended::calc_state(void)
         state.have_undulation = false;
     }
 
+    _highest_supported_status = AP_GPS::GPS_Status::NO_GPS;
+
     // combine the states into a blended solution
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i=0; i<GPS_MAX_INSTANCES; i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
         // use the highest status
         if (gps.state[i].status > state.status) {
             state.status = gps.state[i].status;
         }
+        _highest_supported_status = MAX(_highest_supported_status, gps.highest_supported_status(i));
 
         // calculate a blended average velocity
         state.velocity += gps.state[i].velocity * _blend_weights[i];
@@ -306,7 +390,13 @@ void AP_GPS_Blended::calc_state(void)
     // Use the GPS with the highest weighting as the reference position
     float best_weight = 0.0f;
     uint8_t best_index = 0;
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i=0; i<ARRAY_SIZE(_blend_weights); i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
         if (_blend_weights[i] > best_weight) {
             best_weight = _blend_weights[i];
             best_index = i;
@@ -318,7 +408,13 @@ void AP_GPS_Blended::calc_state(void)
     Vector2f blended_NE_offset_m;
     float blended_alt_offset_cm = 0.0f;
     blended_NE_offset_m.zero();
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i=0; i<ARRAY_SIZE(_blend_weights); i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
         if (_blend_weights[i] > 0.0f && i != best_index) {
             blended_NE_offset_m += state.location.get_distance_NE(gps.state[i].location) * _blend_weights[i];
             blended_alt_offset_cm += (float)(gps.state[i].location.alt - state.location.alt) * _blend_weights[i];
@@ -338,7 +434,13 @@ void AP_GPS_Blended::calc_state(void)
     // detect inconsistent week data
     uint8_t last_week_instance = 0;
     bool weeks_consistent = true;
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i=0; i<ARRAY_SIZE(_blend_weights); i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
         if (last_week_instance == 0 && _blend_weights[i] > 0) {
             // this is our first valid sensor week data
             last_week_instance = gps.state[i].time_week;
@@ -357,7 +459,13 @@ void AP_GPS_Blended::calc_state(void)
         state.time_week = gps.state[best_index].time_week;
         // calculate a blended value for the number of ms lapsed in the week
         double temp_time_0 = 0.0;
-        for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+        for (uint8_t i=0; i<ARRAY_SIZE(_blend_weights); i++) {
+            // don't blend blended backends (including ourself...).  This
+            // probably wants to be a "gps.provides_real_sensor_data()"
+            // callback when we add a median-filter backend
+            if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+                continue;
+            }
             if (_blend_weights[i] > 0.0f) {
                 temp_time_0 += (double)gps.state[i].time_week_ms * (double)_blend_weights[i];
             }
@@ -368,7 +476,13 @@ void AP_GPS_Blended::calc_state(void)
     // calculate a blended value for the timing data and lag
     double temp_time_1 = 0.0;
     double temp_time_2 = 0.0;
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
+    for (uint8_t i=0; i<ARRAY_SIZE(_blend_weights); i++) {
+        // don't blend blended backends (including ourself...).  This
+        // probably wants to be a "gps.provides_real_sensor_data()"
+        // callback when we add a median-filter backend
+        if (params.type == AP_GPS::GPS_TYPE_BLENDED) {
+            continue;
+        }
         if (_blend_weights[i] > 0.0f) {
             temp_time_1 += (double)gps.timing[i].last_fix_time_ms * (double) _blend_weights[i];
             temp_time_2 += (double)gps.timing[i].last_message_time_ms * (double)_blend_weights[i];
@@ -383,7 +497,7 @@ void AP_GPS_Blended::calc_state(void)
 #if HAL_LOGGING_ENABLED
     if (timing.last_message_time_ms > last_blended_message_time_ms &&
         should_log()) {
-        gps.Write_GPS(GPS_BLENDED_INSTANCE);
+        gps.Write_GPS(state.instance);
     }
 #endif
 }
