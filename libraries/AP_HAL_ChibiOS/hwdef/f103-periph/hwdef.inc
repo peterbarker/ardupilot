@@ -109,8 +109,7 @@ define AP_PARAM_MAX_EMBEDDED_PARAM 0
 
 define HAL_I2C_INTERNAL_MASK 0
 
-# disable dual GPS and GPS blending to save flash space
-define GPS_MAX_RECEIVERS 1
+# disable multi-GPS to save flash space
 define GPS_MAX_INSTANCES 1
 define HAL_COMPASS_MAX_SENSORS 1
 define HAL_GYROFFT_ENABLED 0

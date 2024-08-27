@@ -27,7 +27,6 @@ define HAL_PERIPH_ENABLE_BATTERY
 
 
 # single GPS, compass and RF for peripherals
-define GPS_MAX_RECEIVERS 1
 define GPS_MAX_INSTANCES 1
 define HAL_COMPASS_MAX_SENSORS 1
 
