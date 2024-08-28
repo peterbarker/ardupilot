@@ -14,6 +14,7 @@ and how the content should be interpreted.
 |H   | uint16_t|
 |i   | int32_t|
 |I   | uint32_t|
+|g   | float16|
 |f   | float|
 |d   | double|
 |n   | char[4]|
