@@ -3,6 +3,7 @@
 #include "AP_NavEKF3.h"
 #include "AP_NavEKF3_core.h"
 #include <AP_DAL/AP_DAL.h>
+#include "AP_NavEKF3_DAL.h"
 #include <GCS_MAVLink/GCS.h>
 
 // Check basic filter health metrics and return a consolidated health status

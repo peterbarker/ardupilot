@@ -9,6 +9,10 @@
 #include <AP_Beacon/AP_Beacon_config.h>
 #include <AP_AHRS/AP_AHRS_config.h>
 
+#ifndef AP_NAVEKF3_DAL_ENABLED
+#define AP_NAVEKF3_DAL_ENABLED 0
+#endif
+
 // define for when to include all features
 #define EK3_FEATURE_ALL APM_BUILD_TYPE(APM_BUILD_AP_DAL_Standalone) || APM_BUILD_TYPE(APM_BUILD_Replay)
 
@@ -39,4 +43,10 @@
 // rangefinder measurements if available
 #ifndef EK3_FEATURE_RANGEFINDER_MEASUREMENTS
 #define EK3_FEATURE_RANGEFINDER_MEASUREMENTS AP_RANGEFINDER_ENABLED
+#endif
+
+#if AP_NAVEKF3_DAL_ENABLED
+#define AP_NAVEKF3_DAL AP_NavEKF3_DAL
+#else
+#define AP_NAVEKF3_DAL AP_DAL
 #endif

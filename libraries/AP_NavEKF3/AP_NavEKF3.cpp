@@ -1,14 +1,15 @@
 #include "AP_NavEKF3.h"
 
-#include <AP_HAL/AP_HAL.h>
-
 #include "AP_NavEKF3_core.h"
+
+#include <AP_HAL/AP_HAL.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
 
 #include "AP_DAL/AP_DAL.h"
+#include "AP_NavEKF3_DAL.h"
 
 #include <new>
 
@@ -818,7 +819,7 @@ bool NavEKF3::InitialiseFilter(void)
         }
 
         //try to allocate from CCM RAM, fallback to Normal RAM if not available or full
-        core = (NavEKF3_core*)dal.malloc_type(sizeof(NavEKF3_core)*num_cores, dal.MEM_FAST);
+        core = (NavEKF3_core*)dal.malloc_type(sizeof(NavEKF3_core)*num_cores, AP_DAL::Memory_Type::MEM_FAST);
         if (core == nullptr) {
             _enable.set(0);
             num_cores = 0;

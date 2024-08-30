@@ -33,8 +33,10 @@
 #include <AP_NavEKF/EKF_Buffer.h>
 #include <AP_InertialSensor/AP_InertialSensor.h>
 #include <AP_RangeFinder/AP_RangeFinder.h>
+#include <AP_DAL/AP_DAL.h>
 
 #include "AP_NavEKF/EKFGSF_yaw.h"
+#include "AP_NavEKF3_DAL.h"
 
 // GPS pre-flight check bit locations
 #define MASK_GPS_NSATS      (1<<0)
@@ -128,7 +130,7 @@ class NavEKF3_core : public NavEKF_core_common
 {
 public:
     // Constructor
-    NavEKF3_core(class NavEKF3 *_frontend, AP_DAL &dal);
+    NavEKF3_core(class NavEKF3 *_frontend, AP_NAVEKF3_DAL &dal);
 
     // setup this core backend
     bool setup_core(uint8_t _imu_index, uint8_t _core_index);
@@ -466,7 +468,11 @@ public:
 
 private:
     EKFGSF_yaw *yawEstimator;
+#if AP_NAVEKF3_DAL_ENABLED
+    class AP_NAVEKF3_DAL &dal;
+#else
     AP_DAL &dal;
+#endif
 
     // Reference to the global EKF frontend for parameters
     class NavEKF3 *frontend;
@@ -1344,7 +1350,7 @@ private:
 #if EK3_FEATURE_BEACON_FUSION
     class BeaconFusion {
     public:
-        BeaconFusion(AP_DAL &_dal) :
+        BeaconFusion(class AP_NAVEKF3_DAL &_dal) :
             dal{_dal}
             {}
 
@@ -1399,8 +1405,9 @@ private:
         } *fusionReport;
         uint8_t numFusionReports;
 
-        AP_DAL &dal;
-    } rngBcn{dal};
+        AP_NAVEKF3_DAL &dal;
+    };
+    BeaconFusion rngBcn{dal};
 #endif  // if EK3_FEATURE_BEACON_FUSION
 
 #if EK3_FEATURE_DRAG_FUSION

@@ -3,6 +3,7 @@
 #include "AP_NavEKF3.h"
 
 #include <AP_DAL/AP_DAL.h>
+#include "AP_NavEKF3_DAL.h"
 
 /* Monitor GPS data to see if quality is good enough to initialise the EKF
    Monitor magnetometer innovations to see if the heading is good enough to use GPS
