@@ -367,6 +367,13 @@ public:
     // get a yaw estimator instance
     const EKFGSF_yaw *get_yawEstimator(void) const;
 
+#if AP_NAVEKF3_DISABLE_GPS_ENABLED
+    // force GPS disable on EKF3 only
+    void force_gps_disable(bool gps_disable) {
+        dal.force_gps_disable(gps_disable);
+    }
+#endif
+
 private:
 #if AP_NAVEKF3_DAL_ENABLED
     AP_NavEKF3_DAL dal;

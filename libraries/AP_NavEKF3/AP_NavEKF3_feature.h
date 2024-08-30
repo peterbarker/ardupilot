@@ -8,9 +8,10 @@
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_Beacon/AP_Beacon_config.h>
 #include <AP_AHRS/AP_AHRS_config.h>
+#include <AP_GPS/AP_GPS_config.h>
 
 #ifndef AP_NAVEKF3_DAL_ENABLED
-#define AP_NAVEKF3_DAL_ENABLED 0
+#define AP_NAVEKF3_DAL_ENABLED 1
 #endif
 
 // define for when to include all features
@@ -49,4 +50,8 @@
 #define AP_NAVEKF3_DAL AP_NavEKF3_DAL
 #else
 #define AP_NAVEKF3_DAL AP_DAL
+#endif
+
+#ifndef AP_NAVEKF3_DISABLE_GPS_ENABLED
+#define AP_NAVEKF3_DISABLE_GPS_ENABLED AP_NAVEKF3_DAL_ENABLED && AP_GPS_ENABLED
 #endif

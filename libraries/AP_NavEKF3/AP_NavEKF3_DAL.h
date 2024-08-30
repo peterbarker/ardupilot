@@ -40,7 +40,14 @@ public:
     AP_DAL_Baro &baro() { return dal.baro(); }
 
 #if AP_GPS_ENABLED
-    AP_DAL_GPS &gps() { return dal.gps(); }
+    AP_DAL_GPS &gps() {
+#if AP_NAVEKF3_DISABLE_GPS_ENABLED
+        if (gps_disabled) {
+            return disabled_gps;
+        }
+#endif
+        return dal.gps();
+    }
 #endif
 
 #if AP_RANGEFINDER_ENABLED
@@ -101,7 +108,21 @@ public:
 
     int snprintf(char* str, size_t size, const char *format, ...) const;
 
+#if AP_NAVEKF3_DISABLE_GPS_ENABLED
+    // Start methods just for the AP_NavEKF3_DAL:
+    void force_gps_disable(bool gps_disable) {
+        dal.log_event3(gps_disable?AP_DAL::Event::EK3GPSDisable:AP_DAL::Event::EK3GPSEnable);
+        gps_disabled = gps_disable;
+    }
+#endif
+
 private:
     AP_DAL &dal;
+
+#if AP_NAVEKF3_DISABLE_GPS_ENABLED
+    // an DAL GPS object which returns nothing:
+    AP_DAL_GPS disabled_gps;
+    bool gps_disabled;  // trueif we should ise disabled_gps
+#endif
 };
 #endif  // AP_NAVEKF3_DAL_ENABLED
