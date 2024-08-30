@@ -11,6 +11,10 @@
 #include <AP_OpticalFlow/AP_OpticalFlow_config.h>
 #include <AP_GPS/AP_GPS_config.h>
 
+#ifndef AP_NAVEKF3_DAL_ENABLED
+#define AP_NAVEKF3_DAL_ENABLED 0
+#endif
+
 // define for when to include all features
 #define EK3_FEATURE_ALL APM_BUILD_TYPE(APM_BUILD_AP_DAL_Standalone) || APM_BUILD_TYPE(APM_BUILD_Replay)
 
@@ -71,4 +75,10 @@
 
 #if EK3_FEATURE_MOVING_BASELINE && !(AP_GPS_MB_YAW_OFFSET_ENABLED)
 #error "EK3_FEATURE_MOVING_BASELINE requires AP_GPS_MB_YAW_OFFSET_ENABLED"
+#endif
+
+#if AP_NAVEKF3_DAL_ENABLED
+#define AP_NAVEKF3_DAL AP_NavEKF3_DAL
+#else
+#define AP_NAVEKF3_DAL AP_DAL
 #endif

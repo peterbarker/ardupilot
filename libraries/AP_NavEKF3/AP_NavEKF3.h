@@ -24,6 +24,8 @@
 #include <AP_Param/AP_Param.h>
 #include <AP_NavEKF/AP_Nav_Common.h>
 #include <AP_NavEKF/AP_NavEKF_Source.h>
+#include "AP_NavEKF3_DAL.h"
+#include "AP_NavEKF3_feature.h"
 
 class NavEKF3_core;
 class EKFGSF_yaw;
@@ -376,7 +378,11 @@ public:
     bool InitialiseFilterBootstrap();
 
 private:
+#if AP_NAVEKF3_DAL_ENABLED
+    AP_NavEKF3_DAL dal;
+#else
     class AP_DAL &dal;
+#endif
 
     uint8_t num_cores; // number of allocated cores
     uint8_t primary;   // current primary core

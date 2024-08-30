@@ -10,6 +10,7 @@
 #include <AP_BoardConfig/AP_BoardConfig.h>
 
 #include "AP_DAL/AP_DAL.h"
+#include "AP_NavEKF3_DAL.h"
 
 #include <new>
 

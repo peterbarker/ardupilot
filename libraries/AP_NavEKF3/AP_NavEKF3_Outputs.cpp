@@ -3,6 +3,7 @@
 #include "AP_NavEKF3.h"
 #include "AP_NavEKF3_core.h"
 #include <AP_DAL/AP_DAL.h>
+#include "AP_NavEKF3_DAL.h"
 #include <GCS_MAVLink/GCS.h>
 
 #define P (const_cast<const Matrix24 &>(Pmut))
