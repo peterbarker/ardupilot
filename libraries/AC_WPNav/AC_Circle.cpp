@@ -200,7 +200,7 @@ bool AC_Circle::update(float climb_rate_cms)
         target.y += - _radius * sinf(-_angle);
 
         // heading is from vehicle to center of circle
-        _yaw = get_bearing_cd(_inav.get_position_xy_cm(), _center.tofloat().xy());
+        _yaw = get_bearing_cd(_pos_control.get_pos_target_cm().xy().tofloat(), _center.tofloat().xy());
 
         if ((_options.get() & CircleOptions::FACE_DIRECTION_OF_TRAVEL) != 0) {
             _yaw += is_positive(_rate)?-9000.0f:9000.0f;
@@ -313,12 +313,12 @@ void AC_Circle::init_start_angle(bool use_heading)
         _angle = wrap_PI(_ahrs.yaw-M_PI);
     } else {
         // if we are exactly at the center of the circle, init angle to directly behind vehicle (so vehicle will backup but not change heading)
-        const Vector3f &curr_pos = _inav.get_position_neu_cm();
-        if (is_equal(curr_pos.x,float(_center.x)) && is_equal(curr_pos.y,float(_center.y))) {
+        const Vector3f &curr_pos_minus_offset = _inav.get_position_neu_cm() - _pos_control.get_pos_offset_cm().tofloat();
+        if (is_equal(curr_pos_minus_offset.x,float(_center.x)) && is_equal(curr_pos_minus_offset.y,float(_center.y))) {
             _angle = wrap_PI(_ahrs.yaw-M_PI);
         } else {
             // get bearing from circle center to vehicle in radians
-            float bearing_rad = atan2f(curr_pos.y-_center.y,curr_pos.x-_center.x);
+            float bearing_rad = atan2f(curr_pos_minus_offset.y-_center.y, curr_pos_minus_offset.x-_center.x);
             _angle = wrap_PI(bearing_rad);
         }
     }
