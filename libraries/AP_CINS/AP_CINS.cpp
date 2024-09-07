@@ -29,8 +29,6 @@
 // Naive GPS Time Delay settings
 #define CINS_GPS_DELAY (0.05) // seconds of delay
 
-#pragma GCC diagnostic error "-Wframe-larger-than=8000"
-
 // table of user settable parameters
 const AP_Param::GroupInfo AP_CINS::var_info[] = {
 
@@ -156,9 +154,11 @@ Vector3F computeRotationCorrection(const Vector3F& v1, const Vector3F& v2, const
 // constructor
 AP_CINS::AP_CINS(void)
 {
+    ASSERT_STORAGE_SIZE(SIM23, 152);
+    ASSERT_STORAGE_SIZE(GL2, 32);
+
     AP_Param::setup_object_defaults(this, var_info);
 }
-
 
 /*
   initialise the filter
@@ -383,15 +383,14 @@ void AP_CINS::update_imu(const Vector3F &gyro_rads, const Vector3F &accel_mss, c
 {
     //Integrate Dynamics using the Matrix exponential 
     //Create Zero vector 
-    Vector3F zero_vector;
-    zero_vector.zero();
-    Vector3F gravity_vector = Vector3F(0,0,GRAVITY_MSS);
+    const Vector3F zero_vector;
+    const Vector3F gravity_vector{0,0,GRAVITY_MSS};
 
     // Update the bias gain matrices
     // In mathematical terms, \dot{M} = B = - Ad_{Z^{-1} \hat{X}} [I_3, 0_3; 0_3, I_3; 0_3, 0_3].
     // Here, we split B into its parts and add them to the parts of the bias gain matrix.
     if (done_yaw_init) {
-        const SIM23 XInv_Z = SIM23(state.XHat.inverse()) * state.ZHat;
+        const SIM23 XInv_Z { SIM23(state.XHat.inverse()) * state.ZHat };
         state.gyr_bias_gain_mat.rot += -state.XHat.rot() * dt;
         state.gyr_bias_gain_mat.vel += Matrix3F::skew_symmetric(XInv_Z.W1()) * XInv_Z.R().transposed() * dt;
         state.gyr_bias_gain_mat.pos += Matrix3F::skew_symmetric(XInv_Z.W2()) * XInv_Z.R().transposed() * dt;
@@ -452,7 +451,7 @@ void AP_CINS::update_vector_measurement_cts(const Vector3F &measurement, const V
 
     // Set up some computation variables
     const Vector3F& muHat = state.XHat.rot() * reference + state.XHat.vel()*ref_base.x + state.XHat.pos()*ref_base.y;
-    const SIM23& ZInv = state.ZHat.inverse();
+    const SIM23 ZInv { state.ZHat.inverse() };
     const Vector2F& gains_AInvC = ZInv.A() * ref_base;
     const GL2& CCT = GL2(ref_base.x*ref_base.x, ref_base.x*ref_base.y, ref_base.x*ref_base.y, ref_base.y*ref_base.y);
     const Vector3F& mu_Z = state.ZHat.W1()*gains_AInvC.x + state.ZHat.W2()*gains_AInvC.y;
@@ -472,8 +471,6 @@ void AP_CINS::update_vector_measurement_cts(const Vector3F &measurement, const V
 
     // Construct the components of the 9x9 Adjoint matrix $\Ad_Z$
     const Matrix3F& AdZ_11 = state.ZHat.R();
-    const Matrix3F& AdZ_12{}; // Zero matrix
-    const Matrix3F& AdZ_13{}; // Zero matrix
     const Matrix3F& AdZ_21 = - Matrix3F::skew_symmetric(ZInv.W1());
     const Matrix3F& AdZ_22 = state.ZHat.R() * ZInv.A().a11();
     const Matrix3F& AdZ_23 = state.ZHat.R() * ZInv.A().a21();
@@ -487,8 +484,8 @@ void AP_CINS::update_vector_measurement_cts(const Vector3F &measurement, const V
     const Matrix3F& pre_C13 = I3*ref_base.y;
 
     const Matrix3F& C11 = pre_C11 * AdZ_11 + pre_C12 * AdZ_21 + pre_C13 * AdZ_31;
-    const Matrix3F& C12 = pre_C11 * AdZ_12 + pre_C12 * AdZ_22 + pre_C13 * AdZ_32;
-    const Matrix3F& C13 = pre_C11 * AdZ_13 + pre_C12 * AdZ_23 + pre_C13 * AdZ_33;
+    const Matrix3F& C12 = pre_C12 * AdZ_22 + pre_C13 * AdZ_32;
+    const Matrix3F& C13 = pre_C12 * AdZ_23 + pre_C13 * AdZ_33;
 
     // Gain matrix $\Delta = K (\mu - \hat{\mu})$.
     const Matrix3F& K11 = Matrix3F::skew_symmetric(muHat - mu_Z) * 4. * gain_R * dt;
@@ -512,8 +509,6 @@ void AP_CINS::update_vector_measurement_cts(const Vector3F &measurement, const V
 
     // Compute the bias gain matrix updates
     const Matrix3F& A11 = I3;
-    const Matrix3F& A12{}; // Zero matrix
-    const Matrix3F& A13{}; // Zero matrix
     const Matrix3F& A21 = - Matrix3F::skew_symmetric(GammaInv.W1());
     const Matrix3F& A22 = I3*GammaInv.A().a11();
     const Matrix3F& A23 = I3*GammaInv.A().a21();
@@ -521,11 +516,11 @@ void AP_CINS::update_vector_measurement_cts(const Vector3F &measurement, const V
     const Matrix3F& A32 = I3*GammaInv.A().a12();
     const Matrix3F& A33 = I3*GammaInv.A().a22();
 
-    state.gyr_bias_gain_mat.rot = (A11 - K11 * C11) * M1Gyr + (A12 - K11 * C12) * M2Gyr + (A13 - K11 * C13) * M3Gyr;
+    state.gyr_bias_gain_mat.rot = (A11 - K11 * C11) * M1Gyr + ( K11 * C12) * M2Gyr + (K11 * C13) * M3Gyr;
     state.gyr_bias_gain_mat.vel = (A21 - K21 * C11) * M1Gyr + (A22 - K21 * C12) * M2Gyr + (A23 - K21 * C13) * M3Gyr;
     state.gyr_bias_gain_mat.pos = (A31 - K31 * C11) * M1Gyr + (A32 - K31 * C12) * M2Gyr + (A33 - K31 * C13) * M3Gyr;
 
-    state.acc_bias_gain_mat.rot = (A11 - K11 * C11) * M1Acc + (A12 - K11 * C12) * M2Acc + (A13 - K11 * C13) * M3Acc;
+    state.acc_bias_gain_mat.rot = (A11 - K11 * C11) * M1Acc + ( K11 * C12) * M2Acc + (K11 * C13) * M3Acc;
     state.acc_bias_gain_mat.vel = (A21 - K21 * C11) * M1Acc + (A22 - K21 * C12) * M2Acc + (A23 - K21 * C13) * M3Acc;
     state.acc_bias_gain_mat.pos = (A31 - K31 * C11) * M1Acc + (A32 - K31 * C12) * M2Acc + (A33 - K31 * C13) * M3Acc;
 
@@ -658,7 +653,7 @@ void AP_CINS::compute_bias_update_imu(const SIM23& Gamma) {
     // Compute the bias update for IMU inputs
 
     const SIM23 GammaInv = Gamma.inverse();
-    const Matrix3F& Ad_Gamma_11 = Gamma.R();
+    const Matrix3F& Ad_Gamma_11 { Gamma.R() };
     const Matrix3F Ad_Gamma_12; // Zero matrix
     const Matrix3F Ad_Gamma_13; // Zero matrix
     const Matrix3F Ad_Gamma_21 = - Matrix3F::skew_symmetric(GammaInv.W1()) * Gamma.R();
