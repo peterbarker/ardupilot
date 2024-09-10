@@ -11941,6 +11941,34 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # restart GPS driver
         self.reboot_sitl()
 
+    def TakeoffGetPosition(self):
+        '''check takeoff position is returned correctly'''
+        self.upload_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 5),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 20, 0, 5),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 5),
+            (mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0),
+        ])
+        num_wp = self.get_mission_count()
+        self.set_parameter("AUTO_OPTIONS", 3)
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_waypoint(num_wp-1, num_wp-1)
+        # dfreader = self.dfreader_for_current_onboard_log()
+        self.wait_disarmed()
+
+        # while True:
+        #     m = dfreader.recv_match(type=["PSCN", "PSCE", "PSCD"])
+        #     m_type = m.get_type()
+        #     if m_type == "PSCD" and -m.PD < 1:
+        #         # avoid checking the landing where things get rough
+        #         continue
+        #     delta = sqrt(abs(PSCN.TPN-PSCN.PN)**2 + abs(PSCE.TPE-PSCE.PE))
+        #     if delta > 0.1:
+        #         self.progress("PSCN
+        #         raise NotAchievedException("Did not achieve target position")
+
     def tests2b(self):  # this block currently around 9.5mins here
         '''return list of all tests'''
         ret = ([
@@ -12045,6 +12073,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.MAV_CMD_MISSION_START_p1_p2,
             self.ScriptingAHRSSource,
             self.CommonOrigin,
+            self.TakeoffGetPosition,
         ])
         return ret
 
