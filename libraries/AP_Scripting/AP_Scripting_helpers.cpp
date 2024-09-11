@@ -48,7 +48,7 @@ bool Parameter::init(const char *name)
 }
 
 // init by info, to get the value of old params
-bool Parameter::init_by_info(uint16_t key, uint32_t group_element, enum ap_var_type type)
+bool Parameter::init_by_info(uint16_t key, uint32_t group_element, AP_Param::VarType type)
 {
     switch (type) {
     case AP_PARAM_INT8:

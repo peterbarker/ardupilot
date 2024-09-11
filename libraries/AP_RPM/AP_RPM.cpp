@@ -193,7 +193,7 @@ void AP_RPM::convert_params(void)
         info.old_group_element = conversionTable[i].old_element;
 
         // The var type of the params has not changed in the conversion so this is ok:
-        info.type = (ap_var_type)AP_RPM_Params::var_info[destination_index].type;
+        info.type = (AP_Param::VarType)AP_RPM_Params::var_info[destination_index].type;
         hal.util->snprintf(param_name, sizeof(param_name), "RPM%X_%s", param_instance, AP_RPM_Params::var_info[destination_index].name);
         param_name[sizeof(param_name)-1] = '\0';
 

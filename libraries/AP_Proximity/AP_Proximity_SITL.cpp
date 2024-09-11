@@ -38,7 +38,7 @@ AP_Proximity_SITL::AP_Proximity_SITL(AP_Proximity &_frontend,
     AP_Proximity_Backend(_frontend, _state, _params),
     sitl(AP::sitl())
 {
-    ap_var_type ptype;
+    AP_Param::VarType ptype;
     fence_alt_max = (AP_Float *)AP_Param::find("FENCE_ALT_MAX", &ptype);
     if (fence_alt_max == nullptr || ptype != AP_PARAM_FLOAT) {
         AP_HAL::panic("Proximity_SITL: Failed to find FENCE_ALT_MAX");

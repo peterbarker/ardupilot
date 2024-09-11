@@ -145,7 +145,7 @@ public:
     bool Write_Parameter(const char *name, float value, float default_val);
     bool Write_Parameter(const AP_Param *ap,
                              const AP_Param::ParamToken &token,
-                             enum ap_var_type type,
+                             AP_Param::VarType type,
                              float default_val);
     bool Write_VER();
 

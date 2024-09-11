@@ -963,7 +963,7 @@ void ToyMode::handle_message(const mavlink_message_t &msg)
         }
 #endif
     } else if (strncmp(m.name, "LOGDISARM", 10) == 0) {
-        enum ap_var_type vtype;
+        AP_Param::VarType vtype;
         AP_Int8 *log_disarmed = (AP_Int8 *)AP_Param::find("LOG_DISARMED", &vtype);
         if (log_disarmed) {
             log_disarmed->set(int8_t(m.value));

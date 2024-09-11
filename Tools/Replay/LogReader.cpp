@@ -166,7 +166,7 @@ bool LogReader::set_parameter(const char *name, float value, bool force)
         // ignore user set parameters
         return false;
     }
-    enum ap_var_type var_type;
+    AP_Param::VarType var_type;
     AP_Param *vp = AP_Param::find(name, &var_type);
     if (vp == NULL) {
         // a lot of parameters will not be found - e.g. FORMAT_VERSION

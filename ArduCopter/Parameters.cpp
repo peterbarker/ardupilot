@@ -1585,7 +1585,7 @@ void Copter::convert_lgr_parameters(void)
     AP_Int16 *servo_min, *servo_max, *servo_trim;
     AP_Int16 *servo_reversed;
 
-    enum ap_var_type ptype;
+    AP_Param::VarType ptype;
     // get pointers to the servo min, max and trim parameters
     snprintf(pname, sizeof(pname), "SERVO%u_MIN", chan);
     servo_min = (AP_Int16 *)AP_Param::find(pname, &ptype);
@@ -1691,7 +1691,7 @@ void Copter::convert_tradheli_parameters(void) const
             if (swash_pos1_exist || swash_pos2_exist || swash_pos3_exist || swash_phang_exist) {
                 // if any params exist with the generic swash then the upgraded swash type must be generic
                 // find the new variable in the variable structures
-                enum ap_var_type ptype;
+                AP_Param::VarType ptype;
                 AP_Param *ap2;
                 ap2 = AP_Param::find("H_SW_TYPE", &ptype);
                 // make sure the pointer is valid
@@ -1749,7 +1749,7 @@ void Copter::convert_tradheli_parameters(void) const
         if (swash1_pos1_exist || swash1_pos2_exist || swash1_pos3_exist || swash1_phang_exist) {
             // if any params exist with the generic swash then the upgraded swash type must be generic
             // find the new variable in the variable structures
-            enum ap_var_type ptype;
+            AP_Param::VarType ptype;
             AP_Param *ap2;
             ap2 = AP_Param::find("H_SW_TYPE", &ptype);
             // make sure the pointer is valid
@@ -1766,7 +1766,7 @@ void Copter::convert_tradheli_parameters(void) const
         if (swash2_pos1_exist || swash2_pos2_exist || swash2_pos3_exist || swash2_phang_exist) {
             // if any params exist with the generic swash then the upgraded swash type must be generic
             // find the new variable in the variable structures
-            enum ap_var_type ptype;
+            AP_Param::VarType ptype;
             AP_Param *ap2;
             ap2 = AP_Param::find("H_SW2_TYPE", &ptype);
             // make sure the pointer is valid
@@ -1812,7 +1812,7 @@ void Copter::convert_tradheli_parameters(void) const
 
     // update tail speed parameter with scaling
     AP_Int16 *tailspeed;
-    enum ap_var_type ptype;
+    AP_Param::VarType ptype;
     tailspeed = (AP_Int16 *)AP_Param::find("H_TAIL_SPEED", &ptype);
     if (tailspeed != nullptr && tailspeed->get() > 100 ) {
         uint16_t tailspeed_pct = (uint16_t)(0.1f * tailspeed->get());

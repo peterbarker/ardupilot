@@ -14,7 +14,7 @@ public:
     bool init(const char *name);
 
     // init by token, to get the value of old params
-    bool init_by_info(uint16_t key, uint32_t group_element, enum ap_var_type type);
+    bool init_by_info(uint16_t key, uint32_t group_element, AP_Param::VarType type);
 
     // setters and getters
     bool set(float value);
@@ -24,7 +24,7 @@ public:
     bool set_default(float value);
 
 private:
-    enum ap_var_type vtype;
+    AP_Param::VarType vtype;
     AP_Param *vp;
 };
 

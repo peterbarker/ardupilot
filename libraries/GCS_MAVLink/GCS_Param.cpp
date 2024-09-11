@@ -264,7 +264,7 @@ void GCS_MAVLINK::handle_param_set(const mavlink_message_t &msg)
 {
     mavlink_param_set_t packet;
     mavlink_msg_param_set_decode(&msg, &packet);
-    enum ap_var_type var_type;
+    AP_Param::VarType var_type;
 
     // set parameter
     AP_Param *vp;
@@ -323,7 +323,7 @@ void GCS_MAVLINK::handle_param_set(const mavlink_message_t &msg)
 #endif
 }
 
-void GCS_MAVLINK::send_parameter_value(const char *param_name, ap_var_type param_type, float param_value)
+void GCS_MAVLINK::send_parameter_value(const char *param_name, AP_Param::VarType param_type, float param_value)
 {
     if (!HAVE_PAYLOAD_SPACE(chan, PARAM_VALUE)) {
         return;
@@ -340,7 +340,7 @@ void GCS_MAVLINK::send_parameter_value(const char *param_name, ap_var_type param
 /*
   send a parameter value message to all active MAVLink connections
  */
-void GCS::send_parameter_value(const char *param_name, ap_var_type param_type, float param_value)
+void GCS::send_parameter_value(const char *param_name, AP_Param::VarType param_type, float param_value)
 {
     mavlink_param_value_t packet{};
     const uint8_t to_copy = MIN(ARRAY_SIZE(packet.param_id), strlen(param_name));

@@ -264,7 +264,7 @@ void AP_Param::check_group_info(const struct AP_Param::GroupInfo *  group_info,
             check_group_info(ginfo, total_size, group_shift + _group_level_shift, prefix_length + strlen(group_info[i].name));
             continue;
         }
-        uint8_t size = type_size((enum ap_var_type)type);
+        uint8_t size = type_size((VarType)type);
         if (size == 0) {
             FATAL("invalid type in %s", group_info[i].name);
         }
@@ -329,7 +329,7 @@ void AP_Param::check_var_info(void)
             }
             check_group_info(group_info, &total_size, 0, strlen(info.name));
         } else {
-            uint8_t size = type_size((enum ap_var_type)type);
+            uint8_t size = type_size((VarType)type);
             if (size == 0) {
                 // not a valid type - the top level list can't contain
                 // AP_PARAM_NONE
@@ -690,7 +690,7 @@ const struct AP_Param::Info *AP_Param::find_var_info_token(const ParamToken &tok
 }
 
 // return the storage size for a AP_PARAM_* type
-uint8_t AP_Param::type_size(enum ap_var_type type)
+uint8_t AP_Param::type_size(AP_Param::VarType type)
 {
     switch (type) {
     case AP_PARAM_NONE:
@@ -774,7 +774,7 @@ bool AP_Param::scan(const AP_Param::Param_header *target, uint16_t *pofs)
             sentinal_offset = ofs;
             return false;
         }
-        ofs += type_size((enum ap_var_type)phdr.type) + sizeof(phdr);
+        ofs += type_size((VarType)phdr.type) + sizeof(phdr);
     }
     *pofs = 0xffff;
     Debug("scan past end of eeprom");
@@ -847,7 +847,7 @@ void AP_Param::copy_name_info(const struct AP_Param::Info *info,
 // Find a variable by name in a group
 AP_Param *
 AP_Param::find_group(const char *name, uint16_t vindex, ptrdiff_t group_offset,
-                     const struct GroupInfo *group_info, enum ap_var_type *ptype)
+                     const struct GroupInfo *group_info, AP_Param::VarType *ptype)
 {
     uint8_t type;
     for (uint8_t i=0;
@@ -876,7 +876,7 @@ AP_Param::find_group(const char *name, uint16_t vindex, ptrdiff_t group_offset,
             if (!get_base(var_info(vindex), base)) {
                 continue;
             }
-            *ptype = (enum ap_var_type)type;
+            *ptype = (VarType)type;
             return (AP_Param *)(base + group_info[i].offset + group_offset);
         } else if (type == AP_PARAM_VECTOR3F) {
             // special case for finding Vector3f elements
@@ -910,7 +910,7 @@ AP_Param::find_group(const char *name, uint16_t vindex, ptrdiff_t group_offset,
 // Find a variable by name.
 //
 AP_Param *
-AP_Param::find(const char *name, enum ap_var_type *ptype, uint16_t *flags)
+AP_Param::find(const char *name, AP_Param::VarType *ptype, uint16_t *flags)
 {
     for (uint16_t i=0; i<_num_vars; i++) {
         const auto &info = var_info(i);
@@ -942,7 +942,7 @@ AP_Param::find(const char *name, enum ap_var_type *ptype, uint16_t *flags)
             // parameter to have the same prefix name as group
             // parameters, for example CAM_P_G
         } else if (strcasecmp(name, info.name) == 0) {
-            *ptype = (enum ap_var_type)type;
+            *ptype = (VarType)type;
             ptrdiff_t base;
             if (!get_base(info, base)) {
                 return nullptr;
@@ -956,7 +956,7 @@ AP_Param::find(const char *name, enum ap_var_type *ptype, uint16_t *flags)
 // Find a variable by index. Note that this is quite slow.
 //
 AP_Param *
-AP_Param::find_by_index(uint16_t idx, enum ap_var_type *ptype, ParamToken *token)
+AP_Param::find_by_index(uint16_t idx, AP_Param::VarType *ptype, ParamToken *token)
 {
     AP_Param *ap;
     uint16_t count=0;
@@ -969,7 +969,7 @@ AP_Param::find_by_index(uint16_t idx, enum ap_var_type *ptype, ParamToken *token
 }
 
 // by-name equivalent of find_by_index()
-AP_Param* AP_Param::find_by_name(const char* name, enum ap_var_type *ptype, ParamToken *token)
+AP_Param* AP_Param::find_by_name(const char* name, AP_Param::VarType *ptype, ParamToken *token)
 {
     AP_Param *ap;
     for (ap = AP_Param::first(token, ptype);
@@ -1077,7 +1077,7 @@ bool AP_Param::find_top_level_key_by_pointer(const void *ptr, uint16_t &key)
   is used to find the old value of a parameter that has been
   removed from an object.
 */
-bool AP_Param::get_param_by_index(void *obj_ptr, uint8_t idx, ap_var_type old_ptype, void *pvalue)
+bool AP_Param::get_param_by_index(void *obj_ptr, uint8_t idx, AP_Param::VarType old_ptype, void *pvalue)
 {
     uint16_t key;
     if (!find_top_level_key_by_pointer(obj_ptr, key)) {
@@ -1129,7 +1129,7 @@ void AP_Param::notify() const {
         param_header_type = info->type;
     }
 
-    send_parameter(name, (enum ap_var_type)param_header_type, idx);
+    send_parameter(name, (VarType)param_header_type, idx);
 }
 
 
@@ -1188,9 +1188,9 @@ void AP_Param::save_sync(bool force_save, bool send_to_gcs)
     uint16_t ofs;
     if (scan(&phdr, &ofs)) {
         // found an existing copy of the variable
-        eeprom_write_check(ap, ofs+sizeof(phdr), type_size((enum ap_var_type)phdr.type));
+        eeprom_write_check(ap, ofs+sizeof(phdr), type_size((VarType)phdr.type));
         if (send_to_gcs) {
-            send_parameter(name, (enum ap_var_type)phdr.type, idx);
+            send_parameter(name, (VarType)phdr.type, idx);
         }
         return;
     }
@@ -1202,7 +1202,7 @@ void AP_Param::save_sync(bool force_save, bool send_to_gcs)
 
     // if the value is the default value then don't save
     if (phdr.type <= AP_PARAM_FLOAT) {
-        float v1 = cast_to_float((enum ap_var_type)phdr.type);
+        float v1 = cast_to_float((VarType)phdr.type);
         float v2;
         if (ginfo != nullptr) {
             v2 = get_default_value(this, *ginfo);
@@ -1211,7 +1211,7 @@ void AP_Param::save_sync(bool force_save, bool send_to_gcs)
         }
         if (is_equal(v1,v2) && !force_save) {
             if (send_to_gcs) {
-                GCS_SEND_PARAM(name, (enum ap_var_type)info->type, v2);
+                GCS_SEND_PARAM(name, (VarType)info->type, v2);
             }
             return;
         }
@@ -1221,13 +1221,13 @@ void AP_Param::save_sync(bool force_save, bool send_to_gcs)
             // for other than 32 bit integers, we accept values within
             // 0.01 percent of the current value as being the same
             if (send_to_gcs) {
-                GCS_SEND_PARAM(name, (enum ap_var_type)info->type, v2);
+                GCS_SEND_PARAM(name, (VarType)info->type, v2);
             }
             return;
         }
     }
 
-    if (ofs+type_size((enum ap_var_type)phdr.type)+2*sizeof(phdr) >= _storage.size()) {
+    if (ofs+type_size((VarType)phdr.type)+2*sizeof(phdr) >= _storage.size()) {
         // we are out of room for saving variables
         eeprom_full = true;
         DEV_PRINTF("EEPROM full\n");
@@ -1235,12 +1235,12 @@ void AP_Param::save_sync(bool force_save, bool send_to_gcs)
     }
 
     // write a new sentinal, then the data, then the header
-    write_sentinal(ofs + sizeof(phdr) + type_size((enum ap_var_type)phdr.type));
-    eeprom_write_check(ap, ofs+sizeof(phdr), type_size((enum ap_var_type)phdr.type));
+    write_sentinal(ofs + sizeof(phdr) + type_size((VarType)phdr.type));
+    eeprom_write_check(ap, ofs+sizeof(phdr), type_size((VarType)phdr.type));
     eeprom_write_check(&phdr, ofs, sizeof(phdr));
 
     if (send_to_gcs) {
-        send_parameter(name, (enum ap_var_type)phdr.type, idx);
+        send_parameter(name, (VarType)phdr.type, idx);
     }
 }
 
@@ -1346,10 +1346,10 @@ bool AP_Param::load(void)
             for (uint8_t i=0; i<group_nesting.level; i++) {
                 group_offset += group_nesting.group_ret[i]->offset;
             }
-            set_value((enum ap_var_type)phdr.type, (void*)(base + ginfo->offset + group_offset),
+            set_value((VarType)phdr.type, (void*)(base + ginfo->offset + group_offset),
                       get_default_value(this, *ginfo));
         } else {
-            set_value((enum ap_var_type)phdr.type, (void*)base, 
+            set_value((VarType)phdr.type, (void*)base, 
                       get_default_value(this, *info));
         }
         return false;
@@ -1366,7 +1366,7 @@ bool AP_Param::load(void)
     }
 
     // found it
-    _storage.read_block(ap, ofs+sizeof(phdr), type_size((enum ap_var_type)phdr.type));
+    _storage.read_block(ap, ofs+sizeof(phdr), type_size((VarType)phdr.type));
     return true;
 }
 
@@ -1444,7 +1444,7 @@ bool AP_Param::is_read_only(void) const
 }
 
 // set a AP_Param variable to a specified value
-void AP_Param::set_value(enum ap_var_type type, void *ptr, float value)
+void AP_Param::set_value(AP_Param::VarType type, void *ptr, float value)
 {
     switch (type) {
     case AP_PARAM_INT8:
@@ -1476,7 +1476,7 @@ void AP_Param::setup_object_defaults(const void *object_pointer, const struct Gr
          i++) {
         if (type <= AP_PARAM_FLOAT) {
             void *ptr = (void *)(base + group_info[i].offset);
-            set_value((enum ap_var_type)type, ptr,
+            set_value((VarType)type, ptr,
                       get_default_value((const AP_Param *)ptr, group_info[i]));
         } else if (type == AP_PARAM_VECTOR3F) {
             // Single default for all components
@@ -1501,7 +1501,7 @@ bool AP_Param::set_object_value(const void *object_pointer,
          i++) {
         if (strcmp(name, group_info[i].name) == 0 && type <= AP_PARAM_FLOAT) {
             void *ptr = (void *)(base + group_info[i].offset);
-            set_value((enum ap_var_type)type, ptr, value);
+            set_value((VarType)type, ptr, value);
             // return true here ?
             found = true;
         }
@@ -1521,7 +1521,7 @@ void AP_Param::setup_sketch_defaults(void)
         if (type <= AP_PARAM_FLOAT) {
             ptrdiff_t base;
             if (get_base(info, base)) {
-                set_value((enum ap_var_type)type, (void*)base,
+                set_value((VarType)type, (void*)base,
                           get_default_value((const AP_Param *)base, info));
             }
         }
@@ -1556,10 +1556,10 @@ bool AP_Param::load_all()
 
         info = find_by_header(phdr, &ptr);
         if (info != nullptr) {
-            _storage.read_block(ptr, ofs+sizeof(phdr), type_size((enum ap_var_type)phdr.type));
+            _storage.read_block(ptr, ofs+sizeof(phdr), type_size((VarType)phdr.type));
         }
 
-        ofs += type_size((enum ap_var_type)phdr.type) + sizeof(phdr);
+        ofs += type_size((VarType)phdr.type) + sizeof(phdr);
     }
 
     // we didn't find the sentinal
@@ -1686,12 +1686,12 @@ void AP_Param::load_object_from_eeprom(const void *object_pointer, const struct 
                 info = find_by_header(phdr, &ptr);
                 if (info != nullptr) {
                     if ((ptrdiff_t)ptr == ((ptrdiff_t)object_pointer)+group_info[i].offset) {
-                        _storage.read_block(ptr, ofs+sizeof(phdr), type_size((enum ap_var_type)phdr.type));
+                        _storage.read_block(ptr, ofs+sizeof(phdr), type_size((VarType)phdr.type));
                         break;
                     }
                 }
             }
-            ofs += type_size((enum ap_var_type)phdr.type) + sizeof(phdr);
+            ofs += type_size((VarType)phdr.type) + sizeof(phdr);
         }
     }
 
@@ -1708,7 +1708,7 @@ void AP_Param::load_object_from_eeprom(const void *object_pointer, const struct 
 
 
 // return the first variable in _var_info
-AP_Param *AP_Param::first(ParamToken *token, enum ap_var_type *ptype, float *default_val)
+AP_Param *AP_Param::first(ParamToken *token, AP_Param::VarType *ptype, float *default_val)
 {
     token->key = 0;
     token->group_element = 0;
@@ -1722,7 +1722,7 @@ AP_Param *AP_Param::first(ParamToken *token, enum ap_var_type *ptype, float *def
         return nullptr;
     }
     if (ptype != nullptr) {
-        *ptype = (enum ap_var_type)var_info(0).type;
+        *ptype = (VarType)var_info(0).type;
     }
 #if AP_PARAM_DEFAULTS_ENABLED
     if (default_val != nullptr) {
@@ -1741,13 +1741,13 @@ AP_Param *AP_Param::next_group(const uint16_t vindex, const struct GroupInfo *gr
                                const uint8_t group_shift,
                                const ptrdiff_t group_offset,
                                ParamToken *token,
-                               enum ap_var_type *ptype,
+                               AP_Param::VarType *ptype,
                                bool skip_disabled,
                                float *default_val)
 {
-    enum ap_var_type type;
+    VarType type;
     for (uint8_t i=0;
-         (type=(enum ap_var_type)group_info[i].type) != AP_PARAM_NONE;
+         (type=(VarType)group_info[i].type) != AP_PARAM_NONE;
          i++) {
         if (!check_frame_type(group_info[i].flags)) {
             continue;
@@ -1834,7 +1834,7 @@ AP_Param *AP_Param::next_group(const uint16_t vindex, const struct GroupInfo *gr
 
 /// Returns the next variable in _var_info, recursing into groups
 /// as needed
-AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_disabled, float *default_val)
+AP_Param *AP_Param::next(ParamToken *token, AP_Param::VarType *ptype, bool skip_disabled, float *default_val)
 {
     uint16_t i = token->key;
     bool found_current = false;
@@ -1842,7 +1842,7 @@ AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_d
         // illegal token
         return nullptr;
     }
-    enum ap_var_type type = (enum ap_var_type)var_info(i).type;
+    VarType type = (VarType)var_info(i).type;
 
     // allow Vector3f to be seen as 3 variables. First as a vector,
     // then as 3 separate floats
@@ -1869,7 +1869,7 @@ AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_d
         if (!check_frame_type(info.flags)) {
             continue;
         }
-        type = (enum ap_var_type)info.type;
+        type = (VarType)info.type;
         if (type == AP_PARAM_GROUP) {
             const struct GroupInfo *group_info = get_group_info(info);
             if (group_info == nullptr) {
@@ -1900,10 +1900,10 @@ AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_d
 
 /// Returns the next scalar in _var_info, recursing into groups
 /// as needed
-AP_Param *AP_Param::next_scalar(ParamToken *token, enum ap_var_type *ptype, float *default_val)
+AP_Param *AP_Param::next_scalar(ParamToken *token, AP_Param::VarType *ptype, float *default_val)
 {
     AP_Param *ap;
-    enum ap_var_type type;
+    VarType type;
     while ((ap = next(token, &type, true, default_val)) != nullptr && type > AP_PARAM_FLOAT) ;
 
     if (ap != nullptr) {
@@ -1919,7 +1919,7 @@ AP_Param *AP_Param::next_scalar(ParamToken *token, enum ap_var_type *ptype, floa
 
 
 /// cast a variable to a float given its type
-float AP_Param::cast_to_float(enum ap_var_type type) const
+float AP_Param::cast_to_float(AP_Param::VarType type) const
 {
     switch (type) {
     case AP_PARAM_INT8:
@@ -1952,7 +1952,7 @@ bool AP_Param::find_old_parameter(const struct ConversionInfo *info, AP_Param *v
     }
 
     // load the old value from EEPROM
-    _storage.read_block(value, pofs+sizeof(header), type_size((enum ap_var_type)header.type));
+    _storage.read_block(value, pofs+sizeof(header), type_size((VarType)header.type));
     return true;
 }
 
@@ -1972,7 +1972,7 @@ void AP_Param::convert_old_parameter(const struct ConversionInfo *info, float sc
     }
 
     // find the new variable in the variable structures
-    enum ap_var_type ptype;
+    VarType ptype;
     AP_Param *ap2 = find(&info->new_name[0], &ptype);
     if (ap2 == nullptr) {
         DEV_PRINTF("Unknown conversion '%s'\n", info->new_name);
@@ -2043,7 +2043,7 @@ void AP_Param::convert_class(uint16_t param_key, void *object_pointer,
     for (uint8_t i=0; group_info[i].type != AP_PARAM_NONE; i++) {
         struct ConversionInfo info;
         info.old_key = param_key;
-        info.type = (ap_var_type)group_info[i].type;
+        info.type = (VarType)group_info[i].type;
         info.new_name = nullptr;
 
         uint16_t idx = group_info[i].idx;
@@ -2104,7 +2104,7 @@ void AP_Param::convert_toplevel_objects(const TopLevelObjectConversion conversio
  convert width of a parameter, allowing update to wider scalar values
  without changing the parameter indexes
 */
-bool AP_Param::_convert_parameter_width(ap_var_type old_ptype, float scale_factor, bool bitmask)
+bool AP_Param::_convert_parameter_width(AP_Param::VarType old_ptype, float scale_factor, bool bitmask)
 {
     if (configured_in_storage()) {
         // already converted or set by the user
@@ -2122,11 +2122,11 @@ bool AP_Param::_convert_parameter_width(ap_var_type old_ptype, float scale_facto
     }
 
     // remember the type
-    ap_var_type new_ptype;
+    VarType new_ptype;
     if (ginfo != nullptr) {
-        new_ptype = (ap_var_type)ginfo->type;
+        new_ptype = (VarType)ginfo->type;
     } else {
-        new_ptype = (ap_var_type)info->type;
+        new_ptype = (VarType)info->type;
     }
     
     // create the header we will use to scan for the variable
@@ -2198,7 +2198,7 @@ bool AP_Param::_convert_parameter_width(ap_var_type old_ptype, float scale_facto
 /*
   set a parameter to a float value
  */
-void AP_Param::set_float(float value, enum ap_var_type var_type)
+void AP_Param::set_float(float value, AP_Param::VarType var_type)
 {
     if (isnan(value) || isinf(value)) {
         return;
@@ -2301,7 +2301,7 @@ bool AP_Param::count_defaults_in_file(const char *filename, uint16_t &num_defaul
         if (!parse_param_line(line, &pname, value, read_only)) {
             continue;
         }
-        enum ap_var_type var_type;
+        VarType var_type;
         if (!find(pname, &var_type)) {
             continue;
         }
@@ -2330,7 +2330,7 @@ bool AP_Param::read_param_defaults_file(const char *filename, bool last_pass, ui
         if (!parse_param_line(line, &pname, value, read_only)) {
             continue;
         }
-        enum ap_var_type var_type;
+        VarType var_type;
         AP_Param *vp = find(pname, &var_type);
         if (!vp) {
             if (last_pass) {
@@ -2467,7 +2467,7 @@ bool AP_Param::count_param_defaults(const volatile char *ptr, int32_t length, ui
             continue;
         }
 
-        enum ap_var_type var_type;
+        VarType var_type;
         if (!find(pname, &var_type)) {
             continue;
         }
@@ -2530,7 +2530,7 @@ void AP_Param::load_param_defaults(const volatile char *ptr, int32_t length, boo
         if (!parse_param_line(line, &pname, value, read_only)) {
             continue;
         }
-        enum ap_var_type var_type;
+        VarType var_type;
         AP_Param *vp = find(pname, &var_type);
         if (!vp) {
             if (last_pass) {
@@ -2603,7 +2603,7 @@ float AP_Param::get_default_value(const AP_Param *vp, const struct Info &info)
 }
 
 
-void AP_Param::send_parameter(const char *name, enum ap_var_type var_type, uint8_t idx) const
+void AP_Param::send_parameter(const char *name, AP_Param::VarType var_type, uint8_t idx) const
 {
     if (idx != 0 && var_type == AP_PARAM_VECTOR3F) {
         var_type = AP_PARAM_FLOAT;
@@ -2691,7 +2691,7 @@ void AP_Param::invalidate_count(void)
  */
 bool AP_Param::set_default_by_name(const char *name, float value)
 {
-    enum ap_var_type vtype;
+    VarType vtype;
     AP_Param *vp = find(name, &vtype);
     if (vp == nullptr) {
         return false;
@@ -2734,7 +2734,7 @@ void AP_Param::set_defaults_from_table(const struct defaults_table_struct *table
  */
 bool AP_Param::set_by_name(const char *name, float value)
 {
-    enum ap_var_type vtype;
+    VarType vtype;
     AP_Param *vp = find(name, &vtype);
     if (vp == nullptr) {
         return false;
@@ -2764,7 +2764,7 @@ bool AP_Param::set_by_name(const char *name, float value)
  */
 bool AP_Param::get(const char *name, float &value)
 {
-    enum ap_var_type vtype;
+    VarType vtype;
     AP_Param *vp = find(name, &vtype);
     if (vp == nullptr) {
         return false;
@@ -2797,7 +2797,7 @@ bool AP_Param::get(const char *name, float &value)
  */
 bool AP_Param::set_and_save_by_name(const char *name, float value)
 {
-    enum ap_var_type vtype;
+    VarType vtype;
     AP_Param *vp = find(name, &vtype);
     if (vp == nullptr) {
         return false;
@@ -2827,7 +2827,7 @@ bool AP_Param::set_and_save_by_name(const char *name, float value)
  */
 bool AP_Param::set_and_save_by_name_ifchanged(const char *name, float value)
 {
-    enum ap_var_type vtype;
+    VarType vtype;
     AP_Param *vp = find(name, &vtype);
     if (vp == nullptr) {
         return false;
@@ -2909,7 +2909,7 @@ void AP_Param::add_default(AP_Param *ap, float v)
 
 // print the value of all variables
 void AP_Param::show(const AP_Param *ap, const char *s,
-                    enum ap_var_type type, AP_HAL::BetterStream *port)
+                    AP_Param::VarType type, AP_HAL::BetterStream *port)
 {
     switch (type) {
     case AP_PARAM_INT8:
@@ -2931,7 +2931,7 @@ void AP_Param::show(const AP_Param *ap, const char *s,
 
 // print the value of all variables
 void AP_Param::show(const AP_Param *ap, const ParamToken &token,
-                    enum ap_var_type type, AP_HAL::BetterStream *port)
+                    AP_Param::VarType type, AP_HAL::BetterStream *port)
 {
     char s[AP_MAX_NAME_SIZE+1];
     ap->copy_name_token(token, s, sizeof(s), true);
@@ -2944,7 +2944,7 @@ void AP_Param::show_all(AP_HAL::BetterStream *port, bool showKeyValues)
 {
     ParamToken token;
     AP_Param *ap;
-    enum ap_var_type type;
+    VarType type;
     float default_value = nanf("0x4152");  // from logger quiet_nanf
 
     for (ap=AP_Param::first(&token, &type, &default_value);

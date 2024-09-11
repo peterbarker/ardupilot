@@ -175,14 +175,14 @@
 #define AP_VAREND                            { "",   nullptr,                                      {group_info : nullptr },             0,                                                  0,                                  AP_PARAM_NONE }
 
 
-enum ap_var_type {
-    AP_PARAM_NONE    = 0,
-    AP_PARAM_INT8,
-    AP_PARAM_INT16,
-    AP_PARAM_INT32,
-    AP_PARAM_FLOAT,
-    AP_PARAM_VECTOR3F,
-    AP_PARAM_GROUP
+enum class VarType : uint8_t {
+    NONE     = 0,
+    INT8     = 1,
+    INT16    = 2,
+    INT32    = 3,
+    FLOAT    = 4,
+    VECTOR3F = 5,
+    GROUP    = 6,
 };
 
 
@@ -225,7 +225,7 @@ public:
     struct ConversionInfo {
         uint16_t old_key; // k_param_*
         uint32_t old_group_element; // index in old object
-        enum ap_var_type type; // AP_PARAM_*
+        VarType type; // AP_PARAM_*
         const char *new_name;
     };
 
@@ -318,7 +318,7 @@ public:
     /// @return                 A pointer to the variable, or nullptr if
     ///                         it does not exist.
     ///
-    static AP_Param * find(const char *name, enum ap_var_type *ptype, uint16_t *flags = nullptr);
+    static AP_Param * find(const char *name, VarType *ptype, uint16_t *flags = nullptr);
 
     /// set a default value by name
     ///
@@ -362,10 +362,10 @@ public:
     /// @return                 A pointer to the variable, or nullptr if
     ///                         it does not exist.
     ///
-    static AP_Param * find_by_index(uint16_t idx, enum ap_var_type *ptype, ParamToken *token);
+    static AP_Param * find_by_index(uint16_t idx, VarType *ptype, ParamToken *token);
 
     // by-name equivalent of find_by_index()
-    static AP_Param* find_by_name(const char* name, enum ap_var_type *ptype, ParamToken *token);
+    static AP_Param* find_by_name(const char* name, VarType *ptype, ParamToken *token);
 
     /// Find a variable by pointer
     ///
@@ -448,12 +448,12 @@ public:
     static void load_object_from_eeprom(const void *object_pointer, const struct GroupInfo *group_info);
 
     // set a AP_Param variable to a specified value
-    static void         set_value(enum ap_var_type type, void *ptr, float def_value);
+    static void         set_value(VarType type, void *ptr, float def_value);
 
     /*
       set a parameter to a float
     */
-    void set_float(float value, enum ap_var_type var_type);
+    void set_float(float value, VarType var_type);
 
     // load default values for scalars in a group
     static void         setup_object_defaults(const void *object_pointer, const struct GroupInfo *group_info);
@@ -500,14 +500,14 @@ public:
       values without changing the parameter indexes. This will return
       true if the parameter was converted from an old parameter value
     */
-    bool convert_parameter_width(ap_var_type old_ptype, float scale_factor=1.0) {
+    bool convert_parameter_width(VarType old_ptype, float scale_factor=1.0) {
         return _convert_parameter_width(old_ptype, scale_factor, false);
     }
-    bool convert_centi_parameter(ap_var_type old_ptype) {
+    bool convert_centi_parameter(VarType old_ptype) {
         return convert_parameter_width(old_ptype, 0.01f);
     }
     // Converting bitmasks should be done bitwise rather than numerically
-    bool convert_bitmask_parameter_width(ap_var_type old_ptype) {
+    bool convert_bitmask_parameter_width(VarType old_ptype) {
         return _convert_parameter_width(old_ptype, 1.0, true);
     }
 
@@ -529,7 +529,7 @@ public:
       is used to find the old value of a parameter that has been
       removed from an object.
     */
-    static bool get_param_by_index(void *obj_ptr, uint8_t idx, ap_var_type old_ptype, void *pvalue);
+    static bool get_param_by_index(void *obj_ptr, uint8_t idx, VarType old_ptype, void *pvalue);
     
     /// Erase all variables in EEPROM.
     ///
@@ -540,22 +540,22 @@ public:
     /// @return             The first variable in _var_info, or nullptr if
     ///                     there are none.
     ///
-    static AP_Param *      first(ParamToken *token, enum ap_var_type *ptype, float *default_val = nullptr);
+    static AP_Param *      first(ParamToken *token, VarType *ptype, float *default_val = nullptr);
 
     /// Returns the next variable in _var_info, recursing into groups
     /// as needed
-    static AP_Param *      next(ParamToken *token, enum ap_var_type *ptype) { return  next(token, ptype, false); }
-    static AP_Param *      next(ParamToken *token, enum ap_var_type *ptype, bool skip_disabled, float *default_val = nullptr);
+    static AP_Param *      next(ParamToken *token, VarType *ptype) { return  next(token, ptype, false); }
+    static AP_Param *      next(ParamToken *token, VarType *ptype, bool skip_disabled, float *default_val = nullptr);
 
     /// Returns the next scalar variable in _var_info, recursing into groups
     /// as needed
-    static AP_Param *       next_scalar(ParamToken *token, enum ap_var_type *ptype, float *default_val = nullptr);
+    static AP_Param *       next_scalar(ParamToken *token, VarType *ptype, float *default_val = nullptr);
 
     /// get the size of a type in bytes
-    static uint8_t				type_size(enum ap_var_type type);
+    static uint8_t				type_size(VarType type);
 
     /// cast a variable to a float given its type
-    float                   cast_to_float(enum ap_var_type type) const;
+    float                   cast_to_float(VarType type) const;
 
     // check var table for consistency
     static void             check_var_info(void);
@@ -593,13 +593,13 @@ public:
     /// print the value of one variable
     static void         show(const AP_Param *param, 
                              const char *name,
-                             enum ap_var_type ptype, 
+                             VarType ptype, 
                              AP_HAL::BetterStream *port);
 
     /// print the value of one variable
     static void         show(const AP_Param *param, 
                              const ParamToken &token,
-                             enum ap_var_type ptype, 
+                             VarType ptype, 
                              AP_HAL::BetterStream *port);
 #endif // AP_PARAM_KEY_DUMP
 
@@ -646,7 +646,7 @@ private:
  *                   into 3 lots of 6 bits, allowing for three levels
  *                   of object to be stored in the eeprom
  *
- *  - type: the ap_var_type value for the variable
+ *  - type: the VarType value for the variable
  */
     struct Param_header {
         // to get 9 bits for key we needed to split it into two parts to keep binary compatibility
@@ -739,7 +739,7 @@ private:
                                     uint16_t vindex,
                                     ptrdiff_t group_offset,
                                     const struct GroupInfo *group_info,
-                                    enum ap_var_type *ptype);
+                                    VarType *ptype);
     static void                 write_sentinal(uint16_t ofs);
     static uint16_t             get_key(const Param_header &phdr);
     static void                 set_key(Param_header &phdr, uint16_t key);
@@ -759,7 +759,7 @@ private:
                                     const uint8_t group_shift,
                                     const ptrdiff_t group_offset,
                                     ParamToken *token,
-                                    enum ap_var_type *ptype,
+                                    VarType *ptype,
                                     bool skip_disabled,
                                     float *default_val);
 
@@ -801,10 +801,10 @@ private:
       values without changing the parameter indexes. This will return
       true if the parameter was converted from an old parameter value
     */
-    bool _convert_parameter_width(ap_var_type old_ptype, float scale_factor, bool bitmask);
+    bool _convert_parameter_width(VarType old_ptype, float scale_factor, bool bitmask);
 
     // send a parameter to all GCS instances
-    void send_parameter(const char *name, enum ap_var_type param_header_type, uint8_t idx) const;
+    void send_parameter(const char *name, VarType param_header_type, uint8_t idx) const;
 
     static StorageAccess        _storage;
     static StorageAccess        _storage_bak;
@@ -886,11 +886,11 @@ namespace AP {
 /// @tparam T			The scalar type of the variable
 /// @tparam PT			The AP_PARAM_* type
 ///
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 class AP_ParamT : public AP_Param
 {
 public:
-    static const ap_var_type        vtype = PT;
+    static const AP_Param::VarType        vtype = PT;
 
     /// Value getter
     ///
@@ -955,12 +955,12 @@ protected:
 /// @tparam T			The scalar type of the variable
 /// @tparam PT			AP_PARAM_* type
 ///
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 class AP_ParamV : public AP_Param
 {
 public:
 
-    static const ap_var_type        vtype = PT;
+    static const AP_Param::VarType        vtype = PT;
 
     /// Value getter
     ///
@@ -1012,12 +1012,12 @@ protected:
 /// @tparam N           number of elements
 /// @tparam PT          the AP_PARAM_* type
 ///
-template<typename T, uint8_t N, ap_var_type PT>
+template<typename T, uint8_t N, AP_Param::VarType PT>
 class AP_ParamA : public AP_Param
 {
 public:
 
-    static const ap_var_type vtype = PT;
+    static const AP_Param::VarType vtype = PT;
 
     /// Array operator accesses members.
     ///
@@ -1063,7 +1063,7 @@ protected:
 // declare a scalar type
 // _t is the base type
 // _suffix is the suffix on the AP_* type name
-// _pt is the enum ap_var_type type
+// _pt is the AP_Param::VarType
 #define AP_PARAMDEF(_t, _suffix, _pt)   typedef AP_ParamT<_t, _pt> AP_ ## _suffix;
 AP_PARAMDEF(float, Float, AP_PARAM_FLOAT);    // defines AP_Float
 AP_PARAMDEF(int8_t, Int8, AP_PARAM_INT8);     // defines AP_Int8
@@ -1074,7 +1074,7 @@ AP_PARAMDEF(int32_t, Int32, AP_PARAM_INT32);  // defines AP_Int32
 // this is used in AP_Math.h
 // _t is the base type
 // _suffix is the suffix on the AP_* type name
-// _pt is the enum ap_var_type type
+// _pt is the AP_Param::VarType
 #define AP_PARAMDEFV(_t, _suffix, _pt)   typedef AP_ParamV<_t, _pt> AP_ ## _suffix;
 
 /*

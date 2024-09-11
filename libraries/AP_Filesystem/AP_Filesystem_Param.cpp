@@ -171,7 +171,7 @@ uint8_t AP_Filesystem_Param::pack_param(const struct rfile &r, struct cursor &c,
 {
     char name[AP_MAX_NAME_SIZE+1];
     name[AP_MAX_NAME_SIZE] = 0;
-    enum ap_var_type ptype;
+    AP_Param::VarType ptype;
     AP_Param *ap;
     float default_val;
 
@@ -556,8 +556,8 @@ bool AP_Filesystem_Param::param_upload_parse(const rfile &r, bool &need_retry)
     char last_name[17] {};
 
     for (uint16_t i=0; i<hdr.num_params; i++) {
-        enum ap_var_type ptype = (enum ap_var_type)(b[0]&0x0F);
-        uint8_t flags = (enum ap_var_type)(b[0]>>4);
+        AP_Param::VarType ptype = (AP_Param::VarType)(b[0]&0x0F);
+        uint8_t flags = (AP_Param::VarType)(b[0]>>4);
         if (flags != 0) {
             return false;
         }
@@ -572,7 +572,7 @@ bool AP_Filesystem_Param::param_upload_parse(const rfile &r, bool &need_retry)
         name[common_len+name_len] = 0;
 
         memcpy(last_name, name, sizeof(name));
-        enum ap_var_type ptype2 = AP_PARAM_NONE;
+        AP_Param::VarType ptype2 = AP_PARAM_NONE;
         uint16_t flags2;
 
         b += 2 + name_len;

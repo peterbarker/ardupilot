@@ -660,7 +660,7 @@ void AP_BattMonitor::convert_dynamic_param_groups(uint8_t instance)
 
     // Find the index of the BATTn_MONITOR which is not moving to index the moving parameters off from
     AP_Param::ParamToken token = AP_Param::ParamToken {};
-    ap_var_type type;
+    AP_Param::VarType type;
     AP_Param* param = AP_Param::find_by_name(param_name, &type, &token);
     const uint8_t battmonitor_index = 1;
     if( param == nullptr) {
@@ -670,7 +670,7 @@ void AP_BattMonitor::convert_dynamic_param_groups(uint8_t instance)
 
     const struct convert_table {
         uint32_t old_group_element;
-        ap_var_type type;
+        AP_Param::VarType type;
         const char* new_name;
     }  conversion_table[] = {
         // PARAMETER_CONVERSION - Added: Aug-2021

@@ -393,7 +393,7 @@ public:
     // parameter number
     uint8_t _param_number;
     AP_Param* _param;
-    ap_var_type _param_type;
+    AP_Param::VarType _param_type;
     AP_Param::ParamToken _current_token;
 
     // structure to contain setting constraints for important settings

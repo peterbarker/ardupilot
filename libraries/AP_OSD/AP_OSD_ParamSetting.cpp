@@ -312,7 +312,7 @@ void AP_OSD_ParamSetting::update()
 bool AP_OSD_ParamSetting::set_by_name(const char* name, uint8_t config_type, float pmin, float pmax, float pincr)
 {
     AP_Param::ParamToken token = AP_Param::ParamToken {};
-    ap_var_type type;
+    AP_Param::VarType type;
     AP_Param* param = AP_Param::find_by_name(name, &type, &token);
 
     if (param == nullptr) {

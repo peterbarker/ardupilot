@@ -39,7 +39,7 @@ void SITL_State::_set_param_default(const char *parm)
     }
     float value = strtof(p+1, nullptr);
     *p = 0;
-    enum ap_var_type var_type;
+    AP_Param::VarType var_type;
     AP_Param *vp = AP_Param::find(pdup, &var_type);
     if (vp == nullptr) {
         printf("Unknown parameter %s\n", pdup);

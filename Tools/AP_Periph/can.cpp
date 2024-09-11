@@ -241,7 +241,7 @@ void AP_Periph_FW::handle_param_getset(CanardInstance* canard_instance, CanardRx
     uavcan_protocol_param_GetSetResponse pkt {};
 
     AP_Param *vp;
-    enum ap_var_type ptype;
+    AP_Param::VarType ptype;
 
     if (req.name.len != 0 && req.name.len > AP_MAX_NAME_SIZE) {
         vp = nullptr;

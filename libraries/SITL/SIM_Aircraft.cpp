@@ -58,7 +58,7 @@ Aircraft::Aircraft(const char *frame_str) :
     last_wall_time_us = get_wall_time_us();
 
     // allow for orientation settings, such as with tailsitters
-    enum ap_var_type ptype;
+    AP_Param::VarType ptype;
     ahrs_orientation = (AP_Int8 *)AP_Param::find("AHRS_ORIENTATION", &ptype);
 
     // ahrs_orientation->get() returns ROTATION_NONE here, regardless of the actual value

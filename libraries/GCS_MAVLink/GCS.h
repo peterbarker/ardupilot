@@ -273,7 +273,7 @@ public:
     // NOT try to pass in a static-char-* unless it does have that
     // length!
     void send_parameter_value(const char *param_name,
-                              ap_var_type param_type,
+                              AP_Param::VarType param_type,
                               float param_value);
 
     // NOTE! The streams enum below and the
@@ -504,7 +504,7 @@ protected:
     virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
 
     // return a MAVLink parameter type given a AP_Param type
-    static MAV_PARAM_TYPE mav_param_type(enum ap_var_type t);
+    static MAV_PARAM_TYPE mav_param_type(AP_Param::VarType t);
 
     AP_Param *                  _queued_parameter;      ///< next parameter to
                                                         // be sent in queue
@@ -805,7 +805,7 @@ private:
 
     /// Perform queued sending operations
     ///
-    enum ap_var_type            _queued_parameter_type; ///< type of the next
+    AP_Param::VarType            _queued_parameter_type; ///< type of the next
                                                         // parameter
     AP_Param::ParamToken        _queued_parameter_token; ///AP_Param token for
                                                          // next() call
@@ -930,7 +930,7 @@ private:
     struct pending_param_reply {
         mavlink_channel_t chan;        
         float value;
-        enum ap_var_type p_type;
+        AP_Param::VarType p_type;
         int16_t param_index;
         uint16_t count;
         char param_name[AP_MAX_NAME_SIZE+1];
@@ -1193,7 +1193,7 @@ public:
     void send_named_float(const char *name, float value) const;
 
     void send_parameter_value(const char *param_name,
-                              ap_var_type param_type,
+                              AP_Param::VarType param_type,
                               float param_value);
 
     // an array of objects used to handle each of the different

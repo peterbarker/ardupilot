@@ -253,7 +253,7 @@ void AP_Airspeed::convert_per_instance()
 
     static const struct convert_table {
         uint32_t element[2];
-        ap_var_type type;
+        AP_Param::VarType type;
         const char* name;
     }  conversion_table[] = {
         { {4042, 714}, AP_PARAM_INT8, "TYPE" },      // ARSPD_TYPE, ARSPD2_TYPE
@@ -278,7 +278,7 @@ void AP_Airspeed::convert_per_instance()
     }
     const struct convert_table {
         uint32_t element[2];
-        ap_var_type type;
+        AP_Param::VarType type;
         const char* name;
     }  conversion_table[] = {
         { {0, 11}, AP_PARAM_INT8, "TYPE" },      // ARSPD_TYPE, ARSPD2_TYPE

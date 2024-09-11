@@ -173,7 +173,7 @@ private:
     AP_Param::ParamToken token;
     AP_Param *ap;
     float param_default;
-    enum ap_var_type type;
+    AP_Param::VarType type;
 
 
     LoggerMessageWriter_WriteSysInfo _writesysinfo;

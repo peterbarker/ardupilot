@@ -1127,7 +1127,7 @@ void AP_Mount::convert_params()
         if (AP_Param::get_param_by_index(this, mnt_rc_conversion_table[i].old_rcin_idx, AP_PARAM_INT8, &mnt_rcin) && (mnt_rcin > 0)) {
             // get pointers to the appropriate RCx_OPTION parameter
             char pname[17];
-            enum ap_var_type ptype;
+            AP_Param::VarType ptype;
             snprintf(pname, sizeof(pname), "RC%u_OPTION", (unsigned)mnt_rcin);
             AP_Int16 *rcx_option = (AP_Int16 *)AP_Param::find(pname, &ptype);
             if ((rcx_option != nullptr) && !rcx_option->configured()) {

@@ -119,7 +119,7 @@ FlightAxis::FlightAxis(const char *frame_str) :
     for (uint8_t i=0; i<ARRAY_SIZE(sim_defaults); i++) {
         AP_Param::set_default_by_name(sim_defaults[i].name, sim_defaults[i].value);
         if (sim_defaults[i].save) {
-            enum ap_var_type ptype;
+            AP_Param::VarType ptype;
             AP_Param *p = AP_Param::find(sim_defaults[i].name, &ptype);
             if (!p->configured()) {
                 p->save();

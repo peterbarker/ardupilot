@@ -19,7 +19,7 @@
 // Param type template functions
 
 // set a parameter that is an ENABLE param
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamT<T, PT>::set_enable(const T &v) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfloat-equal"
@@ -31,7 +31,7 @@ void AP_ParamT<T, PT>::set_enable(const T &v) {
 }
 
 // Sets if the parameter is unconfigured
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamT<T, PT>::set_default(const T &v) {
 #if AP_PARAM_DEFAULTS_ENABLED
     add_default(this, (float)v);
@@ -42,7 +42,7 @@ void AP_ParamT<T, PT>::set_default(const T &v) {
 }
 
 // Sets parameter and default
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamT<T, PT>::set_and_default(const T &v) {
 #if AP_PARAM_DEFAULTS_ENABLED
     add_default(this, (float)v);
@@ -51,7 +51,7 @@ void AP_ParamT<T, PT>::set_and_default(const T &v) {
 }
 
 // Value setter - set value, tell GCS
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamT<T, PT>::set_and_notify(const T &v) {
 // We do want to compare each value, even floats, since it being the same here
 // is the result of previously setting it.
@@ -65,7 +65,7 @@ void AP_ParamT<T, PT>::set_and_notify(const T &v) {
 }
 
 // Combined set and save
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamT<T, PT>::set_and_save(const T &v) {
     bool force = fabsf((float)(_value - v)) < FLT_EPSILON;
     set(v);
@@ -77,7 +77,7 @@ void AP_ParamT<T, PT>::set_and_save(const T &v) {
 // scan(). This should only be used where we have not set() the
 // value separately, as otherwise the value in EEPROM won't be
 // updated correctly.
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamT<T, PT>::set_and_save_ifchanged(const T &v) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfloat-equal"
@@ -90,7 +90,7 @@ void AP_ParamT<T, PT>::set_and_save_ifchanged(const T &v) {
 }
 
 // AP_ParamT types can implement AP_Param::cast_to_float
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 float AP_ParamT<T, PT>::cast_to_float(void) const {
     return (float)_value;
 }
@@ -101,7 +101,7 @@ template class AP_ParamT<int16_t, AP_PARAM_INT16>;
 template class AP_ParamT<int32_t, AP_PARAM_INT32>;
 
 // Value setter - set value, tell GCS
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamV<T, PT>::set_and_notify(const T &v) {
     if (v != _value) {
         set(v);
@@ -110,7 +110,7 @@ void AP_ParamV<T, PT>::set_and_notify(const T &v) {
 }
 
     /// Combined set and save
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamV<T, PT>::set_and_save(const T &v) {
     bool force = (_value != v);
     set(v);
@@ -122,7 +122,7 @@ void AP_ParamV<T, PT>::set_and_save(const T &v) {
 // scan(). This should only be used where we have not set() the
 // value separately, as otherwise the value in EEPROM won't be
 // updated correctly.
-template<typename T, ap_var_type PT>
+template<typename T, AP_Param::VarType PT>
 void AP_ParamV<T, PT>::set_and_save_ifchanged(const T &v) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfloat-equal"
