@@ -601,9 +601,9 @@ const AP_Param::ConversionInfo q_conversion_table[] = {
     { Parameters::k_param_q_attitude_control, 451,  AP_PARAM_FLOAT, "Q_A_RAT_YAW_FF" },  // Q_A_RAT_YAW_FILT
 
     // tailsitter params have moved but retain the same names
-    { Parameters::k_param_quadplane, 48,  AP_PARAM_INT8,  "Q_TAILSIT_ANGLE" },
-    { Parameters::k_param_quadplane, 61,  AP_PARAM_INT8,  "Q_TAILSIT_ANG_VT" },
-    { Parameters::k_param_quadplane, 50,  AP_PARAM_INT8,  "Q_TAILSIT_INPUT" },
+    { Parameters::k_param_quadplane, 48,  AP_Param::VarType::INT8,  "Q_TAILSIT_ANGLE" },
+    { Parameters::k_param_quadplane, 61,  AP_Param::VarType::INT8,  "Q_TAILSIT_ANG_VT" },
+    { Parameters::k_param_quadplane, 50,  AP_Param::VarType::INT8,  "Q_TAILSIT_INPUT" },
     { Parameters::k_param_quadplane, 53,  AP_PARAM_FLOAT, "Q_TAILSIT_VFGAIN" },
     { Parameters::k_param_quadplane, 54,  AP_PARAM_FLOAT, "Q_TAILSIT_VHGAIN" },
     { Parameters::k_param_quadplane, 56,  AP_PARAM_FLOAT, "Q_TAILSIT_VHPOW" },
@@ -619,8 +619,8 @@ const AP_Param::ConversionInfo q_conversion_table[] = {
     // tiltrotor params have moved but retain the same names
     { Parameters::k_param_quadplane, 37,  AP_PARAM_INT16,  "Q_TILT_MASK" },
     { Parameters::k_param_quadplane, 38,  AP_PARAM_INT16,  "Q_TILT_RATE_UP" },
-    { Parameters::k_param_quadplane, 39,  AP_PARAM_INT8,  "Q_TILT_MAX" },
-    { Parameters::k_param_quadplane, 47,  AP_PARAM_INT8,  "Q_TILT_TYPE" },
+    { Parameters::k_param_quadplane, 39,  AP_Param::VarType::INT8,  "Q_TILT_MAX" },
+    { Parameters::k_param_quadplane, 47,  AP_Param::VarType::INT8,  "Q_TILT_TYPE" },
     { Parameters::k_param_quadplane, 49,  AP_PARAM_INT16,  "Q_TILT_RATE_DN" },
     { Parameters::k_param_quadplane, 55,  AP_PARAM_FLOAT,  "Q_TILT_YAW_ANGLE" },
     { Parameters::k_param_quadplane, 1467,  AP_PARAM_FLOAT,  "Q_TILT_FIX_ANGLE" },

@@ -1313,22 +1313,22 @@ ParametersG2::ParametersG2(void)
  */
 const AP_Param::ConversionInfo conversion_table[] = {
     // PARAMETER_CONVERSION - Added: Jan-2017
-    { Parameters::k_param_arming_check_old,   0,      AP_PARAM_INT8,  "ARMING_CHECK" },
+    { Parameters::k_param_arming_check_old,   0,      AP_Param::VarType::INT8,  "ARMING_CHECK" },
     // battery
     // PARAMETER_CONVERSION - Added: Mar-2018
     { Parameters::k_param_fs_batt_voltage,    0,      AP_PARAM_FLOAT,  "BATT_LOW_VOLT" },
     { Parameters::k_param_fs_batt_mah,        0,      AP_PARAM_FLOAT,  "BATT_LOW_MAH" },
-    { Parameters::k_param_failsafe_battery_enabled,0, AP_PARAM_INT8,   "BATT_FS_LOW_ACT" },
+    { Parameters::k_param_failsafe_battery_enabled,0, AP_Param::VarType::INT8,   "BATT_FS_LOW_ACT" },
 
     // PARAMETER_CONVERSION - Added: Aug-2018
-    { Parameters::Parameters::k_param_ch7_option_old,   0,      AP_PARAM_INT8,  "RC7_OPTION" },
-    { Parameters::Parameters::k_param_ch8_option_old,   0,      AP_PARAM_INT8,  "RC8_OPTION" },
-    { Parameters::Parameters::k_param_ch9_option_old,   0,      AP_PARAM_INT8,  "RC9_OPTION" },
-    { Parameters::Parameters::k_param_ch10_option_old,   0,      AP_PARAM_INT8,  "RC10_OPTION" },
-    { Parameters::Parameters::k_param_ch11_option_old,   0,      AP_PARAM_INT8,  "RC11_OPTION" },
-    { Parameters::Parameters::k_param_ch12_option_old,   0,      AP_PARAM_INT8,  "RC12_OPTION" },
+    { Parameters::Parameters::k_param_ch7_option_old,   0,      AP_Param::VarType::INT8,  "RC7_OPTION" },
+    { Parameters::Parameters::k_param_ch8_option_old,   0,      AP_Param::VarType::INT8,  "RC8_OPTION" },
+    { Parameters::Parameters::k_param_ch9_option_old,   0,      AP_Param::VarType::INT8,  "RC9_OPTION" },
+    { Parameters::Parameters::k_param_ch10_option_old,   0,      AP_Param::VarType::INT8,  "RC10_OPTION" },
+    { Parameters::Parameters::k_param_ch11_option_old,   0,      AP_Param::VarType::INT8,  "RC11_OPTION" },
+    { Parameters::Parameters::k_param_ch12_option_old,   0,      AP_Param::VarType::INT8,  "RC12_OPTION" },
     // PARAMETER_CONVERSION - Added: Apr-2019
-    { Parameters::k_param_compass_enabled_deprecated,    0,      AP_PARAM_INT8, "COMPASS_ENABLE" },
+    { Parameters::k_param_compass_enabled_deprecated,    0,      AP_Param::VarType::INT8, "COMPASS_ENABLE" },
     // PARAMETER_CONVERSION - Added: Jul-2019
     { Parameters::k_param_arming,             2,     AP_PARAM_INT16,  "ARMING_CHECK" },
 };
@@ -1428,7 +1428,7 @@ void Copter::convert_pid_parameters(void)
     }
     // convert RC_FEEL_RP to ATC_INPUT_TC
     // PARAMETER_CONVERSION - Added: Mar-2018
-    const AP_Param::ConversionInfo rc_feel_rp_conversion_info = { Parameters::k_param_rc_feel_rp, 0, AP_PARAM_INT8, "ATC_INPUT_TC" };
+    const AP_Param::ConversionInfo rc_feel_rp_conversion_info = { Parameters::k_param_rc_feel_rp, 0, AP_Param::VarType::INT8, "ATC_INPUT_TC" };
     AP_Int8 rc_feel_rp_old;
     if (AP_Param::find_old_parameter(&rc_feel_rp_conversion_info, &rc_feel_rp_old)) {
         AP_Param::set_default_by_name(rc_feel_rp_conversion_info.new_name, (1.0f / (2.0f + rc_feel_rp_old.get() * 0.1f)));
@@ -1499,7 +1499,7 @@ void Copter::convert_pid_parameters(void)
         // notch filter parameter conversions (moved to INS_HNTC2) for 4.2.x, converted from fixed notch
         const AP_Param::ConversionInfo notchfilt_conversion_info[] {
             // PARAMETER_CONVERSION - Added: Apr 2022
-            { Parameters::k_param_ins, 101, AP_PARAM_INT8,  "INS_HNTC2_ENABLE" },
+            { Parameters::k_param_ins, 101, AP_Param::VarType::INT8,  "INS_HNTC2_ENABLE" },
             { Parameters::k_param_ins, 293, AP_PARAM_FLOAT, "INS_HNTC2_ATT" },
             { Parameters::k_param_ins, 357, AP_PARAM_FLOAT, "INS_HNTC2_FREQ" },
             { Parameters::k_param_ins, 421, AP_PARAM_FLOAT, "INS_HNTC2_BW" },
@@ -1545,17 +1545,17 @@ void Copter::convert_prx_parameters()
     // convert PRX to PRX1_ parameters for Copter-4.3
     // PARAMETER_CONVERSION - Added: Aug-2022
     const AP_Param::ConversionInfo prx_conversion_info[] = {
-        { Parameters::k_param_g2, 72, AP_PARAM_INT8, "PRX1_TYPE" },
-        { Parameters::k_param_g2, 136, AP_PARAM_INT8, "PRX1_ORIENT" },
+        { Parameters::k_param_g2, 72, AP_Param::VarType::INT8, "PRX1_TYPE" },
+        { Parameters::k_param_g2, 136, AP_Param::VarType::INT8, "PRX1_ORIENT" },
         { Parameters::k_param_g2, 200, AP_PARAM_INT16, "PRX1_YAW_CORR" },
         { Parameters::k_param_g2, 264, AP_PARAM_INT16, "PRX1_IGN_ANG1" },
-        { Parameters::k_param_g2, 328, AP_PARAM_INT8, "PRX1_IGN_WID1" },
+        { Parameters::k_param_g2, 328, AP_Param::VarType::INT8, "PRX1_IGN_WID1" },
         { Parameters::k_param_g2, 392, AP_PARAM_INT16, "PRX1_IGN_ANG2" },
-        { Parameters::k_param_g2, 456, AP_PARAM_INT8, "PRX1_IGN_WID2" },
+        { Parameters::k_param_g2, 456, AP_Param::VarType::INT8, "PRX1_IGN_WID2" },
         { Parameters::k_param_g2, 520, AP_PARAM_INT16, "PRX1_IGN_ANG3" },
-        { Parameters::k_param_g2, 584, AP_PARAM_INT8, "PRX1_IGN_WID3" },
+        { Parameters::k_param_g2, 584, AP_Param::VarType::INT8, "PRX1_IGN_WID3" },
         { Parameters::k_param_g2, 648, AP_PARAM_INT16, "PRX1_IGN_ANG4" },
-        { Parameters::k_param_g2, 712, AP_PARAM_INT8, "PRX1_IGN_WID4" },
+        { Parameters::k_param_g2, 712, AP_Param::VarType::INT8, "PRX1_IGN_WID4" },
         { Parameters::k_param_g2, 1224, AP_PARAM_FLOAT, "PRX1_MIN" },
         { Parameters::k_param_g2, 1288, AP_PARAM_FLOAT, "PRX1_MAX" },
     };
@@ -1663,7 +1663,7 @@ void Copter::convert_tradheli_parameters(void) const
             { Parameters::k_param_motors, 2, AP_PARAM_INT16, "H_SW_H3_SV2_POS" },
             { Parameters::k_param_motors, 3, AP_PARAM_INT16, "H_SW_H3_SV3_POS" },
             { Parameters::k_param_motors, 7, AP_PARAM_INT16, "H_SW_H3_PHANG" },
-            { Parameters::k_param_motors, 19, AP_PARAM_INT8, "H_SW_COL_DIR" },
+            { Parameters::k_param_motors, 19, AP_Param::VarType::INT8, "H_SW_COL_DIR" },
         };
 
         // convert single heli parameters without scaling
@@ -1680,7 +1680,7 @@ void Copter::convert_tradheli_parameters(void) const
         bool swash_pos2_exist = AP_Param::find_old_parameter(&singleheli_conversion_info[1], &swash_pos_2);
         bool swash_pos3_exist = AP_Param::find_old_parameter(&singleheli_conversion_info[2], &swash_pos_3);
         bool swash_phang_exist = AP_Param::find_old_parameter(&singleheli_conversion_info[3], &swash_phang);
-        const AP_Param::ConversionInfo swash_type_info { Parameters::k_param_motors, 5, AP_PARAM_INT8, "H_SW_TYPE" };
+        const AP_Param::ConversionInfo swash_type_info { Parameters::k_param_motors, 5, AP_Param::VarType::INT8, "H_SW_TYPE" };
         bool swash_type_exists = AP_Param::find_old_parameter(&swash_type_info, &swash_type);
 
         if (swash_type_exists) {
@@ -1719,9 +1719,9 @@ void Copter::convert_tradheli_parameters(void) const
         // PARAMETER_CONVERSION - Added: Mar-2019
             { Parameters::k_param_motors, 8, AP_PARAM_INT16, "H_SW2_H3_PHANG" },
         // PARAMETER_CONVERSION - Added: Sep-2019
-            { Parameters::k_param_motors, 19, AP_PARAM_INT8, "H_SW_COL_DIR" },
+            { Parameters::k_param_motors, 19, AP_Param::VarType::INT8, "H_SW_COL_DIR" },
         // PARAMETER_CONVERSION - Added: Mar-2019
-            { Parameters::k_param_motors, 19, AP_PARAM_INT8, "H_SW2_COL_DIR" },
+            { Parameters::k_param_motors, 19, AP_Param::VarType::INT8, "H_SW2_COL_DIR" },
         };
 
         // convert dual heli parameters without scaling
@@ -1799,9 +1799,9 @@ void Copter::convert_tradheli_parameters(void) const
 
     // table of rsc parameters to be converted without scaling
     const AP_Param::ConversionInfo rscheli_conversion_info[] = {
-        { Parameters::k_param_motors, 512, AP_PARAM_INT8,  "H_RSC_MODE" },
-        { Parameters::k_param_motors, 640, AP_PARAM_INT8,  "H_RSC_RAMP_TIME" },
-        { Parameters::k_param_motors, 704, AP_PARAM_INT8,  "H_RSC_RUNUP_TIME" },
+        { Parameters::k_param_motors, 512, AP_Param::VarType::INT8,  "H_RSC_MODE" },
+        { Parameters::k_param_motors, 640, AP_Param::VarType::INT8,  "H_RSC_RAMP_TIME" },
+        { Parameters::k_param_motors, 704, AP_Param::VarType::INT8,  "H_RSC_RUNUP_TIME" },
         { Parameters::k_param_motors, 1216, AP_PARAM_INT16,"H_RSC_SLEWRATE" },
     };
     // convert heli rsc parameters without scaling

@@ -1311,7 +1311,7 @@ ParametersG2::ParametersG2(void) :
 static const AP_Param::ConversionInfo conversion_table[] = {
     { Parameters::k_param_log_bitmask_old,    0,      AP_PARAM_INT16, "LOG_BITMASK" },
     { Parameters::k_param_rally_limit_km_old, 0,      AP_PARAM_FLOAT, "RALLY_LIMIT_KM" },
-    { Parameters::k_param_rally_total_old,    0,      AP_PARAM_INT8, "RALLY_TOTAL" },
+    { Parameters::k_param_rally_total_old,    0,      AP_Param::VarType::INT8, "RALLY_TOTAL" },
     { Parameters::k_param_serial0_baud,       0,      AP_PARAM_INT16, "SERIAL0_BAUD" },
     { Parameters::k_param_serial1_baud,       0,      AP_PARAM_INT16, "SERIAL1_BAUD" },
     { Parameters::k_param_serial2_baud,       0,      AP_PARAM_INT16, "SERIAL2_BAUD" },
@@ -1338,25 +1338,25 @@ static const AP_Param::ConversionInfo conversion_table[] = {
     { Parameters::k_param_land_pre_flare_sec, 0,      AP_PARAM_FLOAT, "LAND_PF_SEC" },
     { Parameters::k_param_land_pre_flare_alt, 0,      AP_PARAM_FLOAT, "LAND_PF_ALT" },
     { Parameters::k_param_land_pre_flare_airspeed, 0, AP_PARAM_FLOAT, "LAND_PF_ARSPD" },
-    { Parameters::k_param_land_throttle_slewrate, 0,  AP_PARAM_INT8,  "LAND_THR_SLEW" },
-    { Parameters::k_param_land_disarm_delay,  0,      AP_PARAM_INT8,  "LAND_DISARMDELAY" },
-    { Parameters::k_param_land_then_servos_neutral,0, AP_PARAM_INT8,  "LAND_THEN_NEUTRAL" },
-    { Parameters::k_param_land_abort_throttle_enable,0,AP_PARAM_INT8, "LAND_ABORT_THR" },
-    { Parameters::k_param_land_flap_percent,  0,      AP_PARAM_INT8,  "LAND_FLAP_PERCENT" },
+    { Parameters::k_param_land_throttle_slewrate, 0,  AP_Param::VarType::INT8,  "LAND_THR_SLEW" },
+    { Parameters::k_param_land_disarm_delay,  0,      AP_Param::VarType::INT8,  "LAND_DISARMDELAY" },
+    { Parameters::k_param_land_then_servos_neutral,0, AP_Param::VarType::INT8,  "LAND_THEN_NEUTRAL" },
+    { Parameters::k_param_land_abort_throttle_enable,0,AP_Param::VarType::INT8, "LAND_ABORT_THR" },
+    { Parameters::k_param_land_flap_percent,  0,      AP_Param::VarType::INT8,  "LAND_FLAP_PERCENT" },
 
     // battery failsafes
     { Parameters::k_param_fs_batt_voltage,    0,      AP_PARAM_FLOAT, "BATT_LOW_VOLT" },
     { Parameters::k_param_fs_batt_mah,        0,      AP_PARAM_FLOAT, "BATT_LOW_MAH" },
 
-    { Parameters::k_param_arming,             3,      AP_PARAM_INT8,  "ARMING_RUDDER" },
-    { Parameters::k_param_compass_enabled_deprecated,       0,      AP_PARAM_INT8, "COMPASS_ENABLE" },
+    { Parameters::k_param_arming,             3,      AP_Param::VarType::INT8,  "ARMING_RUDDER" },
+    { Parameters::k_param_compass_enabled_deprecated,       0,      AP_Param::VarType::INT8, "COMPASS_ENABLE" },
     { Parameters::k_param_arming,           128,     AP_PARAM_INT16,  "ARMING_CHECK" },
 
     { Parameters::k_param_fence_minalt,       0,     AP_PARAM_INT16, "FENCE_ALT_MIN"},
     { Parameters::k_param_fence_maxalt,       0,     AP_PARAM_INT16, "FENCE_ALT_MAX"},
     { Parameters::k_param_fence_retalt,       0,     AP_PARAM_INT16, "FENCE_RET_ALT"},
-    { Parameters::k_param_fence_ret_rally,    0,      AP_PARAM_INT8, "FENCE_RET_RALLY"},
-    { Parameters::k_param_fence_autoenable,   0,      AP_PARAM_INT8, "FENCE_AUTOENABLE"},
+    { Parameters::k_param_fence_ret_rally,    0,      AP_Param::VarType::INT8, "FENCE_RET_RALLY"},
+    { Parameters::k_param_fence_autoenable,   0,      AP_Param::VarType::INT8, "FENCE_AUTOENABLE"},
 };
 
 struct RCConversionInfo {
@@ -1407,7 +1407,7 @@ void Plane::load_parameters(void)
     // Convert chan params to RCx_OPTION
     for (uint8_t i=0; i<ARRAY_SIZE(rc_option_conversion); i++) {
         AP_Int8 chan_param;
-        AP_Param::ConversionInfo info {rc_option_conversion[i].old_key, rc_option_conversion[i].old_group_element, AP_PARAM_INT8, nullptr};
+        AP_Param::ConversionInfo info {rc_option_conversion[i].old_key, rc_option_conversion[i].old_group_element, AP_Param::VarType::INT8, nullptr};
         if (AP_Param::find_old_parameter(&info, &chan_param) && chan_param.get() > 0) {
             RC_Channel *chan = rc().channel(chan_param.get() - 1);
             if (chan != nullptr && !chan->option.configured()) {
@@ -1457,7 +1457,7 @@ void Plane::load_parameters(void)
     AP_Param::ConversionInfo fence_action_info_old = {
         Parameters::k_param_fence_action,
         0,
-        AP_PARAM_INT8,
+        AP_Param::VarType::INT8,
         "FENCE_ACTION"
     };
     if (AP_Param::find_old_parameter(&fence_action_info_old, &fence_action_old)) {
@@ -1504,7 +1504,7 @@ void Plane::load_parameters(void)
 #endif // AP_FENCE_ENABLED
 
 #if AP_TERRAIN_AVAILABLE
-    g.terrain_follow.convert_parameter_width(AP_PARAM_INT8);
+    g.terrain_follow.convert_parameter_width(AP_Param::VarType::INT8);
 #endif
 
     g.use_reverse_thrust.convert_parameter_width(AP_PARAM_INT16);
@@ -1523,7 +1523,7 @@ void Plane::load_parameters(void)
     if (!ins.harmonic_notches[1].params.enabled()) {
         // notch filter parameter conversions (moved to INS_HNTC2) for 4.2.x, converted from fixed notch
         const AP_Param::ConversionInfo notchfilt_conversion_info[] {
-            { Parameters::k_param_ins, 101, AP_PARAM_INT8,  "INS_HNTC2_ENABLE" },
+            { Parameters::k_param_ins, 101, AP_Param::VarType::INT8,  "INS_HNTC2_ENABLE" },
             { Parameters::k_param_ins, 293, AP_PARAM_FLOAT, "INS_HNTC2_ATT" },
             { Parameters::k_param_ins, 357, AP_PARAM_FLOAT, "INS_HNTC2_FREQ" },
             { Parameters::k_param_ins, 421, AP_PARAM_FLOAT, "INS_HNTC2_BW" },
