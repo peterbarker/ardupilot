@@ -255,8 +255,8 @@ public:
     /// set_pos_target_xy_cm - sets the position target, frame NEU in cm relative to the EKF origin
     void set_pos_target_xy_cm(float pos_x, float pos_y) { _pos_target.x = pos_x; _pos_target.y = pos_y; }
 
-    /// get_pos_target_cm - returns the position target (not including offsets), frame NEU in cm relative to the EKF origin
-    Vector3p get_pos_target_cm() const { return _pos_target - _pos_offset; }
+    /// returns the position target (not including offsets), frame NEU in cm relative to the EKF origin
+    Vector3p get_pos_target_cm() const;
 
     /// set_pos_target_z_cm - set altitude target in cm above the EKF origin
     void set_pos_target_z_cm(float pos_target) { _pos_target.z = pos_target; }
@@ -288,11 +288,11 @@ public:
     /// set_vel_desired_xy_cms - sets horizontal desired velocity in NEU cm/s
     void set_vel_desired_xy_cms(const Vector2f &vel) {_vel_desired.xy() = vel; }
 
-    /// get_vel_desired_cms - returns desired velocity (i.e. feed forward) in cm/s in NEU
-    Vector3f get_vel_desired_cms() const { return _vel_desired - _vel_offset; }
+    /// returns desired velocity (i.e. feed forward) in cm/s in NEU
+    Vector3f get_vel_desired_cms() const;
 
-    // get_vel_target_cms - returns the target velocity (not including offsets) in NEU cm/s
-    Vector3f get_vel_target_cms() const { return _vel_target - _vel_offset; }
+    // returns the target velocity (not including offsets) in NEU cm/s
+    Vector3f get_vel_target_cms() const;
 
     /// set_vel_desired_z_cms - sets desired velocity in cm/s in z axis
     void set_vel_desired_z_cms(float vel_z_cms) {_vel_desired.z = vel_z_cms;}
@@ -306,8 +306,8 @@ public:
     // set_accel_desired_xy_cmss set desired acceleration in cm/s in xy axis
     void set_accel_desired_xy_cmss(const Vector2f &accel_cms) { _accel_desired.xy() = accel_cms; }
 
-    // get_accel_target_cmss - returns the target acceleration (not including offsets) in NEU cm/s/s
-    Vector3f get_accel_target_cmss() const { return _accel_target - _accel_offset; }
+    // returns the target acceleration (not including offsets) in NEU cm/s/s
+    Vector3f get_accel_target_cmss() const;
 
 
     /// Offset
