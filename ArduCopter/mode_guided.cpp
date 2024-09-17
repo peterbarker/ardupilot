@@ -822,8 +822,7 @@ void ModeGuided::velaccel_control_run()
 
     if (!stabilizing_vel_xy() && !do_avoid) {
         // set the current commanded xy vel to the desired vel
-        guided_vel_target_cms.x = pos_control->get_vel_desired_cms().x;
-        guided_vel_target_cms.y = pos_control->get_vel_desired_cms().y;
+        guided_vel_target_cms.xy() = pos_control->get_vel_desired_cms().xy();
     }
     pos_control->input_vel_accel_xy(guided_vel_target_cms.xy(), guided_accel_target_cmss.xy(), false);
     if (!stabilizing_vel_xy() && !do_avoid) {
@@ -900,14 +899,11 @@ void ModeGuided::posvelaccel_control_run()
     // send position and velocity targets to position controller
     if (!stabilizing_vel_xy()) {
         // set the current commanded xy pos to the target pos and xy vel to the desired vel
-        guided_pos_target_cm.x = pos_control->get_pos_target_cm().x;
-        guided_pos_target_cm.y = pos_control->get_pos_target_cm().y;
-        guided_vel_target_cms.x = pos_control->get_vel_desired_cms().x;
-        guided_vel_target_cms.y = pos_control->get_vel_desired_cms().y;
+        guided_pos_target_cm.xy() = pos_control->get_pos_target_cm().xy();
+        guided_vel_target_cms.xy() = pos_control->get_vel_desired_cms().xy();
     } else if (!stabilizing_pos_xy()) {
         // set the current commanded xy pos to the target pos
-        guided_pos_target_cm.x = pos_control->get_pos_target_cm().x;
-        guided_pos_target_cm.y = pos_control->get_pos_target_cm().y;
+        guided_pos_target_cm.xy() = pos_control->get_pos_target_cm().xy();
     }
     pos_control->input_pos_vel_accel_xy(guided_pos_target_cm.xy(), guided_vel_target_cms.xy(), guided_accel_target_cmss.xy(), false);
     if (!stabilizing_vel_xy()) {

@@ -216,7 +216,7 @@ void _AutoTakeoff::run()
 
     // calculate completion for location in case it is needed for a smooth transition to wp_nav
     if (complete) {
-        const Vector3p& _complete_pos = copter.pos_control->get_pos_target_cm();
+        const Vector3p _complete_pos = copter.pos_control->get_pos_target_cm();
         complete_pos = Vector3p{_complete_pos.x, _complete_pos.y, pos_z};
     }
 }
