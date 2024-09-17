@@ -209,7 +209,7 @@ void GCS_MAVLINK_Plane::send_nav_controller_output() const
         const Vector3f &targets = quadplane.attitude_control->get_att_target_euler_cd();
 
         const Vector2f& curr_pos = quadplane.inertial_nav.get_position_xy_cm();
-        const Vector2f& target_pos = quadplane.pos_control->get_pos_target_cm().xy().tofloat();
+        const Vector2f target_pos = quadplane.pos_control->get_pos_target_cm().xy().tofloat();
         const Vector2f error = (target_pos - curr_pos) * 0.01;
 
         mavlink_msg_nav_controller_output_send(
