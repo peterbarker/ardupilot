@@ -123,8 +123,7 @@ void AC_Loiter::init_target()
     _pos_control.relax_velocity_controller_xy();
 
     // initialise predicted acceleration and angles from the position controller
-    _predicted_accel.x = _pos_control.get_accel_target_cmss().x;
-    _predicted_accel.y = _pos_control.get_accel_target_cmss().y;
+    _predicted_accel = _pos_control.get_accel_target_cmss().xy();
     _predicted_euler_angle.x = radians(_pos_control.get_roll_cd()*0.01f);
     _predicted_euler_angle.y = radians(_pos_control.get_pitch_cd()*0.01f);
     _brake_accel = 0.0f;
@@ -222,7 +221,7 @@ void AC_Loiter::calc_desired_velocity(bool avoidance_on)
     }
 
     // get loiters desired velocity from the position controller where it is being stored.
-    const Vector3f &desired_vel_3d = _pos_control.get_vel_desired_cms();
+    const Vector3f desired_vel_3d = _pos_control.get_vel_desired_cms();
     Vector2f desired_vel{desired_vel_3d.x,desired_vel_3d.y};
 
     // update the desired velocity using our predicted acceleration
