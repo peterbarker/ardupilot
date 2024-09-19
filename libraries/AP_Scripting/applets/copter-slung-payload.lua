@@ -297,7 +297,7 @@ function move_vehicle()
     local vel_offset_NED = Vector3f()
     vel_offset_NED:x(-payload_acc:x() * SLUP_VEL_P:get() + (-pos_offset_NED:x() - payload_offset_NED:x()) * SLUP_WP_POS_P:get())
     vel_offset_NED:y(-payload_acc:y() * SLUP_VEL_P:get() + (-pos_offset_NED:y() - payload_offset_NED:y()) * SLUP_WP_POS_P:get())
-    if poscontrol:set_velaccel_offset(vel_offset_NED, Vector3f()) then
+    if poscontrol:set_posvelaccel_offset(pos_offset_NED, vel_offset_NED, Vector3f()) then
         sent_velocity_offsets_ms = millis()
     end
 end

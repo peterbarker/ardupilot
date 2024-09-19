@@ -91,7 +91,13 @@ function update()
     local vel_offset_NED = Vector3f()
     vel_offset_NED:x(PSC_OFS_VEL_N:get())
     vel_offset_NED:y(PSC_OFS_VEL_E:get())
-    if not poscontrol:set_velaccel_offset(vel_offset_NED, Vector3f()) then
+    -- get position offset (cumulative effect of velocity offsets) and use to slowly move back to waypoint
+    local pos_offset_NED, _, _ = poscontrol:get_posvelaccel_offset()
+    if pos_offset_NED == nil then
+        print_warning("unable to get dist to waypoint")
+        pos_offset_NED = Vector3f()
+    end
+    if not poscontrol:set_posvelaccel_offset(pos_offset_NED, vel_offset_NED, Vector3f()) then
       gcs:send_text(MAV_SEVERITY.ERROR, "copter-posoffset: failed to set vel offset")
     end
   end

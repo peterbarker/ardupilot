@@ -317,18 +317,13 @@ public:
     // gets or sets an additional offset to the vehicle's target position, velocity and acceleration
     // units are m, m/s and m/s/s in NED frame
     bool set_posvelaccel_offset(const Vector3f &pos_offset_NED, const Vector3f &vel_offset_NED, const Vector3f &accel_offset_NED);
-    bool set_velaccel_offset(const Vector3f &vel_offset_NED, const Vector3f &accel_offset_NED);
     bool get_posvelaccel_offset(Vector3f &pos_offset_NED, Vector3f &vel_offset_NED, Vector3f &accel_offset_NED);
 #endif
 
     /// set the horizontal position, velocity and acceleration offset targets in cm, cms and cm/s/s from EKF origin in NE frame
     /// these must be set every 3 seconds (or less) or they will timeout and return to zero
     void set_posvelaccel_offset_target_xy_cm(const Vector2p& pos_offset_target_xy_cm, const Vector2f& vel_offset_target_xy_cms, const Vector2f& accel_offset_target_xy_cmss);
-
-    /// set the horizontal velocity and acceleration offset targets in cm/s and cm/s/s in NE frame
-    /// these must be set every 3 seconds (or less) or they will timeout and return to zero
-    void set_velaccel_offset_target_xy_cms(const Vector2f& vel_offset_target_xy_cms, const Vector2f& accel_offset_target_xy_cmss);
-
+    
     /// get the position, velocity or acceleration offets in cm from EKF origin in NEU frame
     const Vector3p& get_pos_offset_target_cm() const { return _pos_offset_target; }
     const Vector3p& get_pos_offset_cm() const { return _pos_offset; }
@@ -525,11 +520,6 @@ protected:
     bool        _fwd_pitch_is_limited;     // true when the forward pitch demand is being limited to meet acceleration limits
 
     // offset handling variables
-    enum class XYOffsetType {
-        NONE = 0,                       // offset target have never been set
-        POS_VEL_ACCEL,                  // position and (optionally) velocity and acceleration offset targets have been set
-        VEL_ACCEL                       // velocity and (optionally) acceleration offset targets have been set
-    } _xy_offset_type;                  // type of offset being applied.  position OR velocity offsets are supported but not both at the same time
     Vector3p    _pos_offset_target;     // position offset target in cm relative to the EKF origin in NEU frame
     Vector3p    _pos_offset;            // position offset in cm from the EKF origin in NEU frame.  this offset moves towards _pos_offset_target
     Vector2f    _vel_offset_target;     // velocity offset target in cm/s in NEU frame

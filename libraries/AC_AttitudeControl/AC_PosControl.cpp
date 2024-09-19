@@ -632,15 +632,9 @@ void AC_PosControl::input_pos_vel_accel_xy(Vector2p& pos, Vector2f& vel, const V
 /// this moves the offsets (e.g _pos_offset, _vel_offset, _accel_offset) towards the targets (e.g. _pos_offset_target, _vel_offset_target, _accel_offset_target)
 void AC_PosControl::update_xy_offsets()
 {
-    // return immediately if offsets have never been set
-    if (_xy_offset_type == XYOffsetType::NONE) {
-        return;
-    }
-
     // check for offset target timeout
     uint32_t now_ms = AP_HAL::millis();
     if (now_ms - _posvelaccel_offset_target_ms > POSCONTROL_POSVELACCEL_OFFSET_TARGET_TIMEOUT_MS) {
-        _xy_offset_type = XYOffsetType::POS_VEL_ACCEL;
         _pos_offset_target.xy().zero();
         _vel_offset_target.zero();
         _accel_offset_target.zero();
@@ -649,28 +643,12 @@ void AC_PosControl::update_xy_offsets()
     // update position, velocity, accel offsets for this iteration
     update_pos_vel_accel_xy(_pos_offset.xy(), _vel_offset.xy(), _accel_offset.xy(), _dt, _limit_vector.xy(), _p_pos_xy.get_error(), _pid_vel_xy.get_error());
 
-    switch (_xy_offset_type) {
+    // input shape horizontal position, velocity and acceleration offsets
+    shape_pos_vel_accel_xy(_pos_offset_target.xy(), _vel_offset_target, _accel_offset_target,
+                            _pos_offset.xy(), _vel_offset.xy(), _accel_offset.xy(),
+                            _vel_max_xy_cms, _accel_max_xy_cmss, _jerk_max_xy_cmsss, _dt, false);
 
-    case XYOffsetType::NONE:
-        break;
-
-    case XYOffsetType::POS_VEL_ACCEL:
-        // input shape horizontal position, velocity and acceleration offsets
-        shape_pos_vel_accel_xy(_pos_offset_target.xy(), _vel_offset_target, _accel_offset_target,
-                               _pos_offset.xy(), _vel_offset.xy(), _accel_offset.xy(),
-                               _vel_max_xy_cms, _accel_max_xy_cmss, _jerk_max_xy_cmsss, _dt, false);
-        break;
-
-    case XYOffsetType::VEL_ACCEL:
-        // input shape horizontal velocity and acceleration offsets
-        shape_vel_accel_xy(_vel_offset_target, _accel_offset_target,
-                           _vel_offset.xy(), _accel_offset.xy(),
-                           _accel_max_xy_cmss, _jerk_max_xy_cmsss, _dt, false);
-
-        // set the position target offset to the current position offset
-        _pos_offset_target.xy() = _pos_offset.xy();
-        break;
-    }
+    update_pos_vel_accel_xy(_pos_offset_target.xy(), _vel_offset_target, _accel_offset_target, _dt, Vector2f(), Vector2f(), Vector2f());
 }
 
 /// stop_pos_xy_stabilisation - sets the target to the current position to remove any position corrections from the system
@@ -1232,22 +1210,13 @@ bool AC_PosControl::set_posvelaccel_offset(const Vector3f &pos_offset_NED, const
     return true;
 }
 
-// add an additional offset to vehicle's target velocity and acceleration
-// units are m/s and m/s/s in NED frame
-// Z-axis is not currently supported and is ignored
-bool AC_PosControl::set_velaccel_offset(const Vector3f &vel_offset_NED, const Vector3f &accel_offset_NED)
-{
-    set_velaccel_offset_target_xy_cms(vel_offset_NED.xy() * 100.0, accel_offset_NED.xy() * 100.0);
-    return true;
-}
-
 // get position and velocity offset to vehicle's target velocity and acceleration
 // units are m and m/s in NED frame
 bool AC_PosControl::get_posvelaccel_offset(Vector3f &pos_offset_NED, Vector3f &vel_offset_NED, Vector3f &accel_offset_NED)
 {
-    pos_offset_NED = get_pos_offset_cm().tofloat() * 0.01;
-    vel_offset_NED = get_vel_offset_cms() * 0.01;
-    accel_offset_NED = get_accel_offset_cmss() * 0.01;
+    pos_offset_NED = _pos_offset_target.tofloat() * 0.01;
+    vel_offset_NED = Vector3f(_vel_offset_target.x * 0.01, _vel_offset_target.y * 0.01, 0.0);
+    accel_offset_NED = Vector3f(_accel_offset_target.x * 0.01, _accel_offset_target.y * 0.01, 0.0);
     return true;
 }
 #endif
@@ -1257,7 +1226,6 @@ bool AC_PosControl::get_posvelaccel_offset(Vector3f &pos_offset_NED, Vector3f &v
 void AC_PosControl::set_posvelaccel_offset_target_xy_cm(const Vector2p& pos_offset_target_xy_cm, const Vector2f& vel_offset_target_xy_cms, const Vector2f& accel_offset_target_xy_cmss)
 {
     // set position offset target
-    _xy_offset_type = XYOffsetType::POS_VEL_ACCEL;
     _pos_offset_target.xy() = pos_offset_target_xy_cm;
 
     // set velocity offset target
@@ -1268,17 +1236,6 @@ void AC_PosControl::set_posvelaccel_offset_target_xy_cm(const Vector2p& pos_offs
 
     // record time of update so we can detect timeouts
     _posvelaccel_offset_target_ms = AP_HAL::millis();
-}
-
-/// set the horizontal velocity and acceleration offset targets in cm/s and cm/s/s in NE frame
-/// these must be set every 3 seconds (or less) or they will timeout and return to zero
-void AC_PosControl::set_velaccel_offset_target_xy_cms(const Vector2f& vel_offset_target_xy_cms, const Vector2f& accel_offset_target_xy_cmss)
-{
-    // re-use set_posvelaccel_offset_target_xy_cm but with zero position offset target
-    set_posvelaccel_offset_target_xy_cm(Vector2p(), vel_offset_target_xy_cms, accel_offset_target_xy_cmss);
-
-    // override offset type
-    _xy_offset_type = XYOffsetType::VEL_ACCEL;
 }
 
 // returns the NED target acceleration vector for attitude control
@@ -1389,7 +1346,7 @@ void AC_PosControl::write_log()
                    _accel_desired.y, _accel_target.y, accel_y);
 
         // log offsets if they have ever been used
-        if (_xy_offset_type != XYOffsetType::NONE) {
+        if (!_pos_offset_target.xy().is_zero()) {
             Write_PSCO(_pos_offset_target.xy(), _pos_offset.xy(), _vel_offset_target, _vel_offset.xy(), _accel_offset_target, _accel_offset.xy());
         }
     }

@@ -3435,13 +3435,7 @@ poscontrol = {}
 ---@return boolean
 function poscontrol:set_posvelaccel_offset(pos_offset_NED, vel_offset_NED, accel_offset_NED) end
 
--- add an offset to position controller's target velocity and acceleration in autonomous modes
----@param vel_offset_NED Vector3f_ud
----@param accel_offset_NED Vector3f_ud
----@return boolean
-function poscontrol:set_velaccel_offset(vel_offset_NED, accel_offset_NED) end
-
--- get position controller's position, velocity and acceleration offsets
+-- get position controller's target position, velocity and acceleration offsets
 ---@return Vector3f_ud|nil
 ---@return Vector3f_ud|nil
 ---@return Vector3f_ud|nil
