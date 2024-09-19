@@ -641,7 +641,7 @@ void AC_PosControl::update_xy_offsets()
     uint32_t now_ms = AP_HAL::millis();
     if (now_ms - _posvelaccel_offset_target_ms > POSCONTROL_POSVELACCEL_OFFSET_TARGET_TIMEOUT_MS) {
         _xy_offset_type = XYOffsetType::POS_VEL_ACCEL;
-        _pos_offset_target.zero();
+        _pos_offset_target.xy().zero();
         _vel_offset_target.zero();
         _accel_offset_target.zero();
     }
@@ -1260,13 +1260,11 @@ void AC_PosControl::set_posvelaccel_offset_target_xy_cm(const Vector2p& pos_offs
     _xy_offset_type = XYOffsetType::POS_VEL_ACCEL;
     _pos_offset_target.xy() = pos_offset_target_xy_cm;
 
-    // set velocity offset target and limit to 1/2 maximum
+    // set velocity offset target
     _vel_offset_target = vel_offset_target_xy_cms;
-    _vel_offset_target.limit_length(get_max_speed_xy_cms() * 0.5);
 
-    // set acceleration offset target and limit to 1/2 maximum
+    // set acceleration offset target
     _accel_offset_target = accel_offset_target_xy_cmss;
-    _accel_offset_target.limit_length(get_max_accel_xy_cmss() * 0.5);
 
     // record time of update so we can detect timeouts
     _posvelaccel_offset_target_ms = AP_HAL::millis();
