@@ -472,7 +472,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     const Vector3p& psc_pos_offset_target = _pos_control.get_pos_offset_target_cm();
 
     // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
-    const Vector3f &curr_pos = _inav.get_position_neu_cm() - psc_pos_offset_target.tofloat();
+    const Vector3f &curr_pos = _inav.get_position_neu_cm() - Vector3f{float(psc_pos_offset_target.x), float(psc_pos_offset_target.y), terr_offset};
     Vector3f curr_target_vel = _pos_control.get_vel_desired_cms();
     curr_target_vel.z -= _pos_control.get_vel_offset_z_cms();
 
