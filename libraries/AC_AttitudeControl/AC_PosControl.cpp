@@ -1378,19 +1378,15 @@ void AC_PosControl::standby_xyz_reset()
 // write PSC and/or PSCZ logs
 void AC_PosControl::write_log()
 {
-    const Vector3p pos_target = get_pos_target_cm();
-    const Vector3f vel_desired = get_vel_desired_cms();
-    const Vector3f vel_target = get_vel_target_cms();
-    const Vector3f accel_target = get_accel_target_cmss();
     if (is_active_xy()) {
         float accel_x, accel_y;
         lean_angles_to_accel_xy(accel_x, accel_y);
-        Write_PSCN(pos_target.x, _inav.get_position_neu_cm().x,
-                   vel_desired.x, vel_target.x, _inav.get_velocity_neu_cms().x,
-                   _accel_desired.x, accel_target.x, accel_x);
-        Write_PSCE(pos_target.y, _inav.get_position_neu_cm().y,
-                   vel_desired.y, vel_target.y, _inav.get_velocity_neu_cms().y,
-                   _accel_desired.y, accel_target.y, accel_y);
+        Write_PSCN(_pos_target.x, _inav.get_position_neu_cm().x,
+                   _vel_desired.x, _vel_target.x, _inav.get_velocity_neu_cms().x,
+                   _accel_desired.x, _accel_target.x, accel_x);
+        Write_PSCE(_pos_target.y, _inav.get_position_neu_cm().y,
+                   _vel_desired.y, _vel_target.y, _inav.get_velocity_neu_cms().y,
+                   _accel_desired.y, _accel_target.y, accel_y);
 
         // log offsets if they have ever been used
         if (_xy_offset_type != XYOffsetType::NONE) {
@@ -1399,9 +1395,9 @@ void AC_PosControl::write_log()
     }
 
     if (is_active_z()) {
-        Write_PSCD(-pos_target.z, -_inav.get_position_z_up_cm(),
-                   -vel_desired.z, -vel_target.z, -_inav.get_velocity_z_up_cms(),
-                   -_accel_desired.z, -accel_target.z, -get_z_accel_cmss());
+        Write_PSCD(-_pos_target.z, -_inav.get_position_z_up_cm(),
+                   -_vel_desired.z, -_vel_target.z, -_inav.get_velocity_z_up_cms(),
+                   -_accel_desired.z, -_accel_target.z, -get_z_accel_cmss());
     }
 }
 #endif  // HAL_LOGGING_ENABLED
