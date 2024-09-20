@@ -304,7 +304,9 @@ void AP_Spektrum_Telem::calc_rpm()
 #if AP_BATTERY_ENABLED
     _telem.rpm.volts = htobe16(((uint16_t)roundf(_battery.voltage(0) * 100.0f)));
 #endif
+#if AP_BARO_ENABLED
     _telem.rpm.temperature = htobe16(int16_t(roundf(32.0f + AP::baro().get_temperature(0) * 9.0f / 5.0f)));
+#endif
 #if AP_RPM_ENABLED
     const AP_RPM *rpm = AP::rpm();
     float rpm_value;
@@ -416,7 +418,9 @@ void AP_Spektrum_Telem::calc_batt_mah()
 // prepare temperature data - B/E but not supported by Spektrum
 void AP_Spektrum_Telem::calc_temperature(uint8_t instance)
 {
+#if AP_BARO_ENABLED
     _telem.temp.temperature = htobe16(int16_t(roundf(32.0f + AP::baro().get_temperature(instance) * 9.0f / 5.0f)));
+#endif
     _telem.temp.identifier = TELE_DEVICE_TEMPERATURE;
     _telem.temp.sID = 0;
     _telem_pending = true;

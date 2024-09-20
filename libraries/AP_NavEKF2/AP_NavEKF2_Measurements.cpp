@@ -2,6 +2,8 @@
 
 #include "AP_NavEKF2.h"
 
+#if HAL_NAVEKF2_AVAILABLE
+
 #include <GCS_MAVLink/GCS.h>
 #include <AP_DAL/AP_DAL.h>
 #include <AP_InternalError/AP_InternalError.h>
@@ -1090,3 +1092,5 @@ void NavEKF2_core::writeExtNavVelData(const Vector3f &vel, float err, uint32_t t
     extNavVelNew.time_ms = timeStamp_ms;
     storedExtNavVel.push(extNavVelNew);
 }
+
+#endif  // HAL_NAVEKF2_AVAILABLE

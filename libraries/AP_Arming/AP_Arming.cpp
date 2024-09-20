@@ -345,6 +345,7 @@ void AP_Arming::check_failed(bool report, const char *fmt, ...) const
 #endif  // HAL_GCS_ENABLED
 }
 
+#if AP_BARO_ENABLED
 bool AP_Arming::barometer_checks(bool report)
 {
 #ifdef HAL_BARO_ALLOW_INIT_NO_BARO
@@ -366,6 +367,7 @@ bool AP_Arming::barometer_checks(bool report)
 
     return true;
 }
+#endif  // AP_BARO_ENABLED
 
 #if AP_AIRSPEED_ENABLED
 bool AP_Arming::airspeed_checks(bool report)

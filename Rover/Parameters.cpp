@@ -202,9 +202,11 @@ const AP_Param::Info Rover::var_info[] = {
     // @Path: ../libraries/AP_Scheduler/AP_Scheduler.cpp
     GOBJECT(scheduler, "SCHED_", AP_Scheduler),
 
+#if AP_BARO_ENABLED
     // @Group: BARO
     // @Path: ../libraries/AP_Baro/AP_Baro.cpp
     GOBJECT(barometer, "BARO", AP_Baro),
+#endif
 
 #if AP_RELAY_ENABLED
     // @Group: RELAY

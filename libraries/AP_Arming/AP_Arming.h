@@ -189,7 +189,9 @@ protected:
     uint32_t                last_accel_pass_ms;
     uint32_t                last_gyro_pass_ms;
 
+#if AP_BARO_ENABLED
     virtual bool barometer_checks(bool report);
+#endif
 
     bool airspeed_checks(bool report);
 

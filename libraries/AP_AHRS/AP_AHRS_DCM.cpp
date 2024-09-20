@@ -1062,14 +1062,15 @@ bool AP_AHRS_DCM::get_location(Location &loc) const
 {
     loc.lat = _last_lat;
     loc.lng = _last_lng;
-    const auto &baro = AP::baro();
     const auto &gps = AP::gps();
     int32_t alt_cm;
     if (_gps_use == GPSUse::EnableWithHeight &&
         gps.status() >= AP_GPS::GPS_OK_FIX_3D) {
         alt_cm = gps.location().alt;
+#if AP_BARO_ENABLED
     } else {
         alt_cm = baro.get_altitude() * 100 + AP::ahrs().get_home().alt;
+#endif  // AP_BARO_ENABLED
     }
     loc.set_alt_cm(alt_cm, Location::AltFrame::ABSOLUTE);
     loc.offset(_position_offset_north, _position_offset_east);
@@ -1251,9 +1252,11 @@ bool AP_AHRS_DCM::get_vert_pos_rate_D(float &velocity) const
     if (get_velocity_NED(velned)) {
         velocity = velned.z;
         return true;
+#if AP_BARO_ENABLED
     } else if (AP::baro().healthy()) {
         velocity = -AP::baro().get_climb_rate();
         return true;
+#endif
     }
     return false;
 }

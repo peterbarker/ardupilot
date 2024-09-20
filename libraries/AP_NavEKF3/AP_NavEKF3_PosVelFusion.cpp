@@ -374,8 +374,10 @@ bool NavEKF3_core::resetHeightDatum(void)
     }
     // record the old height estimate
     ftype oldHgt = -stateStruct.position.z;
+#if AP_BARO_ENABLED
     // reset the barometer so that it reads zero at the current height
     dal.baro().update_calibration();
+#endif
     // reset the height state
     stateStruct.position.z = 0.0f;
     // adjust the height of the EKF origin so that the origin plus baro height before and after the reset is the same

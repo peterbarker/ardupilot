@@ -1,8 +1,11 @@
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_NavEKF2.h"
+
 #include "AP_NavEKF2_core.h"
 #include <AP_DAL/AP_DAL.h>
+
+#if HAL_NAVEKF2_AVAILABLE
 
 extern const AP_HAL::HAL& hal;
 
@@ -1117,3 +1120,4 @@ void NavEKF2_core::selectHeightForFusion()
     }
 }
 
+#endif  // HAL_NAVEKF2_AVAILABLE

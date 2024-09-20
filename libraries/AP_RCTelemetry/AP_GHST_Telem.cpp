@@ -315,8 +315,10 @@ void AP_GHST_Telem::calc_attitude()
     float heading = AP::compass().calculate_heading(_ahrs.get_rotation_body_to_ned());
     _telem.sensor.compass_heading = htole16(degrees(wrap_PI(heading)));
 
+#if AP_BARO_ENABLED
     float alt = AP::baro().get_altitude();
     _telem.sensor.baro_alt = htole16(roundf(alt));
+#endif
     _telem.sensor.vario = 0;
     _telem.sensor.flags = 3;
     _telem_size = sizeof(AP_GHST_Telem::SensorFrame);

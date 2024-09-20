@@ -8,6 +8,8 @@
 #include <AP_DAL/AP_DAL.h>
 #include <AP_InternalError/AP_InternalError.h>
 
+#if HAL_NAVEKF3_AVAILABLE
+
 #if AP_RANGEFINDER_ENABLED
 /********************************************************
 *              OPT FLOW AND RANGE FINDER                *
@@ -1542,3 +1544,5 @@ void NavEKF3_core::checkUpdateEarthField(void)
         getEarthFieldTable(loc);
     }
 }
+
+#endif  // HAL_NAVEKF3_AVAILABLE

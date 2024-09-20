@@ -2378,18 +2378,20 @@ void GCS_MAVLINK::send_scaled_imu(uint8_t instance, void (*send_fn)(mavlink_chan
 // the relevant fields as 0.
 void GCS_MAVLINK::send_scaled_pressure_instance(uint8_t instance, void (*send_fn)(mavlink_channel_t chan, uint32_t time_boot_ms, float press_abs, float press_diff, int16_t temperature, int16_t temperature_press_diff))
 {
-    const AP_Baro &barometer = AP::baro();
-
     bool have_data = false;
 
     float press_abs = 0.0f;
-    int16_t temperature = 0; // Absolute pressure temperature
     int16_t temperature_press_diff = 0; // Differential pressure temperature
+    int16_t temperature = 0; // Absolute pressure temperature
+#if AP_BARO_ENABLED
+    const AP_Baro &barometer = AP::baro();
+
     if (instance < barometer.num_instances()) {
         press_abs = barometer.get_pressure(instance) * 0.01f;
         temperature = barometer.get_temperature(instance)*100;
         have_data = true;
     }
+#endif
 
     float press_diff = 0; // pascal
 #if AP_AIRSPEED_ENABLED
@@ -4831,6 +4833,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_flash_bootloader(const mavlink_command_in
 }
 #endif  // AP_BOOTLOADER_FLASHING_ENABLED
 
+#if AP_BARO_ENABLED
 MAV_RESULT GCS_MAVLINK::_handle_command_preflight_calibration_baro(const mavlink_message_t &msg)
 {
     // fast barometer calibration
@@ -4853,6 +4856,7 @@ MAV_RESULT GCS_MAVLINK::_handle_command_preflight_calibration_baro(const mavlink
 
     return MAV_RESULT_ACCEPTED;
 }
+#endif  // AP_BARO_ENABLED
 
 MAV_RESULT GCS_MAVLINK::_handle_command_preflight_calibration(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
@@ -4870,9 +4874,11 @@ MAV_RESULT GCS_MAVLINK::_handle_command_preflight_calibration(const mavlink_comm
         return MAV_RESULT_ACCEPTED;
     }
 
+#if AP_BARO_ENABLED
     if (is_equal(packet.param3,1.0f)) {
         return _handle_command_preflight_calibration_baro(msg);
     }
+#endif
 
 #if AP_RC_CHANNEL_ENABLED
     rc().calibrating(is_positive(packet.param4));
@@ -4933,8 +4939,11 @@ MAV_RESULT GCS_MAVLINK::handle_command_preflight_calibration(const mavlink_comma
         GCS_SEND_TEXT(MAV_SEVERITY_NOTICE, "Disarm to allow calibration");
         return MAV_RESULT_FAILED;
     }
+#if AP_BARO_ENABLED
     // now call subclass methods:
     return _handle_command_preflight_calibration(packet, msg);
+#endif
+    return MAV_RESULT_DENIED;
 }
 
 #if AP_ARMING_ENABLED

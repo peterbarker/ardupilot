@@ -86,7 +86,9 @@ void AP_DAL::start_frame(AP_DAL::FrameType frametype)
     _rotation_vehicle_body_to_autopilot_body = ahrs.get_rotation_vehicle_body_to_autopilot_body();
 
     _ins.start_frame();
+#if AP_BARO_ENABLED
     _baro.start_frame();
+#endif
     _gps.start_frame();
     _compass.start_frame();
     if (_airspeed) {

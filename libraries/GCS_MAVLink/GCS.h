@@ -678,7 +678,9 @@ protected:
     virtual MAV_RESULT handle_command_preflight_calibration(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
 
     virtual MAV_RESULT _handle_command_preflight_calibration(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+#if AP_BARO_ENABLED
     virtual MAV_RESULT _handle_command_preflight_calibration_baro(const mavlink_message_t &msg);
+#endif
 
 #if AP_MISSION_ENABLED
     virtual MAV_RESULT handle_command_do_set_mission_current(const mavlink_command_int_t &packet);

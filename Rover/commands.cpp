@@ -53,7 +53,9 @@ void Rover::update_home()
         return;
     }
 
+#if AP_BARO_ENABLED
     barometer.update_calibration();
+#endif
 
     if (ahrs.home_is_set() &&
         loc.get_distance(ahrs.get_home()) < DISTANCE_HOME_MINCHANGE) {
