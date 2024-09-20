@@ -19,6 +19,7 @@
 #include <stdio.h>  // for sprintf
 #include <limits.h>
 #include <GCS_MAVLink/GCS.h>
+#include <AP_Baro/AP_Baro_config.h>
 
 #define ADSB_CHAN_TIMEOUT_MS            15000
 
@@ -107,12 +108,12 @@ void AP_ADSB_uAvionix_MAVLink::send_dynamic_out(const mavlink_channel_t chan) co
     const uint32_t utcTime = gps_time / 1000000ULL;
 
     int32_t altPres = INT_MAX;
+#if AP_BARO_ENABLED
     if (_my_loc.baro_is_healthy) {
         // Altitude difference between sea level pressure and current pressure. Result in millimeters
         altPres = _my_loc.baro_alt_press_diff_sea_level * 1E3; // convert m to mm;
     }
-
-
+#endif
 
     mavlink_msg_uavionix_adsb_out_dynamic_send(
             chan,

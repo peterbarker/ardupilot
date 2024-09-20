@@ -3,11 +3,11 @@
  */
 #pragma once
 
-#include "AP_Baro_Backend.h"
-
-// AP_BARO_MSP_ENABLED is defined in AP_Baro.h
+#include "AP_Baro_config.h"
 
 #if AP_BARO_MSP_ENABLED
+
+#include "AP_Baro_Backend.h"
 
 #define MOVING_AVERAGE_WEIGHT 0.20f // a 5 samples moving average
 

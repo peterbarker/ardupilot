@@ -128,19 +128,25 @@ MAV_RESULT AP_Frsky_MAVliteMsgHandler::handle_command_preflight_calibration_baro
     if (hal.util->get_soft_armed()) {
         return MAV_RESULT_DENIED;
     }
+
+    MAV_RESULT result = MAV_RESULT_FAILED;
+#if AP_BARO_ENABLED
     // fast barometer calibration
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Updating barometer calibration");
     AP::baro().update_calibration();
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Barometer calibration complete");
+    result = MAV_RESULT_ACCEPTED;
+#endif
 
 #if AP_AIRSPEED_ENABLED
     AP_Airspeed *airspeed = AP_Airspeed::get_singleton();
     if (airspeed != nullptr) {
         airspeed->calibrate(false);
     }
+    result = MAV_RESULT_ACCEPTED;
 #endif
 
-    return MAV_RESULT_ACCEPTED;
+    return result;
 }
 
 #if AP_FENCE_ENABLED

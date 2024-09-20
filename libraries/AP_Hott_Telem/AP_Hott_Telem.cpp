@@ -128,6 +128,7 @@ void AP_Hott_Telem::send_EAM(void)
     }
 #endif  // AP_BATTERY_ENABLED
 
+#if AP_BARO_ENABLED
     const AP_Baro &baro = AP::baro();
     msg.temp1 = uint8_t(baro.get_temperature(0) + 20.5);
 #if BARO_MAX_INSTANCES > 1
@@ -135,6 +136,7 @@ void AP_Hott_Telem::send_EAM(void)
         msg.temp2 = uint8_t(baro.get_temperature(1) + 20.5);
     }
 #endif
+#endif  // AP_BARO_ENABLED
 
     AP_AHRS &ahrs = AP::ahrs();
     float alt = 0;

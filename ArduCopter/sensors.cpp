@@ -1,5 +1,6 @@
 #include "Copter.h"
 
+#if AP_BARO_ENABLED
 // return barometric altitude in centimeters
 void Copter::read_barometer(void)
 {
@@ -7,6 +8,7 @@ void Copter::read_barometer(void)
 
     baro_alt_m = barometer.get_altitude();
 }
+#endif  // AP_BARO_ENABLED
 
 #if AP_RANGEFINDER_ENABLED
 void Copter::init_rangefinder(void)

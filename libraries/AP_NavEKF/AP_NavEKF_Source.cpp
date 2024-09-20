@@ -490,7 +490,13 @@ bool AP_NavEKF_Source::pre_arm_check(bool requires_position, char *failure_msg, 
 
     // check all required sensors are available
     const char* ekf_requires_msg = "EK3 sources require %s";
-    if (baro_required && (dal.baro().num_instances() == 0)) {
+
+#if AP_BARO_ENABLED
+    const bool baro_available = (dal.baro().num_instances() == 0);
+#else
+    const bool baro_available = false;
+#endif
+    if (baro_required && !baro_available) {
         hal.util->snprintf(failure_msg, failure_msg_len, ekf_requires_msg, "Baro");
         return false;
     }

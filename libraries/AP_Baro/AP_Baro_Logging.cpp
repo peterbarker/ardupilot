@@ -1,9 +1,9 @@
 #include <AP_Logger/AP_Logger_config.h>
+#include "AP_Baro_config.h"
 
-#if HAL_LOGGING_ENABLED
+#if AP_BARO_ENABLED && HAL_LOGGING_ENABLED
 
 #include "AP_Baro.h"
-
 #include <AP_Logger/AP_Logger.h>
 
 void AP_Baro::Write_Baro_instance(uint64_t time_us, uint8_t baro_instance)
@@ -55,4 +55,4 @@ void AP_Baro::Write_Baro(void)
     }
 }
 
-#endif
+#endif  // AP_BARO_ENABLED && HAL_LOGGING_ENABLED

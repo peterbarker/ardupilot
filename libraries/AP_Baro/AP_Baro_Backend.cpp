@@ -1,3 +1,7 @@
+#include "AP_Baro_config.h"
+
+#if AP_BARO_ENABLED
+
 #include "AP_Baro_Backend.h"
 
 #include <stdio.h>
@@ -108,3 +112,5 @@ bool AP_Baro_Backend::pressure_ok(float press)
     }
     return ret;
 }
+
+#endif  // AP_BARO_ENABLED

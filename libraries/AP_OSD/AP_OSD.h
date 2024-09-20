@@ -211,7 +211,7 @@ private:
     AP_OSD_Setting roll_angle;
     AP_OSD_Setting pitch_angle;
     AP_OSD_Setting temp;
-#if BARO_MAX_INSTANCES > 1
+#if AP_BARO_ENABLED
     AP_OSD_Setting btemp;
 #endif
     AP_OSD_Setting hdop;
@@ -313,7 +313,7 @@ private:
     void draw_roll_angle(uint8_t x, uint8_t y);
     void draw_pitch_angle(uint8_t x, uint8_t y);
     void draw_temp(uint8_t x, uint8_t y);
-#if BARO_MAX_INSTANCES > 1
+#if AP_BARO_ENABLED
     void draw_btemp(uint8_t x, uint8_t y);
 #endif
     void draw_hdop(uint8_t x, uint8_t y);

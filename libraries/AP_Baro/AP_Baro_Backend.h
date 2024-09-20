@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AP_Baro_config.h"
+
+#if AP_BARO_ENABLED
+
 #include "AP_Baro.h"
 
 class AP_Baro_Backend
@@ -80,3 +84,5 @@ protected:
         _frontend.sensors[instance].bus_id.set(int32_t(id));
     }
 };
+
+#endif  // AP_BARO_ENABLED

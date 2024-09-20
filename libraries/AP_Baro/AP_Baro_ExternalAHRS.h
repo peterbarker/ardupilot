@@ -3,9 +3,11 @@
  */
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_EXTERNALAHRS_ENABLED
+
+#include "AP_Baro_Backend.h"
 
 class AP_Baro_ExternalAHRS : public AP_Baro_Backend
 {

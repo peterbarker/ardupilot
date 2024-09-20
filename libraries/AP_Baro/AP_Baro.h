@@ -2,6 +2,8 @@
 
 #include "AP_Baro_config.h"
 
+#if AP_BARO_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
@@ -370,3 +372,5 @@ private:
 namespace AP {
     AP_Baro &baro();
 };
+
+#endif  // AP_BARO_ENABLED

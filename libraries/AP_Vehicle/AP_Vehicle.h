@@ -343,7 +343,9 @@ protected:
 #if AP_GPS_ENABLED
     AP_GPS gps;
 #endif
+#if AP_BARO_ENABLED
     AP_Baro barometer;
+#endif
 #if AP_COMPASS_ENABLED
     Compass compass;
 #endif

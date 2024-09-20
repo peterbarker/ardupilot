@@ -1,7 +1,9 @@
-#include "AP_Baro.h"
-#include <AP_AHRS/AP_AHRS.h>
+#include "AP_Baro_config.h"
 
 #if HAL_BARO_WIND_COMP_ENABLED
+
+#include "AP_Baro.h"
+#include <AP_AHRS/AP_AHRS.h>
 
 // table of compensation coefficient parameters for one baro
 const AP_Param::GroupInfo AP_Baro::WindCoeff::var_info[] = {

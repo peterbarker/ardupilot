@@ -1,3 +1,7 @@
+#include "AP_Baro_config.h"
+
+#if AP_BARO_ENABLED
+
 #include "AP_Baro.h"
 
 #include <AP_HAL/AP_HAL.h>
@@ -44,3 +48,5 @@ void AP_Baro::SimpleUnderWaterAtmosphere(
     const float S = seaTempSurface * 0.338f;
     theta = 1.0f / ((1.8e-4f) * S * (alt * 1e3f) + 1.0f);
 }
+
+#endif  // AP_BARO_ENABLED

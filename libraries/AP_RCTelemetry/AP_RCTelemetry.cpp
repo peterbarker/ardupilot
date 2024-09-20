@@ -311,9 +311,12 @@ float AP_RCTelemetry::get_vspeed_ms(void)
             return -v.z;
         }
     }
+#if AP_BARO_ENABLED
     auto &_baro = AP::baro();
     WITH_SEMAPHORE(_baro.get_semaphore());
     return _baro.get_climb_rate();
+#endif
+    return 0.0;
 }
 
 /*

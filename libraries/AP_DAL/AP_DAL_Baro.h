@@ -2,6 +2,8 @@
 
 #include <AP_Baro/AP_Baro.h>
 
+#if AP_BARO_ENABLED
+
 #include <AP_Logger/LogStructure.h>
 
 class AP_DAL_Baro {
@@ -51,3 +53,5 @@ private:
     struct log_RBRI _RBRI[BARO_MAX_INSTANCES];
 };
 
+
+#endif

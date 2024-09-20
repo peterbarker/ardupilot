@@ -176,9 +176,13 @@ float AP_MSP_Telem_Backend::get_vspeed_ms(void) const
             return -v.z;
         }
     }
+#if AP_BARO_ENABLED
     AP_Baro &_baro = AP::baro();
     WITH_SEMAPHORE(_baro.get_semaphore());
     return _baro.get_climb_rate();
+#endif
+
+    return 0;
 }
 
 void AP_MSP_Telem_Backend::update_home_pos(home_state_t &home_state)
