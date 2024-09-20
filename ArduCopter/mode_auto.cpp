@@ -1416,7 +1416,7 @@ void PayloadPlace::run()
         // vel_threshold_fraction * max velocity
         const float vel_threshold_fraction = 0.1;
         const float stop_distance = 0.5 * sq(vel_threshold_fraction * copter.pos_control->get_max_speed_up_cms()) / copter.pos_control->get_max_accel_z_cmss();
-        bool reached_altitude = copter.pos_control->get_pos_target_z_cm() >= descent_start_altitude_cm - stop_distance;
+        bool reached_altitude = copter.pos_control->get_pos_desired_z_cm() >= descent_start_altitude_cm - stop_distance;
         if (reached_altitude) {
             state = State::Done;
         }

@@ -107,7 +107,7 @@ void AC_Loiter::init_target(const Vector2f& position)
     _brake_accel = 0.0f;
 
     // set target position
-    _pos_control.set_pos_target_xy_cm(position.x, position.y);
+    _pos_control.set_pos_desired_xy_cm(position);
 }
 
 /// initialize's position and feed-forward velocity from current pos and velocity
@@ -279,11 +279,11 @@ void AC_Loiter::calc_desired_velocity(bool avoidance_on)
 #endif // !APM_BUILD_ArduPlane
 
     // get loiters desired velocity from the position controller where it is being stored.
-    Vector2p target_pos = _pos_control.get_pos_target_cm().xy();
+    Vector2p desired_pos = _pos_control.get_pos_desired_cm().xy();
 
-    // update the target position using our predicted velocity
-    target_pos += (desired_vel * dt).topostype();
+    // update the desired position using our predicted velocity
+    desired_pos += (desired_vel * dt).topostype();
 
     // send adjusted feed forward acceleration and velocity back to the Position Controller
-    _pos_control.set_pos_vel_accel_xy(target_pos, desired_vel, _desired_accel);
+    _pos_control.set_pos_vel_accel_xy(desired_pos, desired_vel, _desired_accel);
 }

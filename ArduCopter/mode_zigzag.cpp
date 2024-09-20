@@ -464,7 +464,7 @@ bool ModeZigZag::calculate_next_dest(Destination ab_dest, bool use_wpnav_alt, Ve
             }
 #endif
         } else {
-            next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_target_z_cm() : inertial_nav.get_position_z_up_cm();
+            next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_desired_z_cm() : inertial_nav.get_position_z_up_cm();
         }
     }
 
@@ -518,7 +518,7 @@ bool ModeZigZag::calculate_side_dest(Vector3f& next_dest, bool& terrain_alt) con
         }
 #endif
     } else {
-        next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_target_z_cm() : inertial_nav.get_position_z_up_cm();
+        next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_desired_z_cm() : inertial_nav.get_position_z_up_cm();
     }
 
     return true;
