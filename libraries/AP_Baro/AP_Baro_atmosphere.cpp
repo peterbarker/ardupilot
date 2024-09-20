@@ -1,3 +1,7 @@
+#include "AP_Baro_config.h"
+
+#if AP_BARO_ENABLED
+
 #include "AP_Baro.h"
 #include <AP_InternalError/AP_InternalError.h>
 
@@ -356,3 +360,5 @@ float AP_Baro::get_sealevel_pressure(float pressure, float altitude) const
     }
     return p0;
 }
+
+#endif  // AP_BARO_ENABLED
