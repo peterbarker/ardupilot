@@ -1242,38 +1242,14 @@ const AP_Param::GroupInfo ParametersG2::var_info2[] = {
  */
 ParametersG2::ParametersG2(void)
     : command_model_pilot(PILOT_Y_RATE_DEFAULT, PILOT_Y_EXPO_DEFAULT, 0.0f)
-#if AP_TEMPCALIBRATION_ENABLED
-    , temp_calibration()
-#endif
-#if AP_BEACON_ENABLED
-    , beacon()
-#endif
-#if HAL_PROXIMITY_ENABLED
-    , proximity()
-#endif
-#if ADVANCED_FAILSAFE
-    ,afs()
-#endif
-#if MODE_SMARTRTL_ENABLED
-    ,smart_rtl()
-#endif
 #if MODE_FLOWHOLD_ENABLED
     ,mode_flowhold_ptr(&copter.mode_flowhold)
-#endif
-#if MODE_FOLLOW_ENABLED
-    ,follow()
-#endif
-#if USER_PARAMS_ENABLED
-    ,user_parameters()
 #endif
 #if AUTOTUNE_ENABLED
     ,autotune_ptr(&copter.mode_autotune.autotune)
 #endif
 #if MODE_SYSTEMID_ENABLED
     ,mode_systemid_ptr(&copter.mode_systemid)
-#endif
-#if MODE_AUTOROTATE_ENABLED
-    ,arot()
 #endif
 #if HAL_BUTTON_ENABLED
     ,button_ptr(&copter.button)
@@ -1290,9 +1266,6 @@ ParametersG2::ParametersG2(void)
     ,command_model_acro_y(ACRO_Y_RATE_DEFAULT, ACRO_Y_EXPO_DEFAULT, 0.0f)
 #endif
 
-#if WEATHERVANE_ENABLED
-    ,weathervane()
-#endif
 {
     AP_Param::setup_object_defaults(this, var_info);
     AP_Param::setup_object_defaults(this, var_info2);
