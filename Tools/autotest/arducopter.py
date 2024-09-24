@@ -10630,6 +10630,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
              self.SetpointBadVel,
              self.SplineTerrain,
              self.TakeoffCheck,
+             self.GainBackoffTakeoff,
         ])
         return ret
 
@@ -10766,6 +10767,59 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.wait_ready_to_arm()
         self.takeoff(alt_min=20, mode='LOITER')
         self.do_RTL()
+        self.context_pop()
+        self.reboot_sitl()
+
+    def PitchPDZero(self):
+        '''ensure that when a Copter pitches in ALT_HOLD that PD
+        remain zero while integrator increases'''
+
+        class ValidatePDZero(vehicle_test_suite.TestSuite.MessageHook):
+            '''asserts correct values in PID_TUNING'''
+
+            def __init__(self, suite):
+                super(ValidatePDZero, self).__init__(suite)
+
+            def progress_prefix(self):
+                return "PPDZ: "
+
+            def hook_removed(self):
+                return "PPDZ: "
+
+            def process(self, mav, m):
+                if m.get_type() != 'PID_TUNING':
+                    return
+                if m.P > 0:
+                    raise ValueError("P is not zero")
+                if m.D > 0:
+                    raise ValueError("D is not zero")
+
+        self.context_push()
+        self.install_message_hook_context(ValidatePDZero(self))
+        # until the context pop happens, all received PID_TUNINGS will be verified as good
+        self.context_pop()
+
+    def GainBackoffTakeoff(self):
+        '''test gain backoff on takeoff'''
+        self.context_push()
+        self.set_parameters({
+            "ATC_LAND_R_MULT": 0.0,
+            "ATC_LAND_P_MULT": 0.0,
+            "ATC_LAND_Y_MULT": 0.0,
+            "GCS_PID_MASK" : 2
+        })
+        self.reboot_sitl()
+        self.wait_ready_to_arm()
+        self.change_mode('ALT_HOLD')
+        self.arm_vehicle()
+        self.set_rc(3, 1500)
+        self.set_rc(2, 1300)
+        self.assert_receive_message('PID_TUNING', timeout=5)
+        self.progress("Check that PD values are zero")
+        self.PitchPDZero()
+        self.set_rc(3, 1100)
+        self.disarm_vehicle()
+
         self.context_pop()
         self.reboot_sitl()
 
