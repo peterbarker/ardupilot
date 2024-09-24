@@ -279,7 +279,7 @@ void AC_Loiter::calc_desired_velocity(bool avoidance_on)
     Vector2p desired_pos = _pos_control.get_pos_desired_cm().xy();
 
     // update the desired position using our desired velocity and acceleration
-    desired_pos += (desired_vel * dt + _desired_accel * 0.5 * sq(dt)).topostype();
+    desired_pos += (desired_vel * dt).topostype();
 
     // send adjusted feed forward acceleration and velocity back to the Position Controller
     _pos_control.set_pos_vel_accel_xy(desired_pos, desired_vel, _desired_accel);
