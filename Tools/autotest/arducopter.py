@@ -10774,31 +10774,6 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         '''ensure that when a Copter pitches in ALT_HOLD that PD
         remain zero while integrator increases'''
 
-        class ValidatePDZero(vehicle_test_suite.TestSuite.MessageHook):
-            '''asserts correct values in PID_TUNING'''
-
-            def __init__(self, suite):
-                super(ValidatePDZero, self).__init__(suite)
-
-            def progress_prefix(self):
-                return "PPDZ: "
-
-            def hook_removed(self):
-                return "PPDZ: "
-
-            def process(self, mav, m):
-                if m.get_type() != 'PID_TUNING':
-                    return
-                if m.P > 0:
-                    raise ValueError("P is not zero")
-                if m.D > 0:
-                    raise ValueError("D is not zero")
-
-        self.context_push()
-        self.install_message_hook_context(ValidatePDZero(self))
-        # until the context pop happens, all received PID_TUNINGS will be verified as good
-        self.context_pop()
-
     def GainBackoffTakeoff(self):
         '''test gain backoff on takeoff'''
         self.context_push()
@@ -10811,6 +10786,29 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.reboot_sitl()
         self.wait_ready_to_arm()
         self.change_mode('ALT_HOLD')
+
+        class ValidatePDZero(vehicle_test_suite.TestSuite.MessageHook):
+            '''asserts correct values in PID_TUNING'''
+
+            def __init__(self, suite):
+                super(ValidatePDZero, self).__init__(suite)
+                self.pid_tuning_count = 0
+
+            def hook_removed(self):
+                print(f"ValidatePDZero: PID_TUNING count: {self.pid_tuning_count}")
+
+            def process(self, mav, m):
+                if m.get_type() != 'PID_TUNING':
+                    return
+                self.pid_tuning_count += 1
+                if m.P > 0:
+                    raise ValueError("P is not zero")
+                if m.D > 0:
+                    raise ValueError("D is not zero")
+
+        self.context_push()
+        self.install_message_hook_context(ValidatePDZero(self))
+        # until the context pop happens, all received PID_TUNINGS will be verified as good
         self.arm_vehicle()
         self.set_rc(3, 1500)
         self.set_rc(2, 1300)
@@ -10818,7 +10816,9 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.progress("Check that PD values are zero")
         self.PitchPDZero()
         self.set_rc(3, 1100)
+        self.delay_sim_time(5)
         self.disarm_vehicle()
+        self.context_pop()
 
         self.context_pop()
         self.reboot_sitl()
