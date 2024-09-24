@@ -11990,6 +11990,33 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # restart GPS driver
         self.reboot_sitl()
 
+    def AltHoldTwice(self):
+        '''test taking off and landing in althold'''
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('Callisto'),
+            model="octa-quad:@ROMFS/models/Callisto.json",
+            wipe=True,
+        )
+
+        self.change_mode('ALT_HOLD')
+
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.set_rc(3, 2000)
+        self.wait_altitude(5, 100, relative=True)
+        self.set_rc(3, 1000)
+        self.wait_disarmed()
+
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.set_rc(3, 2000)
+        self.delay_sim_time(10)
+        self.send_debug_trap()
+        self.wait_altitude(5, 100, relative=True)
+        self.set_rc(3, 1000)
+        self.wait_disarmed()
+
     def tests2b(self):  # this block currently around 9.5mins here
         '''return list of all tests'''
         ret = ([
@@ -12095,6 +12122,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.MAV_CMD_MISSION_START_p1_p2,
             self.ScriptingAHRSSource,
             self.CommonOrigin,
+            self.AltHoldTwice,
         ])
         return ret
 
