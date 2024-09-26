@@ -12004,6 +12004,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.reboot_sitl()
         self.context_collect('STATUSTEXT')
         self.set_rc(10, 1000)
+        raise NotAchievedException("Deliberate failure introduced")
         self.wait_statustext('Using EKF Source Set 1', check_context=True)
         self.set_rc(10, 1500)
         self.wait_statustext('Using EKF Source Set 2', check_context=True)
