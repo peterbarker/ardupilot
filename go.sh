@@ -4,6 +4,8 @@ python3.9 ./Tools/autotest/sim_vehicle.py \
     --vehicle plane \
     --frame quadplane \
     --aircraft Volanti \
+    --gdb \
+    --debug \
     --map \
     --console \
     -l -35.58324108,148.97773215,1119.1,45.0 \
