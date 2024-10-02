@@ -86,6 +86,14 @@ public:
     // p1,p2 are in range 0 to 1.  0 is left or top, 1 is right or bottom
     bool set_tracking(TrackingType tracking_type, const Vector2f& top_left, const Vector2f& bottom_right);
 
+    // returns true if the objkect to be tracked is visible in the frame
+    bool is_tracking_object_visible() {
+        if (camera_settings._cam_tracking_status.tracking_status & CAMERA_TRACKING_STATUS_FLAGS::CAMERA_TRACKING_STATUS_FLAGS_ACTIVE) {
+            return true;
+        }
+        return false;
+    }
+
 #if AP_CAMERA_TRACKING_ENABLED
     // default tracking supported by camera
     virtual bool set_tracking_internal(TrackingType tracking_type, const Vector2f& top_left, const Vector2f& bottom_right) { return false; }
@@ -112,6 +120,9 @@ public:
 
     // handle camera information message
     void handle_message_camera_information(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // handle image tracking status messages
+    void handle_message_camera_tracking_image_status(mavlink_channel_t chan, const mavlink_message_t &msg);
 
     // configure camera
     virtual void configure(float shooting_mode, float shutter_speed, float aperture, float ISO, int32_t exposure_type, int32_t cmd_id, float engine_cutoff_time) {}
@@ -153,6 +164,8 @@ public:
     // send camera thermal range message to GCS
     virtual void send_camera_thermal_range(mavlink_channel_t chan) const {};
 #endif
+    // send camera tracking image status message to GCS 
+    void send_camera_tracking_image_status(mavlink_channel_t chan) const;
 
 #if AP_CAMERA_SCRIPTING_ENABLED
     // accessor to allow scripting backend to retrieve state
@@ -230,9 +243,16 @@ private:
     struct {
         bool _got_camera_info;      // true once camera has provided CAMERA_INFORMATION
         mavlink_camera_information_t _cam_info {}; // latest camera information received from camera
+        mavlink_camera_tracking_image_status_t _cam_tracking_status {};
         uint8_t _sysid_camera;      // sysid of camera
         uint8_t _compid_camera;     // component id of gimbal
     } camera_settings;
+
+    enum CAMERA_TRACKING_STATUS_FLAGS : uint8_t {
+        CAMERA_TRACKING_STATUS_FLAGS_IDLE,
+        CAMERA_TRACKING_STATUS_FLAGS_ACTIVE,
+        CAMERA_TRACKING_STATUS_FLAGS_ERROR
+    };
 };
 
 #endif // AP_CAMERA_ENABLED

@@ -144,6 +144,7 @@ public:
     // p1,p2 are in range 0 to 1.  0 is left or top, 1 is right or bottom
     bool set_tracking(TrackingType tracking_type, const Vector2f& top_left, const Vector2f& bottom_right);
     bool set_tracking(uint8_t instance, TrackingType tracking_type, const Vector2f& top_left, const Vector2f& bottom_right);
+    bool is_tracking_object_visible(uint8_t instance);
 #endif
 
 #if AP_CAMERA_SET_CAMERA_SOURCE_ENABLED
@@ -258,6 +259,9 @@ private:
     // send camera thermal range message to GCS
     void send_camera_thermal_range(mavlink_channel_t chan);
 #endif
+
+    // send camera tracking image status message
+    void send_camera_tracking_image_status(mavlink_channel_t chan);
 
     HAL_Semaphore _rsem;                // semaphore for multi-thread access
     AP_Camera_Backend *primary;         // primary camera backed

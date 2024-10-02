@@ -479,7 +479,12 @@ bool AP_Camera::send_mavlink_message(GCS_MAVLINK &link, const enum ap_message ms
         send_video_stream_information(chan);
         break;
 #endif // AP_MAVLINK_MSG_VIDEO_STREAM_INFORMATION_ENABLED
-
+#if AP_CAMERA_TRACKING_ENABLED
+    case MSG_CAMERA_TRACKING_IMAGE_STATUS:
+        CHECK_PAYLOAD_SIZE2(CAMERA_TRACKING_IMAGE_STATUS);
+        send_camera_tracking_image_status(chan);
+        break;
+#endif
     default:
         // should not reach this; should only be called for specific IDs
         break;
@@ -651,13 +656,27 @@ void AP_Camera::send_camera_capture_status(mavlink_channel_t chan)
 #if AP_CAMERA_SEND_THERMAL_RANGE_ENABLED
 // send camera thermal range message to GCS
 void AP_Camera::send_camera_thermal_range(mavlink_channel_t chan)
-{
     WITH_SEMAPHORE(_rsem);
 
     // call each instance
     for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {
             _backends[instance]->send_camera_thermal_range(chan);
+        }
+    }
+}
+#endif
+
+#if AP_CAMERA_TRACKING_ENABLED
+// send camera tracking image status message to GCS
+void AP_Camera::send_camera_tracking_image_status(mavlink_channel_t chan)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    // call each instance
+    for (uint8_t instance = 0; instance < AP_CAMERA_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_camera_tracking_image_status(chan);
         }
     }
 }
@@ -775,6 +794,20 @@ bool AP_Camera::set_tracking(uint8_t instance, TrackingType tracking_type, const
     // call each instance
     return backend->set_tracking(tracking_type, top_left, bottom_right);
 }
+
+bool AP_Camera::is_tracking_object_visible(uint8_t instance)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+
+    // call each instance
+    return backend->is_tracking_object_visible();
+}
+
 #endif
 
 #if AP_CAMERA_SET_CAMERA_SOURCE_ENABLED

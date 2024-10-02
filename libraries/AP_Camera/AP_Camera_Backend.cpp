@@ -354,6 +354,24 @@ void AP_Camera_Backend::send_camera_capture_status(mavlink_channel_t chan) const
         image_index);     // total number of images captured
 }
 
+// send camera tracking image status message to GCS
+void AP_Camera_Backend::send_camera_tracking_image_status(mavlink_channel_t chan) const
+{
+    mavlink_msg_camera_tracking_image_status_send(
+        chan,
+        camera_settings._cam_tracking_status.tracking_status,  // uint8_t tracking_status
+        camera_settings._cam_tracking_status.tracking_mode,    // uint8_t tracking_mode
+        camera_settings._cam_tracking_status.target_data,      // uint8_t target_data
+        camera_settings._cam_tracking_status.point_x,          // float point_x
+        camera_settings._cam_tracking_status.point_y,          // float point_y
+        camera_settings._cam_tracking_status.radius,           // float radius
+        camera_settings._cam_tracking_status.rec_top_x,        // float rec_top_x
+        camera_settings._cam_tracking_status.rec_top_y,        // float rec_top_y
+        camera_settings._cam_tracking_status.rec_bottom_x,     // float rec_bottom_x
+        camera_settings._cam_tracking_status.rec_bottom_y      // float rec_bottom_y
+    );
+}
+
 // setup a callback for a feedback pin. When on PX4 with the right FMU
 // mode we can use the microsecond timer.
 void AP_Camera_Backend::setup_feedback_callback()
@@ -508,6 +526,11 @@ void AP_Camera_Backend::handle_message_camera_information(mavlink_channel_t chan
     camera_settings._got_camera_info = true;
 }
 
+void AP_Camera_Backend::handle_message_camera_tracking_image_status(mavlink_channel_t chan, const mavlink_message_t &msg)
+{
+    mavlink_msg_camera_tracking_image_status_decode(&msg, &camera_settings._cam_tracking_status);
+}
+
 // handle MAVLink messages from the camera
 void AP_Camera_Backend::handle_message(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
@@ -516,6 +539,8 @@ void AP_Camera_Backend::handle_message(mavlink_channel_t chan, const mavlink_mes
         case MAVLINK_MSG_ID_CAMERA_INFORMATION:
             handle_message_camera_information(chan,msg);
             break;
+        case MAVLINK_MSG_ID_CAMERA_TRACKING_IMAGE_STATUS:
+            handle_message_camera_tracking_image_status(chan,msg);
         default:
             break;
     }
