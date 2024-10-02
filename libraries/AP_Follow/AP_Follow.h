@@ -33,7 +33,8 @@ public:
 
     // enum for FOLLOW_OPTIONS parameter
     enum class Option {
-        MOUNT_FOLLOW_ON_ENTER = 1
+        MOUNT_FOLLOW_ON_ENTER = 1,
+        OBJECT_FOLLOW_ON_ENTER = 2
     };
 
     // enum for YAW_BEHAVE parameter
@@ -69,10 +70,10 @@ public:
     bool have_target() const;
 
     // get target's estimated location and velocity (in NED)
-    bool get_target_location_and_velocity(Location &loc, Vector3f &vel_ned) const;
+    bool get_target_location_and_velocity(Location &loc, Vector3f &vel_ned);
 
     // get target's estimated location and velocity (in NED), with offsets added
-    bool get_target_location_and_velocity_ofs(Location &loc, Vector3f &vel_ned) const;
+    bool get_target_location_and_velocity_ofs(Location &loc, Vector3f &vel_ned);
     
     // get distance vector to target (in meters), target plus offsets, and target's velocity all in NED frame
     bool get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_with_ofs, Vector3f &vel_ned);

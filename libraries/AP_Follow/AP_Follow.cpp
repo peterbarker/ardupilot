@@ -26,6 +26,8 @@
 #include <AP_Logger/AP_Logger.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
+#include <AP_Mount/AP_Mount.h>
+#include <AP_Camera/AP_Camera.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -137,7 +139,7 @@ const AP_Param::GroupInfo AP_Follow::var_info[] = {
     // @Param: _OPTIONS
     // @DisplayName: Follow options
     // @Description: Follow options bitmask
-    // @Values: 0:None,1: Mount Follows lead vehicle on mode enter
+    // @Values: 0:None,1: Mount Follows lead vehicle on mode enter, 2: Follows vehicle tracked by the gimbal target.
     // @User: Standard
     AP_GROUPINFO("_OPTIONS", 11, AP_Follow, _options, 0),
 
@@ -166,7 +168,7 @@ void AP_Follow::clear_offsets_if_required()
 }
 
 // get target's estimated location
-bool AP_Follow::get_target_location_and_velocity(Location &loc, Vector3f &vel_ned) const
+bool AP_Follow::get_target_location_and_velocity(Location &loc, Vector3f &vel_ned)
 {
     // exit immediately if not enabled
     if (!_enabled) {
@@ -175,19 +177,50 @@ bool AP_Follow::get_target_location_and_velocity(Location &loc, Vector3f &vel_ne
 
     // check for timeout
     if ((_last_location_update_ms == 0) || (AP_HAL::millis() - _last_location_update_ms > AP_FOLLOW_TIMEOUT_MS)) {
-        return false;
+        if (option_is_enabled(Option::MOUNT_FOLLOW_ON_ENTER)) {
+            return false;
+        }
     }
 
     // calculate time since last actual position update
     const float dt = (AP_HAL::millis() - _last_location_update_ms) * 0.001f;
 
     // get velocity estimate
-    if (!get_velocity_ned(vel_ned, dt)) {
-        return false;
+    if (option_is_enabled(Option::OBJECT_FOLLOW_ON_ENTER)) {
+        vel_ned = {0,0,0};
+    } else {
+        if (!get_velocity_ned(vel_ned, dt)) {
+            return false;
+        }
     }
 
     // project the vehicle position
-    Location last_loc = _target_location;
+    Location last_loc;
+    if (option_is_enabled(Option::OBJECT_FOLLOW_ON_ENTER)) {
+        uint8_t instance = 0;
+        Quaternion quat;
+        Location poi_loc;
+        if (AP_Camera::get_singleton()->is_tracking_object_visible(0)) {
+            if (AP_Mount::get_singleton()->get_poi(instance,quat,loc,poi_loc)) {
+                poi_loc.change_alt_frame(last_loc.get_alt_frame());
+                if (last_loc.lat == poi_loc.lat && last_loc.lng == poi_loc.lng && last_loc.alt == poi_loc.alt) {
+                    // Do nothing
+                } else {
+                    last_loc = poi_loc;
+                    _last_location_update_ms = AP_HAL::millis();
+                }
+            } else {
+                return false;
+            }
+        } else {
+            printf("No objet detected");
+            return false;
+        }
+
+    } else if (option_is_enabled(Option::MOUNT_FOLLOW_ON_ENTER)) {
+        last_loc = _target_location;
+    }
+
     last_loc.offset(vel_ned.x * dt, vel_ned.y * dt);
     last_loc.alt -= vel_ned.z * 100.0f * dt; // convert m/s to cm/s, multiply by dt.  minus because NED
 
@@ -211,6 +244,7 @@ bool AP_Follow::get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_w
     Vector3f veh_vel;
     if (!get_target_location_and_velocity(target_loc, veh_vel)) {
         clear_dist_and_bearing_to_target();
+        gcs().send_text(MAV_SEVERITY_CRITICAL,"Returning false 0");
         return false;
     }
 
@@ -225,6 +259,7 @@ bool AP_Follow::get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_w
     // fail if too far
     if (is_positive(_dist_max.get()) && (dist_vec.length() > _dist_max)) {
         clear_dist_and_bearing_to_target();
+        gcs().send_text(MAV_SEVERITY_CRITICAL,"Returning false 1");
         return false;
     }
 
@@ -235,6 +270,7 @@ bool AP_Follow::get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_w
     Vector3f offsets;
     if (!get_offsets_ned(offsets)) {
         clear_dist_and_bearing_to_target();
+        gcs().send_text(MAV_SEVERITY_CRITICAL,"Returning false 2");
         return false;
     }
 
@@ -538,7 +574,7 @@ void AP_Follow::clear_dist_and_bearing_to_target()
 }
 
 // get target's estimated location and velocity (in NED), with offsets added
-bool AP_Follow::get_target_location_and_velocity_ofs(Location &loc, Vector3f &vel_ned) const
+bool AP_Follow::get_target_location_and_velocity_ofs(Location &loc, Vector3f &vel_ned)
 {
     Vector3f ofs;
     if (!get_offsets_ned(ofs) ||
