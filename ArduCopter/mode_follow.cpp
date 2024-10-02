@@ -2,6 +2,7 @@
 
 #if MODE_FOLLOW_ENABLED
 
+#include<AP_Camera/AP_Camera_Tracking.h>
 /*
  * mode_follow.cpp - follow another mavlink-enabled vehicle by system id
  *
