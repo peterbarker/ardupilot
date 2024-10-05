@@ -281,6 +281,7 @@ class ExtractFeatures(object):
 
             ('AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED', r'GCS_MAVLINK_Plane::handle_command_int_guided_slew_commands'),
             ('AP_SERIALMANAGER_REGISTER_ENABLED', r'AP_SerialManager::register_port'),
+            ('AP_NETWORKING_TESTS_ENABLED', r'AP_Networking::start_tests'),
         ]
 
     def progress(self, msg):

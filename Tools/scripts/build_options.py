@@ -428,6 +428,7 @@ BUILD_OPTIONS = [
 
     Feature('Networking', 'PPP', 'AP_NETWORKING_BACKEND_PPP', 'Enable PPP networking', 0, None),
     Feature('Networking', 'CAN MCAST', 'AP_NETWORKING_CAN_MCAST_ENABLED', 'Enable CAN multicast bridge', 0, None),
+    Feature('Networking', 'NETWORKING_TESTS', 'AP_NETWORKING_TESTS_ENABLED', 'Enable networking tests', 0, None),
 
     Feature('DroneCAN', 'DroneCAN', 'HAL_ENABLE_DRONECAN_DRIVERS', 'Enable DroneCAN support', 0, None),
 ]
