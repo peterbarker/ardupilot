@@ -2,3 +2,5 @@ include ../Pixhawk6X/hwdef.dat
 
 define USE_BOOTLOADER_FROM_BOARD Pixhawk6X
 define AP_BOOTLOADER_FLASHING_ENABLED 0
+
+define HAL_GENERATOR_ENABLED 0
