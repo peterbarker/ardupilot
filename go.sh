@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3.9 ./Tools/autotest/sim_vehicle.py \
+./Tools/autotest/sim_vehicle.py \
     --vehicle plane \
     --frame quadplane \
     --aircraft Volanti \
