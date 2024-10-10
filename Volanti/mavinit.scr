@@ -2,3 +2,11 @@ map icon -35.5882733 148.9698032 barrell
 
 map icon -35.59614497 148.97168085 flag
 map icon -35.58830957 148.98004853 flag
+
+
+set flytoframe AGL
+
+alias add hold command_int GLOBAL_TERRAIN_ALT DO_REPOSITION 0 0 0 1 0 0 -355792491 1489722110 100
+
+graph TERRAIN_REPORT.current_height
+
