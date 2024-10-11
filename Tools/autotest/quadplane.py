@@ -2193,12 +2193,18 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
 
         self.set_rc(3, 2000)
         self.wait_altitude(home.altitude*0.001+20, home.altitude*0.001+25, altitude_source='SIM_STATE.alt')
-        self.set_rc(3, 1000)
+        self.set_rc(3, 1500)
 
         self.change_mode('CRUISE')
-        self.wait_airspeed(23, 25, timeout=120)
+        self.wait_airspeed(14, 16, timeout=120)
         self.set_rc(1, 1700)
+        self.delay_sim_time(10)
+        self.change_mode('AUTO')
         self.delay_sim_time(120)
+
+        self.disarm_vehicle(force=True)
+
+        # test stuff ended - clean-up is happening now
 
         self.remove_installed_script_module("json.lua")
         for script_to_uninstall in scripts_to_install:
