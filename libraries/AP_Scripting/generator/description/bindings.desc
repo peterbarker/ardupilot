@@ -239,6 +239,15 @@ ap_object AP_RangeFinder_Backend method status uint8_t
 ap_object AP_RangeFinder_Backend manual handle_script_msg lua_range_finder_handle_script_msg 1
 ap_object AP_RangeFinder_Backend method get_state void RangeFinder::RangeFinder_State'Ref
 
+include SITL/SITL.h
+userdata SITL::sitl_fdm depends AP_SIM_ENABLED
+userdata SITL::sitl_fdm method location Location
+
+singleton SITL::SIM depends AP_SIM_ENABLED
+singleton SITL::SIM rename sitl
+singleton SITL::SIM method get_state SITL::sitl_fdm
+
+
 singleton RangeFinder depends (!defined(HAL_BUILD_AP_PERIPH) || defined(HAL_PERIPH_ENABLE_RANGEFINDER))
 singleton RangeFinder rename rangefinder
 singleton RangeFinder method num_sensors uint8_t

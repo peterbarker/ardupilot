@@ -97,6 +97,11 @@ struct sitl_fdm {
     // AGL altitude, usually derived from the terrain database in simulation:
     float height_agl;
 
+    Location location() {
+        // floats are near enough to doubles today:
+        return Location(latitude*1e7, longitude*1e7, altitude*100, Location::AltFrame::ABSOLUTE);
+    }
+
 };
 
 // number of rc output channels
@@ -153,6 +158,8 @@ public:
     };
 
     struct sitl_fdm state;
+
+    struct sitl_fdm &get_state() { return state; }
 
     // throttle when motors are active
     float throttle;
@@ -545,6 +552,10 @@ public:
 
 namespace AP {
     SITL::SIM *sitl();
+};
+
+namespace AP {
+    SITL::sitl_fdm &sitl_fdm();
 };
 
 #endif // AP_SIM_ENABLED

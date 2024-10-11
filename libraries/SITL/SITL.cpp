@@ -1441,6 +1441,11 @@ SITL::SIM *sitl()
     return SITL::SIM::get_singleton();
 }
 
+SITL::sitl_fdm &sitl_fdm()
+{
+    return sitl()->state;
+}
+
 };
 
 #endif // AP_SIM_ENABLED
