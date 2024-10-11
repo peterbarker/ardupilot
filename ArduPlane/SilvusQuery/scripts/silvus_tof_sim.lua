@@ -156,7 +156,8 @@ end
    get range in TOF units (100ns), given offset of beacon from home
 --]]
 local function get_range_ticks(radio_idx)
-   local gps_loc = gps:location(0)
+   local state = sitl:get_state()
+   local gps_loc = state:location()
    if not gps_loc then
       return nil
    end
