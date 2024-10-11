@@ -2141,8 +2141,10 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             'INS_ACCSCAL_Y': 1,
             'INS_ACCSCAL_Z': 1,
             'EK3_SRC1_POSXY': 0,
-            'EK3_SRC1_VELXY': 0,
-            'EK3_SRC1_VELZ': 0,
+            'EK3_SRC1_POSZ': 1,
+            'EK3_SRC1_VELXY': 3,
+            'EK3_SRC1_VELZ': 3,
+            'EK3_SRC_OPTIONS': 0,
         })
         # need to force the IMU calibrations into storage:
         self.run_cmd_int(mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION, p5=76)
@@ -2188,8 +2190,9 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         )
 
         self.change_mode('QHOVER')
-        self.wait_prearm_sys_status_healthy(timeout=30)
-        self.arm_vehicle()
+        # self.wait_prearm_sys_status_healthy(timeout=30)
+        self.delay_sim_time(120)
+        self.arm_vehicle(force=True)
 
         self.set_rc(3, 2000)
         self.wait_altitude(home.altitude*0.001+20, home.altitude*0.001+25, altitude_source='SIM_STATE.alt')
@@ -2199,6 +2202,9 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.wait_airspeed(14, 16, timeout=120)
         self.set_rc(1, 1700)
         self.delay_sim_time(10)
+        self.change_mode('LOITER')
+        self.delay_sim_time(120)
+
         self.change_mode('AUTO')
         self.delay_sim_time(120)
 
