@@ -29,6 +29,7 @@
 #define FSO_PAYLOAD_BEC_TEMPERATURE_MAX     80.0    // Maximum temperature of the payload BEC's
 #define FSO_MAIN_TEMPERATURE_MAX            95.0    // Maximum temperature of the main power disribution board
 #define FSO_FAN_ERROR_HZ_MIN                100.0   // Minimum tachometer reading for the standard fan
+#define FSO_OPTIONS_DEFAULT                 40      // Default options: H16_PRO ON  PAYLOAD_HV OFF PAYLOAD_BEC ON
 
 #define FSO_CAL_MAIN_VOLT                   50.0    // Voltage of source used for calibrating Bat 1, Bat 2 and Main Output voltages
 #define FSO_CAL_MAIN_LOAD                   0.5     // Resistance of the load used to calibrate the Bat 1, Bat 2 and Main Output currents
@@ -63,7 +64,7 @@ const AP_Param::GroupInfo FSOPowerStack::var_info[] {
     // @DisplayName: FSO Options
     // @Description: FSO Options
     // @Bitmask: 0:Debug
-    AP_GROUPINFO("_OPTIONS", 2, FSOPowerStack, options, 40),
+    AP_GROUPINFO("_OPTIONS", 2, FSOPowerStack, options, FSO_OPTIONS_DEFAULT),
 
     // @Param: _BAT_OFF_MAX
     // @DisplayName: Payload 1 voltage
@@ -1367,7 +1368,7 @@ void FSOPowerStack::calibrate()
             set_LED_1_off();
             set_LED_debug_off();
             // Could not work out how to set just that bit
-            options.set_and_save(56);
+            options.set_and_save(FSO_OPTIONS_DEFAULT);
             break;
         }
         break;
@@ -1512,7 +1513,7 @@ void FSOPowerStack::calibrate_main_current()
         set_LED_1_off();
         set_LED_debug_off();
         // Could not work out how to set just that bit
-        options.set_and_save(56);
+        options.set_and_save(FSO_OPTIONS_DEFAULT);
         break;
 
     case CalibrateHighCurrentState::Current_Finish:
