@@ -435,7 +435,7 @@ void FSOPowerStack::update_main_power()
             // Turn on main battery switches
             set_bat_1_SW_on();
             set_bat_2_SW_on();
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Main Power On");
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Main Power On");
             main_state = TurnOnState::On;
         } else if (now_ms - start_main_precharge_ms > FSO_PRECHARGE_TIMEOUT_MS) {
             GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Main pre-charge failure, dV: %.2f", MAX(batt.voltage(0), batt.voltage(1)) - batt.voltage(8));
@@ -454,7 +454,7 @@ void FSOPowerStack::update_main_power()
         set_main_PC_off();
         set_bat_1_SW_off();
         set_bat_2_SW_off();
-        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Main Power Off");
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Main Power Off");
         main_state = TurnOnState::Off;
         break;
     }
@@ -629,11 +629,11 @@ void FSOPowerStack::update_DAC()
 {
     const float v1 = (cal_payload_P1c1 - payload_1_voltage) * cal_payload_P1c2;
     if (!dac.set_voltage(0, 0, v1)) {
-        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "set voltage %u %.3f failed", unsigned(0), v1);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "set voltage %u %.3f failed", unsigned(0), v1);
     }
     const float v2 = (cal_payload_P2c1 - payload_2_voltage) * cal_payload_P2c2;
     if (!dac.set_voltage(0, 3, v2)) {
-        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "set voltage %u %.3f failed", unsigned(3), v2);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "set voltage %u %.3f failed", unsigned(3), v2);
     }
 }
 
