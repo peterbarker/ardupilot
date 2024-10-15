@@ -148,6 +148,7 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, ModeReason reason
         } else if (g.fs_action_long == FS_ACTION_LONG_AUTO) {
             set_mode(mode_auto, reason);
         } else if (g.fs_action_long == FS_ACTION_LONG_AUTO_SATISFY_JUMP_REPEATS) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Marking all loops as satisfied");
             mission.satisfy_jump_repeats();
             set_mode(mode_auto, reason);
         } else {
@@ -194,6 +195,7 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, ModeReason reason
         } else if (g.fs_action_long == FS_ACTION_LONG_AUTO) {
             set_mode(mode_auto, reason);
         } else if (g.fs_action_long == FS_ACTION_LONG_AUTO_SATISFY_JUMP_REPEATS) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Marking all loops as satisfied");
             mission.satisfy_jump_repeats();
             set_mode(mode_auto, reason);
         } else if (g.fs_action_long == FS_ACTION_LONG_RTL) {
