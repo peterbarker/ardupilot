@@ -662,6 +662,11 @@ public:
         return _last_change_time_ms;
     }
 
+    // set all jump counters to the repeat count, so we no longer loop
+    void satisfy_jump_repeats() {
+        all_loops_satisified = true;
+    }
+
     // find the nearest landing sequence starting point (DO_LAND_START) and
     // return its index.  Returns 0 if no appropriate DO_LAND_START point can
     // be found.
@@ -920,6 +925,8 @@ private:
       format to take advantage of new packing
      */
     void format_conversion(uint8_t tag_byte, const Mission_Command &cmd, PackedContent &packed_content) const;
+
+    bool all_loops_satisified;
 };
 
 namespace AP

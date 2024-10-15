@@ -147,6 +147,9 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, ModeReason reason
             set_mode(mode_fbwa, reason);
         } else if (g.fs_action_long == FS_ACTION_LONG_AUTO) {
             set_mode(mode_auto, reason);
+        } else if (g.fs_action_long == FS_ACTION_LONG_AUTO_SATISFY_JUMP_REPEATS) {
+            mission.satisfy_jump_repeats();
+            set_mode(mode_auto, reason);
         } else {
             set_mode(mode_rtl, reason);
         }
@@ -190,6 +193,9 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, ModeReason reason
             set_mode(mode_fbwa, reason);
         } else if (g.fs_action_long == FS_ACTION_LONG_AUTO) {
             set_mode(mode_auto, reason);
+        } else if (g.fs_action_long == FS_ACTION_LONG_AUTO_SATISFY_JUMP_REPEATS) {
+            mission.satisfy_jump_repeats();
+            set_mode(mode_auto, reason);
         } else if (g.fs_action_long == FS_ACTION_LONG_RTL) {
             set_mode(mode_rtl, reason);
         }
@@ -197,6 +203,10 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, ModeReason reason
 
     case Mode::Number::RTL:
         if (g.fs_action_long == FS_ACTION_LONG_AUTO) {
+            set_mode(mode_auto, reason);
+        } else if (g.fs_action_long == FS_ACTION_LONG_AUTO_SATISFY_JUMP_REPEATS) {
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Marking all loops as satisfied");
+            mission.satisfy_jump_repeats();
             set_mode(mode_auto, reason);
         }
         break;

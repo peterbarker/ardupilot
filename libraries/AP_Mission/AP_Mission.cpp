@@ -267,6 +267,7 @@ void AP_Mission::reset()
     _prev_nav_cmd_id       = AP_MISSION_CMD_ID_NONE;
     init_jump_tracking();
     reset_wp_history();
+    all_loops_satisified = false;
 }
 
 /// clear - clears out mission
@@ -2145,7 +2146,8 @@ bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool i
             } else {
                 // get number of times jump command has already been run
                 int16_t jump_times_run = get_jump_times_run(temp_cmd);
-                if (jump_times_run < temp_cmd.content.jump.num_times) {
+                if (jump_times_run < temp_cmd.content.jump.num_times &&
+                    !all_loops_satisified) {
                     // update the record of the number of times run
                     if (increment_jump_num_times_if_found && !_flags.resuming_mission) {
                         increment_jump_times_run(temp_cmd, send_gcs_msg);
