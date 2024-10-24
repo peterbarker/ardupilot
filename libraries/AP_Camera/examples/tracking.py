@@ -5,13 +5,21 @@ import threading
 import math
 from pymavlink import mavutil
 import time
+import imutils
 
 stop_thread_lock = threading.Lock()
 stop_thread = False
 
+#rtsp_url = "rtsp://localhost:8554/camera"
+rtsp_url = "rtsp://192.168.144.25:8554/main.264"
+#pymavlink_connection_url = '/dev/ttyTHS0'
+pymavlink_connection_url = 'localhost:7000'
+
 class GimbalControl:
     def __init__(self, connection_str):
-        self.master = mavutil.mavlink_connection(connection_str)
+        print("Connecting")
+        self.master = mavutil.mavlink_connection(connection_str, baud=921600, source_system=20)
+        print("Connected")
         self.master.wait_heartbeat()
         print("Heartbeat from the system (system %u component %u)" % 
               (self.master.target_system, self.master.target_component))
@@ -32,18 +40,19 @@ class GimbalControl:
             start_time = time.time()
             with self.lock:
                 # Send 1 if object is detected, 2 if not
+                tracking_status = 0
                 with stop_thread_lock:
                     if stop_thread == True:
-                        tracking_status = 0
+                        tracking_status = mavutil.mavlink.CAMERA_TRACKING_STATUS_FLAGS_IDLE
                     elif self.object_detected == True:
-                        tracking_status = 1
+                        tracking_status = mavutil.mavlink.CAMERA_TRACKING_STATUS_FLAGS_ACTIVE
                     else:
-                        tracking_status = 2
+                        tracking_status = mavutil.mavlink.CAMERA_TRACKING_STATUS_FLAGS_ERROR
 
                 self.send_camera_tracking_image_status(
                     tracking_status,  # Example: Active tracking
-                    tracking_mode=1,  # Example: CAMERA_TRACKING_MODE_POINT
-                    target_data=1,  # Example: Target location available
+                    tracking_mode=mavutil.mavlink.CAMERA_TRACKING_MODE_POINT,
+                    target_data=mavutil.mavlink.CAMERA_TRACKING_TARGET_DATA_IN_STATUS,
                     point_x=0,
                     point_y=0,
                     radius=float("NaN"),
@@ -112,7 +121,13 @@ class GimbalControl:
                 diff_x = (centre_x_copy - (640 / 2)) / 2
                 diff_y = -(centre_y_copy - (480 / 2)) / 2
 
-            self.send_gimbal_manager_pitch_yaw_angles(float("NaN"), float("NaN"), math.radians(diff_y), math.radians(diff_x))
+            pitch_rate = math.radians(diff_y)
+            yaw_rate = math.radians(diff_x)
+            if abs(pitch_rate) > 0.1:
+                pitch_rate = pitch_rate/abs(pitch_rate) * 0.1
+            if abs(yaw_rate) > 0.1:
+                yaw_rate = yaw_rate/abs(yaw_rate) * 0.1
+            self.send_gimbal_manager_pitch_yaw_angles(float("NaN"), float("NaN"), pitch_rate, yaw_rate)
 
             # 50Hz
             elapsed_time = time.time() - start_time
@@ -140,34 +155,54 @@ class VideoStreamer:
         self.last_change_time = 0
 
     def initialize_video_capture(self):
+        print("Opening VideoCapture")
+#            f'rtspsrc location={rtsp_url} latency=50 ! decodebin ! videoconvert ! appsink',
         cap = cv2.VideoCapture(
-            'rtspsrc location=rtsp://localhost:8554/camera latency=50 ! decodebin ! videoconvert ! appsink',
+            f'rtspsrc location={rtsp_url} latency=0 buffer-mode=auto ! rtph265depay !  tee name=tee1 tee1. ! queue ! h265parse ! avdec_h265  ! videoconvert ! video/x-raw,format=BGRx ! appsink tee1. ! queue ! h265parse config-interval=15 ! video/x-h265 ! mpegtsmux ! appsink',
             cv2.CAP_GSTREAMER
         )
+
+        
+
+        print("Created videocapture")
         if not cap.isOpened():
             print("Error: Could not open video stream.")
             exit()
+        print("returning cap")
         return cap
 
     def update_tracker(self, new_roi):
         self.initBB = new_roi
         self.tracker = cv2.legacy.TrackerCSRT_create()  # Change to legacy namespace
         if self.frame is not None:
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
             self.tracker.init(self.frame, new_roi)
+
+    def grab_frame(self):
+        ret, frame = self.cap.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+#        frame = imutils.resize(frame, 500)
+        return ret, frame
 
     def process_frame(self, gimbal_control):
         global stop_thread
+        i = 0
         while True:
+#            if i % 10 == 0:
+#                print(f"Frame {i}")
+            i += 1
             start_time = time.time()  # Record the start time of the loop
             with stop_thread_lock:
                 if stop_thread == True:
                     elapsed_time = time.time() - start_time
                     sleep_time = max(0, 0.02 - elapsed_time)  # Ensure no negative sleep time
                     time.sleep(sleep_time)
-                    ret, self.frame = self.cap.read()
+                    ret, self.frame = self.grab_frame()
                     continue
 
-            ret, self.frame = self.cap.read()
+            ret, self.frame = self.grab_frame()
             if not ret:
                 print("Error: Unable to read frame from video stream.")
                 break
@@ -176,6 +211,7 @@ class VideoStreamer:
             if self.initBB is not None:
                 (success, box) = self.tracker.update(self.frame)
                 if success:
+                    print("Success")
                     (x, y, w, h) = [int(v) for v in box]
                     center_x = x + (w // 2)
                     center_y = y + (h // 2)
@@ -191,10 +227,11 @@ class VideoStreamer:
                     self.reinitialize_tracker(gimbal_control)
 
             # Display the frame
-            cv2.imshow("Frame", self.frame)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
-                break
+#            cv2.imshow("Frame", self.frame)
+#            # print(self.frame.shape)
+#            key = cv2.waitKey(1) & 0xFF
+#            if key == ord("q"):
+#                break
 
         self.cleanup()
 
@@ -230,17 +267,32 @@ class UDPReceiver:
         self.udp_thread.daemon = True
         self.udp_thread.start()
 
+#    def receive_udp_data(self):
+#        while True:
+#            global stop_thread
+#            data, addr = self.sock.recvfrom(16)
+#            x1, y1, x2, y2 = struct.unpack('!ffff', data)
+#            print(f"Received new tracking coordinates: x1={x1}, y1={y1}, x2={x2}, y2={y2}")
+#            with stop_thread_lock:
+#                stop_thread = False
+            # Convert normalized coordinates to pixel values
+ #           x1, y1, x2, y2 = int(x1 * self.video_streamer.frame_width), int(y1 * self.video_streamer.frame_height), int(x2 * self.video_streamer.frame_width), int(y2 * self.video_streamer.frame_height)
+ #           self.video_streamer.update_tracker((x1, y1, x1 + x2, y1 + y2))
+
     def receive_udp_data(self):
         while True:
             global stop_thread
             data, addr = self.sock.recvfrom(16)
-            x, y, w, h = struct.unpack('!ffff', data)
-            print(f"Received new tracking coordinates: x={x}, y={y}, w={w}, h={h}")
+            x, y, x2, y2 = struct.unpack('!ffff', data)
+            print(f"Received new tracking coordinates: x={x}, y={y}, x2={x2}, y2={y2}")
             with stop_thread_lock:
                 stop_thread = False
-            # Convert normalized coordinates to pixel values
-            x, y, w, h = int(x * self.video_streamer.frame_width), int(y * self.video_streamer.frame_height), int(w * self.video_streamer.frame_width), int(h * self.video_streamer.frame_height)
-            self.video_streamer.update_tracker((x, y, w-x, h-y))
+           # Convert normalized coordinates to pixel values
+            x, y, x2, y2 = int(x * self.video_streamer.frame_width), int(y * self.video_streamer.frame_height), int(x2 * self.video_streamer.frame_width), int(y2 * self.video_streamer.frame_height)
+            rec = (x, y, x2-x, y2-y)
+            rec = (x, y, 50, 50)
+            print(f"{rec=}")
+            self.video_streamer.update_tracker(rec)
 
     def receive_udp_data2(self):
         global stop_thread
@@ -252,7 +304,7 @@ class UDPReceiver:
 
 
 def main():
-    gimbal_control = GimbalControl('127.0.0.1:14570')
+    gimbal_control = GimbalControl(pymavlink_connection_url)
     video_streamer = VideoStreamer(input_port=5600, output_port=5700)
     udp_receiver = UDPReceiver(gimbal_control, video_streamer)
 

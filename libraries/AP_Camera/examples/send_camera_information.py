@@ -4,6 +4,10 @@ from pymavlink import mavutil
 import argparse
 import socket
 import struct
+import sys
+
+# pymavlink_connection_url = f'/dev/ttyTHS0'
+pymavlink_connection_url = 'localhost:7001'
 
 # Define CAMERA_CAP_FLAGS as constants
 CAMERA_CAP_FLAGS_CAPTURE_VIDEO = 1                          # Camera is able to record video
@@ -20,9 +24,8 @@ CAMERA_CAP_FLAGS_HAS_TRACKING_RECTANGLE = 1024              # Camera supports tr
 CAMERA_CAP_FLAGS_HAS_TRACKING_GEO_STATUS = 2048             # Camera supports tracking geo status
 
 class CameraTrackingScript:
-    def __init__(self, ip, port, sysid, compid, resh, resv):
-        self.ip = ip
-        self.port = port
+    def __init__(self, pymavlink_connection_url, sysid, compid, resh, resv):
+        self.pymavlink_connection_url = pymavlink_connection_url
         self.sysid = sysid
         self.compid = compid
         self.connection = None
@@ -35,7 +38,12 @@ class CameraTrackingScript:
         self.resv = resv
 
     def connect_to_mavlink(self):
-        self.connection = mavutil.mavlink_connection(f'udp:{self.ip}:{self.port}', source_system=self.sysid)
+#        self.connection = mavutil.mavlink_connection(f'udp:{self.ip}:{self.port}', source_system=self.sysid)
+        self.connection = mavutil.mavlink_connection(
+            self.pymavlink_connection_url,
+            source_system=self.sysid,
+            baud=921600,
+        )
         print("Searching Vehicle")
         while not self.connection.probably_vehicle_heartbeat(self.connection.wait_heartbeat()):
             print(".", end="")
@@ -48,7 +56,7 @@ class CameraTrackingScript:
             base_mode=0,
             custom_mode=0,
             system_status=mavutil.mavlink.MAV_STATE_UNINIT,
-            mavlink_version=3
+            mavlink_version=3,
         )
 
     def send_camera_information(self):
@@ -93,6 +101,7 @@ class CameraTrackingScript:
 
     def handle_camera_track_rectangle(self, msg):
         print("Received MAV_CMD_CAMERA_TRACK_RECTANGLE command.")
+        mavutil.dump_message_verbose(sys.stdout, msg)
         # These should remain as floats (normalized coordinates)
         norm_x = msg.param1
         norm_y = msg.param2
@@ -153,7 +162,7 @@ def main():
     ip = "127.0.0.1"
     port = 14560
 
-    script = CameraTrackingScript(ip, port, args.sysid, args.compid, args.resh, args.resv)
+    script = CameraTrackingScript(pymavlink_connection_url, args.sysid, args.compid, args.resh, args.resv)
     script.run()
 
 if __name__ == "__main__":
