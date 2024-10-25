@@ -656,6 +656,7 @@ void AP_Camera::send_camera_capture_status(mavlink_channel_t chan)
 #if AP_CAMERA_SEND_THERMAL_RANGE_ENABLED
 // send camera thermal range message to GCS
 void AP_Camera::send_camera_thermal_range(mavlink_channel_t chan)
+{
     WITH_SEMAPHORE(_rsem);
 
     // call each instance
