@@ -15,26 +15,16 @@
 /*
   Simulator for the RichenPower Hybrid generators
 
-./Tools/autotest/sim_vehicle.py --gdb --debug -v ArduCopter -A --serial5=sim:richenpower --speedup=1 --console
+./Tools/autotest/sim_vehicle.py --gdb --debug -v ArduCopter -A --serial5=sim:umix40 --speedup=1 --console
 
-param set SERIAL5_PROTOCOL 30
-param set SERIAL5_BAUD 9600
-param set SIM_RICH_ENABLE 1
-param set SERVO8_FUNCTION 42
-param fetch
-param set SIM_RICH_CTRL 8
-param set RC9_OPTION 85
-param set GEN_TYPE 3
+param set SERIAL5_PROTOCOL 50
+param set SERIAL5_BAUD 921
 
 reboot
 
-graph SERVO_OUTPUT_RAW.servo8_raw
-graph RC_CHANNELS.chan9_raw
-module load generator
+graph RAW_IMU.zacc
 
-arm throttle (denied because generator not running)
-
-./Tools/autotest/autotest.py --gdb --debug build.ArduCopter fly.ArduCopter.RichenPower
+./Tools/autotest/autotest.py --gdb --debug build.ArduCopter fly.ArduCopter.UMIX40
 
 */
 
