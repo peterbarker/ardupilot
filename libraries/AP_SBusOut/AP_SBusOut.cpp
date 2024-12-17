@@ -169,6 +169,9 @@ AP_SBusOut::update()
 #endif
 }
 
+#pragma GCC diagnostic push
+#pragma GCC optimize("Os")
+
 void AP_SBusOut::init() {
     uint16_t rate = sbus_rate.get();
 
@@ -205,5 +208,7 @@ void AP_SBusOut::init() {
     uart.set_unbuffered_writes(true);
     uart.set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
 }
+#pragma GCC diagnostic pop
+
 
 #endif  // AP_SBUSOUTPUT_ENABLED
