@@ -239,6 +239,9 @@ public:
       create a rotation matrix from Euler angles in 321 euler ordering
     */
     void        from_euler(T roll, T pitch, T yaw);
+    void        from_euler(const Vector3<T> &src_rpy) {
+        from_euler(src_rpy[0], src_rpy[1], src_rpy[2]);
+    }
 
     /* create eulers from a rotation matrix.
        roll is from -Pi to Pi
@@ -247,6 +250,7 @@ public:
        euler order is 321
     */
     void        to_euler(T *roll, T *pitch, T *yaw) const;
+    void        to_euler(Vector3<T> &ret_rpy) const;
 
     // create matrix from rotation enum
     void from_rotation(enum Rotation rotation);

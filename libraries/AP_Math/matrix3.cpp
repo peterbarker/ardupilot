@@ -58,6 +58,13 @@ void Matrix3<T>::to_euler(T *roll, T *pitch, T *yaw) const
         *yaw = atan2F(b.x, a.x);
     }
 }
+template <typename T>
+void Matrix3<T>::to_euler(Vector3<T> &ret_rpy) const
+{
+    ret_rpy[0] = atan2F(c.y, c.z);
+    ret_rpy[1] = -safe_asin(c.x);
+    ret_rpy[2] = atan2F(b.x, a.x);
+}
 
 template <typename T>
 void Matrix3<T>::from_rotation(enum Rotation rotation)
