@@ -141,9 +141,9 @@ AP_AHRS_DCM::update()
 
 void AP_AHRS_DCM::get_results(AP_AHRS_Backend::Estimates &results)
 {
-    results.roll_rad = roll;
-    results.pitch_rad = pitch;
-    results.yaw_rad = yaw;
+    results.eulers[0] = roll;
+    results.eulers[1] = pitch;
+    results.eulers[2] = yaw;
 
     results.dcm_matrix = _body_dcm_matrix;
     results.gyro_estimate = _omega;

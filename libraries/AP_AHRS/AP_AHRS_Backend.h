@@ -51,9 +51,8 @@ public:
 
     // structure to retrieve results from backends:
     struct Estimates {
-        float roll_rad;
-        float pitch_rad;
-        float yaw_rad;
+        Vector3f eulers;  // rpy in radians
+
         Matrix3f dcm_matrix;
         Vector3f gyro_estimate;
         Vector3f gyro_drift;

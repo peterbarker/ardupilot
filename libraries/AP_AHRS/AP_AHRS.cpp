@@ -500,9 +500,9 @@ void AP_AHRS::update(bool skip_ins_update)
  */
 void AP_AHRS::copy_estimates_from_backend_estimates(const AP_AHRS_Backend::Estimates &results)
 {
-    roll = results.roll_rad;
-    pitch = results.pitch_rad;
-    yaw = results.yaw_rad;
+    roll = results.eulers[0];
+    pitch = results.eulers[1];
+    yaw = results.eulers[2];
 
     state.dcm_matrix = results.dcm_matrix;
 
@@ -1233,9 +1233,7 @@ bool AP_AHRS::_get_secondary_attitude(Vector3f &eulers) const
 #if AP_AHRS_DCM_ENABLED
     case EKFType::DCM:
         // DCM is secondary
-        eulers[0] = dcm_estimates.roll_rad;
-        eulers[1] = dcm_estimates.pitch_rad;
-        eulers[2] = dcm_estimates.yaw_rad;
+        eulers = dcm_estimates.eulers;
         return true;
 #endif
 
@@ -1262,9 +1260,7 @@ bool AP_AHRS::_get_secondary_attitude(Vector3f &eulers) const
 #if AP_AHRS_EXTERNAL_ENABLED
     case EKFType::EXTERNAL: {
         // External is secondary
-        eulers[0] = external_estimates.roll_rad;
-        eulers[1] = external_estimates.pitch_rad;
-        eulers[2] = external_estimates.yaw_rad;
+        eulers = external_estimates.eulers;
         return true;
     }
 #endif
