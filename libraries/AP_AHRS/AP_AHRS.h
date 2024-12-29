@@ -316,7 +316,10 @@ public:
     void writeExtNavVelData(const Vector3f &vel, float err, uint32_t timeStamp_ms, uint16_t delay_ms);
 
     // get speed limit
-    void getControlLimits(float &ekfGndSpdLimit, float &controlScaleXY) const;
+    void getControlLimits(float &ekfGndSpdLimit, float &controlScaleXY) const {
+        active_backend->get_control_limits(ekfGndSpdLimit, controlScaleXY);
+    }
+
     float getControlScaleZ(void) const;
 
     // is the AHRS subsystem healthy?
