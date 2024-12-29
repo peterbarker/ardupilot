@@ -414,7 +414,7 @@ void AP_AHRS::update_state(void)
     state.location_ok = _get_location(state.location);
     state.secondary_pos_ok = _get_secondary_position(state.secondary_pos);
     state.ground_speed_vec = active_backend->groundspeed_vector();
-    state.ground_speed = _groundspeed();
+    state.ground_speed = state.ground_speed_vec.length();
     _getCorrectedDeltaVelocityNED(state.corrected_dv, state.corrected_dv_dt);
     state.origin_ok = _get_origin(state.origin);
     state.velocity_NED_ok = _get_velocity_NED(state.velocity_NED);
@@ -1300,33 +1300,6 @@ bool AP_AHRS::_get_secondary_position(Location &loc) const
 
     // since there is no default case above, this is unreachable
     return false;
-}
-
-float AP_AHRS::_groundspeed(void)
-{
-    switch (active_EKF_type()) {
-#if AP_AHRS_DCM_ENABLED
-    case EKFType::DCM:
-        return dcm.groundspeed();
-#endif
-#if HAL_NAVEKF2_AVAILABLE
-    case EKFType::TWO:
-#endif
-
-#if HAL_NAVEKF3_AVAILABLE
-    case EKFType::THREE:
-#endif
-
-#if AP_AHRS_EXTERNAL_ENABLED
-    case EKFType::EXTERNAL:
-#endif
-
-#if AP_AHRS_SIM_ENABLED
-    case EKFType::SIM:
-#endif
-        break;
-    }
-    return groundspeed_vector().length();
 }
 
 // set the EKF's origin location in 10e7 degrees.  This should only
