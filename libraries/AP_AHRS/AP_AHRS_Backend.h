@@ -49,6 +49,8 @@ public:
 
     CLASS_NO_COPY(AP_AHRS_Backend);
 
+    virtual const char *shortname() const = 0;
+
     // structure to retrieve results from backends:
     struct Estimates {
         float roll_rad;
