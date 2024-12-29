@@ -444,11 +444,11 @@ void AP_AHRS::update(bool skip_ins_update)
     update_AOA_SSA();
 
 #if HAL_GCS_ENABLED
-    state.active_EKF = _active_EKF_type();
-    if (state.active_EKF != last_active_ekf_type) {
-        last_active_ekf_type = state.active_EKF;
+    state.active_EKF_type = _active_EKF_type();
+    if (state.active_EKF_type != last_active_ekf_type) {
+        last_active_ekf_type = state.active_EKF_type;
         const char *shortname = "???";
-        switch ((EKFType)state.active_EKF) {
+        switch ((EKFType)state.active_EKF_type) {
 #if AP_AHRS_DCM_ENABLED
         case EKFType::DCM:
             shortname = "DCM";
