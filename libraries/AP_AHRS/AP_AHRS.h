@@ -27,7 +27,7 @@
 
 #include "AP_AHRS_Backend.h"
 #include <AP_NavEKF2/AP_NavEKF2.h>
-#include <AP_NavEKF3/AP_NavEKF3.h>
+#include "AP_AHRS_NavEKF3.h"
 #include <AP_NavEKF/AP_Nav_Common.h>              // definitions shared by inertial and ekf nav filters
 
 #include "AP_AHRS_DCM.h"
@@ -64,6 +64,10 @@ public:
     static AP_AHRS *get_singleton() {
         return _singleton;
     }
+
+#if AP_AHRS_NAVEKF3_ENABLED
+    AP_AHRS_NavEKF3 ekf3;
+#endif
 
     // periodically checks to see if we should update the AHRS
     // orientation (e.g. based on the AHRS_ORIENTATION parameter)
@@ -442,7 +446,7 @@ public:
 #if AP_AHRS_DCM_ENABLED
         DCM = 0,
 #endif
-#if HAL_NAVEKF3_AVAILABLE
+#if AP_AHRS_NAVEKF3_ENABLED
         THREE = 3,
 #endif
 #if HAL_NAVEKF2_AVAILABLE
@@ -464,9 +468,6 @@ public:
     // these are only out here so vehicles can reference them for parameters
 #if HAL_NAVEKF2_AVAILABLE
     NavEKF2 EKF2;
-#endif
-#if HAL_NAVEKF3_AVAILABLE
-    NavEKF3 EKF3;
 #endif
 
     // for holding parameters
@@ -763,7 +764,6 @@ private:
     bool _ekf2_started;
 #endif
 #if HAL_NAVEKF3_AVAILABLE
-    bool _ekf3_started;
     void update_EKF3(void);
 #endif
 
@@ -998,9 +998,12 @@ private:
     AP_AHRS_DCM dcm{_kp_yaw, _kp, gps_gain, beta, _gps_use, _gps_minsats};
     struct AP_AHRS_Backend::Estimates dcm_estimates;
 #endif
+#if AP_AHRS_NAVEKF3_ENABLED
+    struct AP_AHRS_Backend::Estimates ekf3_estimates;
+#endif
 #if AP_AHRS_SIM_ENABLED
 #if HAL_NAVEKF3_AVAILABLE
-    AP_AHRS_SIM sim{EKF3};
+    AP_AHRS_SIM sim{ekf3.EKF3};
 #else
     AP_AHRS_SIM sim;
 #endif
