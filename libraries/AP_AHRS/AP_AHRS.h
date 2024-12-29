@@ -26,7 +26,7 @@
 #include <AP_HAL/Semaphores.h>
 
 #include "AP_AHRS_Backend.h"
-#include <AP_NavEKF2/AP_NavEKF2.h>
+#include "AP_AHRS_NavEKF2.h"
 #include "AP_AHRS_NavEKF3.h"
 #include <AP_NavEKF/AP_Nav_Common.h>              // definitions shared by inertial and ekf nav filters
 
@@ -65,6 +65,9 @@ public:
         return _singleton;
     }
 
+#if AP_AHRS_NAVEKF2_ENABLED
+    AP_AHRS_NavEKF2 ekf2;
+#endif
 #if AP_AHRS_NAVEKF3_ENABLED
     AP_AHRS_NavEKF3 ekf3;
 #endif
@@ -449,7 +452,7 @@ public:
 #if AP_AHRS_NAVEKF3_ENABLED
         THREE = 3,
 #endif
-#if HAL_NAVEKF2_AVAILABLE
+#if AP_AHRS_NAVEKF2_ENABLED
         TWO = 2,
 #endif
 #if AP_AHRS_SIM_ENABLED
@@ -464,11 +467,6 @@ public:
     void set_ekf_type(EKFType ahrs_type) {
         _ekf_type.set(ahrs_type);
     }
-    
-    // these are only out here so vehicles can reference them for parameters
-#if HAL_NAVEKF2_AVAILABLE
-    NavEKF2 EKF2;
-#endif
 
     // for holding parameters
     static const struct AP_Param::GroupInfo var_info[];
@@ -761,7 +759,6 @@ private:
 
 #if HAL_NAVEKF2_AVAILABLE
     void update_EKF2(void);
-    bool _ekf2_started;
 #endif
 #if HAL_NAVEKF3_AVAILABLE
     void update_EKF3(void);
@@ -1000,6 +997,9 @@ private:
 #endif
 #if AP_AHRS_NAVEKF3_ENABLED
     struct AP_AHRS_Backend::Estimates ekf3_estimates;
+#endif
+#if AP_AHRS_NAVEKF2_ENABLED
+    struct AP_AHRS_Backend::Estimates ekf2_estimates;
 #endif
 #if AP_AHRS_SIM_ENABLED
 #if HAL_NAVEKF3_AVAILABLE
