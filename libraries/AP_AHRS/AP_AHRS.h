@@ -464,10 +464,10 @@ public:
 #if AP_AHRS_DCM_ENABLED
         DCM = 0,
 #endif
-#if HAL_NAVEKF3_AVAILABLE
+#if AP_AHRS_NAVEKF3_ENABLED
         THREE = 3,
 #endif
-#if HAL_NAVEKF2_AVAILABLE
+#if AP_AHRS_NAVEKF2_ENABLED
         TWO = 2,
 #endif
 #if AP_AHRS_SIM_ENABLED
