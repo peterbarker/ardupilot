@@ -2544,7 +2544,7 @@ bool AP_AHRS::_get_origin(EKFType type, Location &ret) const
         return false;
     }
 
-    return backend->get_origin();
+    return backend->get_origin(ret);
 }
 
 /*
