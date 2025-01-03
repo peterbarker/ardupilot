@@ -445,10 +445,14 @@ public:
     void Log_Write();
 
     // check if non-compass sensor is providing yaw.  Allows compass pre-arm checks to be bypassed
-    bool using_noncompass_for_yaw(void) const;
+    bool using_noncompass_for_yaw(void) const {
+        return active_backend->using_noncompass_for_yaw();
+    }
 
     // check if external nav is providing yaw
-    bool using_extnav_for_yaw(void) const;
+    bool using_extnav_for_yaw(void) const {
+        return active_backend->using_extnav_for_yaw();
+    }
 
     // set and save the ALT_M_NSE parameter value
     void set_alt_measurement_noise(float noise);

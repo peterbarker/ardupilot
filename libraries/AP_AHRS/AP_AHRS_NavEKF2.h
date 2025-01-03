@@ -126,6 +126,12 @@ public:
     bool resetHeightDatum(void) override WARN_IF_UNUSED {
         return EKF2.resetHeightDatum();
     }
+    bool using_noncompass_for_yaw(void) const override WARN_IF_UNUSED {
+        return EKF2.isExtNavUsedForYaw();
+    };
+    bool using_extnav_for_yaw(void) const override WARN_IF_UNUSED {
+        return EKF2.isExtNavUsedForYaw();
+    };
 
     bool pre_arm_check(bool requires_position, char *failure_msg, uint8_t failure_msg_len) const override;
 
