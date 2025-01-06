@@ -2942,12 +2942,12 @@ bool AP_AHRS::get_hgt_ctrl_limit(float& limit) const
 
 #if HAL_NAVEKF3_AVAILABLE
     case EKFType::THREE:
-        return ekf3.get_hgt_ctrl_limit(limit);
+        return ekf3.EKF3.getHeightControlLimit(limit);
 #endif
 
 #if AP_AHRS_SIM_ENABLED
     case EKFType::SIM:
-        return sim.get_hgt_ctrl_limit(limit);
+        return false;
 #endif
 #if AP_AHRS_EXTERNAL_ENABLED
     case EKFType::EXTERNAL:
@@ -2984,7 +2984,7 @@ void AP_AHRS::set_terrain_hgt_stable(bool stable)
     ekf2.set_terrain_hgt_stable(stable);
 #endif
 #if HAL_NAVEKF3_AVAILABLE
-    ekf3.set_terrain_hgt_stable(stable);
+    ekf3.EKF3.setTerrainHgtStable(stable);
 #endif
 }
 
@@ -3111,7 +3111,7 @@ bool AP_AHRS::get_vel_innovations_and_variances_for_source(uint8_t source, Vecto
 #if HAL_NAVEKF3_AVAILABLE
     case EKFType::THREE:
         // use EKF to get variance
-        return ekf3.get_vel_innovations_and_variances_for_source(source, innovations, variances);
+        return ekf3.EKF3.getVelInnovationsAndVariancesForSource((AP_NavEKF_Source::SourceXY)source, innovations, variances);
 #endif
 
 #if AP_AHRS_SIM_ENABLED
