@@ -243,7 +243,9 @@ private:
 
     CalibrationState calibration_state[AIRSPEED_MAX_SENSORS];
 
+public:
     struct airspeed_state {
+        uint8_t instance;
         float   raw_airspeed;
         float   airspeed;
         float	last_pressure;
@@ -278,7 +280,11 @@ private:
 #if AP_AIRSPEED_HYGROMETER_ENABLE
         uint32_t last_hygrometer_log_ms;
 #endif
-    } state[AIRSPEED_MAX_SENSORS];
+    };
+
+private:
+
+    airspeed_state state[AIRSPEED_MAX_SENSORS];
 
     bool calibration_enabled;
 
