@@ -483,17 +483,6 @@ void AP_Airspeed::allocate()
     }
 }
 
-// read the airspeed sensor
-float AP_Airspeed_Backend::get_pressure()
-{
-    if (!frontend.enabled(state.instance)) {
-        return 0;
-    }
-    float pressure = 0;
-    state.healthy = get_differential_pressure(pressure);
-    return pressure;
-}
-
 // get a temperature reading if possible
 bool AP_Airspeed::get_temperature(uint8_t i, float &temperature)
 {
@@ -621,14 +610,11 @@ void AP_Airspeed_Backend::update()
     }
 
 #ifndef HAL_BUILD_AP_PERIPH
-    /*
-      get the healthy state before we call get_pressure() as
-      get_pressure() overwrites the healthy state
-     */
     bool prev_healthy = state.healthy;
 #endif
 
-    float raw_pressure = get_pressure();
+    float raw_pressure = 0;
+    state.healthy = get_differential_pressure(raw_pressure);
     float airspeed_pressure = raw_pressure - frontend.get_offset(state.instance);
 
     // remember raw pressure for logging
