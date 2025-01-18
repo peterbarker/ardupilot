@@ -484,15 +484,13 @@ void AP_Airspeed::allocate()
 }
 
 // read the airspeed sensor
-float AP_Airspeed::get_pressure(uint8_t i)
+float AP_Airspeed_Backend::get_pressure()
 {
-    if (!enabled(i)) {
+    if (!frontend.enabled(state.instance)) {
         return 0;
     }
     float pressure = 0;
-    if (sensor[i]) {
-        state[i].healthy = sensor[i]->get_differential_pressure(pressure);
-    }
+    state.healthy = get_differential_pressure(pressure);
     return pressure;
 }
 
@@ -611,17 +609,14 @@ AP_Airspeed::CalibrationState AP_Airspeed::get_calibration_state() const
 }
 
 // read one airspeed sensor
-void AP_Airspeed::read(uint8_t i)
+void AP_Airspeed_Backend::update()
 {
-    if (!enabled(i) || !sensor[i]) {
-        return;
-    }
-    state[i].last_update_ms = AP_HAL::millis();
+    state.last_update_ms = AP_HAL::millis();
 
     // try and get a direct reading of airspeed
-    if (sensor[i]->has_airspeed()) {
-        state[i].healthy = sensor[i]->get_airspeed(state[i].airspeed);
-        state[i].raw_airspeed = state[i].airspeed;  // for logging
+    if (has_airspeed()) {
+        state.healthy = get_airspeed(state.airspeed);
+        state.raw_airspeed = state.airspeed;  // for logging
         return;
     }
 
@@ -630,18 +625,18 @@ void AP_Airspeed::read(uint8_t i)
       get the healthy state before we call get_pressure() as
       get_pressure() overwrites the healthy state
      */
-    bool prev_healthy = state[i].healthy;
+    bool prev_healthy = state.healthy;
 #endif
 
-    float raw_pressure = get_pressure(i);
-    float airspeed_pressure = raw_pressure - get_offset(i);
+    float raw_pressure = get_pressure();
+    float airspeed_pressure = raw_pressure - frontend.get_offset(state.instance);
 
     // remember raw pressure for logging
-    state[i].corrected_pressure = airspeed_pressure;
+    state.corrected_pressure = airspeed_pressure;
 
 #ifndef HAL_BUILD_AP_PERIPH
-    if (state[i].cal.start_ms != 0) {
-        update_calibration(i, raw_pressure);
+    if (state.cal.start_ms != 0) {
+        frontend.update_calibration(state.instance, raw_pressure);
     }
 
     // filter before clamping positive
@@ -649,31 +644,31 @@ void AP_Airspeed::read(uint8_t i)
         // if the previous state was not healthy then we should not
         // use an IIR filter, otherwise a bad reading will last for
         // some time after the sensor becomes healthy again
-        state[i].filtered_pressure = airspeed_pressure;
+        state.filtered_pressure = airspeed_pressure;
     } else {
-        state[i].filtered_pressure = 0.7f * state[i].filtered_pressure + 0.3f * airspeed_pressure;
+        state.filtered_pressure = 0.7f * state.filtered_pressure + 0.3f * airspeed_pressure;
     }
 
     /*
       we support different pitot tube setups so user can choose if
       they want to be able to detect pressure on the static port
      */
-    switch ((enum pitot_tube_order)param[i].tube_order.get()) {
-    case PITOT_TUBE_ORDER_NEGATIVE:
-        state[i].last_pressure  = -airspeed_pressure;
-        state[i].raw_airspeed   = sqrtf(MAX(-airspeed_pressure, 0) * param[i].ratio);
-        state[i].airspeed       = sqrtf(MAX(-state[i].filtered_pressure, 0) * param[i].ratio);
+    switch ((enum AP_Airspeed::pitot_tube_order)params.tube_order.get()) {
+    case AP_Airspeed::pitot_tube_order::PITOT_TUBE_ORDER_NEGATIVE:
+        state.last_pressure  = -airspeed_pressure;
+        state.raw_airspeed   = sqrtf(MAX(-airspeed_pressure, 0) * params.ratio);
+        state.airspeed       = sqrtf(MAX(-state.filtered_pressure, 0) * params.ratio);
         break;
-    case PITOT_TUBE_ORDER_POSITIVE:
-        state[i].last_pressure  = airspeed_pressure;
-        state[i].raw_airspeed   = sqrtf(MAX(airspeed_pressure, 0) * param[i].ratio);
-        state[i].airspeed       = sqrtf(MAX(state[i].filtered_pressure, 0) * param[i].ratio);
+    case AP_Airspeed::pitot_tube_order::PITOT_TUBE_ORDER_POSITIVE:
+        state.last_pressure  = airspeed_pressure;
+        state.raw_airspeed   = sqrtf(MAX(airspeed_pressure, 0) * params.ratio);
+        state.airspeed       = sqrtf(MAX(state.filtered_pressure, 0) * params.ratio);
         break;
-    case PITOT_TUBE_ORDER_AUTO:
+    case AP_Airspeed::pitot_tube_order::PITOT_TUBE_ORDER_AUTO:
     default:
-        state[i].last_pressure  = fabsf(airspeed_pressure);
-        state[i].raw_airspeed   = sqrtf(fabsf(airspeed_pressure) * param[i].ratio);
-        state[i].airspeed       = sqrtf(fabsf(state[i].filtered_pressure) * param[i].ratio);
+        state.last_pressure  = fabsf(airspeed_pressure);
+        state.raw_airspeed   = sqrtf(fabsf(airspeed_pressure) * params.ratio);
+        state.airspeed       = sqrtf(fabsf(state.filtered_pressure) * params.ratio);
         break;
     }
 #endif // HAL_BUILD_AP_PERIPH
@@ -687,7 +682,13 @@ void AP_Airspeed::update()
     }
 
     for (uint8_t i=0; i<AIRSPEED_MAX_SENSORS; i++) {
-        read(i);
+        if (!enabled(i)) {
+            continue;
+        }
+        if (sensor[i] == nullptr) {
+            continue;
+        }
+        sensor[i]->update();
     }
 
 #if HAL_GCS_ENABLED
