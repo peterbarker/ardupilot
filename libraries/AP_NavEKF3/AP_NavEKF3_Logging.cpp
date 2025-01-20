@@ -103,7 +103,8 @@ void NavEKF3_core::Log_Write_XKFS(uint64_t time_us) const
         source_set     : frontend->sources.getActiveSourceSet(core_index),
         gps_good_to_align : gpsGoodToAlign,
         wait_for_gps_checks : waitingForGpsChecks,
-        mag_fusion: (uint8_t) magFusionSel
+        mag_fusion: (uint8_t) magFusionSel,
+        yaw_source: (uint8_t) yaw_source_last,
     };
     AP::logger().WriteBlock(&pkt, sizeof(pkt));
 }
