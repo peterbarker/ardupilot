@@ -327,6 +327,10 @@
 /*
  * defaults for defines gating which physics backends are supported:
  */
+#ifndef AP_SIM_AIRMASTER_AC300_ENABLED
+#define AP_SIM_AIRMASTER_AC300_ENABLED 1
+#endif
+
 #ifndef AP_SIM_AIRSIM_ENABLED
 #define AP_SIM_AIRSIM_ENABLED (CONFIG_HAL_BOARD == HAL_BOARD_SITL)
 #endif  // AP_SIM_AIRSIM_ENABLED

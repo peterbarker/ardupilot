@@ -75,6 +75,10 @@ public:
 
     static AP_ICEngine *get_singleton() { return _singleton; }
 
+#if AP_AIRMASTER_AC300_ENABLED
+    void set_vpp_engaged(bool _state) { airmaster_ac300.engaged = _state; }
+#endif  // AP_AIRMASTER_AC300_ENABLED
+
 private:
     static AP_ICEngine *_singleton;
 
@@ -176,6 +180,8 @@ private:
 
     // Last aux function value
     RC_Channel::AuxSwitchPos aux_pos = RC_Channel::AuxSwitchPos::MIDDLE;
+    // the setter of aux_pos:
+    void do_aux_function_runstate(const RC_Channel::AuxFuncTrigger &trigger);
 
 #if AP_RPM_ENABLED
     // redline rpm
@@ -186,6 +192,15 @@ private:
         float throttle_percentage;
     } redline;
 #endif
+
+#if AP_AIRMASTER_AC300_ENABLED
+    struct AirMasterC300 {
+        bool engaged;
+        AP_Int32 cruise_rpm;
+        class AP_HAL::UARTDriver *uart;
+        void set_desired_rpm(uint32_t rpm);
+    } airmaster_ac300;
+#endif  // AP_AIRMASTER_AC300_ENABLED
 
     // Param conversion function and flag
     void param_conversion();

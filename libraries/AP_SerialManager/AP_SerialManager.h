@@ -88,6 +88,8 @@ public:
         SerialProtocol_IBUS_Telem = 49,                // i-BUS telemetry data, ie via sensor port of FS-iA6B
         SerialProtocol_IOMCU = 50,                     // IOMCU 
         SerialProtocol_NumProtocols                    // must be the last value
+        SerialProtocol_Airmaster_AC300 = 51,                // i-BUS telemetry data, ie via sensor port of FS-iA6B
+        SerialProtocol_NumProtocols = 52                    // must be the last value
     };
 
     // get singleton instance
