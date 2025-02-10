@@ -165,6 +165,9 @@ public:
 #if AP_SIM_VOLZ_ENABLED
     void set_volz(Volz *_volz) { volz = _volz; }
 #endif
+#if AP_SIM_AIRMASTER_AC300_ENABLED
+    void set_airmaster_ac300(class Airmaster_AC300 *_airmaster) { airmaster_ac300 = _airmaster; }
+#endif  // AP_SIM_AIRMASTER_AC300_ENABLED
     void set_ie24(IntelligentEnergy24 *_ie24) { ie24 = _ie24; }
     void set_gripper_servo(Gripper_Servo *_gripper) { gripper = _gripper; }
     void set_gripper_epm(Gripper_EPM *_gripper_epm) { gripper_epm = _gripper_epm; }
@@ -360,6 +363,10 @@ protected:
         bool currently_clamped;
         bool grab_attempted;  // avoid warning multiple times about missed grab
     } clamp;
+
+#if AP_SIM_AIRMASTER_AC300_ENABLED
+    class Airmaster_AC300 *airmaster_ac300;
+#endif  // AP_SIM_AIRMASTER_AC300_ENABLED
 
 private:
     uint64_t last_time_us;

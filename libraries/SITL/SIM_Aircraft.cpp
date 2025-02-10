@@ -1169,6 +1169,13 @@ void Aircraft::update_external_payload(const struct sitl_input &input)
         ie24->update(input);
     }
 
+#if AP_SIM_AIRMASTER_AC300_ENABLED
+    // update Loweheiser generator
+    if (airmaster_ac300 != nullptr) {
+        airmaster_ac300->update();
+    }
+#endif  // AP_SIM_AIRMASTER_AC300_ENABLED
+
 #if AP_TEST_DRONECAN_DRIVERS
     if (dronecan) {
         dronecan->update();

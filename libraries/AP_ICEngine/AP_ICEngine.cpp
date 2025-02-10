@@ -27,6 +27,8 @@
 #include <AP_Parachute/AP_Parachute.h>
 #include <AP_Relay/AP_Relay.h>
 #include "AP_ICEngine.h"
+#include <AP_SerialManager/AP_SerialManager.h>
+#include <AP_BoardConfig/AP_BoardConfig.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -186,6 +188,16 @@ const AP_Param::GroupInfo AP_ICEngine::var_info[] = {
     // @Range: 0 127
     AP_GROUPINFO("STRT_MX_RTRY", 20, AP_ICEngine, max_crank_retry, 0),
 
+#if AP_AIRMASTER_AC300_ENABLED
+    // @Param: CRUISE_RPM
+    // @DisplayName: RPM for cruising
+    // @Description: desired RPM setpoint when cruising
+    // @User: Advanced
+    // @Range: 0 2000000
+    // @Units: RPM
+    AP_GROUPINFO("CRUISE_RPM", 21, AP_ICEngine, airmaster_ac300.cruise_rpm, 0),
+#endif  // AP_AIR
+
     AP_GROUPEND
 };
 
@@ -218,6 +230,13 @@ void AP_ICEngine::init()
 
     // Convert params
     param_conversion();
+
+#if AP_AIRMASTER_AC300_ENABLED
+    airmaster_ac300.uart = AP::serialmanager().find_serial(AP_SerialManager::SerialProtocol_Airmaster_AC300, 0);
+    if (airmaster_ac300.uart == nullptr) {
+        AP_BoardConfig::config_error("Missing SERIALn_PROTOCOL for airmaster c300");
+    }
+#endif  // AP_AIRMASTER_AC300_ENABLED
 }
 
 // PARAMETER_CONVERSION - Added: Aug 2024
@@ -281,7 +300,7 @@ void AP_ICEngine::param_conversion()
 }
 
 // Handle incoming aux function
-void AP_ICEngine::do_aux_function(const RC_Channel::AuxFuncTrigger &trigger)
+void AP_ICEngine::do_aux_function_runstate(const RC_Channel::AuxFuncTrigger &trigger)
 {
     // If triggered from RC apply start chan min
     if (trigger.source == RC_Channel::AuxFuncTrigger::Source::RC) {
@@ -292,6 +311,21 @@ void AP_ICEngine::do_aux_function(const RC_Channel::AuxFuncTrigger &trigger)
     }
 
     aux_pos = trigger.pos;
+}
+
+void AP_ICEngine::do_aux_function(const RC_Channel::AuxFuncTrigger &trigger)
+{
+    switch (trigger.func) {
+    case RC_Channel::AUX_FUNC::ICE_START_STOP:
+        do_aux_function_runstate(trigger);
+        return;
+    case RC_Channel::AUX_FUNC::VPP_RPM_GOV_ENGAGE:
+        set_vpp_engaged(trigger.pos == RC_Channel::AuxSwitchPos::HIGH);
+        return;
+    default:
+        // we shouldn't have been called
+        break;
+    }
 }
 
 /*
@@ -573,6 +607,16 @@ bool AP_ICEngine::throttle_override(float &percentage, const float base_throttle
     }
 #endif // AP_RPM_ENABLED
 
+#if AP_AIRMASTER_AC300_ENABLED
+    // we don't adjust percentage, but we do inform the AC300 of the
+    // RPM we want to achieve:
+    if (airmaster_ac300.engaged) {
+        airmaster_ac300.set_desired_rpm(airmaster_ac300.cruise_rpm);
+    } else {
+        airmaster_ac300.set_desired_rpm(0);  // zero disabled
+    }
+#endif  // AP_AIRMASTER_AC300_ENABLED
+
     // if THROTTLE_WHILE_DISARMED is set then we use the base_throttle, allowing the pilot to control throttle while disarmed
     if (allow_throttle_while_disarmed() && !hal.util->get_soft_armed() &&
         base_throttle > percentage) {
@@ -581,6 +625,21 @@ bool AP_ICEngine::throttle_override(float &percentage, const float base_throttle
     }
 
     return false;
+}
+
+void AP_ICEngine::AirMasterC300::set_desired_rpm(uint32_t rpm)
+{
+    char buffer[32];
+    uint8_t ofs = 0;
+    ofs += snprintf(&buffer[ofs],  ARRAY_SIZE(buffer)-ofs, "RC_S=%u\r\n", rpm);
+    if (ofs > ARRAY_SIZE(buffer)) {
+        // odd...
+        return;
+    }
+    if (uart->txspace() < ofs) {
+        return;
+    }
+    uart->write((uint8_t*)buffer, ofs);
 }
 
 /*

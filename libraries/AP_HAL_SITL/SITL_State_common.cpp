@@ -240,7 +240,11 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         }
         microstrain7 = NEW_NOTHROW SITL::MicroStrain7();
         return microstrain7;
-
+#if AP_SIM_AIRMASTER_AC300_ENABLED
+    } else if (streq(name, "airmaster_ac300")) {
+        sitl_model->set_airmaster_ac300(&_sitl->airmaster_ac300_sim);
+        return &_sitl->airmaster_ac300_sim;
+#endif  // AP_SIM_AIRMASTER_AC300_ENABLED
     } else if (streq(name, "ILabs")) {
         if (inertiallabs != nullptr) {
             AP_HAL::panic("Only one InertialLabs INS at a time");

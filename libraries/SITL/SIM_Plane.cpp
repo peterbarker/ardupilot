@@ -497,7 +497,15 @@ void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel
     // simulate engine RPM
     motor_mask |= (1U<<2);
     rpm[2] = thrust * 7000;
-    
+
+#if AP_SIM_AIRMASTER_AC300_ENABLED
+    // scale thurst up and bog the motor down according to current prop pitch
+    if (airmaster_ac300 != nullptr) {
+        thrust *= airmaster_ac300->thrust_scale();
+        rpm[2] *= 1/(airmaster_ac300->thrust_scale()/2);
+    }
+#endif  // AP_SIM_AIRMASTER_AC300_ENABLED
+
     // scale thrust to newtons
     thrust *= thrust_scale;
 

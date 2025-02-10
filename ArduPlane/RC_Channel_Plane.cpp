@@ -198,6 +198,9 @@ void RC_Channel_Plane::init_aux_function(const RC_Channel::AUX_FUNC ch_option,
     case AUX_FUNC::CROW_SELECT:
 #if AP_ICENGINE_ENABLED
     case AUX_FUNC::ICE_START_STOP:
+#if AP_AIRMASTER_AC300_ENABLED
+    case AUX_FUNC::VPP_RPM_GOV_ENGAGE:
+#endif
 #endif
         run_aux_function(ch_option, ch_flag, AuxFuncTrigger::Source::INIT, ch_in);
         break;
@@ -484,6 +487,9 @@ bool RC_Channel_Plane::do_aux_function(const AuxFuncTrigger &trigger)
 #endif
 
 #if AP_ICENGINE_ENABLED
+#if AP_AIRMASTER_AC300_ENABLED
+    case AUX_FUNC::VPP_RPM_GOV_ENGAGE:
+#endif
     case AUX_FUNC::ICE_START_STOP:
         plane.g2.ice_control.do_aux_function(trigger);
         break;

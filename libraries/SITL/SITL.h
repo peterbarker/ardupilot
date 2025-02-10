@@ -32,6 +32,7 @@
 #include "SIM_GPS.h"
 #include "SIM_DroneCANDevice.h"
 #include "SIM_ADSB_Sagetech_MXS.h"
+#include "SIM_Airmaster_AC300.h"
 #include "SIM_Volz.h"
 
 namespace SITL {
@@ -541,6 +542,9 @@ public:
 #if AP_TEST_DRONECAN_DRIVERS
     DroneCANDevice dronecan_sim;
 #endif
+#if AP_SIM_AIRMASTER_AC300_ENABLED
+    Airmaster_AC300 airmaster_ac300_sim;
+#endif  // AP_SIM_AIRMASTER_AC300_ENABLED
 
     // ESC telemetry
     AP_Int8 esc_telem;
