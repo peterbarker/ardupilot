@@ -98,7 +98,7 @@ bool AP_RangeFinder_Benewake::get_reading(float &reading_m)
     uint16_t count = 0;
     uint16_t count_out_of_range = 0;
 
-    uint32_t nbytes = MIN(uart->available(), 4096);
+    uint32_t nbytes = MIN(uart->available(), 4096U);
 
     while (nbytes > 0) {
         const auto bytes_to_read = MIN(nbytes, ARRAY_SIZE(u.linebuf)-linebuf_len);
