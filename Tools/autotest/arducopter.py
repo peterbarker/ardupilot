@@ -8786,7 +8786,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.start_subtest("Do a payload place")
         self.progress("putting into payload place approach mode")
         self.wait_servo_channel_value(10, 1000)  # this is the gripper grabbed
-        aux_func_ship_ops = 175
+        aux_func_ship_ops = 180
         self.run_auxfunc(aux_func_ship_ops, 0)
         self.progress("triggering place with RC")
         self.set_rc(3, 1000)
