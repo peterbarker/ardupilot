@@ -1580,6 +1580,8 @@ private:
     AP_Float keep_out_CCW;
     AP_Float keep_out_radius;
     AP_Float deck_radius;
+
+    bool xy_position_control_permitted;
 };
 #endif // MODE_SHIP_OPS_ENABLED
 

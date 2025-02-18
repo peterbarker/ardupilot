@@ -207,6 +207,10 @@ bool ModeShipOperation::init(const bool ignore_checks)
     offset.zero();
     offset.xy() = curr_pos_neu_cm.xy() - ship.pos_ned.xy().tofloat();
 
+    // do not permit horizontal movement until we have met an altitude
+    // threshold:
+    xy_position_control_permitted = false;
+
     // initialise horizontal speed, acceleration
     pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
     pos_control->set_correction_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
@@ -502,12 +506,6 @@ void ModeShipOperation::run()
     case AltHold_Takeoff:
         // initiate take-off
         if (!takeoff.running()) {
-            // initialise no-navigation altitude
-            if (is_positive(g2.wp_navalt_min)) {
-                auto_takeoff_no_nav_active = true;
-            } else {
-                auto_takeoff_no_nav_active = false;
-            }
             // initialise takeoff variables
             takeoff.start(constrain_float(g.pilot_takeoff_alt, 0.0f, 1000.0f));
             offset.zero();
@@ -518,10 +516,12 @@ void ModeShipOperation::run()
         takeoff.do_pilot_takeoff(target_climb_rate);
 
         // check if we are not navigating because of low altitude
-        if (auto_takeoff_no_nav_active) {
-            // check if vehicle has reached no_nav_alt threshold
+        if (!xy_position_control_permitted) {
+            // check if vehicle has reached no_nav_alt threshold.
+            // Note we are e-using this WP parameter when we possibly
+            // should not.
             if (inertial_nav.get_position_z_up_cm() >= takeoff.take_off_start_alt + g2.wp_navalt_min) {
-                auto_takeoff_no_nav_active = false;
+                xy_position_control_permitted = true;
             }
             pos_control->relax_velocity_controller_xy();
         } else {
