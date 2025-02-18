@@ -1,0 +1,3 @@
+include ../Callisto/hwdef.inc
+
+define AP_CUSTOM_FIRMWARE_STRING "Callisto-2.4"
