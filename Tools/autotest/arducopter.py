@@ -8587,7 +8587,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                 raise ValueError("Bad number of positions")
             ship_gpi = positions[17]
             vehicle_gpi = positions[1]
-            xangle = AutoTest.get_bearing_int(ship_gpi, vehicle_gpi)
+            xangle = AutoTestCopter.get_bearing_int(ship_gpi, vehicle_gpi)
             return mavextra.wrap_180(xangle - ship_gpi.hdg * 0.01)
 
         self.wait_and_maintain(
