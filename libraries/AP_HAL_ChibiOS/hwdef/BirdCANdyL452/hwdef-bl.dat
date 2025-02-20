@@ -1,0 +1,81 @@
+# hw definition file for processing by chibios_pins.py
+# hardware repository: https://github.com/FlyfocusUAV/Bird-CANdy
+
+# MCU class and specific type
+# note: the device is STM32F412CE, not all F412 pins are available
+MCU STM32L452 STM32L452xx
+
+FLASH_RESERVE_START_KB 0
+FLASH_BOOTLOADER_LOAD_KB 36
+FLASH_SIZE_KB 512
+APP_START_OFFSET_KB 4
+
+# board ID for firmware load
+APJ_BOARD_ID 1090
+
+# setup build for a peripheral firmware
+env AP_PERIPH 1
+
+# crystal frequency
+OSCILLATOR_HZ 16000000
+
+#define CH_CFG_ST_FREQUENCY 800000
+
+#STDOUT_SERIAL SD1
+#STDOUT_BAUDRATE 38400
+
+# order of UARTs
+#SERIAL_ORDER USART1
+
+# CANdy pin 19
+PA5 LED_BOOTLOADER OUTPUT LOW
+define HAL_LED_ON 1
+
+# USART1
+#PB6 USART1_TX USART1
+#PB7 USART1_RX USART1
+
+# USART6
+#PA11 USART6_TX USART6
+#PA12 USART6_RX USART6
+
+# SWD debugging
+PA13 JTMS-SWDIO SWD
+PA14 JTCK-SWCLK SWD
+
+define HAL_USE_SERIAL FALSE
+
+define STM32_SERIAL_USE_USART1 TRUE
+define STM32_SERIAL_USE_USART2 FALSE
+define STM32_SERIAL_USE_USART3 FALSE
+define STM32_SERIAL_USE_USART4 FALSE
+define STM32_SERIAL_USE_USART5 FALSE
+define STM32_SERIAL_USE_USART6 FALSE
+
+define HAL_NO_GPIO_IRQ
+define HAL_USE_EMPTY_IO TRUE
+
+# avoid timer and RCIN threads to save memory
+define HAL_NO_TIMER_THREAD
+define HAL_NO_RCIN_THREAD
+
+
+define DMA_RESERVE_SIZE 0
+
+define HAL_DISABLE_LOOP_DELAY
+
+# enable CAN support
+PB8 CAN1_RX CAN1
+PB9 CAN1_TX CAN1
+PB2 GPIO_CAN1_SILENT OUTPUT PUSHPULL SPEED_LOW LOW
+CAN_ORDER 1
+
+define CAN_APP_NODE_NAME "FF BirdCANdy L452 BOOT"
+
+
+# make bl baudrate match debug baudrate for easier debugging
+define BOOTLOADER_BAUDRATE 57600
+
+# use a small bootloader timeout
+define HAL_BOOTLOADER_TIMEOUT 1000
+
