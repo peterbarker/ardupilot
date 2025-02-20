@@ -13,6 +13,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_DSHOT_LED_ENABLED
+
 #include "AP_Notify/AP_Notify.h"
 #include <AP_HAL/RCOutput.h>
 #include "DShotLED.h"
@@ -34,3 +38,5 @@ bool DShotLED::hw_set_rgb(uint8_t red, uint8_t green, uint8_t blue)
 
     return true;
 }
+
+#endif  // AP_NOTIFY_DSHOT_LED_ENABLED

@@ -15,6 +15,9 @@
 
 */
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_RGBLED_ENABLED
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_GPS/AP_GPS.h>
@@ -303,3 +306,5 @@ void RGBLed::rgb_control(uint8_t r, uint8_t g, uint8_t b, uint8_t rate_hz)
     _led_override.g = g;
     _led_override.b = b;
 }
+
+#endif  // AP_NOTIFY_RGBLED_ENABLED

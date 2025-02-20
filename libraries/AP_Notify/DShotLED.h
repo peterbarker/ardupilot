@@ -14,6 +14,10 @@
  */
 #pragma once
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_DSHOT_LED_ENABLED
+
 #include "RGBLed.h"
 #include "DShotLED.h"
 #include <AP_Common/AP_Common.h>
@@ -27,3 +31,5 @@ public:
 protected:
     bool hw_set_rgb(uint8_t r, uint8_t g, uint8_t b) override;
 };
+
+#endif  // AP_NOTIFY_DSHOT_LED_ENABLED

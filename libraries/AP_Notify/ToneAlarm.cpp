@@ -16,6 +16,10 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_TONEALARM_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 
@@ -469,3 +473,5 @@ void AP_Notify::handle_play_tune(const mavlink_message_t &msg)
     play_tune(_tone_buf);
 }
 #endif
+
+#endif  // AP_NOTIFY_TONEALARM_ENABLED

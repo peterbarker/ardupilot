@@ -14,6 +14,10 @@
  */
 #pragma once
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_ENABLED
+
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
 #include "AP_Notify_config.h"
@@ -263,3 +267,5 @@ private:
 namespace AP {
     AP_Notify &notify();
 };
+
+#endif  // AP_NOTIFY_ENABLED

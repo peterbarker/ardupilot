@@ -19,6 +19,10 @@
  */
 #pragma once
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_RGBLED_ENABLED
+
 #include "NotifyDevice.h"
 
 class RGBLed: public NotifyDevice {
@@ -114,3 +118,5 @@ private:
     Source rgb_source() const;
 
 };
+
+#endif  // AP_NOTIFY_RGBLED_ENABLED

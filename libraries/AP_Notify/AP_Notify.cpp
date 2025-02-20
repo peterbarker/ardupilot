@@ -13,6 +13,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_ENABLED
+
 #include "AP_Notify.h"
 
 #include "AP_BoardLED.h"
@@ -527,3 +531,5 @@ AP_Notify &notify()
 }
 
 };
+
+#endif  // AP_NOTIFY_ENABLED

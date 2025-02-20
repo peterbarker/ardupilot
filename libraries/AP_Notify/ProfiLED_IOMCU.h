@@ -18,7 +18,7 @@
 #include <AP_Common/AP_Common.h>
 #include <AP_IOMCU/AP_IOMCU.h>
 
-#if HAL_WITH_IO_MCU && AP_IOMCU_PROFILED_SUPPORT_ENABLED
+#if AP_NOTIFY_PROFILED_IOMCU_ENABLED
 
 class ProfiLED_IOMCU : public RGBLed {
 public:
@@ -37,4 +37,4 @@ protected:
     }
 };
 
-#endif
+#endif  // AP_NOTIFY_PROFILED_IOMCU_ENABLED

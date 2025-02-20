@@ -15,6 +15,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_BUZZER_ENABLED
+
 #include "Buzzer.h"
 
 #include <AP_HAL/AP_HAL.h>
@@ -155,3 +160,5 @@ void Buzzer::play_pattern(const uint32_t pattern)
     _pattern_start_time = AP_HAL::millis();
 }
 
+
+#endif  // AP_NOTIFY_BUZZER_ENABLED

@@ -17,6 +17,10 @@
  */
 #pragma once
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_TONEALARM_ENABLED
+
 #include "NotifyDevice.h"
 #include "MMLPlayer.h"
 
@@ -81,3 +85,5 @@ private:
     MMLPlayer _mml_player;
     char _tone_buf[AP_NOTIFY_TONEALARM_TONE_BUF_SIZE];
 };
+
+#endif  // AP_NOTIFY_TONEALARM_ENABLED

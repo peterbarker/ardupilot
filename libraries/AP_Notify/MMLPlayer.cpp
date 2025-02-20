@@ -1,5 +1,9 @@
 #include "MMLPlayer.h"
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_MMLPLAYER_ENABLED
+
 #include <ctype.h>
 #include <math.h>
 #include <AP_HAL/AP_HAL.h>
@@ -319,3 +323,5 @@ void MMLPlayer::next_action()
 
     start_note(note_period, note_frequency, note_volume);
 }
+
+#endif  // AP_NOTIFY_MMLPLAYER_ENABLED

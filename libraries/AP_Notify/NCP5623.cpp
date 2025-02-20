@@ -16,6 +16,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_NCP5623_ENABLED
+
 #include "NCP5623.h"
 #include <utility>
 
@@ -120,3 +124,5 @@ void NCP5623::_timer(void)
 
     write_pwm(rgb);
 }
+
+#endif  // AP_NOTIFY_NCP5623_ENABLED

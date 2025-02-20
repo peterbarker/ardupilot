@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_MMLPLAYER_ENABLED
+
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -43,12 +47,4 @@ private:
     void next_action();
 };
 
-
-
-
-
-
-
-
-
-
+#endif  // AP_NOTIFY_MMLPLAYER_ENABLED

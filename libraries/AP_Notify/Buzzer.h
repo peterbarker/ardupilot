@@ -17,6 +17,12 @@
  */
 #pragma once
 
+#include "AP_Notify_config.h"
+
+#if AP_NOTIFY_BUZZER_ENABLED
+
+#include "AP_Notify.h"
+
 #include "NotifyDevice.h"
 
 class Buzzer: public NotifyDevice
@@ -71,3 +77,5 @@ private:
     void update_pattern_to_play();
 
 };
+
+#endif  // AP_NOTIFY_BUZZER_ENABLED
