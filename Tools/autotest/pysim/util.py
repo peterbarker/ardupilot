@@ -452,7 +452,8 @@ def start_SITL(binary,
                lldb=False,
                enable_fgview_output=False,
                supplementary=False,
-               stdout_prefix=None):
+               stdout_prefix=None,
+               ):
 
     """Launch a SITL instance."""
     cmd = []
@@ -543,6 +544,8 @@ def start_SITL(binary,
         print(text, file=filepath)
         filepath.close()
         defaults.append(str(filepath.name))
+    else:
+        print("############## #No default param_defaults")
 
     if not supplementary:
         if wipe:
@@ -564,13 +567,7 @@ def start_SITL(binary,
         if enable_fgview_output:
             cmd.append("--enable-fgview")
 
-    if defaults_filepath is not None:
-        if isinstance(defaults_filepath, list):
-            defaults = [reltopdir(path) for path in defaults_filepath]
-            if len(defaults):
-                cmd.extend(['--defaults', ",".join(defaults)])
-        else:
-            cmd.extend(['--defaults', reltopdir(defaults_filepath)])
+    cmd.extend(['--defaults', ",".join(defaults)])
 
     cmd.extend(customisations)
 
