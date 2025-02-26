@@ -27,14 +27,15 @@ map circle -35.28523177 148.89421446 20 blue
 
 
 module load kmlread
-kml load "ARA - Fire Spotting BVLOS Area.kmz"
-# kml toggle "Canberra Airport"
 
-kml toggle "3500ft LL C-Class Canberra-7"
-kml toggle "5500ft LL C-Class Canberra-8"
-kml toggle "6500ft LL C-Class Canberra-9"
-kml toggle "8500ft LL C-Class Canberra-10"
-kml toggle "Untitled Path-12"
-kml toggle "Altitude Limit - 4900 ft AMSL-4"
-kml toggle "Altitude Limit - 5900 ft AMSL-5"
-kml toggle "N2-11"
+#kml load "ARA - Fire Spotting BVLOS Area.kmz"
+#kml toggle "3500ft LL C-Class Canberra-7"
+#kml toggle "5500ft LL C-Class Canberra-8"
+#kml toggle "6500ft LL C-Class Canberra-9"
+#kml toggle "8500ft LL C-Class Canberra-10"
+#kml toggle "Untitled Path-12"
+#kml toggle "Altitude Limit - 4900 ft AMSL-4"
+#kml toggle "Altitude Limit - 5900 ft AMSL-5"
+#kml toggle "N2-11"
+
+kml load "RPAS2023-11232 - Aerial Robotics Australia Pty Ltd - ARN 1163975 - Testing and Training Area v1 08_08_2024.KML"
