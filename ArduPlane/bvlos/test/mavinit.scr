@@ -38,4 +38,4 @@ module load kmlread
 #kml toggle "Altitude Limit - 5900 ft AMSL-5"
 #kml toggle "N2-11"
 
-kml load "RPAS2023-11232 - Aerial Robotics Australia Pty Ltd - ARN 1163975 - Testing and Training Area v1 08_08_2024.KML"
+kml load "RPAS2023-11232 - Aerial Robotics Australia Pty Ltd - ARN 1163975 - Testing and Training Area v1 08_08_2024.kml"
