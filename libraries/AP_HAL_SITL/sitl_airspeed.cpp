@@ -40,8 +40,8 @@ void SITL_State::_update_airspeed(float true_airspeed)
         airspeed = sqrtf(fabsf(arspd.ratio*(diff_pressure + arspd.noise * rand_float())));
 
         // check sensor failure
-        if (is_positive(arspd.fail)) {
-            airspeed = arspd.fail;
+        if (is_positive(arspd.fail_speed)) {
+            airspeed = arspd.fail_speed;
         }
 
         if (!is_zero(arspd.fail_pressure)) {
