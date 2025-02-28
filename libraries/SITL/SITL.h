@@ -277,7 +277,7 @@ public:
     public:
         static const struct AP_Param::GroupInfo var_info[];
         AP_Float noise;  // pressure noise
-        AP_Float fail;   // airspeed value in m/s to fail to
+        AP_Float fail_speed;   // airspeed value in m/s to fail to
         AP_Float fail_pressure; // pitot tube failure pressure in Pa
         AP_Float fail_pitot_pressure; // pitot tube failure pressure in Pa
         AP_Float offset; // airspeed sensor offset in m/s

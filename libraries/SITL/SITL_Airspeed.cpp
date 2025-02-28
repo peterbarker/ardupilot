@@ -22,7 +22,7 @@ const AP_Param::GroupInfo SIM::AirspeedParm::var_info[] = {
     // @Description: Simulates Airspeed sensor 1 failure
     // @Values: 0:Disabled, 1:Enabled
     // @User: Advanced
-    AP_GROUPINFO("FAIL",    3, AirspeedParm,  fail, 0),
+    AP_GROUPINFO("FAIL",    3, AirspeedParm,  fail_speed, 0),
     // @Param: FAILP
     // @DisplayName: Airspeed sensor failure pressure
     // @Description: Simulated airspeed sensor failure pressure
