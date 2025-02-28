@@ -189,6 +189,10 @@ void I2C::init()
     is31fl3195.set_product_id(SIM_IS31FL3195_ADDR);
 #endif
 
+#if AP_SIM_AIRSPEED_DLVR_ENABLED
+    airspeed_dlvr.set_params(AP::sitl()->airspeed[0]);
+#endif  // AP_SIM_AIRSPEED_DLVR_ENABLED
+
     // sanity check the i2c_devices structure to ensure we don't have
     // two devices at the same address on the same bus:
     for (uint8_t i=0; i<ARRAY_SIZE(i2c_devices)-1; i++) {

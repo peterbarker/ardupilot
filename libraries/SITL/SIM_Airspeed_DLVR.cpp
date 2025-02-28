@@ -8,6 +8,10 @@
 
 int SITL::Airspeed_DLVR::rdwr(I2C::i2c_rdwr_ioctl_data *&data)
 {
+    if (params->fail_type == SIM::AirspeedParm::FailType::DISAPPEARED) {
+        return -1;  // ?
+    }
+
     struct I2C::i2c_msg &msg = data->msgs[0];
     if (msg.flags == I2C_M_RD) {
         // driver is attempting to receive reading...

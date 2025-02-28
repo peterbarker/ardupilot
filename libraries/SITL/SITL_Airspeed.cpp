@@ -46,6 +46,14 @@ const AP_Param::GroupInfo SIM::AirspeedParm::var_info[] = {
     // @Description: Simulated airspeed sensor ratio
     // @User: Advanced
     AP_GROUPINFO("RATIO",   7, AirspeedParm,  ratio, 1.99),
+
+    // @Param: FTYPE
+    // @Values: 0:None,1:Disappeared
+    // @DisplayName: Failure type
+    // @Description: Simulate specific failure type
+    // @User: Advanced
+    AP_GROUPINFO("FTYPE",   8, AirspeedParm,  fail_type, 0),
+
     AP_GROUPEND
 };
 }

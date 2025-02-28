@@ -275,6 +275,10 @@ public:
     // airspeed parameters
     class AirspeedParm {
     public:
+        enum class FailType {
+            NONE = 0,
+            DISAPPEARED = 1,
+        };
         static const struct AP_Param::GroupInfo var_info[];
         AP_Float noise;  // pressure noise
         AP_Float fail_speed;   // airspeed value in m/s to fail to
@@ -283,6 +287,7 @@ public:
         AP_Float offset; // airspeed sensor offset in m/s
         AP_Float ratio; // airspeed ratios
         AP_Int8  signflip;
+        AP_Enum<FailType> fail_type;
     };
     AirspeedParm airspeed[AIRSPEED_MAX_SENSORS];
 

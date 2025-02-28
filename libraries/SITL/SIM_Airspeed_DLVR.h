@@ -16,6 +16,10 @@ public:
 
     void update(const class Aircraft &aircraft) override;
 
+    void set_params(SIM::AirspeedParm &_params) {
+        params = &_params;
+    }
+
 private:
 
     float pressure;
@@ -27,6 +31,9 @@ private:
 
     // time we last responded to an i2c request for data:
     uint32_t last_sent_ms;
+
+    // simulation parameters to use for this simulation:
+    SIM::AirspeedParm *params;
 };
 
 } // namespace SITL
