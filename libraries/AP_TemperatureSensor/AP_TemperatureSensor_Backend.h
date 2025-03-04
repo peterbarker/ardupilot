@@ -53,7 +53,6 @@ protected:
     AP_TemperatureSensor::TemperatureSensor_State   &_state;    // reference to this instance's state (held in the front-end)
     AP_TemperatureSensor_Params                     &_params;   // reference to this instance's parameters (held in the front-end)
 
-private:
     HAL_Semaphore _sem; // used to copy from backend to frontend
 };
 
