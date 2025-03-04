@@ -59,7 +59,7 @@ class AP_TemperatureSensor_SHT3x : public AP_TemperatureSensor_Backend {
 public:
     void init(void) override;
 
-    void update() override {};
+    void update() override;
 
 private:
     // reset device
@@ -72,6 +72,27 @@ private:
 
     // update the temperature, called at 20Hz
     void _timer(void);
+
+    // set_data is called from the timer thread to put state into the
+    // main thread data structure:
+    void set_data(float temperature, float humidity) {
+        WITH_SEMAPHORE(_sem);
+        set_temperature(temperature);
+        humidity_pct = humidity;
+    }
+
+    // humidity is protected by _sem from our base class
+    float humidity_pct;  // percent
+
+    // periodically send HYGROMETER message:
+    void update_send_hygrometer_message();
+    // time we last sent mavlink HYGROMETER:
+    uint32_t last_HYGROMETER_msg_sent_ms;
+
+    // periodically log to onboard log:
+    void update_logging();
+    // time we last logged to onboard log:
+    uint32_t last_log_ms;
 
 };
 #endif // AP_TEMPERATURE_SENSOR_SHT3X_ENABLED

@@ -23,6 +23,7 @@ Written with reference to the PX4 driver written by Roman Dvorak <dvorakroman@th
 #include <stdio.h>
 #include <AP_HAL/I2CDevice.h>
 #include <AP_Math/AP_Math.h>
+#include <AP_Logger/AP_Logger.h>
 
 #include <GCS_MAVLink/GCS.h>
 
@@ -72,6 +73,92 @@ void AP_TemperatureSensor_SHT3x::init()
                                      FUNCTOR_BIND_MEMBER(&AP_TemperatureSensor_SHT3x::_timer, void));
 }
 
+#if HAL_GCS_ENABLED
+void AP_TemperatureSensor_SHT3x::update_send_hygrometer_message()
+{
+    // send message periodically:
+    const uint32_t now_ms = AP_HAL::millis();
+    if (now_ms - last_HYGROMETER_msg_sent_ms < 1000) {
+        return;
+    }
+    last_HYGROMETER_msg_sent_ms = now_ms;
+
+    // extract data from semaphore-protected area:
+    float temperature;
+    float humidity;
+    {
+        WITH_SEMAPHORE(_sem);
+        temperature = _state.temperature;
+        humidity = humidity_pct;
+    }
+
+    const mavlink_hygrometer_sensor_t packet{
+        int16_t(temperature*100),
+        uint16_t(humidity*100),
+        0,  // sensor ID
+    };
+    gcs().send_to_active_channels(MAVLINK_MSG_ID_HYGROMETER_SENSOR,
+                                  (const char *)&packet);
+}
+#endif  // HAL_GCS_ENABLED
+
+// stolen from AP_Airspeed:
+
+// @LoggerMessage: HYGR
+// @Description: Hygrometer data
+// @Field: TimeUS: Time since system startup
+// @Field: Id: sensor ID
+// @Field: Humidity: percentage humidity
+// @Field: Temp: temperature in degrees C
+
+#if HAL_LOGGING_ENABLED
+void AP_TemperatureSensor_SHT3x::update_logging()
+{
+    const uint32_t now_ms = AP_HAL::millis();
+
+    // only log periodically:
+    if (now_ms - last_log_ms < 1000) {
+        return;
+    }
+
+    // only log if we've seen data:
+    if (_state.last_time_ms == 0) {
+        return;
+    }
+    last_log_ms = now_ms;
+
+    // extract data from semaphore-protected area:
+    float temperature;
+    float humidity;
+    {
+        WITH_SEMAPHORE(_sem);
+        temperature = _state.temperature;
+        humidity = humidity_pct;
+    }
+
+    // ask logger to write the message out:
+    AP::logger().WriteStreaming("HYGR",
+                                "TimeUS,Id,Humidity,Temp",
+                                "s#%O",
+                                "F---",
+                                "QBff",
+                                AP_HAL::micros64(),
+                                0,
+                                humidity,
+                                temperature);
+}
+#endif  // HAL_LOGGING_ENABLED
+
+void AP_TemperatureSensor_SHT3x::update()
+{
+#if HAL_GCS_ENABLED
+    update_send_hygrometer_message();
+#endif  // HAL_GCS_ENABLED
+#if HAL_LOGGING_ENABLED
+    update_logging();
+#endif
+}
+
 bool AP_TemperatureSensor_SHT3x::read_measurements(uint16_t &temp, uint16_t &humidity) const
 {
     uint8_t val[6];
@@ -100,7 +187,8 @@ void AP_TemperatureSensor_SHT3x::_timer(void)
     uint16_t encoded_humidity;
     if (read_measurements(encoded_temp, encoded_humidity)) {
         const float temp = -45 + 175 * (encoded_temp/65535.0);
-        set_temperature(temp);
+        const float humidity = encoded_humidity / 655.35;
+        set_data(temp, humidity);
     }
 
     start_next_sample();
