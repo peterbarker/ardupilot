@@ -1,7 +1,7 @@
 #pragma once
 #include "AP_RangeFinder_config.h"
 
-#if AP_RANGEFINDER_NRA24_CAN_ENABLED || AP_RANGEFINDER_HEXSOONRADAR_ENABLED
+#if AP_RANGEFINDER_NRA24_CAN_DRIVER_ENABLED
 #include "AP_RangeFinder_Backend_CAN.h"
 
 class AP_RangeFinder_NRA24_CAN : public AP_RangeFinder_Backend_CAN {
@@ -24,4 +24,5 @@ private:
     uint32_t last_heartbeat_ms; // last status message received from the sensor
 };
 
-#endif  // AP_RANGEFINDER_USD1_CAN_ENABLED
+#endif  // AP_RANGEFINDER_NRA24_CAN_DRIVER_ENABLED
+x

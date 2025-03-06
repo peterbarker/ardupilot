@@ -579,7 +579,7 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
         _add_backend(NEW_NOTHROW AP_RangeFinder_TOFSenseP_CAN(state[instance], params[instance]), instance);
         break;
 #endif
-#if AP_RANGEFINDER_NRA24_CAN_ENABLED || AP_RANGEFINDER_HEXSOONRADAR_ENABLED
+#if AP_RANGEFINDER_NRA24_CAN_DRIVER_ENABLED
   #if AP_RANGEFINDER_NRA24_CAN_ENABLED
     case Type::NRA24_CAN:
   #endif
@@ -588,7 +588,7 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
   #endif
         _add_backend(NEW_NOTHROW AP_RangeFinder_NRA24_CAN(state[instance], params[instance]), instance);
         break;
-#endif
+#endif  // AP_RANGEFINDER_NRA24_CAN_DRIVER_ENABLED
 #if AP_RANGEFINDER_TOFSENSEF_I2C_ENABLED
     case Type::TOFSenseF_I2C: {
         uint8_t addr = TOFSENSEP_I2C_DEFAULT_ADDR;
