@@ -30,6 +30,28 @@ extern const AP_HAL::HAL& hal;
 
 static StorageAccess fence_storage(StorageManager::StorageFence);
 
+// a structure to hold an inclusion or exclusion circle when it is
+// stored in the StorageManager:
+struct PACKED FenceStorage_CIRCLE_WITH_ALT {
+    int32_t lat;  // TODO: make sure these are around the right way vs ::read_latlon_from_storage
+    int32_t lon;
+    float radius;
+    float maximum_alt;
+    float minimum_alt;
+    uint8_t maximum_alt_frame : 3;
+    uint8_t minimum_alt_frame : 3;
+    // uint8_t your_two_bits_here : 2;
+};
+struct PACKED FenceStorage_POLYGON_WITH_ALT {
+    int32_t lat;  // TODO: make sure these are around the right way vs ::read_latlon_from_storage
+    int32_t lon;
+    float maximum_alt;
+    float minimum_alt;
+    uint8_t maximum_alt_frame : 3;
+    uint8_t minimum_alt_frame : 3;
+};
+
+
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 #define AC_FENCE_SDCARD_FILENAME "APM/fence.stg"
 #else
@@ -115,11 +137,24 @@ bool AC_PolyFence_loader::find_storage_offset_for_seq(const uint16_t seq, uint16
             return false;
         }
         break;
+    case AC_PolyFenceType::CIRCLE_INCLUSION_WITH_ALT:
+    case AC_PolyFenceType::CIRCLE_EXCLUSION_WITH_ALT:
+        if (delta != 0) {
+            INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+            return false;
+        }
+        break;
     case AC_PolyFenceType::POLYGON_INCLUSION:
     case AC_PolyFenceType::POLYGON_EXCLUSION:
         vertex_count_offset = offset;
         offset += 1; // the count of points in the fence
         offset += (delta * 8);
+        break;
+    case AC_PolyFenceType::POLYGON_INCLUSION_WITH_ALT:
+    case AC_PolyFenceType::POLYGON_EXCLUSION_WITH_ALT:
+        vertex_count_offset = offset;
+        offset += 1; // the count of points in the fence
+        offset += (delta * (4+4+4+4+1);  // float-lat + float-lng + float-minalt+float-maxalt+8 bits for frames (encoded as 3 bits each)
         break;
     case AC_PolyFenceType::RETURN_POINT:
         if (delta != 0) {
@@ -157,6 +192,20 @@ bool AC_PolyFence_loader::get_item(const uint16_t seq, AC_PolyFenceItem &item)
         }
         item.radius = fence_storage.read_float(offset);
         break;
+    case AC_PolyFenceType::CIRCLE_INCLUSION_WITH_ALT:
+    case AC_PolyFenceType::CIRCLE_EXCLUSION_WITH_ALT: {
+        FenceStorage_CIRCLE_WITH_ALT stored_circle;
+        if (!read_block_from_storage(offset, (uint8_t*)&stored_circle, sizeof(stored_circle))) {
+            return false;
+        }
+        item.loc.x = stored_circle.lat;
+        item.loc.y = stored_circle.lng;
+        item.radius = stored_circle.radius;;
+        item.minimum_alt = stored_circle.minimum_alt;
+        item.maximum_alt = stored_circle.maximum_alt;
+        item.minimum_alt_frame = Location::AltFrame(stored_circle.minimum_alt_frame);
+        item.maximum_alt_frame = Location::AltFrame(stored_circle.maximum_alt_frame);
+        break;
 #if AC_POLYFENCE_CIRCLE_INT_SUPPORT_ENABLED
     case AC_PolyFenceType::CIRCLE_INCLUSION_INT:
     case AC_PolyFenceType::CIRCLE_EXCLUSION_INT:
@@ -177,6 +226,20 @@ bool AC_PolyFence_loader::get_item(const uint16_t seq, AC_PolyFenceItem &item)
         if (!read_latlon_from_storage(offset, item.loc)) {
             return false;
         }
+        item.vertex_count = fence_storage.read_uint8(vertex_count_offset);
+        break;
+    case AC_PolyFenceType::POLYGON_INCLUSION_WITH_ALT:
+    case AC_PolyFenceType::POLYGON_EXCLUSION_WITH_ALT:
+        FenceStorage_POLYGON_WITH_ALT stored_polygon;
+        if (!read_block_from_storage(offset, (uint8_t*)&stored_polygon, sizeof(stored_polygon))) {
+            return false;
+        }
+        item.x = stored_polygon.lat;
+        item.y = stored_polygon.lon;
+        item.maximum_alt = stored_polygon.maximum_alt;
+        item.minimum_alt = stored_polygon.minimum_alt;
+        item.minimum_alt_frame = Location::AltFrame(stored_circle.minimum_alt_frame);
+        item.maximum_alt_frame = Location::AltFrame(stored_circle.maximum_alt_frame);
         item.vertex_count = fence_storage.read_uint8(vertex_count_offset);
         break;
     case AC_PolyFenceType::RETURN_POINT:
@@ -214,6 +277,15 @@ bool AC_PolyFence_loader::read_latlon_from_storage(uint16_t &read_offset, Vector
     read_offset += 4;
     ret.y = fence_storage.read_uint32(read_offset);
     read_offset += 4;
+    return true;
+}
+
+bool AC_PolyFence_loader::read_block_from_storage(uint16_t &read_offset, uint8_t *buffer, uint8_t len) const
+{
+    if (!fence_storage.read_block((void*)buffer, read_offset, len)) {
+        return false;
+    }
+    read_offset += len;
     return true;
 }
 
@@ -428,6 +500,13 @@ bool AC_PolyFence_loader::scan_eeprom(scan_fn_t scan_fn)
             break;
         case AC_PolyFenceType::POLYGON_INCLUSION:
         case AC_PolyFenceType::POLYGON_EXCLUSION: {
+            const uint8_t vertex_count = fence_storage.read_uint8(read_offset);
+            read_offset += 1; // for the count we just read
+            read_offset += vertex_count*8;
+            break;
+        }
+        case AC_PolyFenceType::POLYGON_INCLUSION_WITH_ALT:
+        case AC_PolyFenceType::POLYGON_EXCLUSION_WITH_ALT: {
             const uint8_t vertex_count = fence_storage.read_uint8(read_offset);
             read_offset += 1; // for the count we just read
             read_offset += vertex_count*8;

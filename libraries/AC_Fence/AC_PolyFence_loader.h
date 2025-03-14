@@ -31,6 +31,11 @@ enum class AC_PolyFenceType : uint8_t {
 #endif // #if AC_POLYFENCE_CIRCLE_INT_SUPPORT_ENABLED
     CIRCLE_EXCLUSION      = 93,
     CIRCLE_INCLUSION      = 92,
+
+    POLYGON_INCLUSION_WITH_ALT = 91,
+    POLYGON_EXCLUSION_WITH_ALT = 90,
+    CIRCLE_INCLUSION_WITH_ALT  = 89,
+    CIRCLE_EXCLUSION_WITH_ALT  = 88,
 };
 
 // a FenceItem is just a means of passing data about an item into
@@ -44,6 +49,9 @@ public:
     Vector2l loc;
     uint8_t vertex_count;
     float radius;
+    float minimum_alt;  // in metres; should we make this float16?
+    float maximum_alt;  // in metres; should we make this float16?
+    Location::AltFrame frame;
 };
 
 #if AP_FENCE_ENABLED
@@ -401,6 +409,7 @@ private:
     bool write_type_to_storage(uint16_t &offset, AC_PolyFenceType type) WARN_IF_UNUSED;
     bool write_latlon_to_storage(uint16_t &offset, const Vector2l &latlon) WARN_IF_UNUSED;
     bool read_latlon_from_storage(uint16_t &read_offset, Vector2l &latlon) const WARN_IF_UNUSED;
+    bool read_block_from_storage(uint16_t &read_offset, uint8_t *buffer, uint8_t len) const;
 
     // methods to write specific types of fencepoint out:
     bool write_eos_to_storage(uint16_t &offset);
