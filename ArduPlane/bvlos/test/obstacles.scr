@@ -1,0 +1,149 @@
+map circle -35.27648690 148.97100862 100 red
+map circle -35.27866535 148.97599273 100 red
+map circle -35.28058830 148.97855286 300 red
+map circle -35.27542934 148.97096622 100 red
+map circle -35.28296806 148.97564451 100 red
+map circle -35.28126150 148.93751790 100 red
+
+# further out to the West:
+map circle -35.28839987 148.90794074 100 red
+map circle -35.28941045 148.91112189 100 red
+map circle -35.28805833 148.91180398 100 red
+
+map circle -35.28987759 148.90839704 100 red
+map circle -35.29048627 148.91017736 100 red
+
+# pierce's creek state forest
+map circle -35.33215801 148.91836579 100 red
+map circle -35.33196554 148.92153981 100 red
+
+
+# high-voltage power lines close-in
+map circle -35.27501580 148.98633535 20 blue
+map circle -35.26846045 148.98654057 20 blue
+map circle -35.27509957 148.98633535 20 blue
+map circle -35.27899483 148.98618143 20 blue
+map circle -35.28215697 148.98618143 20 blue
+map circle -35.28515146 148.98602751 20 blue
+map circle -35.28845994 148.98595056 20 blue
+
+# further out on Sherwood Forest power lnes
+map circle -35.25683498 148.90975848 20 blue
+map circle -35.26089826 148.90719346 20 blue
+map circle -35.26414455 148.90524404 20 blue
+map circle -35.26795615 148.90275598 20 blue
+map circle -35.27030166 148.90165302 20 blue
+map circle -35.27482496 148.89929320 20 blue
+map circle -35.27691899 148.89842109 20 blue
+map circle -35.28232135 148.89570217 20 blue
+map circle -35.28523177 148.89421446 20 blue
+map circle -35.29360753 148.89008353 20 blue
+map circle -35.29523142 148.88925191 20 blue
+map circle -35.30008571 148.88389021 20 blue
+map circle -35.30269181 148.88095112 20 blue
+map circle -35.30474134 148.87866188 20 blue
+map circle -35.30746777 148.87557081 20 blue
+map circle -35.31022981 148.87250514 20 blue
+map circle -35.31391750 148.86838470 20 blue
+map circle -35.31528767 148.86681021 20 blue
+map circle -35.31794190 148.86385384 20 blue
+map circle -35.32337601 148.85774386 20 blue
+map circle -35.32427630 148.85673493 20 blue
+map circle -35.32531143 148.85558509 20 blue
+map circle -35.32669018 148.85404642 20 blue
+map circle -35.33059643 148.84966990 20 blue
+map circle -35.33322326 148.84556434 20 blue
+map circle -35.33620018 148.84084071 20 blue
+map circle -35.33846513 148.83725370 20 blue
+map circle -35.34049581 148.83405930 20 blue
+map circle -35.34276762 148.83049090 20 blue
+map circle -35.34606938 148.82532946 20 blue
+map circle -35.34816046 148.82205897 20 blue
+map circle -35.34994882 148.81921402 20 blue
+map circle -35.35113740 148.81738367 20 blue
+map circle -35.35216761 148.81570043 20 blue
+map circle -35.35394227 148.81292418 20 blue
+map circle -35.35512462 148.81079695 20 blue
+map circle -35.35802228 148.80367715 20 blue
+map circle -35.35959820 148.79982458 20 blue
+map circle -35.36181608 148.79434963 20 blue
+
+
+# old Honeysuckle creek tracking station
+map circle -35.58343368 148.97714652 200 red
+map circle -35.58288466 148.97445661 100 red
+
+# old Ororal Valley (public toilets etc)
+map circle -35.62866780 148.95616749 200 red
+
+# Ororal Valley homestead
+map circle -35.63916833 148.96132886 100 red
+
+# random houses (outside flight geography
+map circle -35.66235214 149.00308499 100 red
+map circle -35.65434355 148.99693307 100 red
+
+# Frank and Jack's hut:
+map circle -35.77522668 148.95885656 100 red
+
+# Hospital creek hut
+map circle -35.79012361 148.96693507 100 red
+
+# mount clear campground
+map circle -35.86477621 149.01089517 100 red
+
+# horse gullyhoursegully hut:
+map circle -35.82371638 149.06596799 100 red
+
+# glendale picnic area:
+map circle -35.68117146 148.99825917 100 red
+
+# Ororal River picnic campground
+map circle -35.66568215 148.98866016 100 red
+
+# Murray Gap camping area
+map circle -35.68180269 148.79771497 100 red
+
+# Cotter hut
+map circle -35.65088667 148.83109303 100 red
+
+# pond creek camping ground:
+map circle -35.63350540 148.85535037 100 red
+
+# Pryor's hut
+map circle -35.56235273 148.77809538 100 red
+
+# Corrin Dam lookout:
+map circle -35.53642518 148.83928326 100 red
+
+# Mt Franklin Ski lodge
+map circle -35.49104970 148.76518617 100 red
+
+# Corrin Forest
+map circle -35.51471354 148.92173901 200 red
+
+# tidbinbilla nature reserve, top end:
+map circle -35.46679456 148.90380081 200 red
+
+# Bendora dam:
+map circle -35.44603548 148.82791082 100 red
+
+
+# Bull's head tower
+map circle -35.38572458 148.81354850 100 red
+
+# Coree campground
+map circle -35.29688777 148.80723069 100 red
+
+# Blue Range Hut campground
+map circle -35.28956978 148.87594050 100 red
+
+# sherwood homestead
+map circle -35.27334478 148.89206949 100 red
+
+# random houses in Ororal valley
+map circle -35.74319151 148.98536690 100 red
+map circle -35.74353160 148.98782829 100 red
+
+# factory near Ororal valley?
+map circle -35.69179304 149.00462723 100 red

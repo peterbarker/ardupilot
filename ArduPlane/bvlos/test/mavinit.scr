@@ -1,41 +1,19 @@
 map set circle_linewidth 3
-map circle -35.27648690 148.97100862 100 red
-map circle -35.27866535 148.97599273 100 red
-map circle -35.28058830 148.97855286 300 red
-map circle -35.27542934 148.97096622 100 red
-map circle -35.28296806 148.97564451 100 red
-map circle -35.28126150 148.93751790 100 red
 
-map circle -35.27501580 148.98633535 20 blue
-map circle -35.26846045 148.98654057 20 blue
-map circle -35.27509957 148.98633535 20 blue
-map circle -35.27899483 148.98618143 20 blue
-map circle -35.28215697 148.98618143 20 blue
-map circle -35.28515146 148.98602751 20 blue
-map circle -35.28845994 148.98595056 20 blue
-
-
-map circle -35.25683498 148.90975848 20 blue
-map circle -35.26089826 148.90719346 20 blue
-map circle -35.26414455 148.90524404 20 blue
-map circle -35.26795615 148.90275598 20 blue
-map circle -35.27030166 148.90165302 20 blue
-map circle -35.27482496 148.89929320 20 blue
-map circle -35.27691899 148.89842109 20 blue
-map circle -35.28232135 148.89570217 20 blue
-map circle -35.28523177 148.89421446 20 blue
-
+script test/obstacles.scr
 
 module load kmlread
 
-#kml load "ARA - Fire Spotting BVLOS Area.kmz"
+kml load "ARA - Fire Spotting BVLOS Area.kmz"
 #kml toggle "3500ft LL C-Class Canberra-7"
 #kml toggle "5500ft LL C-Class Canberra-8"
 #kml toggle "6500ft LL C-Class Canberra-9"
 #kml toggle "8500ft LL C-Class Canberra-10"
 #kml toggle "Untitled Path-12"
-#kml toggle "Altitude Limit - 4900 ft AMSL-4"
-#kml toggle "Altitude Limit - 5900 ft AMSL-5"
-#kml toggle "N2-11"
+kml toggle "Altitude Limit - 4900 ft AMSL-4"
+kml toggle "Altitude Limit - 5900 ft AMSL-5"
+kml toggle "N2-11"
 
-kml load "RPAS2023-11232 - Aerial Robotics Australia Pty Ltd - ARN 1163975 - Testing and Training Area v1 08_08_2024.kml"
+# kml load "RPAS2023-11232 - Aerial Robotics Australia Pty Ltd - ARN 1163975 - Testing and Training Area v1 08_08_2024.kml"
+
+terrain set source SRTM1
