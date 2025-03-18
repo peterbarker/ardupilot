@@ -304,9 +304,9 @@ AP_OSD::AP_OSD()
 
 void AP_OSD::init()
 {
-    const AP_OSD::osd_types types[OSD_MAX_INSTANCES] = {
-        osd_types(osd_type.get()),
-        osd_types(osd_type2.get())
+    const AP_OSD::Type types[OSD_MAX_INSTANCES] = {
+        osd_type,
+        osd_type2
     };
     for (uint8_t instance = 0; instance < OSD_MAX_INSTANCES; instance++) {
         if (init_backend(types[instance], instance)) {
@@ -318,7 +318,7 @@ void AP_OSD::init()
     }
 }
 
-bool AP_OSD::init_backend(const AP_OSD::osd_types type, const uint8_t instance)
+bool AP_OSD::init_backend(const AP_OSD::Type, const uint8_t instance)
 {
     // check if we can run this backend instance in parallel with backend instance 0
     if (instance > 0) {

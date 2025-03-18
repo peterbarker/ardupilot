@@ -41,22 +41,22 @@ public:
     // return a correction factor used to display angles correctly
     float get_aspect_ratio_correction() const override;
 
-    bool is_compatible_with_backend_type(AP_OSD::osd_types type) const override {
+    bool is_compatible_with_backend_type(Type type) const override {
         switch(type) {
-        case AP_OSD::osd_types::OSD_MAX7456:
-        case AP_OSD::osd_types::OSD_SITL:
+        case AP_OSD::Type::MAX7456:
+        case AP_OSD::Type::SITL:
             return false;
-        case AP_OSD::osd_types::OSD_NONE:
-        case AP_OSD::osd_types::OSD_TXONLY:
-        case AP_OSD::osd_types::OSD_MSP:
-        case AP_OSD::osd_types::OSD_MSP_DISPLAYPORT:
+        case AP_OSD::Type::NONE:
+        case AP_OSD::Type::TXONLY:
+        case AP_OSD::Type::MSP:
+        case AP_OSD::Type::MSP_DISPLAYPORT:
             return true;
         }
         return false;
     }
 
-    AP_OSD::osd_types get_backend_type() const override {
-        return AP_OSD::osd_types::OSD_MAX7456;
+    AP_OSD::Type get_backend_type() const override {
+        return AP_OSD::Type::MAX7456;
     }
 
 private:

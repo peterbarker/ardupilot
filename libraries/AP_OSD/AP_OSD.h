@@ -546,16 +546,16 @@ public:
     // User settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
-    enum osd_types {
-        OSD_NONE=0,
-        OSD_MAX7456=1,
-        OSD_SITL=2,
-        OSD_MSP=3,
-        OSD_TXONLY=4,
-        OSD_MSP_DISPLAYPORT=5
+    enum class Type {
+        NONE=0,
+        MAX7456=1,
+        SITL=2,
+        MSP=3,
+        TXONLY=4,
+        MSP_DISPLAYPORT=5
     };
 
-    bool init_backend(const osd_types type, const uint8_t instance);
+    bool init_backend(const Type type, const uint8_t instance);
 
     enum switch_method {
         TOGGLE=0,
@@ -563,8 +563,8 @@ public:
         AUTO_SWITCH=2,
     };
 
-    AP_Int8 osd_type;
-    AP_Int8 osd_type2; // additional backend active in parallel
+    AP_Enum<Type>_type;
+    AP_Enum<Type> osd_type2; // additional backend active in parallel
     AP_Int8 font_num;
     AP_Int32 options;
 
