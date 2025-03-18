@@ -49,7 +49,7 @@ public:
         case AP_OSD::Type::NONE:
         case AP_OSD::Type::TXONLY:
         case AP_OSD::Type::MSP:
-        case AP_OSD::Type::MSP_DISPLAYPORT:
+        case AP_OSD::ype::MSPDISPLAYPORT:
             return true;
         }
         return false;

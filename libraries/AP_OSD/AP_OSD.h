@@ -552,7 +552,7 @@ public:
         SITL=2,
         MSP=3,
         TXONLY=4,
-        MSP_DISPLAYPORT=5
+        MSPDISPLAYPORT=5
     };
 
     bool init_backend(const Type type, const uint8_t instance);
