@@ -1484,7 +1484,7 @@ void AP_DroneCAN::handle_debug(const CanardRxTransfer& transfer, const uavcan_pr
         if (send_mavlink) {
             // when we send as MAVLink it also gets logged locally, so
             // we return to avoid a duplicate
-            GCS_SEND_TEXT(mavlink_level, "CAN[%u] %s", transfer.source_node_id, msg.text.data);
+            GCS_SEND_TEXT(mavlink_level, "%s", msg.text.data);
             return;
         }
     }
