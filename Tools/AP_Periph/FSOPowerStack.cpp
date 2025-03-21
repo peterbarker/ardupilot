@@ -796,7 +796,7 @@ void FSOPowerStack::calibrate()
         case CalibrateSubState::Setup: {
             set_switch_1_off();
             set_LED_1_off();
-            power_on = false;
+            waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Payload BEC 1 shunt");
             const float v1 = (cal_payload_P1c1 - 5.0) * cal_payload_P1c2;
             if (!dac.set_voltage(0, 0, v1)) {
@@ -809,18 +809,18 @@ void FSOPowerStack::calibrate()
         }
 
         case CalibrateSubState::Start:
-            if (switch_1_is_on() && !power_on) {
+            if (switch_1_is_on() && !waiting_for_test) {
                 set_LED_1_on();
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Turn on load");
 
                 // Turn on Payload BEC
                 set_payload_BEC_1_on();
-                power_on = true;
+                waiting_for_test = true;
 
                 cal_measurement_count = 0;
                 cal_measurement_1 = 0.0;
                 last_update_ms = now_ms;
-            } else if (switch_1_is_on() && power_on) {
+            } else if (switch_1_is_on() && waiting_for_test) {
                 if (batt.current_amps(payload_current, 3)) {
                     if (payload_current > 0.75 * cal_HCB_current) {
                         last_update_ms = now_ms;
@@ -866,7 +866,7 @@ void FSOPowerStack::calibrate()
         case CalibrateSubState::Setup: {
             set_switch_1_off();
             set_LED_1_off();
-            power_on = false;
+            waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Payload BEC 2 shunt");
             const float v2 = (cal_payload_P2c1 - 5.0) * cal_payload_P2c2;
             if (!dac.set_voltage(0, 3, v2)) {
@@ -879,18 +879,18 @@ void FSOPowerStack::calibrate()
         }
 
         case CalibrateSubState::Start: 
-            if (switch_1_is_on() && !power_on) {
+            if (switch_1_is_on() && !waiting_for_test) {
                 set_LED_1_on();
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Turn on load");
 
                 // Turn on Payload BEC
                 set_payload_BEC_2_on();
-                power_on = true;
+                waiting_for_test = true;
 
                 cal_measurement_count = 0;
                 cal_measurement_1 = 0.0;
                 last_update_ms = now_ms;
-            } else if (switch_1_is_on() && power_on) {
+            } else if (switch_1_is_on() && waiting_for_test) {
                 if (batt.current_amps(payload_current, 4)) {
                     if (payload_current > 0.75 * cal_HCB_current) {
                         last_update_ms = now_ms;
@@ -936,7 +936,7 @@ void FSOPowerStack::calibrate()
         case CalibrateSubState::Setup: {
             set_switch_1_off();
             set_LED_1_off();
-            power_on = false;
+            waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Internal 5.0 V HC shunt");
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Connect IHC and set Load to %.1f A", (float)cal_HCB_current);
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Press Main Button to start");
@@ -945,15 +945,15 @@ void FSOPowerStack::calibrate()
         }
 
         case CalibrateSubState::Start: 
-            if (switch_1_is_on() && !power_on) {
+            if (switch_1_is_on() && !waiting_for_test) {
                 set_LED_1_on();
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Turn on load");
-                power_on = true;
+                waiting_for_test = true;
 
                 cal_measurement_count = 0;
                 cal_measurement_1 = 0.0;
                 last_update_ms = now_ms;
-            } else if (switch_1_is_on() && power_on) {
+            } else if (switch_1_is_on() && waiting_for_test) {
                 if (batt.current_amps(payload_current, 5)) {
                     if (payload_current > 0.75 * cal_HCB_current) {
                         last_update_ms = now_ms;
@@ -997,7 +997,7 @@ void FSOPowerStack::calibrate()
         case CalibrateSubState::Setup: {
             set_switch_1_off();
             set_LED_1_off();
-            power_on = false;
+            waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Internal BEC 1 shunt");
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Connect I1 and set Load to %.1f A", (float)cal_LCB_current);
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Press Main Button to start");
@@ -1006,15 +1006,15 @@ void FSOPowerStack::calibrate()
         }
 
         case CalibrateSubState::Start: 
-            if (switch_1_is_on() && !power_on) {
+            if (switch_1_is_on() && !waiting_for_test) {
                 set_LED_1_on();
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Turn on load");
-                power_on = true;
+                waiting_for_test = true;
 
                 cal_measurement_count = 0;
                 cal_measurement_1 = 0.0;
                 last_update_ms = now_ms;
-            } else if (switch_1_is_on() && power_on) {
+            } else if (switch_1_is_on() && waiting_for_test) {
                 if (batt.current_amps(payload_current, 6)) {
                     if (payload_current > 0.75 * cal_LCB_current) {
                         last_update_ms = now_ms;
@@ -1058,7 +1058,7 @@ void FSOPowerStack::calibrate()
         case CalibrateSubState::Setup: {
             set_switch_1_off();
             set_LED_1_off();
-            power_on = false;
+            waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Internal BEC 2 shunt");
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Connect I2 and set Load to %.1f A", (float)cal_LCB_current);
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Press Main Button to start");
@@ -1067,15 +1067,15 @@ void FSOPowerStack::calibrate()
         }
 
         case CalibrateSubState::Start: 
-            if (switch_1_is_on() && !power_on) {
+            if (switch_1_is_on() && !waiting_for_test) {
                 set_LED_1_on();
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Turn on load");
-                power_on = true;
+                waiting_for_test = true;
 
                 cal_measurement_count = 0;
                 cal_measurement_1 = 0.0;
                 last_update_ms = now_ms;
-            } else if (switch_1_is_on() && power_on) {
+            } else if (switch_1_is_on() && waiting_for_test) {
                 if (batt.current_amps(payload_current, 7)) {
                     if (payload_current > 0.75 * cal_LCB_current) {
                         last_update_ms = now_ms;
@@ -1119,7 +1119,7 @@ void FSOPowerStack::calibrate()
         case CalibrateSubState::Setup:
             set_switch_1_off();
             set_LED_1_off();
-            power_on = false;
+            waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Payload HV shunt");
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Connect Phv and set Load to %.1f A", (float)cal_HV_current);
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Press Main Button to start");
@@ -1130,11 +1130,11 @@ void FSOPowerStack::calibrate()
             if (switch_1_is_on() && HV_payload_is_off()) {
                 // Turn on Payload HV
                 set_HV_payload_on();
-            } else if (switch_1_is_on() && HV_payload_is_on() && !power_on) {
+            } else if (switch_1_is_on() && HV_payload_is_on() && !waiting_for_test) {
                 set_LED_1_on();
-                power_on = true;
+                waiting_for_test = true;
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Turn on load");
-            } else if (switch_1_is_on() && HV_payload_is_on() && power_on) {
+            } else if (switch_1_is_on() && HV_payload_is_on() && waiting_for_test) {
                 if (batt.current_amps(payload_current, 2)) {
                     if (payload_current > 0.75 * cal_HV_current) {
                         last_update_ms = now_ms;

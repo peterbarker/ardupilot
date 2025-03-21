@@ -218,7 +218,6 @@ private:
 
     bool main_on;
     bool payload_HV_on;
-    bool power_on;
     uint32_t start_main_precharge_ms;
     uint32_t start_payload_HV_precharge_ms;
     LowPassFilterFloat  payload_HV_current_filter;  // Payload HV current input filter
@@ -227,6 +226,8 @@ private:
     LowPassFilterFloat  internal_HC_current_filter;  // Internal BEC HC current input filter
     LowPassFilterFloat  internal_1_current_filter;   // Internal BEC 1 current input filter
     LowPassFilterFloat  internal_2_current_filter;   // Internal BEC 2 current input filter
+
+    bool waiting_for_test;
 
     TurnOnState main_state = Off;
     TurnOnState payload_HV_state = Off;
