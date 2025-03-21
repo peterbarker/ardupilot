@@ -7348,6 +7348,7 @@ return update()
             self.MotorTest,
             self.WheelEncoders,
             self.DataFlashOverMAVLink,
+            self.DataFlashOverMAVLinkLongLog,
             self.DataFlash,
             self.SkidSteer,
             self.PolyFence,

@@ -10656,6 +10656,33 @@ Also, ignores heartbeats not from our target system'''
         if ex is not None:
             raise ex
 
+    def DataFlashOverMAVLinkLongLog(self):
+        '''Test DataFlash over MAVLink - create long log and inspect'''
+        print(f"I'm at {os.getcwd()}")
+        mavproxy = self.start_mavproxy()
+        self.set_parameter("LOG_BACKEND_TYPE", 2)
+        self.reboot_sitl()
+        self.mavproxy_load_module(mavproxy, 'dataflash_logger')
+        mavproxy.expect(r'logging started \(([^)]+)\)')
+        filename = mavproxy.match.group(1)
+        self.set_parameter("SIM_SPEEDUP", 1)
+        self.set_parameter("LOG_DISARMED", 1)
+        self.delay_sim_time(60)
+        self.set_parameter("LOG_DISARMED", 0)
+        self.stop_mavproxy(mavproxy)
+
+        self.progress(f"Dataflash log is at {filename}")
+        dfreader = self.dfreader_for_path(filename)
+        while True:
+            m = dfreader.recv_match()
+            if m is None:
+                break
+            t = m.get_type()
+            if t == 'DMS':
+                print(f"{m}")
+                if m.Dp > 0:
+                    raise NotAchievedException("Dropped messages?!")
+
     def DataFlash(self):
         """Test DataFlash SITL backend"""
         self.context_push()
