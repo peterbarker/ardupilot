@@ -131,17 +131,13 @@ bool AP_Logger_MAVLink::WritesOK() const
 // DM_write: 70734 events, 0 overruns, 167806us elapsed, 2us avg, min 1us max 34us 0.620us rms
 bool AP_Logger_MAVLink::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical)
 {
-    if (!semaphore.take_nonblocking()) {
-        _dropped++;
-        return false;
-    }
+    WITH_SEMAPHORE(semaphore);
 
     if (bufferspace_available() < size) {
         if (_startup_messagewriter->finished()) {
             // do not count the startup packets as being dropped...
             _dropped++;
         }
-        semaphore.give();
         return false;
     }
 
@@ -153,7 +149,6 @@ bool AP_Logger_MAVLink::_WritePrioritisedBlock(const void *pBuffer, uint16_t siz
             if (_current_block == nullptr) {
                 // should not happen - there's a sanity check above
                 INTERNAL_ERROR(AP_InternalError::error_t::logger_bad_current_block);
-                semaphore.give();
                 return false;
             }
         }
@@ -169,8 +164,6 @@ bool AP_Logger_MAVLink::_WritePrioritisedBlock(const void *pBuffer, uint16_t siz
             _current_block = next_block();
         }
     }
-
-    semaphore.give();
 
     return true;
 }
@@ -276,9 +269,7 @@ void AP_Logger_MAVLink::remote_log_block_status_msg(const GCS_MAVLINK &link,
 {
     mavlink_remote_log_block_status_t packet;
     mavlink_msg_remote_log_block_status_decode(&msg, &packet);
-    if (!semaphore.take_nonblocking()) {
-        return;
-    }
+    WITH_SEMAPHORE(semaphore);
     switch ((MAV_REMOTE_LOG_DATA_BLOCK_STATUSES)packet.status) {
         case MAV_REMOTE_LOG_DATA_BLOCK_NACK:
             handle_retry(packet.seqno);
@@ -290,7 +281,6 @@ void AP_Logger_MAVLink::remote_log_block_status_msg(const GCS_MAVLINK &link,
         case MAV_REMOTE_LOG_DATA_BLOCK_STATUSES_ENUM_END:
             break;
     }
-    semaphore.give();
 }
 
 void AP_Logger_MAVLink::handle_retry(uint32_t seqno)
@@ -479,20 +469,15 @@ void AP_Logger_MAVLink::push_log_blocks()
 
     AP_Logger_Backend::WriteMoreStartupMessages();
 
-    if (!semaphore.take_nonblocking()) {
-        return;
-    }
+    WITH_SEMAPHORE(semaphore);
 
     if (! send_log_blocks_from_queue(_blocks_retry)) {
-        semaphore.give();
         return;
     }
 
     if (! send_log_blocks_from_queue(_blocks_pending)) {
-        semaphore.give();
         return;
     }
-    semaphore.give();
 }
 
 void AP_Logger_MAVLink::do_resends(uint32_t now)
