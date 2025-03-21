@@ -234,7 +234,7 @@ void FSOPowerStack::init()
     uint32_t now_ms = AP_HAL::millis();
     last_report_errors_ms = now_ms;
     last_fan_error_ms = now_ms - FSO_ERROR_FAN_MSG_INTERVAL + 30000; // delay first fan error message by 30 seconds
-    
+
     init_fan(FSO_FAN_TACH1_PIN, fans[0]);
     init_fan(FSO_FAN_TACH2_PIN, fans[1]);
     init_fan(FSO_FAN_TACH3_PIN, fans[2]);
@@ -483,7 +483,7 @@ void FSOPowerStack::update_main_power()
         if (main_on == true) {
             main_state = TurnOnState::PreChargeStart;
             if (!version_displayed) {
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "PowerStack Version: 1.2");
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "PowerStack Version: 1.3");
                 version_displayed = true;
             }
         }
