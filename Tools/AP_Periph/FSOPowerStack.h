@@ -135,7 +135,6 @@ private:
     void update_main_power();
     void update_payload_HV_power();
     void update_payload_BEC();
-    void update_internal_BEC();
     void update_DAC();
     void calibrate();
     void calibrate_main_current();
@@ -151,12 +150,6 @@ private:
     
     bool HV_payload_is_on(){return payload_HV_state == TurnOnState::On;}
     bool HV_payload_is_off(){return payload_HV_state == TurnOnState::Off;}
-
-    void set_payload_BEC_1_on(){hal.gpio->write(FSO_PAYLOAD_1_EN_PIN, 1);}
-    void set_payload_BEC_1_off(){hal.gpio->write(FSO_PAYLOAD_1_EN_PIN, 0);}
-
-    void set_payload_BEC_2_on(){hal.gpio->write(FSO_PAYLOAD_2_EN_PIN, 1);}
-    void set_payload_BEC_2_off(){hal.gpio->write(FSO_PAYLOAD_2_EN_PIN, 0);}
 
     void set_switch_1_on(){switch_1_on = true;}
     void set_switch_1_off(){switch_1_on = false;}
@@ -194,18 +187,26 @@ private:
     void set_payload_HV_SW_on(){hal.gpio->write(FSO_PAYLOAD_HV_EN_PIN, 1);}
     void set_payload_HV_SW_off(){hal.gpio->write(FSO_PAYLOAD_HV_EN_PIN, 0);}
 
+    void set_payload_BEC_1_on(){hal.gpio->write(FSO_PAYLOAD_1_EN_PIN, 1); payload_BEC_1_on = true;}
+    void set_payload_BEC_1_off(){hal.gpio->write(FSO_PAYLOAD_1_EN_PIN, 0); payload_BEC_1_on = false;}
+
+    void set_payload_BEC_2_on(){hal.gpio->write(FSO_PAYLOAD_2_EN_PIN, 1); payload_BEC_2_on = true;}
+    void set_payload_BEC_2_off(){hal.gpio->write(FSO_PAYLOAD_2_EN_PIN, 0); payload_BEC_2_on = false;}
+
+    void set_internal_HC_on(){hal.gpio->write(FSO_INTERNAL_HC_EN_PIN, 1); payload_internal_HC_on = true;}
+    void set_internal_HC_off(){hal.gpio->write(FSO_INTERNAL_HC_EN_PIN, 0); payload_internal_HC_on = false;}
+
     void set_h16pro_on(){hal.gpio->write(FSO_H16_EN_PIN, 1);}
     void set_h16pro_off(){hal.gpio->write(FSO_H16_EN_PIN, 0);}
     bool h16pro_fault(){return hal.gpio->read(FSO_H16_FAULT_PIN);}
-
-    void set_internal_HC_on(){hal.gpio->write(FSO_INTERNAL_HC_EN_PIN, 1);}
-    void set_internal_HC_off(){hal.gpio->write(FSO_INTERNAL_HC_EN_PIN, 0);}
 
     bool switch_1_pressed(){return hal.gpio->read(FSO_SWITCH_MAIN_PIN);}
     bool switch_2_pressed(){return hal.gpio->read(FSO_SWITCH_PAYLOAD_PIN);}
 
     uint32_t last_report_ms;
     void report();
+    uint32_t last_report_errors_ms;
+    void report_errors();
 
 
     bool switch_1_on;
@@ -218,6 +219,9 @@ private:
 
     bool main_on;
     bool payload_HV_on;
+    bool payload_BEC_1_on;
+    bool payload_BEC_2_on;
+    bool payload_internal_HC_on;
     uint32_t start_main_precharge_ms;
     uint32_t start_payload_HV_precharge_ms;
     LowPassFilterFloat  payload_HV_current_filter;  // Payload HV current input filter
