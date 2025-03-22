@@ -2291,7 +2291,7 @@ bool AP_GPS::backends_healthy(char failure_msg[], uint16_t failure_msg_len) {
         if (_type[i] == GPS_TYPE_UBLOX_RTK_ROVER ||
             _type[i] == GPS_TYPE_UAVCAN_RTK_ROVER) {
             if (AP_HAL::millis() - state[i].gps_yaw_time_ms > 15000) {
-                hal.util->snprintf(failure_msg, failure_msg_len, "GPS[%u] yaw not available", unsigned(i+1));
+                hal.util->snprintf(failure_msg, failure_msg_len, "GPS %u: yaw not available", unsigned(i+1));
                 return false;
             }
         }
