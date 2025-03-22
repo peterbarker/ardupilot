@@ -316,6 +316,7 @@ void AP_Networking::Port::tcp_client_loop(void)
 /*
   run one send/receive loop
  */
+uint8_t buf[1200];
 bool AP_Networking::Port::send_receive(void)
 {
 
@@ -330,7 +331,6 @@ bool AP_Networking::Port::send_receive(void)
     }
     if (space > 0) {
         const uint32_t n = MIN(300U, space);
-        uint8_t buf[n];
         const auto ret = sock->recv(buf, n, 0);
         if (close_on_recv_error && ret == 0) {
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "TCP[%u]: closed connection", unsigned(state.idx));
@@ -382,17 +382,16 @@ bool AP_Networking::Port::send_receive(void)
         {
             WITH_SEMAPHORE(sem);
             available = writebuffer->available();
-            available = MIN(300U, available);
+            available = MIN(1200U, available);
 #if AP_MAVLINK_PACKETISE_ENABLED
-            if (packetise) {
-                available = mavlink_packetise(*writebuffer, available);
-            }
+            // if (packetise) {
+            //     available = mavlink_packetise(*writebuffer, available);
+            // }
 #endif
             if (available == 0) {
                 return active;
             }
         }
-        uint8_t buf[available];
         uint32_t n;
         {
             WITH_SEMAPHORE(sem);

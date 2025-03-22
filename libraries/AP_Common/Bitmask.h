@@ -115,6 +115,7 @@ public:
     // return true if given bitnumber is set
     bool get(uint16_t bit) const {
         if (!validate(bit)) {
+            abort();
             return false; // pretend invalid bit is not set
         }
         uint16_t word = bit/32;

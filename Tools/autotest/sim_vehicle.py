@@ -560,6 +560,7 @@ def find_location_by_name(locname):
     comment_regex = re.compile(r"\s*#.*")
     for path in [locations_userpath, locations_filepath]:
         if not os.path.isfile(path):
+            print(f"no {path}")
             continue
         with open(path, 'r') as fd:
             for line in fd:

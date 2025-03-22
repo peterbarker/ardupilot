@@ -263,6 +263,7 @@ void UARTDriver::_begin(uint32_t b, uint16_t rxS, uint16_t txS)
 #endif
     if (rx_size_by_baudrate) {
         min_rx_buffer = MAX(min_rx_buffer, b/(40*10));
+        min_tx_buffer = MAX(min_tx_buffer, b/(40*10));
     }
 
     if (sdef.is_usb) {
