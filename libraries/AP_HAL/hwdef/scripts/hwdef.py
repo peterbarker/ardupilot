@@ -246,27 +246,37 @@ class HWDef:
 
             self.intdefines[name] = intvalue
 
-    def parse_spi_device(self, dev):
+    def parse_spi_device(self, dev, OwnPtr=True):
         '''parse a SPI:xxx device item'''
         a = dev.split(':')
         if len(a) != 2:
             self.error("Bad SPI device: %s" % dev)
-        return 'hal.spi->get_device("%s")' % a[1]
+        if OwnPtr:
+            get_device = "get_device"
+        else:
+            get_device = "get_device_ptr"
+        return f'hal.spi->{get_device}("{a[1]}")'
 
-    def parse_i2c_device(self, dev):
+    def parse_i2c_device(self, dev, OwnPtr=True):
         '''parse a I2C:xxx:xxx device item'''
         a = dev.split(':')
         if len(a) != 3:
             self.error("Bad I2C device: %s" % dev)
         busaddr = int(a[2], base=0)
+
+        if OwnPtr:
+            GET_I2C_DEVICE = "GET_I2C_DEVICE"
+        else:
+            GET_I2C_DEVICE = "GET_I2C_DEVICE_PTR"
+
         if a[1] == 'ALL_EXTERNAL':
-            return ('FOREACH_I2C_EXTERNAL(b)', 'GET_I2C_DEVICE(b,0x%02x)' % (busaddr))
+            return ('FOREACH_I2C_EXTERNAL(b)', f'{GET_I2C_DEVICE}(b,0x{busaddr:02x})')
         elif a[1] == 'ALL_INTERNAL':
-            return ('FOREACH_I2C_INTERNAL(b)', 'GET_I2C_DEVICE(b,0x%02x)' % (busaddr))
+            return ('FOREACH_I2C_INTERNAL(b)', f'{GET_I2C_DEVICE}(b,0x{busaddr:02x})')
         elif a[1] == 'ALL':
-            return ('FOREACH_I2C(b)', 'GET_I2C_DEVICE(b,0x%02x)' % (busaddr))
+            return ('FOREACH_I2C(b)', f'{GET_I2C_DEVICE}(b,0x{busaddr:02x})')
         busnum = int(a[1])
-        return ('', 'GET_I2C_DEVICE(%u,0x%02x)' % (busnum, busaddr))
+        return ('', f'{GET_I2C_DEVICE}({busnum},0x{busaddr:02x})')
 
     def seen_str(self, dev):
         '''return string representation of device for checking for duplicates'''
@@ -365,15 +375,18 @@ class HWDef:
                 probe = a[1]
             for i in range(1, len(dev)):
                 if dev[i].startswith("SPI:"):
-                    dev[i] = self.parse_spi_device(dev[i])
+                    dev[i] = self.parse_spi_device(dev[i], OwnPtr=False)
                 elif dev[i].startswith("I2C:"):
-                    (wrapper, dev[i]) = self.parse_i2c_device(dev[i])
+                    (wrapper, dev[i]) = self.parse_i2c_device(dev[i], OwnPtr=False)
             n = len(devlist)+1
             devlist.append('HAL_BARO_PROBE%u' % n)
             args = ['*this'] + dev[1:]
+            get_device_call = args[1]
+            args[1] = "*dev"
+            probe_args = ",".join(args)
             f.write(
-                '#define HAL_BARO_PROBE%u %s ADD_BACKEND(AP_Baro_%s::%s(%s))\n'
-                % (n, wrapper, driver, probe, ','.join(args)))
+                f'#define HAL_BARO_PROBE{n} {wrapper} {{ auto *dev = {get_device_call}; if (dev) {{ auto *probed_backend = AP_Baro_{driver}::{probe}({probe_args}); if (probed_backend) {{ ADD_BACKEND(probed_backend); }} else {{ delete dev; }} }} }}\n'  # NOQA:E501
+            )
         if len(devlist) > 0:
             f.write('#define HAL_BARO_PROBE_LIST %s\n\n' % ';'.join(devlist))
 
