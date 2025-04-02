@@ -9,7 +9,6 @@ OSCILLATOR_HZ 16000000
 # board ID for firmware load
 APJ_BOARD_ID 1141
 
-env OPTIMIZE -O2
 
 # ChibiOS system timer
 STM32_ST_USE_TIMER 5
