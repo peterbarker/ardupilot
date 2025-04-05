@@ -44,6 +44,7 @@ private:
         INPUT_ROLL = 1,         // angle input roll axis is being excited
         INPUT_PITCH = 2,        // angle pitch axis is being excited
         INPUT_YAW = 3,          // angle yaw axis is being excited
+#if HAL_QUADPLANE_ENABLED
         RECOVER_ROLL = 4,       // angle roll axis is being excited
         RECOVER_PITCH = 5,      // angle pitch axis is being excited
         RECOVER_YAW = 6,        // angle yaw axis is being excited
@@ -53,6 +54,7 @@ private:
         MIX_ROLL = 10,          // mixer roll axis is being excited
         MIX_PITCH = 11,         // mixer pitch axis is being excited
         MIX_YAW = 12,           // mixer pitch axis is being excited
+#endif  // HAL_QUADPLANE_ENABLED
         MIX_THROTTLE = 13,      // mixer throttle axis is being excited
     };
 
