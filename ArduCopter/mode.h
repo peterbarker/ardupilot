@@ -1576,8 +1576,8 @@ private:
     AP_Float ship_max_jerk_xy_msss;
     AP_Float ship_max_accel_z_mss;
     AP_Float ship_max_jerk_z_msss;
-    AP_Float ship_max_accel_h_mss;
-    AP_Float ship_max_jerk_h_msss;
+    AP_Float ship_max_accel_h_degss;
+    AP_Float ship_max_jerk_h_degsss;
     AP_Float keep_out_CW_deg;
     AP_Float keep_out_CCW_deg;
     AP_Float keep_out_radius_m;

@@ -69,7 +69,7 @@ const AP_Param::GroupInfo ModeShipOperation::var_info[] = {
     // @Range: 0 90
     // @Units: deg/s/s
     // @User: Advanced
-    AP_GROUPINFO("ACCELH", 8, ModeShipOperation, ship_max_accel_h_mss, 90.0),
+    AP_GROUPINFO("ACCELH", 8, ModeShipOperation, ship_max_accel_h_degss, 90.0),
 
     // @Param: JERKH
     // @DisplayName: Angular jerk limit for the heading kinematic input shaping
@@ -77,7 +77,7 @@ const AP_Param::GroupInfo ModeShipOperation::var_info[] = {
     // @Range: 0 360
     // @Units: deg/s/s/s
     // @User: Advanced
-    AP_GROUPINFO("JERKH", 9, ModeShipOperation, ship_max_jerk_h_msss, 360.0),
+    AP_GROUPINFO("JERKH", 9, ModeShipOperation, ship_max_jerk_h_degsss, 360.0),
 
     // @Param: KOZ_CW
     // @DisplayName: CW angular offset_ned_cm in degrees from ship heading for Keep Out Zone
@@ -445,8 +445,8 @@ void ModeShipOperation::run()
     
             shape_angle_vel_accel(radians(target_heading_deg), 0.0, 0.0,
                 ship.heading_rad, ship.heading_rate_rads, ship.heading_accel_radss,
-                0.0, radians(ship_max_accel_h_mss),
-                radians(ship_max_jerk_h_msss), G_Dt, false);
+                0.0, radians(ship_max_accel_h_degss),
+                radians(ship_max_jerk_h_degsss), G_Dt, false);
             postype_t ship_heading_p = ship.heading_rad;
             update_pos_vel_accel(ship_heading_p, ship.heading_rate_rads, ship.heading_accel_radss, G_Dt, 0.0, 0.0, 0.0);
             ship.heading_rad = wrap_PI(ship_heading_p);
