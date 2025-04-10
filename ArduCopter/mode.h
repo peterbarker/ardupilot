@@ -1935,6 +1935,20 @@ protected:
     int32_t wp_bearing() const override;
 
     uint32_t last_log_ms;   // system time of last time desired velocity was logging
+
+private:
+    class FollowTarget {
+    public:
+        void reset(uint8_t sys_id, const Vector3f &pos_with_ofs_ned, const Vector3f &vel_ned_ms, float target_heading_deg, float target_heading_rate_degs);
+        uint8_t sysid;
+        Vector3p pos_ned_cm;
+        Vector3f vel_ned_cms;
+        Vector3f accel_ned_cmss;
+        float heading_rad;
+        float heading_rate_rads;
+        float heading_accel_radss;
+        bool available;
+    } target;
 };
 #endif
 
