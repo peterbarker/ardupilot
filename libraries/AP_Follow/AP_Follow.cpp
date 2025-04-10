@@ -137,7 +137,7 @@ const AP_Param::GroupInfo AP_Follow::var_info[] = {
     // @Param: _OPTIONS
     // @DisplayName: Follow options
     // @Description: Follow options bitmask
-    // @Values: 0:None,1: Mount Follows lead vehicle on mode enter
+    // @Values: 0:None,1: Mount Follows lead vehicle on mode enter,2: Use Follow Target message only
     // @User: Standard
     AP_GROUPINFO("_OPTIONS", 11, AP_Follow, _options, 0),
 
@@ -272,6 +272,23 @@ bool AP_Follow::get_target_heading_deg(float &heading) const
     return true;
 }
 
+bool AP_Follow::get_target_heading_rate_degs(float &heading_rate) const
+{
+    // exit immediately if not enabled
+    if (!_enabled) {
+        return false;
+    }
+
+    // check for timeout
+    if ((_last_heading_update_ms == 0) || (AP_HAL::millis() - _last_heading_update_ms > AP_FOLLOW_TIMEOUT_MS)) {
+        return false;
+    }
+
+    // return latest heading estimate
+    heading_rate = degrees(_target_heading_rate);
+    return true;
+}
+
 // handle mavlink DISTANCE_SENSOR messages
 void AP_Follow::handle_msg(const mavlink_message_t &msg)
 {
@@ -301,6 +318,10 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
 
     switch (msg.msgid) {
     case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {
+        if (option_is_enabled(Option::USE_FOLLOW_TARGET_MESSAGE_ONLY)) {
+            // ignore this message if we are using FOLLOW_TARGET
+            return;
+        }
         // decode message
         mavlink_global_position_int_t packet;
         mavlink_msg_global_position_int_decode(&msg, &packet);
@@ -332,6 +353,7 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
             _target_heading = packet.hdg * 0.01f;   // convert centi-degrees to degrees
             _last_heading_update_ms = _last_location_update_ms;
         }
+        _target_heading_rate = 0.0f; // Default to zero if attitude is not available
         // initialise _sysid if zero to sender's id
         if (_sysid == 0) {
             _sysid.set(msg.sysid);
@@ -341,24 +363,25 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
         break;
     }
     case MAVLINK_MSG_ID_FOLLOW_TARGET: {
-        // decode message
+        // Decode message
         mavlink_follow_target_t packet;
         mavlink_msg_follow_target_decode(&msg, &packet);
-
-        // ignore message if lat and lon are (exactly) zero
+    
+        // Ignore message if lat and lon are (exactly) zero
         if ((packet.lat == 0 && packet.lon == 0)) {
             return;
         }
-        // require at least position
-        if ((packet.est_capabilities & (1<<0)) == 0) {
+    
+        // Require at least position
+        if ((packet.est_capabilities & (1 << 0)) == 0) {
             return;
         }
-
+    
         Location new_loc = _target_location;
         new_loc.lat = packet.lat;
         new_loc.lng = packet.lon;
-        new_loc.set_alt_cm(packet.alt*100, Location::AltFrame::ABSOLUTE);
-
+        new_loc.set_alt_cm(packet.alt * 100, Location::AltFrame::ABSOLUTE);
+    
         // FOLLOW_TARGET is always AMSL, change the provided alt to
         // above home if we are configured for relative alt
         if (_alt_type == AP_FOLLOW_ALTITUDE_TYPE_RELATIVE &&
@@ -366,27 +389,40 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
             return;
         }
         _target_location = new_loc;
-
-        if (packet.est_capabilities & (1<<1)) {
-            _target_velocity_ned.x = packet.vel[0]; // velocity north
-            _target_velocity_ned.y = packet.vel[1]; // velocity east
-            _target_velocity_ned.z = packet.vel[2]; // velocity down
+    
+        if (packet.est_capabilities & (1 << 1)) {
+            _target_velocity_ned.x = packet.vel[0]; // Velocity north
+            _target_velocity_ned.y = packet.vel[1]; // Velocity east
+            _target_velocity_ned.z = packet.vel[2]; // Velocity down
         } else {
             _target_velocity_ned.zero();
         }
-
-        // get a local timestamp with correction for transport jitter
-        _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.timestamp, AP_HAL::millis());
-
-        if (packet.est_capabilities & (1<<3)) {
-            Quaternion q{packet.attitude_q[0], packet.attitude_q[1], packet.attitude_q[2], packet.attitude_q[3]};
-            float r, p, y;
-            q.to_euler(r,p,y);
-            _target_heading = degrees(y);
-            _last_heading_update_ms = _last_location_update_ms;
+    
+        if (packet.est_capabilities & (1 << 2)) {
+            _target_accel_ned.x = packet.acc[0]; // Acceleration north
+            _target_accel_ned.y = packet.acc[1]; // Acceleration east
+            _target_accel_ned.z = packet.acc[2]; // Acceleration down
+        } else {
+            _target_accel_ned.zero();
         }
-
-        // initialise _sysid if zero to sender's id
+    
+        // Get a local timestamp with correction for transport jitter
+        _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.timestamp, AP_HAL::millis());
+    
+        if (packet.est_capabilities & (1 << 3)) {
+            Quaternion q{packet.attitude_q[0], packet.attitude_q[1], packet.attitude_q[2], packet.attitude_q[3]};
+            float roll, pitch, yaw;
+            q.to_euler(roll, pitch, yaw);
+            _target_heading = degrees(yaw);
+            _last_heading_update_ms = _last_location_update_ms;
+    
+            // Transform yaw rate to earth frame
+            _target_heading_rate = degrees(packet.rates[2] * cosf(pitch)); // Adjust for pitch
+        } else {
+            _target_heading_rate = 0.0f; // Default to zero if attitude is not available
+        }
+    
+        // Initialise _sysid if zero to sender's id
         if (_sysid == 0) {
             _sysid.set(msg.sysid);
             _automatic_sysid = true;
@@ -398,40 +434,34 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
 
     if (updated) {
 #if HAL_LOGGING_ENABLED
-        // get estimated location and velocity
-        Location loc_estimate{};
-        Vector3f vel_estimate;
-        UNUSED_RESULT(get_target_location_and_velocity(loc_estimate, vel_estimate));
 
         // log lead's estimated vs reported position
-// @LoggerMessage: FOLL
-// @Description: Follow library diagnostic data
-// @Field: TimeUS: Time since system startup
-// @Field: Lat: Target latitude
-// @Field: Lon: Target longitude
-// @Field: Alt: Target absolute altitude
-// @Field: VelN: Target earth-frame velocity, North
-// @Field: VelE: Target earth-frame velocity, East
-// @Field: VelD: Target earth-frame velocity, Down
-// @Field: LatE: Vehicle latitude
-// @Field: LonE: Vehicle longitude
-// @Field: AltE: Vehicle absolute altitude
+        // @LoggerMessage: FOLL
+        // @Description: Follow library diagnostic data
+        // @Field: TimeUS: Time since system startup
+        // @Field: Lat: Target latitude
+        // @Field: Lon: Target longitude
+        // @Field: Alt: Target absolute altitude
+        // @Field: VelN: Target earth-frame velocity, North
+        // @Field: VelE: Target earth-frame velocity, East
+        // @Field: VelD: Target earth-frame velocity, Down
+        // @Field: Yaw: Vehicle heading
+        // @Field: YawR: Vehicle heading rate
         AP::logger().WriteStreaming("FOLL",
-                                               "TimeUS,Lat,Lon,Alt,VelN,VelE,VelD,LatE,LonE,AltE",  // labels
-                                               "sDUmnnnDUm",    // units
-                                               "F--B000--B",    // mults
-                                               "QLLifffLLi",    // fmt
-                                               AP_HAL::micros64(),
-                                               _target_location.lat,
-                                               _target_location.lng,
-                                               _target_location.alt,
-                                               (double)_target_velocity_ned.x,
-                                               (double)_target_velocity_ned.y,
-                                               (double)_target_velocity_ned.z,
-                                               loc_estimate.lat,
-                                               loc_estimate.lng,
-                                               loc_estimate.alt
-                                               );
+            "TimeUS,Lat,Lon,Alt,VelN,VelE,VelD,Yaw,YawR",  // labels
+            "sDUmnnnhk",    // units
+            "F--B00000",    // mults
+            "QLLifffff",    // fmt
+            AP_HAL::micros64(),
+            _target_location.lat,
+            _target_location.lng,
+            _target_location.alt,
+            (double)_target_velocity_ned.x,
+            (double)_target_velocity_ned.y,
+            (double)_target_velocity_ned.z,
+            (double)_target_heading,          // Yaw in degrees
+            (double)_target_heading_rate      // Yaw rate in radians per second
+        );
 #endif
     }
 }
