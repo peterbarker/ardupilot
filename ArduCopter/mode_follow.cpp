@@ -85,11 +85,11 @@ void ModeFollow::run()
 
     
     const Vector3f &curr_pos_neu_cm = inertial_nav.get_position_neu_cm();
+    Vector3f pos_delta_ned_m;  // vector to lead vehicle + offset_ned_cm
     if (!AP::ahrs().home_is_set()) {
         target.available = false;
     } else {
         // define target location
-        Vector3f pos_delta_ned_m;  // vector to lead vehicle + offset_ned_cm
         Vector3f pos_delta_with_ofs_ned_m;  // vector to lead vehicle + offset_ned_cm
         Vector3f vel_ned_ms;  // velocity of lead vehicle
         Vector3f accel_ned_mss;  // accel of lead vehicle
@@ -149,9 +149,8 @@ void ModeFollow::run()
         // calculate vehicle heading
         switch (g2.follow.get_yaw_behave()) {
             case AP_Follow::YAW_BEHAVE_FACE_LEAD_VEHICLE: {
-                Vector2f pos_delta_ned_m = target.pos_ned_cm.xy().tofloat() - curr_pos_neu_cm.xy();
-                if (pos_delta_ned_m.length_squared() > 1.0) {
-                    yaw_cd = get_bearing_cd(Vector2f{}, pos_delta_ned_m);
+                if (pos_delta_ned_m.xy().length_squared() > 1.0) {
+                    yaw_cd = get_bearing_cd(Vector2f{}, pos_delta_ned_m.xy());
                 }
                 break;
             }
@@ -165,7 +164,6 @@ void ModeFollow::run()
             case AP_Follow::YAW_BEHAVE_DIR_OF_FLIGHT: {
                 if (vel_ned_cms_xy.length_squared() > (100.0 * 100.0)) {
                     yaw_cd = get_bearing_cd(Vector2f{}, vel_ned_cms_xy);
-                    yaw_cd = degrees(target.heading_rad) * 100.0;
                     yaw_rate_cds = degrees(target.heading_rate_rads) * 100.0;
                 }
                 break;
@@ -178,8 +176,9 @@ void ModeFollow::run()
 
         }
     } else {
-        Vector2f zero;
-        pos_control->input_vel_accel_xy(zero, zero, false);
+        Vector2f vel_zero;
+        Vector2f accel_zero;
+        pos_control->input_vel_accel_xy(vel_zero, accel_zero, false);
         float velz = 0.0;
         pos_control->input_vel_accel_z(velz, 0.0, false);
         yaw_rate_cds = 0.0f;
