@@ -285,7 +285,7 @@ bool AP_Follow::get_target_heading_rate_degs(float &heading_rate) const
     }
 
     // return latest heading estimate
-    heading_rate = degrees(_target_heading_rate);
+    heading_rate = _target_heading_rate;
     return true;
 }
 
@@ -350,7 +350,7 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
         // get a local timestamp with correction for transport jitter
         _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.time_boot_ms, AP_HAL::millis());
         if (packet.hdg <= 36000) {                  // heading (UINT16_MAX if unknown)
-            _target_heading = packet.hdg * 0.01f;   // convert centi-degrees to degrees
+            _target_heading = wrap_360(packet.hdg * 0.01);   // convert centi-degrees to degrees
             _last_heading_update_ms = _last_location_update_ms;
         }
         _target_heading_rate = 0.0f; // Default to zero if attitude is not available
@@ -413,11 +413,15 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
             Quaternion q{packet.attitude_q[0], packet.attitude_q[1], packet.attitude_q[2], packet.attitude_q[3]};
             float roll, pitch, yaw;
             q.to_euler(roll, pitch, yaw);
-            _target_heading = degrees(yaw);
+            _target_heading = wrap_360(degrees(yaw));
             _last_heading_update_ms = _last_location_update_ms;
     
-            // Transform yaw rate to earth frame
-            _target_heading_rate = degrees(packet.rates[2] * cosf(pitch)); // Adjust for pitch
+            // Transform body frame rate to earth frame
+            Matrix3f R;
+            q.rotation_matrix(R);
+            Vector3f omega_body = Vector3f{packet.rates[0], packet.rates[1], packet.rates[2]};
+            Vector3f omega_world = R * omega_body; // rad/s
+            _target_heading_rate = degrees(omega_world.z); // Adjust for pitch
         } else {
             _target_heading_rate = 0.0f; // Default to zero if attitude is not available
         }
