@@ -1939,7 +1939,7 @@ protected:
 private:
     class FollowTarget {
     public:
-        void reset(uint8_t sys_id, const Vector3f &pos_with_ofs_ned, const Vector3f &vel_ned_ms, float target_heading_deg, float target_heading_rate_degs);
+        void reset(uint8_t sys_id, const Vector3f &target_pos_ned_cm, const Vector3f &target_vel_ned_cms, float target_heading_deg, float target_heading_rate_degs);
         uint8_t sysid;
         Vector3p pos_ned_cm;
         Vector3f vel_ned_cms;

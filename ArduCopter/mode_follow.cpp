@@ -50,11 +50,11 @@ void ModeFollow::exit()
     g2.follow.clear_offsets_if_required();
 }
 
-void ModeFollow::FollowTarget::reset(uint8_t sys_id, const Vector3f &pos_with_ofs_ned_cm, const Vector3f &vel_ned_ms, float target_heading_deg, float target_heading_rate_degs)
+void ModeFollow::FollowTarget::reset(uint8_t sys_id, const Vector3f &target_pos_ned_cm, const Vector3f &target_vel_ned_cms, float target_heading_deg, float target_heading_rate_degs)
 {
     sysid = sys_id;
-    pos_ned_cm = pos_with_ofs_ned_cm.topostype();
-    vel_ned_cms = vel_ned_ms;
+    pos_ned_cm = target_pos_ned_cm.topostype();
+    vel_ned_cms = target_vel_ned_cms;
     accel_ned_cmss.zero();
     heading_rad = radians(target_heading_deg);
     heading_rate_rads = radians(target_heading_rate_degs);
@@ -94,7 +94,7 @@ void ModeFollow::run()
         Vector3f vel_ned_ms;  // velocity of lead vehicle
         Vector3f accel_ned_mss;  // accel of lead vehicle
         if (g2.follow.get_target_dist_and_vel_ned(pos_delta_ned_m, pos_delta_with_ofs_ned_m, vel_ned_ms)) {
-            vel_ned_ms *= 100.0f;
+            Vector3f vel_ned_cms = vel_ned_ms * 100.0;
             accel_ned_mss.zero(); // follow me should include acceleration so it is kept here for future functionality.
             // vel_ned_ms does not include the change in heading_rad + offset_ned_cm radius
             Vector3f pos_with_ofs_ned_cm;  // vector to lead vehicle + offset_ned_cm
@@ -108,15 +108,15 @@ void ModeFollow::run()
     
             if (!target.available || target.sysid != g2.follow.get_target_sysid()) {
                 // reset target pos, vel, accel to current value when detected.
-                target.reset(g2.follow.get_target_sysid(), pos_with_ofs_ned_cm, vel_ned_ms, target_heading_deg, target_heading_rate_degs);
+                target.reset(g2.follow.get_target_sysid(), pos_with_ofs_ned_cm, vel_ned_cms, target_heading_deg, target_heading_rate_degs);
                 GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Follow Target %i detected", g2.follow.get_target_sysid() );
             }
     
-            shape_pos_vel_accel_xy(pos_with_ofs_ned_cm.xy().topostype(), vel_ned_ms.xy(), accel_ned_mss.xy(),
+            shape_pos_vel_accel_xy(pos_with_ofs_ned_cm.xy().topostype(), vel_ned_cms.xy(), accel_ned_mss.xy(),
                 target.pos_ned_cm.xy(), target.vel_ned_cms.xy(), target.accel_ned_cmss.xy(),
                 0.0, target_max_accel_xy_mss * 100.0,
                 target_max_jerk_xy_msss * 100.0, G_Dt, false);
-            shape_pos_vel_accel(pos_with_ofs_ned_cm.z, vel_ned_ms.z, accel_ned_mss.z,
+            shape_pos_vel_accel(pos_with_ofs_ned_cm.z, vel_ned_cms.z, accel_ned_mss.z,
                 target.pos_ned_cm.z, target.vel_ned_cms.z, target.accel_ned_cmss.z,
                 0.0, 0.0, 
                 -target_max_accel_z_mss * 100.0, target_max_accel_z_mss * 100.0,
