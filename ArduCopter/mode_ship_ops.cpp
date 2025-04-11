@@ -207,12 +207,12 @@ bool ModeShipOperation::init(const bool ignore_checks)
         Vector3f pos_with_ofs_ned_cm;  // vector to lead vehicle + offset_ned_cm
         pos_with_ofs_ned_cm.xy() = curr_pos_neu_cm.xy() + pos_delta_with_ofs_ned_m.xy() * 100.0;
         pos_with_ofs_ned_cm.z = -curr_pos_neu_cm.z + pos_delta_with_ofs_ned_m.z * 100.0;
-        vel_ned_ms *= 100.0f;
+        Vector3f vel_ned_cms = vel_ned_ms * 100.0;
         
         float target_heading_deg = 0.0f;
         g2.follow.get_target_heading_deg(target_heading_deg);
 
-        ship.reset(g2.follow.get_target_sysid(), pos_with_ofs_ned_cm, vel_ned_ms, target_heading_deg);
+        ship.reset(g2.follow.get_target_sysid(), pos_with_ofs_ned_cm, vel_ned_cms, target_heading_deg);
 
         offset_ned_cm.xy() = curr_pos_neu_cm.xy() - ship.pos_ned_cm.xy().tofloat();
         offset_ned_cm.z = -curr_pos_neu_cm.z - ship.pos_ned_cm.tofloat().z;
@@ -344,11 +344,11 @@ void ModeShipOperation::approach_mode_message()
     }
 }
 
-void ModeShipOperation::Ship::reset(uint8_t sys_id, const Vector3f &pos_with_ofs_ned_cm, const Vector3f &vel_ned_ms, float target_heading_deg)
+void ModeShipOperation::Ship::reset(uint8_t sys_id, const Vector3f &target_pos_ned_cm, const Vector3f &target_vel_ned_cms, float target_heading_deg)
 {
     sysid = sys_id;
-    pos_ned_cm = pos_with_ofs_ned_cm.topostype();
-    vel_ned_cms = vel_ned_ms;
+    pos_ned_cm = target_pos_ned_cm.topostype();
+    vel_ned_cms = target_vel_ned_cms;
     accel_ned_cmss.zero();
     heading_rad = radians(target_heading_deg);
     heading_rate_rads = 0.0;
@@ -410,7 +410,7 @@ void ModeShipOperation::run()
         Vector3f vel_ned_ms;  // velocity of lead vehicle
         Vector3f accel_ned_mss;  // accel of lead vehicle
         if (g2.follow.get_target_dist_and_vel_ned(pos_delta_ned_m, pos_delta_with_ofs_ned_m, vel_ned_ms)) {
-            vel_ned_ms *= 100.0f;
+            Vector3f vel_ned_cms = vel_ned_ms * 100.0;
             accel_ned_mss.zero(); // follow me should include acceleration so it is kept here for future functionality.
             // vel_ned_ms does not include the change in heading_rad + offset_ned_cm radius
             Vector3f pos_with_ofs_ned_cm;  // vector to lead vehicle + offset_ned_cm
@@ -422,7 +422,7 @@ void ModeShipOperation::run()
     
             if (!ship.available || ship.sysid != g2.follow.get_target_sysid()) {
                 // reset ship pos, vel, accel to current value when detected.
-                ship.reset(g2.follow.get_target_sysid(), pos_with_ofs_ned_cm, vel_ned_ms, target_heading_deg);
+                ship.reset(g2.follow.get_target_sysid(), pos_with_ofs_ned_cm, vel_ned_cms, target_heading_deg);
                 GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Beacon %i detected", g2.follow.get_target_sysid() );
                 if (copter.ap.land_complete) {
                     set_state(SubMode::LAUNCH_RECOVERY);
@@ -431,11 +431,11 @@ void ModeShipOperation::run()
                 }
             }
     
-            shape_pos_vel_accel_xy(pos_with_ofs_ned_cm.xy().topostype(), vel_ned_ms.xy(), accel_ned_mss.xy(),
+            shape_pos_vel_accel_xy(pos_with_ofs_ned_cm.xy().topostype(), vel_ned_cms.xy(), accel_ned_mss.xy(),
                 ship.pos_ned_cm.xy(), ship.vel_ned_cms.xy(), ship.accel_ned_cmss.xy(),
                 0.0, ship_max_accel_xy_mss * 100.0,
                 ship_max_jerk_xy_msss * 100.0, G_Dt, false);
-            shape_pos_vel_accel(pos_with_ofs_ned_cm.z, vel_ned_ms.z, accel_ned_mss.z,
+            shape_pos_vel_accel(pos_with_ofs_ned_cm.z, vel_ned_cms.z, accel_ned_mss.z,
                 ship.pos_ned_cm.z, ship.vel_ned_cms.z, ship.accel_ned_cmss.z,
                 0.0, 0.0, 
                 -ship_max_accel_z_mss * 100.0, ship_max_accel_z_mss * 100.0,
