@@ -103,7 +103,7 @@ void AP_SystemID::start()
         gcs().send_text(MAV_SEVERITY_WARNING, "SystemID: No axis selected");
         return;
     }
-    if (!plane.control_mode->supports_fw_systemid() || !plane.control_mode->supports_vtol_systemid()) {
+    if (!plane.control_mode->supports_fw_systemid() && !plane.control_mode->supports_vtol_systemid()) {
         gcs().send_text(MAV_SEVERITY_WARNING, "SystemID: Not supported in mode %s", plane.control_mode->name());
         return;
     }
