@@ -393,22 +393,23 @@ void AP_SystemID::log_plane_data() const
     if (is_positive(delta_angle_dt) && is_positive(delta_velocity_dt)) {
         const float dt_ang_inv = 1.0 / delta_angle_dt;
         const float dt_vel_inv = 1.0 / delta_velocity_dt;
-        AP::logger().WriteStreaming("SIDP", "TimeUS,Time,Targ,F,Gx,Gy,Gz,Ax,Ay,Az,DRoll,Roll,DPit,Pitch",
-                                    "ss-zkkkooooooo", "F-------------", "Qfffffffffffff",
-                                    AP_HAL::micros64(),
-                                    waveform_time, waveform_sample, waveform_freq_rads / (2 * M_PI),
-                                    degrees(delta_angle.x * dt_ang_inv),
-                                    degrees(delta_angle.y * dt_ang_inv),
-                                    degrees(delta_angle.z * dt_ang_inv),
-                                    delta_velocity.x * dt_vel_inv,
-                                    delta_velocity.y * dt_vel_inv,
-                                    delta_velocity.z * dt_vel_inv),
-                                    plane.nav_roll_cd,
-                                    plane.ahrs.roll_sensor,
-                                    plane.nav_pitch_cd,
-                                    plane.ahrs.pitch_sensor;
-                                    
-                                
+        AP::logger().WriteStreaming(
+            "SIDP",
+            "TimeUS,Time,Targ,F,Gx,Gy,Gz,Ax,Ay,Az,DRoll,Roll,DPit,Pitch",
+            "ss-zkkkooooooo", "F-------------", "Qfffffffffffff",
+            AP_HAL::micros64(),
+            waveform_time, waveform_sample, waveform_freq_rads / (2 * M_PI),
+            degrees(delta_angle.x * dt_ang_inv),
+            degrees(delta_angle.y * dt_ang_inv),
+            degrees(delta_angle.z * dt_ang_inv),
+            delta_velocity.x * dt_vel_inv,
+            delta_velocity.y * dt_vel_inv,
+            delta_velocity.z * dt_vel_inv,
+            plane.nav_roll_cd,
+            plane.ahrs.roll_sensor,
+            plane.nav_pitch_cd,
+            plane.ahrs.pitch_sensor);
+    }
 #endif // HAL_LOGGING_ENABLED
 }
 #endif // AP_PLANE_SYSTEMID_ENABLED
