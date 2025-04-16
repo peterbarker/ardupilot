@@ -525,6 +525,101 @@ bool AP_Baro::_have_i2c_driver(uint8_t bus, uint8_t address) const
        } \
     } while (0)
 
+// macro for use by HAL_INS_PROBE_LIST and various helper functions
+#define GET_I2C_DEVICE_PTR(bus, address) _have_i2c_driver(bus, address)?nullptr:hal.i2c_mgr->get_device_ptr(bus, address)
+
+// probe for an I2C barometer.  Returns true if there's still room for
+// more backends.  May or may not actually create a backend.
+bool AP_Baro::probe_i2c_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), uint8_t bus, uint8_t addr)
+{
+    auto *dev = GET_I2C_DEVICE_PTR(bus, addr);  // dev may be freed by probe_dev
+    return probe_dev(probefn, dev);
+}
+
+// probe for an I2C barometer.  Returns true if there's still room for
+// more backends.  May or may not actually create a backend.
+bool AP_Baro::probe_spi_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), const char *name)
+{
+    auto *dev = hal.spi->get_device_ptr(name);  // dev may be freed by probe_dev
+    return probe_dev(probefn, dev);
+}
+
+// see of Device dev exists.  If it does not delete it.  Returns true
+// if there is still room for more baros
+bool AP_Baro::probe_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), AP_HAL::Device *dev)
+{
+    AP_Baro_Backend *backend;
+    if (dev == nullptr) {
+        goto OUT_NOT_FOUND;
+    }
+    backend = probefn(*this, *dev);
+    if (backend == nullptr) {
+        goto OUT_NOT_FOUND;
+    }
+    _add_backend(backend);
+
+    goto OUT_FOUND;
+
+OUT_NOT_FOUND:
+    delete dev;
+    dev = nullptr;
+
+OUT_FOUND:
+    if (_num_drivers == BARO_MAX_DRIVERS ||
+        _num_sensors == BARO_MAX_INSTANCES) {
+        return false;
+    }
+    return true;
+}
+
+#if AP_BARO_ICM20789_ENABLED
+bool AP_Baro::probe_icm20789(uint8_t bus, uint8_t addr, uint8_t mpu_bus, uint8_t mpu_addr)
+{
+    auto *i2c_dev = GET_I2C_DEVICE_PTR(bus, addr);
+    AP_HAL::I2CDevice *mpu_dev = GET_I2C_DEVICE_PTR(mpu_bus, mpu_addr);
+    return _probe_icm20789(i2c_dev, mpu_dev);
+}
+
+bool AP_Baro::probe_icm20789(uint8_t bus, uint8_t addr, const char *mpu_name)
+{
+    auto *i2c_dev = GET_I2C_DEVICE_PTR(bus, addr);
+    AP_HAL::SPIDevice *mpu_dev = hal.spi->get_device_ptr(mpu_name);
+    return _probe_icm20789(i2c_dev, mpu_dev);
+}
+
+// convenience underlying method for other probe functions;
+// will. delete the passed-in devices if a backend is not found
+bool AP_Baro::_probe_icm20789(AP_HAL::I2CDevice *i2c_dev, AP_HAL::Device *mpu_dev)
+{
+    AP_Baro_Backend *backend;
+    if (i2c_dev == nullptr) {
+        goto OUT_NOT_FOUND;
+    }
+    if (mpu_dev == nullptr) {
+        goto OUT_NOT_FOUND;
+    }
+    backend = AP_Baro_ICM20789::probe(*this, *i2c_dev, *mpu_dev);
+    if (backend == nullptr) {
+        goto OUT_NOT_FOUND;
+    }
+    _add_backend(backend);
+    goto OUT_FOUND;
+
+OUT_NOT_FOUND:
+    delete i2c_dev;
+    i2c_dev = nullptr;
+    delete mpu_dev;
+    mpu_dev = nullptr;
+
+OUT_FOUND:
+    if (_num_drivers == BARO_MAX_DRIVERS ||
+        _num_sensors == BARO_MAX_INSTANCES) {
+        return false;
+    }
+    return true;
+}
+#endif  // AP_BARO_ICM20789_ENABLED
+
 /*
   initialise the barometer object, loading backend drivers
  */
@@ -572,13 +667,11 @@ void AP_Baro::init(void)
     }
 #endif
 
-// macro for use by HAL_INS_PROBE_LIST
-#define GET_I2C_DEVICE(bus, address) _have_i2c_driver(bus, address)?nullptr:hal.i2c_mgr->get_device(bus, address)
-
 #if AP_SIM_BARO_ENABLED
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL && AP_BARO_MS5611_ENABLED
-    ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                      std::move(GET_I2C_DEVICE(_ext_bus, HAL_BARO_MS5611_I2C_ADDR))));
+    if (!probe_i2c_dev(AP_Baro_MS5611::probe, _ext_bus, HAL_BARO_MS5611_I2C_ADDR)) {
+        return;
+    }
 #endif
     // do not probe for other drivers when using simulation:
     return;
@@ -591,8 +684,10 @@ void AP_Baro::init(void)
     switch (AP_BoardConfig::get_board_type()) {
     case AP_BoardConfig::PX4_BOARD_PX4V1:
 #if AP_BARO_MS5611_ENABLED && defined(HAL_BARO_MS5611_I2C_BUS)
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(GET_I2C_DEVICE(HAL_BARO_MS5611_I2C_BUS, HAL_BARO_MS5611_I2C_ADDR))));
+        // probe_i2c_dev returns false if there's no space for more backends
+        if (!probe_i2c_dev(AP_Baro_MS5611::probe, HAL_BARO_MS5611_I2C_BUS, HAL_BARO_MS5611_I2C_ADDR)) {
+            return;
+        }
 #endif
         break;
 
@@ -611,48 +706,60 @@ void AP_Baro::init(void)
     case AP_BoardConfig::PX4_BOARD_FMUV5:
     case AP_BoardConfig::PX4_BOARD_FMUV6:
 #if AP_BARO_MS5611_ENABLED
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
+        // probe_spi_dev returns false if there's no space for more backends
+        if (!probe_spi_dev(AP_Baro_MS5611::probe, HAL_BARO_MS5611_NAME)) {
+            return;
+        }
 #endif
         break;
 
     case AP_BoardConfig::PX4_BOARD_PIXHAWK2:
     case AP_BoardConfig::PX4_BOARD_SP01:
 #if AP_BARO_MS5611_ENABLED
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_EXT_NAME))));
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
+        // probe_spi_dev returns false if there's no space for more backends
+        if (!probe_spi_dev(AP_Baro_MS5611::probe, HAL_BARO_MS5611_SPI_EXT_NAME)) {
+            return;
+        }
+        if (!probe_spi_dev(AP_Baro_MS5611::probe, HAL_BARO_MS5611_NAME)) {
+            return;
+        }
 #endif
         break;
 
     case AP_BoardConfig::PX4_BOARD_AEROFC:
 #if AP_BARO_MS5607_ENABLED
 #ifdef HAL_BARO_MS5607_I2C_BUS
-        ADD_BACKEND(AP_Baro_MS5607::probe(*this,
-                                          std::move(GET_I2C_DEVICE(HAL_BARO_MS5607_I2C_BUS, HAL_BARO_MS5607_I2C_ADDR))));
+        // probe_i2c_dev returns false if there's no space for more backends
+        if (!probe_i2c_dev(AP_Baro_MS5607::probe, HAL_BARO_MS5607_I2C_BUS, HAL_BARO_MS5607_I2C_ADDR)) {
+            return;
+        }
 #endif
 #endif  // AP_BARO_MS5607_ENABLED
         break;
 
     case AP_BoardConfig::VRX_BOARD_BRAIN54:
 #if AP_BARO_MS5611_ENABLED
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_EXT_NAME))));
+        // probe_spi_dev returns false if there's no space for more backends
+        if (!probe_spi_dev(AP_Baro_MS5611::probe, HAL_BARO_MS5611_NAME)) {
+            return;
+        }
+        if (!probe_spi_dev(AP_Baro_MS5611::probe, HAL_BARO_MS5611_SPI_EXT_NAME)) {
+            return;
+        }
 #ifdef HAL_BARO_MS5611_SPI_IMU_NAME
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_IMU_NAME))));
+        // probe_spi_dev returns false if there's no space for more backends
+        if (!probe_spi_dev(AP_Baro_MS5611::probe, HAL_BARO_MS5611_SPI_IMU_NAME)) {
+            return;
+        }
 #endif
 #endif  // AP_BARO_MS5611_ENABLED
         break;
 
     case AP_BoardConfig::PX4_BOARD_PCNC1:
 #if AP_BARO_ICM20789_ENABLED
-        ADD_BACKEND(AP_Baro_ICM20789::probe(*this,
-                                            std::move(GET_I2C_DEVICE(1, 0x63)),
-                                            std::move(hal.spi->get_device(HAL_INS_MPU60x0_NAME))));
+        if (!probe_icm20789(1, 0x63, HAL_INS_MPU60x0_NAME)) {
+            return;
+        }
 #endif
         break;
 
@@ -660,34 +767,49 @@ void AP_Baro::init(void)
         break;
     }
 #elif HAL_BARO_DEFAULT == HAL_BARO_LPS25H_IMU_I2C
-	ADD_BACKEND(AP_Baro_LPS2XH::probe_InvensenseIMU(*this,
-                                                    std::move(GET_I2C_DEVICE(HAL_BARO_LPS25H_I2C_BUS, HAL_BARO_LPS25H_I2C_ADDR)),
-                                                    HAL_BARO_LPS25H_I2C_IMU_ADDR));
+    {
+        const auto *dev = GET_I2C_DEVICE(HAL_BARO_LPS25H_I2C_BUS, HAL_BARO_LPS25H_I2C_ADDR);
+        if (dev) {
+            auto *backend = AP_Baro_LPS2XH::probe_InvensenseIMU(*this,
+                                                                dev,
+                                                                HAL_BARO_LPS25H_I2C_IMU_ADDR);
+            if (backend != nullptr) {
+                ADD_BACKEND(backend);
+            } else {
+                delete dev;
+            }
+        }
+    }
 #elif HAL_BARO_DEFAULT == HAL_BARO_20789_I2C_I2C
-    ADD_BACKEND(AP_Baro_ICM20789::probe(*this,
-                                        std::move(GET_I2C_DEVICE(HAL_BARO_20789_I2C_BUS, HAL_BARO_20789_I2C_ADDR_PRESS)),
-                                        std::move(GET_I2C_DEVICE(HAL_BARO_20789_I2C_BUS, HAL_BARO_20789_I2C_ADDR_ICM))));
+    // probe_icm20789 returns false if there's no space for more backends
+    if (!probe_icm20789(HAL_BARO_20789_I2C_BUS, HAL_BARO_20789_I2C_ADDR_PRESS, HAL_BARO_20789_I2C_BUS, HAL_BARO_20789_I2C_ADDR_ICM)) {
+        return;
+    }
 #elif HAL_BARO_DEFAULT == HAL_BARO_20789_I2C_SPI
-    ADD_BACKEND(AP_Baro_ICM20789::probe(*this,
-                                        std::move(GET_I2C_DEVICE(HAL_BARO_20789_I2C_BUS, HAL_BARO_20789_I2C_ADDR_PRESS)),
-                                        std::move(hal.spi->get_device("icm20789"))));
+    // probe_icm20789 returns false if there's no space for more backends
+    if (!probe_icm20789(HAL_BARO_20789_I2C_BUS, HAL_BARO_20789_I2C_ADDR_PRESS, "icm20789")) {
+        return;
+    }
 #endif
 
     // can optionally have baro on I2C too
     if (_ext_bus >= 0) {
 #if APM_BUILD_TYPE(APM_BUILD_ArduSub)
 #if AP_BARO_MS5837_ENABLED
-        ADD_BACKEND(AP_Baro_MS5837::probe(*this,
-                                          std::move(GET_I2C_DEVICE(_ext_bus, HAL_BARO_MS5837_I2C_ADDR))));
+        if (!probe_i2c_dev(AP_Baro_MS5837::probe, _ext_bus, HAL_BARO_MS5837_I2C_ADDR)) {
+            return;
+        }
 #endif
 #if AP_BARO_KELLERLD_ENABLED
-        ADD_BACKEND(AP_Baro_KellerLD::probe(*this,
-                                          std::move(GET_I2C_DEVICE(_ext_bus, HAL_BARO_KELLERLD_I2C_ADDR))));
+        if (!probe_i2c_dev(AP_Baro_KellerLD::probe, _ext_bus, HAL_BARO_KELLERLD_I2C_ADDR)) {
+            return;
+        }
 #endif
 #else
 #if AP_BARO_MS5611_ENABLED
-        ADD_BACKEND(AP_Baro_MS5611::probe(*this,
-                                          std::move(GET_I2C_DEVICE(_ext_bus, HAL_BARO_MS5611_I2C_ADDR))));
+        if (!probe_i2c_dev(AP_Baro_MS5611::probe, _ext_bus, HAL_BARO_MS5611_I2C_ADDR)) {
+            return;
+        }
 #endif
 #endif
     }
@@ -751,7 +873,7 @@ void AP_Baro::_probe_i2c_barometers(void)
 
     static const struct BaroProbeSpec {
         uint32_t bit;
-        AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::OwnPtr<AP_HAL::Device>);
+        AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&);
         uint8_t addr;
     } baroprobespec[] {
 #if AP_BARO_BMP085_ENABLED
@@ -811,7 +933,17 @@ void AP_Baro::_probe_i2c_barometers(void)
             continue;
         }
         FOREACH_I2C_MASK(i, mask) {
-            ADD_BACKEND(spec.probefn(*this, std::move(GET_I2C_DEVICE(i, spec.addr))));
+            auto *dev = GET_I2C_DEVICE_PTR(i, spec.addr);
+            if (dev == nullptr) {
+                continue;
+            }
+            auto *backend = spec.probefn(*this, *dev);
+            if (backend == nullptr) {
+                delete dev;
+                dev = nullptr;
+                continue;
+            }
+            ADD_BACKEND(backend);
         }
     }
 }
