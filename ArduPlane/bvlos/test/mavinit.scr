@@ -4,7 +4,10 @@ script test/obstacles.scr
 
 module load kmlread
 
-kml load "ARA - Fire Spotting BVLOS Area.kmz"
+#kml load "ARA - Fire Spotting BVLOS Area.kmz"
+
+kml load "250314_ARA - Fire Spotting BVLOS Area.kmz"
+
 #kml toggle "3500ft LL C-Class Canberra-7"
 #kml toggle "5500ft LL C-Class Canberra-8"
 #kml toggle "6500ft LL C-Class Canberra-9"
