@@ -29,7 +29,7 @@ private:
     bool init(void);
     void timer(void);
 
-    AP_HAL::Device *_dev;
+    AP_HAL::Device &dev;
 
     uint8_t instance;
     float pressure_sum;

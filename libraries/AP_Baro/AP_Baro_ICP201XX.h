@@ -35,7 +35,7 @@ private:
 
     uint8_t instance;
 
-    AP_HAL::I2CDevice *dev;
+    AP_HAL::I2CDevice &dev;
 
     // accumulation structure, protected by _sem
     struct {

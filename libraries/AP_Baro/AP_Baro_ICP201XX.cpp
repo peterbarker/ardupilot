@@ -77,7 +77,7 @@ extern const AP_HAL::HAL &hal;
  */
 AP_Baro_ICP201XX::AP_Baro_ICP201XX(AP_Baro &baro, AP_HAL::I2CDevice &_dev)
     : AP_Baro_Backend(baro)
-    , dev(&_dev)
+    , dev(_dev)
 {
 }
 
@@ -93,11 +93,7 @@ AP_Baro_Backend *AP_Baro_ICP201XX::probe(AP_Baro &baro, AP_HAL::I2CDevice &dev)
 
 bool AP_Baro_ICP201XX::init()
 {
-    if (!dev) {
-        return false;
-    }
-
-    dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
     uint8_t id = 0xFF;
     uint8_t ver = 0xFF;
@@ -127,20 +123,20 @@ bool AP_Baro_ICP201XX::init()
 
     wait_read();
 
-    dev->set_retries(0);
+    dev.set_retries(0);
 
     instance = _frontend.register_sensor();
 
-    dev->set_device_type(DEVTYPE_BARO_ICP201XX);
-    set_bus_id(instance, dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_ICP201XX);
+    set_bus_id(instance, dev.get_bus_id());
 
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
-    dev->register_periodic_callback(CONVERSION_INTERVAL/2, FUNCTOR_BIND_MEMBER(&AP_Baro_ICP201XX::timer, void));
+    dev.register_periodic_callback(CONVERSION_INTERVAL/2, FUNCTOR_BIND_MEMBER(&AP_Baro_ICP201XX::timer, void));
     return true;
 
  failed:
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
     return false;
 }
 
@@ -150,14 +146,14 @@ void AP_Baro_ICP201XX::dummy_reg()
     do {
         uint8_t reg = REG_EMPTY;
         uint8_t val = 0;
-        dev->transfer(&reg, 1, &val, 1);
+        dev.transfer(&reg, 1, &val, 1);
     } while (0);
 }
 
 bool AP_Baro_ICP201XX::read_reg(uint8_t reg, uint8_t *buf, uint8_t len)
 {
     bool ret;
-    ret = dev->transfer(&reg, 1, buf, len);
+    ret = dev.transfer(&reg, 1, buf, len);
     dummy_reg();
     return ret;
 }
@@ -171,7 +167,7 @@ bool AP_Baro_ICP201XX::write_reg(uint8_t reg, uint8_t val)
 {
     bool ret;
     uint8_t data[2] = { reg, val };
-    ret = dev->transfer(data, sizeof(data), nullptr, 0);
+    ret = dev.transfer(data, sizeof(data), nullptr, 0);
     dummy_reg();
     return ret;
 }

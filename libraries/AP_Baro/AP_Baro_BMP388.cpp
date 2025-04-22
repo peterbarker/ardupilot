@@ -55,7 +55,7 @@ extern const AP_HAL::HAL &hal;
 
 AP_Baro_BMP388::AP_Baro_BMP388(AP_Baro &baro, AP_HAL::Device &_dev)
     : AP_Baro_Backend(baro)
-    , dev(&_dev)
+    , dev(_dev)
 {
 }
 
@@ -71,20 +71,17 @@ AP_Baro_Backend *AP_Baro_BMP388::probe(AP_Baro &baro, AP_HAL::Device &_dev)
 
 bool AP_Baro_BMP388::init()
 {
-    if (!dev) {
-        return false;
-    }
-    WITH_SEMAPHORE(dev->get_semaphore());
+    WITH_SEMAPHORE(dev.get_semaphore());
 
-    dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
     // setup to allow reads on SPI
-    if (dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
-        dev->set_read_flag(0x80);
+    if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+        dev.set_read_flag(0x80);
     }
 
     // normal mode, temp and pressure
-    dev->write_register(BMP388_REG_PWR_CTRL, 0x33, true);
+    dev.write_register(BMP388_REG_PWR_CTRL, 0x33, true);
     
     uint8_t whoami;
     if (!read_registers(BMP388_REG_ID, &whoami, 1)) {
@@ -93,10 +90,10 @@ bool AP_Baro_BMP388::init()
 
     switch (whoami) {
     case BMP388_ID:
-        dev->set_device_type(DEVTYPE_BARO_BMP388);
+        dev.set_device_type(DEVTYPE_BARO_BMP388);
         break;
     case BMP390_ID:
-        dev->set_device_type(DEVTYPE_BARO_BMP390);
+        dev.set_device_type(DEVTYPE_BARO_BMP390);
         break;
     default:
         return false;
@@ -108,17 +105,17 @@ bool AP_Baro_BMP388::init()
 
     scale_calibration_data();
 
-    dev->setup_checked_registers(4);
+    dev.setup_checked_registers(4);
 
     // normal mode, temp and pressure
-    dev->write_register(BMP388_REG_PWR_CTRL, 0x33, true);
+    dev.write_register(BMP388_REG_PWR_CTRL, 0x33, true);
 
     instance = _frontend.register_sensor();
 
-    set_bus_id(instance, dev->get_bus_id());
+    set_bus_id(instance, dev.get_bus_id());
 
     // request 50Hz update
-    dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP388::timer, void));
+    dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP388::timer, void));
 
     return true;
 }
@@ -143,7 +140,7 @@ void AP_Baro_BMP388::timer(void)
         update_temperature((buf[6] << 16) | (buf[5] << 8) | buf[4]);
     }
 
-    dev->check_next_register();
+    dev.check_next_register();
 }
 
 // transfer data to the frontend
@@ -232,15 +229,15 @@ void AP_Baro_BMP388::update_pressure(uint32_t data)
 bool AP_Baro_BMP388::read_registers(uint8_t reg, uint8_t *data, uint8_t len)
 {
     // when on I2C we just read normally
-    if (dev->bus_type() != AP_HAL::Device::BUS_TYPE_SPI) {
-        return dev->read_registers(reg, data, len);
+    if (dev.bus_type() != AP_HAL::Device::BUS_TYPE_SPI) {
+        return dev.read_registers(reg, data, len);
     }
     // for SPI we need to discard the first returned byte. See
     // datasheet for explanation
     uint8_t b[len+2];
     b[0] = reg | 0x80;
     memset(&b[1], 0, len+1);
-    if (!dev->transfer_fullduplex(b, len+2)) {
+    if (!dev.transfer_fullduplex(b, len+2)) {
         return false;
     }
     memcpy(data, &b[2], len);

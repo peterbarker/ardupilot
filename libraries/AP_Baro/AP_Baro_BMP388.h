@@ -31,7 +31,7 @@ private:
     void update_temperature(uint32_t);
     void update_pressure(uint32_t);
 
-    AP_HAL::Device *dev;
+    AP_HAL::Device &dev;
 
     uint8_t instance;
     float pressure_sum;

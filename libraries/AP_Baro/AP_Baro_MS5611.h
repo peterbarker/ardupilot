@@ -76,7 +76,7 @@ private:
 
     void _timer();
 
-    AP_HAL::Device *_dev;
+    AP_HAL::Device &dev;
 
     /* Shared values between thread sampling the HW and main thread */
     struct {

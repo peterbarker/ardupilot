@@ -30,7 +30,7 @@ private:
     void timer(void);
     void calculate_PT(int32_t UT, int32_t UP, int32_t &pressure, int32_t &temperature);
 
-    AP_HAL::Device *dev;
+    AP_HAL::Device &dev;
 
     uint8_t instance;
 

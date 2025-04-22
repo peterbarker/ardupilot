@@ -55,9 +55,9 @@ extern const AP_HAL::HAL &hal;
 #define BMP581_REG_OSR_EFF            0x38
 #define BMP581_REG_CMD                0x7E
 
-AP_Baro_BMP581::AP_Baro_BMP581(AP_Baro &baro, AP_HAL::Device &dev)
+AP_Baro_BMP581::AP_Baro_BMP581(AP_Baro &baro, AP_HAL::Device &_dev)
     : AP_Baro_Backend(baro)
-    , _dev(&dev)
+    , dev(_dev)
 {
 }
 
@@ -73,39 +73,35 @@ AP_Baro_Backend *AP_Baro_BMP581::probe(AP_Baro &baro, AP_HAL::Device &dev)
 
 bool AP_Baro_BMP581::init()
 {
-    if (!_dev) {
-        return false;
-    }
+    WITH_SEMAPHORE(dev.get_semaphore());
 
-    WITH_SEMAPHORE(_dev->get_semaphore());
-
-    _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
     uint8_t whoami;
 
     // setup to allow reads on SPI
-    if (_dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
-        _dev->set_read_flag(0x80);
+    if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+        dev.set_read_flag(0x80);
 
-        if (!_dev->read_registers(BMP581_REG_CHIP_ID, &whoami, 1)) {
+        if (!dev.read_registers(BMP581_REG_CHIP_ID, &whoami, 1)) {
             return false;
         }
     }
 
-    if (!_dev->read_registers(BMP581_REG_CHIP_ID, &whoami, 1)) {
+    if (!dev.read_registers(BMP581_REG_CHIP_ID, &whoami, 1)) {
         return false;
     }
 
     switch (whoami) {
     case BMP581_ID:
-        _dev->set_device_type(DEVTYPE_BARO_BMP581);
+        dev.set_device_type(DEVTYPE_BARO_BMP581);
         break;
     default:
         return false;
     }
 
     uint8_t status;
-    if (!_dev->read_registers(BMP581_REG_STATUS, &status, 1)) {
+    if (!dev.read_registers(BMP581_REG_STATUS, &status, 1)) {
         return false;
     }
 
@@ -114,7 +110,7 @@ bool AP_Baro_BMP581::init()
     }
 
     uint8_t int_status;
-    if (!_dev->read_registers(BMP581_REG_INT_STATUS, &int_status, 1)) {
+    if (!dev.read_registers(BMP581_REG_INT_STATUS, &int_status, 1)) {
         return false;
     }
 
@@ -122,23 +118,23 @@ bool AP_Baro_BMP581::init()
         return false;
     }
 
-    _dev->setup_checked_registers(4);
+    dev.setup_checked_registers(4);
 
     // Standby mode
-    _dev->write_register(BMP581_REG_ODR_CONFIG, 0, true);
+    dev.write_register(BMP581_REG_ODR_CONFIG, 0, true);
 
     // Press EN | osr_p 64X | osr_t 4X
-    _dev->write_register(BMP581_REG_OSR_CONFIG, 0b01110010, true);
+    dev.write_register(BMP581_REG_OSR_CONFIG, 0b01110010, true);
 
     // ORD 50Hz | Normal Mode
-    _dev->write_register(BMP581_REG_ODR_CONFIG, 0b0111101, true);
+    dev.write_register(BMP581_REG_ODR_CONFIG, 0b0111101, true);
 
     instance = _frontend.register_sensor();
 
-    set_bus_id(instance, _dev->get_bus_id());
+    set_bus_id(instance, dev.get_bus_id());
 
     // request 50Hz update
-    _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP581::timer, void));
+    dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP581::timer, void));
 
     return true;
 }
@@ -148,7 +144,7 @@ void AP_Baro_BMP581::timer(void)
 {
     uint8_t buf[6];
 
-    if (!_dev->read_registers(BMP581_REG_TEMP_DATA_XLSB, buf, sizeof(buf))) {
+    if (!dev.read_registers(BMP581_REG_TEMP_DATA_XLSB, buf, sizeof(buf))) {
         return;
     }
 
@@ -165,7 +161,7 @@ void AP_Baro_BMP581::timer(void)
         pressure_count++;
     }
 
-    _dev->check_next_register();
+    dev.check_next_register();
 }
 
 // transfer data to the frontend

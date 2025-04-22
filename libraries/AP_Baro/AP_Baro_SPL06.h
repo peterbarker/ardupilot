@@ -38,7 +38,7 @@ private:
 
     int32_t raw_value_scale_factor(uint8_t);
 
-    AP_HAL::Device *_dev;
+    AP_HAL::Device &dev;
 
     int8_t _timer_counter;
     uint8_t _instance;

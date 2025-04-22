@@ -38,7 +38,7 @@ private:
     bool     _read_prom(uint16_t *prom);
 
 
-    AP_HAL::Device *_dev;
+    AP_HAL::Device &dev;
     AP_HAL::DigitalSource *_eoc;
 
     uint8_t _instance;

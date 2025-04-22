@@ -45,8 +45,8 @@ private:
 
     uint8_t instance;
 
-    AP_HAL::I2CDevice *dev;
-    AP_HAL::Device *dev_imu;
+    AP_HAL::I2CDevice &dev;
+    AP_HAL::Device &dev_imu;
 
     // time last read command was sent
     uint32_t last_measure_us;

@@ -38,7 +38,7 @@ protected:
     void set_config_registers(void);
     void check_health();
 
-    AP_HAL::Device *dev;
+    AP_HAL::Device &dev;
 
     uint8_t instance;
 

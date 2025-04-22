@@ -42,7 +42,7 @@ private:
 
     bool _check_whoami(void);
 
-    AP_HAL::Device *_dev;
+    AP_HAL::Device &dev;
 
     uint8_t _instance;
     float _pressure_sum;

@@ -55,7 +55,7 @@ private:
 
     void _update_and_wrap_accumulator(uint16_t pressure, uint16_t temperature, uint8_t max_count);
 
-    AP_HAL::Device *_dev;
+    AP_HAL::Device &dev;
 
     /* Shared values between thread sampling the HW and main thread */
     /* These are raw outputs, not calculated values */

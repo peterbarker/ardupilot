@@ -67,8 +67,8 @@ extern const AP_HAL::HAL &hal;
  */
 AP_Baro_ICM20789::AP_Baro_ICM20789(AP_Baro &baro, AP_HAL::I2CDevice &_dev, AP_HAL::Device &_dev_imu)
     : AP_Baro_Backend(baro)
-    , dev(&_dev)
-    , dev_imu(&_dev_imu)
+    , dev(_dev)
+    , dev_imu(_dev_imu)
 {
 }
 
@@ -91,41 +91,41 @@ AP_Baro_Backend *AP_Baro_ICM20789::probe(AP_Baro &baro,
 */
 bool AP_Baro_ICM20789::imu_spi_init(void)
 {
-    dev_imu->get_semaphore()->take_blocking();
+    dev_imu.get_semaphore()->take_blocking();
 
-    dev_imu->set_read_flag(0x80);
+    dev_imu.set_read_flag(0x80);
 
-    dev_imu->set_speed(AP_HAL::Device::SPEED_LOW);
+    dev_imu.set_speed(AP_HAL::Device::SPEED_LOW);
     uint8_t whoami = 0;
     uint8_t v;
 
-    dev_imu->read_registers(MPUREG_USER_CTRL, &v, 1);
-    dev_imu->write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
+    dev_imu.read_registers(MPUREG_USER_CTRL, &v, 1);
+    dev_imu.write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
 
     hal.scheduler->delay(1);
-    dev_imu->write_register(MPUREG_USER_CTRL, BIT_USER_CTRL_I2C_IF_DIS);
-    dev_imu->write_register(MPUREG_PWR_MGMT_1,
+    dev_imu.write_register(MPUREG_USER_CTRL, BIT_USER_CTRL_I2C_IF_DIS);
+    dev_imu.write_register(MPUREG_PWR_MGMT_1,
                             BIT_PWR_MGMT_1_SLEEP | BIT_PWR_MGMT_1_CLK_XGYRO);
 
     hal.scheduler->delay(1);
-    dev_imu->write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
+    dev_imu.write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
 
     hal.scheduler->delay(1);
-    dev_imu->write_register(MPUREG_FIFO_EN, 0x00);
-    dev_imu->write_register(MPUREG_PWR_MGMT_1,
+    dev_imu.write_register(MPUREG_FIFO_EN, 0x00);
+    dev_imu.write_register(MPUREG_PWR_MGMT_1,
                             BIT_PWR_MGMT_1_SLEEP | BIT_PWR_MGMT_1_CLK_XGYRO);
 
-    dev_imu->read_registers(MPUREG_WHOAMI, &whoami, 1);
+    dev_imu.read_registers(MPUREG_WHOAMI, &whoami, 1);
 
     // wait for sensor to settle
     hal.scheduler->delay(100);
 
-    dev_imu->read_registers(MPUREG_WHOAMI, &whoami, 1);
+    dev_imu.read_registers(MPUREG_WHOAMI, &whoami, 1);
 
-    dev_imu->write_register(MPUREG_INT_PIN_CFG, 0x00);
-    dev_imu->write_register(MPUREG_USER_CTRL, BIT_USER_CTRL_I2C_IF_DIS);
+    dev_imu.write_register(MPUREG_INT_PIN_CFG, 0x00);
+    dev_imu.write_register(MPUREG_USER_CTRL, BIT_USER_CTRL_I2C_IF_DIS);
 
-    dev_imu->get_semaphore()->give();
+    dev_imu.get_semaphore()->give();
 
     return true;
 }
@@ -137,24 +137,24 @@ bool AP_Baro_ICM20789::imu_i2c_init(void)
 {
     // as the baro device is already locked we need to re-use it,
     // changing its address to match the IMU address
-    uint8_t old_address = dev->get_bus_address();
-    dev->set_address(dev_imu->get_bus_address());
+    uint8_t old_address = dev.get_bus_address();
+    dev.set_address(dev_imu.get_bus_address());
     
-    dev->set_retries(4);
+    dev.set_retries(4);
 
     uint8_t whoami=0;
-    dev->read_registers(MPUREG_WHOAMI, &whoami, 1);
+    dev.read_registers(MPUREG_WHOAMI, &whoami, 1);
     debug("ICM20789: whoami 0x%02x old_address=%02x\n", whoami, old_address);
 
-    dev->write_register(MPUREG_FIFO_EN, 0x00);
-    dev->write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
+    dev.write_register(MPUREG_FIFO_EN, 0x00);
+    dev.write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
     
     // wait for sensor to settle
     hal.scheduler->delay(10);
 
-    dev->write_register(MPUREG_INT_PIN_CFG, BIT_BYPASS_EN);
+    dev.write_register(MPUREG_INT_PIN_CFG, BIT_BYPASS_EN);
 
-    dev->set_address(old_address);
+    dev.set_address(old_address);
 
     return true;
 }
@@ -163,10 +163,10 @@ bool AP_Baro_ICM20789::init()
 {
     debug("Looking for 20789 baro\n");
 
-    dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
     debug("Setting up IMU\n");
-    if (dev_imu->bus_type() != AP_HAL::Device::BUS_TYPE_I2C) {
+    if (dev_imu.bus_type() != AP_HAL::Device::BUS_TYPE_I2C) {
         if (!imu_spi_init()) {
             debug("ICM20789: failed to initialise IMU SPI device\n");
             return false;
@@ -195,38 +195,38 @@ bool AP_Baro_ICM20789::init()
         goto failed;
     }
 
-    dev->set_retries(0);
+    dev.set_retries(0);
 
     instance = _frontend.register_sensor();
 
-    dev->set_device_type(DEVTYPE_BARO_ICM20789);
-    set_bus_id(instance, dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_ICM20789);
+    set_bus_id(instance, dev.get_bus_id());
     
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
     debug("ICM20789: startup OK\n");
 
     // use 10ms to ensure we don't lose samples, with max lag of 10ms
-    dev->register_periodic_callback(CONVERSION_INTERVAL/2, FUNCTOR_BIND_MEMBER(&AP_Baro_ICM20789::timer, void));
+    dev.register_periodic_callback(CONVERSION_INTERVAL/2, FUNCTOR_BIND_MEMBER(&AP_Baro_ICM20789::timer, void));
 
     return true;
 
  failed:
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
     return false;
 }
 
 bool AP_Baro_ICM20789::send_cmd16(uint16_t cmd)
 {
     uint8_t cmd_b[2] = { uint8_t(cmd >> 8), uint8_t(cmd & 0xFF) };
-    return dev->transfer(cmd_b, 2, nullptr, 0);
+    return dev.transfer(cmd_b, 2, nullptr, 0);
 }
 
 bool AP_Baro_ICM20789::read_calibration_data(void)
 {
     // setup for OTP read
     const uint8_t cmd[5] = { 0xC5, 0x95, 0x00, 0x66, 0x9C };
-    if (!dev->transfer(cmd, sizeof(cmd), nullptr, 0)) {
+    if (!dev.transfer(cmd, sizeof(cmd), nullptr, 0)) {
         debug("ICM20789: read cal1 failed\n");
         return false;
     }
@@ -236,7 +236,7 @@ bool AP_Baro_ICM20789::read_calibration_data(void)
             return false;
         }
         uint8_t d[3];
-        if (!dev->transfer(nullptr, 0, d, sizeof(d))) {
+        if (!dev.transfer(nullptr, 0, d, sizeof(d))) {
             debug("ICM20789: read cal3[%u] failed\n", i);
             return false;
         }
@@ -314,7 +314,7 @@ void AP_Baro_ICM20789::convert_data(uint32_t Praw, uint32_t Traw)
 void AP_Baro_ICM20789::timer(void)
 {
     uint8_t d[9] {};
-    if (dev->transfer(nullptr, 0, d, sizeof(d))) {
+    if (dev.transfer(nullptr, 0, d, sizeof(d))) {
         // ignore CRC bytes for now
         uint32_t Praw = (uint32_t(d[0]) << 16) | (uint32_t(d[1]) << 8) | d[3];
         uint32_t Traw = (uint32_t(d[6]) << 8) | d[7];
