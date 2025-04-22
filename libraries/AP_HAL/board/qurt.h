@@ -103,7 +103,7 @@
 /*
   barometer list
  */
-#define PROBE_BARO_I2C(driver, bus, addr, args ...) ADD_BACKEND(AP_Baro_ ## driver::probe(*this,std::move(GET_I2C_DEVICE(bus, addr)),##args))
+#define BARO_PROBE_I2C(driver, bus, addr) {{ auto *dev = GET_I2C_DEVICE_PTR(bus, addr); if (dev) {{ auto *probed_backend = AP_Baro_{driver}::probe(*this, *dev); if (probed_backend) {{ ADD_BACKEND(probed_backend); }} else {{ delete dev; }} }} }}
 #define HAL_BARO_PROBE_LIST PROBE_BARO_I2C(ICP101XX, 2, 0x63)
 
 /*
