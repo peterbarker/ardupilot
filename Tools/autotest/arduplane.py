@@ -7195,6 +7195,42 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             if abs(m.Pos - m.PosCmd) > 20:
                 break
 
+    def RevAeroGA(self):
+        '''setup scenario for testing via user interaction'''
+        # model = 'jsbsim'
+        # self.customise_SITL_commandline(
+        #     [],
+        #     model=model,
+        #     defaults_filepath=self.model_defaults_filepath(model),
+        #     wipe=True,
+        # )
+        self.set_parameters({
+            "SIM_SPEEDUP": 10,
+        })
+        self.upload_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 30),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 800, 0, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 800, 800, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, -800, 800, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 800, 0, 0),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_DO_JUMP,
+                p1=2,
+                p2=10,
+            ),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
+            ),
+        ])
+        self.takeoff(30, mode='TAKEOFF')
+        self.change_mode('AUTO')
+        self.wait_current_waypoint(3, timeout=3000)
+        self.set_parameters({
+            "SIM_SPEEDUP": 1,
+        })
+        self.progress("Scenario started; have at it!")
+        self.delay_sim_time(100000)
+
     def tests(self):
         '''return list of all tests'''
         ret = []
@@ -7359,6 +7395,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.AdvancedFailsafeBadBaro,
             self.DO_CHANGE_ALTITUDE,
             self.SET_POSITION_TARGET_GLOBAL_INT_for_altitude,
+            self.RevAeroGA,
         ]
 
     def disabled_tests(self):
