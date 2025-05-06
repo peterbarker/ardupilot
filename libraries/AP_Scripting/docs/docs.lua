@@ -2471,6 +2471,14 @@ function gcs:send_text(severity, text) end
 ---@return uint32_t_ud -- system time in milliseconds
 function gcs:last_seen() end
 
+-- Return whether the GCS library is currently allowed to set parameters
+---@return boolean
+function gcs:get_allow_param_set() end
+
+-- set whether the GCS library is currently allowed to set parameters
+---@param new_allow_value boolean
+function gcs:set_allow_param_set(new_allow_value) end
+
 -- desc
 ---@class relay
 relay = {}
