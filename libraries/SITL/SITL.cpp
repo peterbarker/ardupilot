@@ -255,7 +255,7 @@ const AP_Param::GroupInfo SIM::var_info[] = {
     AP_GROUPINFO("ENGINE_FAIL",   58, SIM,  engine_fail,  0),
     AP_SUBGROUPINFO(models, "",   59, SIM, SIM::ModelParm),
     AP_SUBGROUPEXTENSION("",      60, SIM,  var_mag),
-#if HAL_SIM_GPS_ENABLED
+#if AP_SIM_GPS_ENABLED
     AP_SUBGROUPEXTENSION("",      61, SIM,  var_gps),
 #endif
     AP_SUBGROUPEXTENSION("",      62, SIM,  var_info3),
@@ -655,7 +655,7 @@ const AP_Param::GroupInfo SIM::var_info3[] = {
 };
 
 
-#if HAL_SIM_GPS_ENABLED
+#if AP_SIM_GPS_ENABLED
 // GPS SITL parameters
 const AP_Param::GroupInfo SIM::var_gps[] = {
     //  1 was GPS_DISABLE
@@ -734,7 +734,7 @@ const AP_Param::GroupInfo SIM::var_gps[] = {
 
    AP_GROUPEND
 };
-#endif  // HAL_SIM_GPS_ENABLED
+#endif  // AP_SIM_GPS_ENABLED
 
 // Mag SITL parameters
 const AP_Param::GroupInfo SIM::var_mag[] = {

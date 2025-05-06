@@ -116,7 +116,7 @@ public:
         AP_Param::setup_object_defaults(this, var_info);
         AP_Param::setup_object_defaults(this, var_info2);
         AP_Param::setup_object_defaults(this, var_info3);
-#if HAL_SIM_GPS_ENABLED
+#if AP_SIM_GPS_ENABLED
         AP_Param::setup_object_defaults(this, var_gps);
 #endif
         AP_Param::setup_object_defaults(this, var_mag);
@@ -168,7 +168,7 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
     static const struct AP_Param::GroupInfo var_info2[];
     static const struct AP_Param::GroupInfo var_info3[];
-#if HAL_SIM_GPS_ENABLED
+#if AP_SIM_GPS_ENABLED
     static const struct AP_Param::GroupInfo var_gps[];
 #endif
     static const struct AP_Param::GroupInfo var_mag[];
