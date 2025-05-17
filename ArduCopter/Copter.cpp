@@ -636,6 +636,10 @@ void Copter::three_hz_loop()
 
     // check if avoidance should be enabled based on alt
     low_alt_avoidance();
+
+    // write out AYAW.  This should be internal to Mode but each mode
+    // would need to call this at the moment:
+    flightmode->auto_yaw.log();
 }
 
 // one_hz_loop - runs at 1Hz
@@ -698,10 +702,6 @@ void Copter::init_simple_bearing()
         Log_Write_Data(LogDataID::INIT_SIMPLE_BEARING, ahrs.yaw_sensor);
     }
 #endif
-
-    // write out AYAW.  This should be internal to Mode but each mode
-    // would need to call this at the moment:
-    flight_mode->auto_yaw.log();
 }
 
 // update_simple_mode - rotates pilot input if we are in simple mode

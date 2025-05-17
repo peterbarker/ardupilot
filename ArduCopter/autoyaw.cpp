@@ -30,7 +30,6 @@ void Mode::AutoYaw::log()
     // @Description: information on what AutoYaw library is up to
     // @Field: TimeUS: Time since system startup
     // @Field: Mode: autoyaw mode
-    // @FieldValueEnum: Mode::AutoYaw::Mode
     // @Field: FO: Fixed Offset when in fixed mode
     // @Field: FYS: Fixed Yaw Slewrate when in fixed mode
     // @Field: LAY: yaw when in look-ahead mode
@@ -43,7 +42,7 @@ void Mode::AutoYaw::log()
         "s"       "-"     "h"   "k"    "h"    "h"     "k"     "k",
         "F"       "-"     "0"   "0"    "0"    "0"     "0"     "0",
         "Q"       "B"     "f"   "f"    "f"    "f"     "f"     "f",
-        now,
+        AP_HAL::micros64(),
         (uint8_t)_mode,
         _fixed_yaw_offset_cd * 0.01,
         _fixed_yaw_slewrate_cds * 0.01,
