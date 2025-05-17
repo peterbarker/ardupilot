@@ -5031,6 +5031,18 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.wait_heading(225, minimum_duration=10, timeout=20)
         self.wait_disarmed()
 
+        self.progress("Try to reproduce yaw problem")
+        self.load_mission('mission.txt')
+        self.customise_SITL_commandline([
+            "--home", self.sitl_home_string_from_mission("mission.txt"),
+        ])
+        self.set_parameter('AUTO_OPTIONS', 3)
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_current_waypoint(19)
+        self.do_RTL()
+
     def TestGripperMission(self):
         '''Test Gripper mission items'''
         self.context_push()
