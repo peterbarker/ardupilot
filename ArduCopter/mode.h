@@ -326,6 +326,9 @@ public:
 
         AC_AttitudeControl::HeadingCommand get_heading();
 
+        // log data about autoyaw as required:
+        void log();
+
     private:
 
         // yaw_cd(): main product of AutoYaw; the heading:

@@ -24,6 +24,36 @@ void Mode::AutoYaw::set_mode_to_default(bool rtl)
     set_mode(default_mode(rtl));
 }
 
+void Mode::AutoYaw::log()
+{
+    // @LoggerMessage: AYAW
+    // @Description: information on what AutoYaw library is up to
+    // @Field: TimeUS: Time since system startup
+    // @Field: Mode: autoyaw mode
+    // @FieldValueEnum: Mode::AutoYaw::Mode
+    // @Field: FO: Fixed Offset when in fixed mode
+    // @Field: FYS: Fixed Yaw Slewrate when in fixed mode
+    // @Field: LAY: yaw when in look-ahead mode
+    // @Field: AYRA: yaw when in auto-yaw-rate mode
+    // @Field: AYRR: yaw rate when in auto-yaw-rate mode
+    // @Field: PYR: yaw rate when in pilot-yaw-rate mode
+    AP::logger().WriteStreaming(
+        "AYAW",
+        "TimeUS," "Mode," "FO," "FYS," "LAY," "AYRA," "AYRR," "PYR",
+        "s"       "-"     "h"   "k"    "h"    "h"     "k"     "k",
+        "F"       "-"     "0"   "0"    "0"    "0"     "0"     "0",
+        "Q"       "B"     "f"   "f"    "f"    "f"     "f"     "f",
+        now,
+        (uint8_t)_mode,
+        _fixed_yaw_offset_cd * 0.01,
+        _fixed_yaw_slewrate_cds * 0.01,
+        _look_ahead_yaw * 0.01,
+        _yaw_angle_cd,
+        _yaw_rate_cds,
+        _pilot_yaw_rate_cds
+        );
+}
+
 // default_mode - returns auto_yaw.mode() based on WP_YAW_BEHAVIOR parameter
 // set rtl parameter to true if this is during an RTL
 Mode::AutoYaw::Mode Mode::AutoYaw::default_mode(bool rtl) const

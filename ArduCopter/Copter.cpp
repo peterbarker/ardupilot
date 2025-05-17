@@ -698,6 +698,10 @@ void Copter::init_simple_bearing()
         Log_Write_Data(LogDataID::INIT_SIMPLE_BEARING, ahrs.yaw_sensor);
     }
 #endif
+
+    // write out AYAW.  This should be internal to Mode but each mode
+    // would need to call this at the moment:
+    flight_mode->auto_yaw.log();
 }
 
 // update_simple_mode - rotates pilot input if we are in simple mode
