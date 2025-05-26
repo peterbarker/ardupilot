@@ -181,6 +181,11 @@ end
    check for new connections
 --]]
 local function update()
+   send_ranges()
+   send_temperature()
+end
+
+local function send_temperature()
    if SSIM_ENABLE:get() <= 0 then
       return
    end
