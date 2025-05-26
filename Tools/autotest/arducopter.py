@@ -2969,6 +2969,43 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             if ogains[g] != ngains[g]:
                 raise NotAchievedException(f"AUTOTUNE gains not discarded {ogains=} {ngains=}")
 
+    def AutoTuneResetFainsOnFailCase(self):
+        """Test autotune mode - cross fail path, expect gains to reset"""
+
+        gain_names = [
+            "ATC_RAT_RLL_D",
+            "ATC_RAT_RLL_I",
+            "ATC_RAT_RLL_P",
+        ]
+
+        ogains = self.get_parameters(gain_names)
+        # set these parameters so they get reverted at the end of the test:
+        self.set_parameters(ogains)
+
+        self.takeoff(10)
+
+        self.progress("Set some parameters so we're definitely going to fail autotune")
+        self.set_parameters({
+            "ANGLE_MAX": 1000,
+        })
+
+        self.change_mode('AUTOTUNE')
+
+        self.wait_statustext(
+            "AutoTune: Twitch Size Determination Failed",
+            regex=True,
+            timeout=5000,
+        )
+
+        self.set_rc(3, 1000)
+        self.wait_landed_and_disarmed()
+
+        self.progress("checking the original gains have been re-instated")
+        ngains = self.get_parameters(gain_names)
+        for g in ngains.keys():
+            if ogains[g] != ngains[g]:
+                raise NotAchievedException(f"AUTOTUNE gains not discarded {ogains=} {ngains=}")
+
     def AutoTuneSwitch(self):
         """Test autotune on a switch with gains being saved"""
 
@@ -11969,6 +12006,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
              self.AuxFunctionsInMission,
              self.AutoTune,
              self.AutoTuneYawD,
+             self.AutoTuneResetFainsOnFailCase,
              self.NoRCOnBootPreArmFailure,
         ])
         return ret
