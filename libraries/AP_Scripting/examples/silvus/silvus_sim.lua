@@ -125,9 +125,34 @@ for r = 1, SSIM_NUM_RADIOS:get() do
    SSIM_GND_ALT[r] = bind_add_param(string.format('GND%u_ALT',r),       23+(r-1)*5, 0)
 end
 
-local listen_sock = nil
+local listen_sock = nil      -- used to listen for connects
+local connection_sock = nil  -- connection from http client
+local http_request = nil     -- data being read from client
+local request_start = nil    -- time connection was created
+local REQUEST_TIMEOUT = 250  -- 
 
 gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: starting with %u beacons", #SSIM_GND_ALT))
+
+--[[
+   see if we have a API reply
+--]]
+local function check_request()
+   if not connection_sock then
+      -- should not have been called?!
+      return
+   end
+   local now = millis()
+   if request_start and now - request_start > REQUEST_TIMEOUT then
+      parse_reply()
+      return
+   end
+   local r = sock:recv(1024)
+   if r then
+      http_request = http_request .. r
+   else
+      parse_reply()
+   end
+end
 
 --[[
    get ground radio location
@@ -177,31 +202,11 @@ local function get_range_ticks(radio_idx)
    return range_ticks
 end
 
---[[
-   check for new connections
---]]
-local function update()
-   send_ranges()
-   send_temperature()
+local function send_temperature(sock)
+   gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: send_temperature beacons", #SSIM_GND_ALT))
 end
 
-local function send_temperature()
-   if SSIM_ENABLE:get() <= 0 then
-      return
-   end
-   if not listen_sock then
-      listen_sock = Socket(0)
-      if not listen_sock then
-         return
-      end
-      assert(listen_sock:bind("0.0.0.0", SSIM_LISTEN_PORT:get()))
-      assert(listen_sock:listen(2))
-      listen_sock:reuseaddress()
-   end
-   local sock = listen_sock:accept()
-   if not sock then
-      return
-   end
+local function send_ranges(sock)
    local range_str = ""
    for i = 1, #SSIM_GND_NODEID do
       local range = get_range_ticks(i)
@@ -222,6 +227,38 @@ Server: silvus sim
    msg = string.gsub(msg, "\n", "\r\n")
    sock:send(msg, #msg)
    sock:close()
+end
+
+--[[
+   check for new connections
+--]]
+local function update()
+   if SSIM_ENABLE:get() <= 0 then
+      return
+   end
+   if connection_sock then
+      check_request()
+      return
+   end
+   if not listen_sock then
+      listen_sock = Socket(0)
+      if not listen_sock then
+         return
+      end
+      assert(listen_sock:bind("0.0.0.0", SSIM_LISTEN_PORT:get()))
+      assert(listen_sock:listen(2))
+      listen_sock:reuseaddress()
+   end
+   connection_sock = listen_sock:accept()
+   if not connection_sock then
+      return
+   end
+   http_request = ''
+end
+
+local function handle_request()
+   send_temperature(sock)
+   send_ranges(sock)
 end
 
 -- wrapper around update(). This calls update() at 20Hz,
