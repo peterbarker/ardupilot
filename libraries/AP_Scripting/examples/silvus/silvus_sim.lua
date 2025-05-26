@@ -289,6 +289,15 @@ local function check_request()
       return
    end
    local r = connection_sock:recv(1024)
+   -- if r == nil then
+   --    gcs:send_text(0, "r is nil")
+   -- end
+   -- if r == "" then
+   --    gcs:send_text(0, "r is empty")
+   -- end
+   -- if r ~= nil then
+   --    gcs:send_text(0, "r (" .. r .. ")")
+   -- end
 
    if r == nil or r == "" then
       finalise_request()
