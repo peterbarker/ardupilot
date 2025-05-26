@@ -213,15 +213,12 @@ local function http_request(api)
       sock:close()
       sock = nil
    end
-      gcs:send_text(0, "y")
    sock = Socket(0)
    local node_ip = silvus_ip()
-      gcs:send_text(0, "z" .. node_ip)
    if not sock:connect(node_ip, SLV_HTTP_PORT:get()) then
       gcs:send_text(MAV_SEVERITY.ERROR, string.format("Silvus: failed to connect", name))
       return nil
    end
-      gcs:send_text(0, "a")
    local json = string.format([[{"jsonrpc":"2.0","method":"%s","id":"sbkb5u0c"}]], api)
    local cmd = string.format([[POST /streamscape_api HTTP/1.1
 Host: %s
@@ -566,8 +563,6 @@ local function update()
    if not last_request_ms or now - last_request_ms >= period_ms then
       last_request_ms = now
       http_request("current_tof")
-   else
-      gcs:send_text(0, "connect good")
    end
 end
 

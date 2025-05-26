@@ -129,29 +129,30 @@ local listen_sock = nil      -- used to listen for connects
 local connection_sock = nil  -- connection from http client
 local http_request = nil     -- data being read from client
 local request_start = nil    -- time connection was created
-local REQUEST_TIMEOUT = 250  -- 
+local REQUEST_TIMEOUT = 250  -- timeout for client requests
+
+local json = require("json")
+local json_log = nil
 
 gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: starting with %u beacons", #SSIM_GND_ALT))
 
---[[
-   see if we have a API reply
---]]
-local function check_request()
-   if not connection_sock then
-      -- should not have been called?!
-      return
-   end
-   local now = millis()
-   if request_start and now - request_start > REQUEST_TIMEOUT then
-      parse_reply()
-      return
-   end
-   local r = sock:recv(1024)
-   if r then
-      http_request = http_request .. r
-   else
-      parse_reply()
-   end
+local function send_json(json)
+   local msg = string.format([[Content-Type: application/json
+Cache-Control: no-cache
+Content-Length: %u
+Server: silvus sim
+
+%s]], #json, json)
+   msg = string.gsub(msg, "\n", "\r\n")
+   connection_sock:send(msg, #msg)
+   connection_sock:close()
+end
+
+local function send_noise_level()
+   gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: send_temperature"))
+   noise_level = 17
+   local json = string.format([[{"result" : [%s],"id" : "sbkb5u0c", "jsonrpc" : "2.0"}]], noise_level)
+   send_json(json)
 end
 
 --[[
@@ -202,11 +203,7 @@ local function get_range_ticks(radio_idx)
    return range_ticks
 end
 
-local function send_temperature(sock)
-   gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: send_temperature beacons", #SSIM_GND_ALT))
-end
-
-local function send_ranges(sock)
+local function send_ranges()
    local range_str = ""
    for i = 1, #SSIM_GND_NODEID do
       local range = get_range_ticks(i)
@@ -224,9 +221,82 @@ Content-Length: %u
 Server: silvus sim
 
 %s]], #json, json)
+   send_json(json)
    msg = string.gsub(msg, "\n", "\r\n")
-   sock:send(msg, #msg)
+   connect_sock:send(msg, #msg)
    sock:close()
+end
+
+--[[
+   parse JSON request from remote radio
+--]]
+local function parse_request()
+   --save_to_file("json_rep.txt", http_request)
+   for s in http_request:gmatch("[^\r\n]+") do
+      table.insert(lines, s)
+   end
+   local success, req = pcall(json.parse, lines[#lines])
+   if not success then
+      return
+   end
+   -- gcs:send_text(0, lines[#lines])
+   local method = req['method']
+   if not method then
+      -- badly formatted
+      return
+   end
+
+   print("method is " .. method)
+   if method == "current_tof" then
+      send_ranges()
+      return
+   end
+   if method == "noise_level" then
+      send_noise_level()
+      return
+   end
+   gcs:send_text(0, "Unknown method (" .. method .. ")")
+end
+
+--[[
+   handle the "request complete" state; close connection, parse request
+--]]
+local function finalise_request()
+   connection_sock:close()
+   connection_sock = nil
+   lines = {}
+   if not http_request then
+      return
+   end
+   if not json_log then
+      json_log = io.open("json.log",'wb')
+   end
+   if json_log then
+      json_log:write(http_request)
+   end
+
+   parse_request()
+end
+
+--[[
+   see if we have a API reply
+--]]
+local function check_request()
+   if not connection_sock then
+      -- should not have been called?!
+      return
+   end
+   local now = millis()
+   if request_start and now - request_start > REQUEST_TIMEOUT then
+      finalise_request()
+      return
+   end
+   local r = connection_sock:recv(1024)
+   if r ~= "" then
+      http_request = http_request .. r
+   else
+      finalise_request()
+   end
 end
 
 --[[
@@ -254,11 +324,6 @@ local function update()
       return
    end
    http_request = ''
-end
-
-local function handle_request()
-   send_temperature(sock)
-   send_ranges(sock)
 end
 
 -- wrapper around update(). This calls update() at 20Hz,
