@@ -145,7 +145,6 @@ Server: silvus sim
 %s]], #json, json)
    msg = string.gsub(msg, "\n", "\r\n")
    connection_sock:send(msg, #msg)
-   connection_sock:close()
 end
 
 local function send_noise_level()
@@ -223,8 +222,6 @@ Server: silvus sim
 %s]], #json, json)
    send_json(json)
    msg = string.gsub(msg, "\n", "\r\n")
-   connect_sock:send(msg, #msg)
-   sock:close()
 end
 
 --[[
@@ -262,8 +259,6 @@ end
    handle the "request complete" state; close connection, parse request
 --]]
 local function finalise_request()
-   connection_sock:close()
-   connection_sock = nil
    lines = {}
    if not http_request then
       return
@@ -276,6 +271,8 @@ local function finalise_request()
    end
 
    parse_request()
+   connection_sock:close()
+   connection_sock = nil
 end
 
 --[[
@@ -292,11 +289,13 @@ local function check_request()
       return
    end
    local r = connection_sock:recv(1024)
-   if r ~= "" then
-      http_request = http_request .. r
-   else
+
+   if r == nil or r == "" then
       finalise_request()
+      return
    end
+
+   http_request = http_request .. r
 end
 
 --[[
