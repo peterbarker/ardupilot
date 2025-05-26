@@ -145,7 +145,8 @@ void AC_AutoTune::disarmed(const bool in_autotune_mode)
     // True if in autotune mode and no pilot testing commands have been received
     const bool tune_complete_no_testing = !have_pilot_testing_command && in_autotune_mode;
 
-    if (tune_complete_no_testing || testing_tuned) {
+    if ((tune_complete_no_testing || testing_tuned) &&
+        mode == TuneMode::SUCCESS) {
         save_tuning_gains();
     } else {
         reset();
