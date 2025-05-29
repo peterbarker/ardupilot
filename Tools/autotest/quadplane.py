@@ -355,6 +355,106 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
                                      timeout=30)
         self.mav.motors_disarmed_wait()
 
+    class CurrentWPPrinter(vehicle_test_suite.TestSuite.MessageHook):
+        '''prints current waypoint when it changes or at intervals'''
+        def __init__(self, testsuite):
+            super().__init__(testsuite)
+            self.last_print = None
+            self.print_interval = 60
+            self.waypoint = -1
+            self.mc = self.suite.get_mission_count()
+
+        def process(self, mav, m):
+            if m.get_type() != 'MISSION_CURRENT':
+                return
+            if m.seq != self.waypoint:
+                self.waypoint = m.seq
+                self.print_waypoint(force=True)
+                return
+            self.print_waypoint()
+
+        def print_waypoint(self, force=False):
+            now = self.suite.get_sim_time_cached()
+            if (not force and
+                    self.last_print is not None and
+                    now - self.last_print < self.print_interval):
+                return
+            nco = self.suite.mav.messages.get("NAV_CONTROLLER_OUTPUT", None)
+            dist_remaining = -1
+            if nco is not None:
+                dist_remaining = nco.wp_dist
+
+            self.progress(f"WP {self.waypoint}/{self.mc} (wp_dist={dist_remaining})")
+            self.last_print = now
+
+    class DistanceSummer(vehicle_test_suite.TestSuite.MessageHook):
+        def __init__(self, testsuite):
+            super().__init__(testsuite)
+            self.last_position = None
+            self.distance = 0
+
+        def get_distance(self):
+            return self.distance
+
+        def process(self, mav, m):
+            if m.get_type() != 'GLOBAL_POSITION_INT':
+                return
+            if self.last_position is not None:
+                self.distance += self.suite.get_distance_int(m, self.last_position)
+            self.last_position = m
+
+    def BVLOSMissionRTLFuzz(self):
+        '''fly a mission many times, RTLing at different distances and make sure we don't hit terrain'''
+        self.set_parameters({
+            'RTL_AUTOLAND': 2,
+        })
+
+        self.load_mission("mission.txt")
+        sp = self.sitl_home_string_from_mission("mission.txt")
+        self.customise_SITL_commandline([
+            f"--home={sp}",
+        ])
+        flight_distance_to_rtl_at = 500
+
+        def fly_mission_rtl_at_distance(rtl_distance):
+            '''flies the loaded mission, returns false if we disarmed
+            before travelling rtl_distance, rtls at distance'''
+            self.context_push()
+
+            self.set_current_waypoint(0, check_afterwards=False)
+
+            self.wait_ready_to_arm(timeout=300000)
+            self.arm_vehicle()
+            self.change_mode('AUTO')
+
+            ds = self.DistanceSummer(self)
+            self.install_message_hook_context(ds)
+
+            cwwp = self.CurrentWPPrinter(self)
+            self.install_message_hook_context(cwwp)
+
+            did_rtl = False
+            ds_last_print = self.get_sim_time_cached()
+            while True:
+                if not self.armed():
+                    return did_rtl
+                dist_travelled = ds.get_distance()
+                if dist_travelled >= rtl_distance and not did_rtl:
+                    self.change_mode('RTL')
+                    did_rtl = 1
+                now = self.get_sim_time_cached()
+                if now - ds_last_print > 60:
+                    self.progress(f"{dist_travelled=} {rtl_distance=}")
+                    ds_last_print = now
+
+            self.context_pop()
+
+        while True:
+            self.start_subtest(f"Flying to distance {flight_distance_to_rtl_at}")
+            if not fly_mission_rtl_at_distance(flight_distance_to_rtl_at):
+                break
+            flight_distance_to_rtl_at += 1000
+
     def EXTENDED_SYS_STATE(self):
         '''Check extended sys state works'''
         self.EXTENDED_SYS_STATE_SLT()
@@ -2193,6 +2293,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.WindEstimateConsistency,
             self.MAV_CMD_NAV_LOITER_TO_ALT,
             self.LoiterAltQLand,
+            self.BVLOSMissionRTLFuzz,
             self.VTOLLandSpiral,
             self.VTOLQuicktune,
             self.VTOLQuicktune_CPP,
