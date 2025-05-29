@@ -1990,7 +1990,7 @@ class TestSuite(ABC):
         # usually.  Set this to False to gather tiles from internet in
         # the cae there are new tiles required, then add them to the
         # repo and set this back to false:
-        self.terrain_in_offline_mode = True
+        self.terrain_in_offline_mode = False
         self.elevationmodel = mp_elevation.ElevationModel(
             cachedir=util.reltopdir("Tools/autotest/tilecache/srtm"),
             offline=self.terrain_in_offline_mode
