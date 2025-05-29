@@ -3413,6 +3413,9 @@ class TestSuite(ABC):
             string = self.progress_prefix() + string
             self.suite.progress(string)
 
+        def hook_removed(self):
+            pass
+
     class ValidateIntPositionAgainstSimState(MessageHook):
         '''monitors a message containing a position containing lat/lng in 1e7,
         makes sure it stays close to SIMSTATE'''
