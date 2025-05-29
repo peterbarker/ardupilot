@@ -4268,8 +4268,8 @@ class TestSuite(ABC):
             target_component=target_component)
         self.check_mission_upload_download(mission)
 
-    def get_mission_count(self):
-        return self.get_parameter("MIS_TOTAL")
+    def get_mission_count(self) -> int:
+        return int(self.get_parameter("MIS_TOTAL"))
 
     def run_auxfunc(self,
                     function,
