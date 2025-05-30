@@ -477,6 +477,10 @@ local function parse_reply()
    end
    -- gcs:send_text(0, lines[#lines])
    local result = req['result']
+   if result == nil then
+      gcs:send_text(0, "nil here")
+      return
+   end
    if not result then
       -- badly formatted
       return
@@ -505,8 +509,7 @@ local function handle_response_TOF(result)
 end
 
 local function handle_response_noise_level(result)
-   gcs:send_text(0, "Handle response noise level!!!" .. result)
-   gcs:send_named_float("NL", tonumber(result))
+   gcs:send_named_float("NL", tonumber(result[1]))
 end
 
 --[[

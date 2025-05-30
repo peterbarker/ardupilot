@@ -149,8 +149,8 @@ Server: silvus sim
 end
 
 local function send_noise_level()
-   gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: send_noise_level"))
-   noise_level = 19
+   -- gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: send_noise_level"))
+   noise_level = 17
    local json = string.format([[{"result" : [%s],"id" : "sbkb5u0c", "jsonrpc" : "2.0"}]], noise_level)
    send_json(json)
 end
@@ -245,7 +245,6 @@ local function parse_request()
       return
    end
 
-   print("method is " .. method)
    if method == "current_tof" then
       send_ranges()
       return
