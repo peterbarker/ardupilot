@@ -297,16 +297,15 @@ bool AP_Terrain::height_relative_home_equivalent(float terrain_altitude,
      */
     const AP_AHRS &ahrs = AP::ahrs();
     const auto &home = ahrs.get_home();
-    int32_t home_height_amsl_cm = 0;
-    UNUSED_RESULT(home.get_alt_cm(Location::AltFrame::ABSOLUTE, home_height_amsl_cm));
+    const int32_t home_height_amsl_m = home.get_alt_m();
 
     float theight_home;
     if (!height_amsl(home, theight_home)) {
         return false;
     }
 
-    relative_home_altitude += theight_home - home_height_amsl_cm*0.01;
-    
+    relative_home_altitude += theight_home - home_height_amsl_m;
+
     return true;
 }
 

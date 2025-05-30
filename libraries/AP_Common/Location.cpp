@@ -630,4 +630,15 @@ void Location::linearly_interpolate_alt(const Location &point1, const Location &
     set_alt_cm(point1.alt + (point2.alt - point1.alt) * constrain_float(line_path_proportion(point1, point2), 0.0f, 1.0f), point2.get_alt_frame());
 }
 
+bool AbsAltLocation::from(const Location &loc) {
+    Location tmp = loc;
+    if (!tmp.change_alt_frame(Location::AltFrame::ABSOLUTE)) {
+        return false;
+    }
+    lat = tmp.lat;
+    lng = tmp.lng;
+    alt = tmp.alt;
+    return true;
+}
+
 #endif // HAL_BOOTLOADER_BUILD

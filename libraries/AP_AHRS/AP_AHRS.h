@@ -547,7 +547,7 @@ public:
 
     // get the home location. This is const to prevent any changes to
     // home without telling AHRS about the change
-    const Location &get_home(void) const {
+    const AbsAltLocation &get_home(void) const {
         return _home;
     }
 
@@ -568,6 +568,7 @@ public:
     // set the home location in 10e7 degrees. This should be called
     // when the vehicle is at this position. It is assumed that the
     // current barometer and GPS altitudes correspond to this altitude
+    bool set_home(const AbsAltLocation &loc) WARN_IF_UNUSED;
     bool set_home(const Location &loc) WARN_IF_UNUSED;
 
     /*
@@ -814,7 +815,7 @@ private:
      */
     void load_watchdog_home();
     bool _checked_watchdog_home;
-    Location _home;
+    AbsAltLocation _home;
     bool _home_is_set :1;
     bool _home_locked :1;
 

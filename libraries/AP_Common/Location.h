@@ -226,6 +226,8 @@ public:
         Location(latitude, longitude, alt_in_cm, Location::AltFrame::ABSOLUTE);
     }
 
+    bool from(const Location &loc);
+
 private:
 
     // privatise some methods
