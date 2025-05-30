@@ -3016,19 +3016,21 @@ bool AP_AHRS::_get_origin(Location &ret) const
 
 bool AP_AHRS::set_home(const Location &loc)
 {
+    AbsAltLocation absloc;
+    if (!absloc.from(loc)) {
+        return false;
+    }
+    return set_home(absloc);
+}
+
+bool AP_AHRS::set_home(const AbsAltLocation &loc)
+{
     WITH_SEMAPHORE(_rsem);
     // check location is valid
     if (!loc.initialised()) {
         return false;
     }
     if (!loc.check_latlng()) {
-        return false;
-    }
-    // home must always be global frame at the moment as .alt is
-    // accessed directly by the vehicles and they may not be rigorous
-    // in checking the frame type.
-    Location tmp = loc;
-    if (!tmp.change_alt_frame(Location::AltFrame::ABSOLUTE)) {
         return false;
     }
 
@@ -3039,7 +3041,7 @@ bool AP_AHRS::set_home(const Location &loc)
     }
 #endif
 
-    _home = tmp;
+    _home = loc;
     _home_is_set = true;
 
 #if HAL_LOGGING_ENABLED
@@ -3073,7 +3075,7 @@ void AP_AHRS::load_watchdog_home()
     if (hal.util->was_watchdog_reset() && (pd.home_lat != 0 || pd.home_lon != 0)) {
         _home.lat = pd.home_lat;
         _home.lng = pd.home_lon;
-        _home.set_alt_cm(pd.home_alt_cm, Location::AltFrame::ABSOLUTE);
+        _home.set_alt_cm(pd.home_alt_cm);
         _home_is_set = true;
         _home_locked = true;
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Restored watchdog home");
