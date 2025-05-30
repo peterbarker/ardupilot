@@ -204,7 +204,7 @@ local last_request_ms = nil
 local last_heartbeat_ms = nil
 local json = require("json")
 local json_log = nil
-local response_handler = nil
+local handle_response = nil
 
 --[[
    make a silvus API request
@@ -238,7 +238,7 @@ Content-Length: %u
    sock:send(json, #json)
    http_reply = ''
    reply_start = millis()
-   response_handler = http_request_response_handler
+   handle_response = http_request_response_handler
 end
 
 --[[
@@ -479,14 +479,13 @@ local function parse_reply()
    local result = req['result']
    if not result then
       -- badly formatted
-      print("badly formwatted")
       return
    end
 
-   response_handler(result)
+   handle_response(result)
 end
 
-local function handle_reply_TOF(result)
+local function handle_response_TOF(result)
    local num_nodes = math.floor(#result / 3)
    for i = 1, num_nodes do
       local node_id = tonumber(result[1+(i-1)*3])
@@ -505,8 +504,9 @@ local function handle_reply_TOF(result)
    end
 end
 
-local function handle_reply_noise_level(result)
-   gcs:send_text(0, "Handle reply noise level!!!")
+local function handle_response_noise_level(result)
+   gcs:send_text(0, "Handle response noise level!!!" .. result)
+   gcs:send_named_float("NL", tonumber(result))
 end
 
 --[[
@@ -575,8 +575,8 @@ local function update()
    local period_ms = 1000.0 / SLV_RATE:get()
    if not last_request_ms or now - last_request_ms >= period_ms then
       last_request_ms = now
---      http_request("current_tof", handle_reply_TOF)
-      http_request("noise_level", handle_reply_noise_level)
+--      http_request("current_tof", handle_response_TOF)
+      http_request("noise_level", handle_response_noise_level)
    end
 end
 
