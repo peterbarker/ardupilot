@@ -643,9 +643,8 @@ void AP_ADSB_Sagetech_MXS::send_gps_msg()
         strncpy(gps.timeOfFix, "      .   ", 11);
     }
 
-    int32_t height;
-    if (_frontend._my_loc.initialised() && _frontend._my_loc.get_alt_cm(Location::AltFrame::ABSOLUTE, height)) {
-        gps.height = height * 0.01;
+    if (_frontend._my_loc.initialised()) {
+        gps.height = _frontend._my_loc.get_alt_m();
     } else {
         gps.height = 0.0;
     }
@@ -739,9 +738,8 @@ sg_airspeed_t AP_ADSB_Sagetech_MXS::convert_airspeed_knots_to_sg(const float max
 
 void AP_ADSB_Sagetech_MXS::populate_op_altitude(const AP_ADSB::Loc &loc)
 {
-    int32_t height;
-    if (loc.initialised() && loc.get_alt_cm(Location::AltFrame::ABSOLUTE, height)) {
-        mxs_state.op.altitude = height * SAGETECH_SCALE_CM_TO_FEET;         // Height above sealevel in feet
+    if (loc.initialised()) {
+        mxs_state.op.altitude = loc.get_alt_cm() * SAGETECH_SCALE_CM_TO_FEET;         // Height above sealevel in feet
     } else {
         mxs_state.op.altitude = 0;
     }

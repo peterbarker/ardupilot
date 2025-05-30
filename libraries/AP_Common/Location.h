@@ -212,3 +212,25 @@ private:
     // inverse of LOCATION_SCALING_FACTOR
     static constexpr float LOCATION_SCALING_FACTOR_INV = LATLON_TO_M_INV;
 };
+
+// a Location object, but the stored altitude is always in AltFrame::ABSOLUTE:
+class AbsAltLocation : public Location {
+public:
+    int32_t get_alt_cm() const { return alt; }
+    float get_alt_m() const { return alt * 0.01; }
+
+    void set_alt_cm(int32_t alt_cm) { alt = alt_cm; }
+    void set_alt_m(float alt_m) { alt = alt_m * 100; }
+
+    AbsAltLocation(int32_t latitude, int32_t longitude, int32_t alt_in_cm) {
+        Location(latitude, longitude, alt_in_cm, Location::AltFrame::ABSOLUTE);
+    }
+
+private:
+
+    // privatise some methods
+    using Location::change_alt_frame;
+
+    // don't want random constructors being called:
+    using Location::Location;
+};

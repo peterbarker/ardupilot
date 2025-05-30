@@ -999,7 +999,7 @@ void NavEKF3_core::readRngBcnData()
             // Set the EKF origin and magnetic field declination if not previously set
             if (!validOrigin && (PV_AidingMode != AID_ABSOLUTE)) {
                 // get origin from beacon system
-                Location origin_loc;
+                AbsAltLocation origin_loc;
                 if (beacon->get_origin(origin_loc)) {
                     setOriginLLH(origin_loc);
 
