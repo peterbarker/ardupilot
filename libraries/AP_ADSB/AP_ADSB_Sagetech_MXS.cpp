@@ -133,7 +133,7 @@ void AP_ADSB_Sagetech_MXS::update()
             now_ms - last.packet_Operating_ms >= SAGETECH_OPERATING_MSG_RATE ||             // Send Operating Message every second
             last.operating_squawk != _frontend.out_state.ctrl.squawkCode ||                 // Or anytime Operating data changes
             last.operating_squawk != _frontend.out_state.cfg.squawk_octal ||
-            abs(last.operating_alt - _frontend._my_loc.alt) > 1555 ||                       // 1493cm == 49ft. The output resolution is 100ft per bit
+               abs(last.operating_alt - _frontend._my_loc.get_alt_cm()) > 1555 ||                       // 1493cm == 49ft. The output resolution is 100ft per bit
             last.operating_rf_select != _frontend.out_state.cfg.rfSelect ||                 // The following booleans control the MXS OpMode
             last.modeAEnabled != _frontend.out_state.ctrl.modeAEnabled ||
             last.modeCEnabled != _frontend.out_state.ctrl.modeCEnabled ||
@@ -152,7 +152,7 @@ void AP_ADSB_Sagetech_MXS::update()
         last.modeCEnabled = _frontend.out_state.ctrl.modeCEnabled;
         last.modeSEnabled = (_frontend._options & uint32_t(AP_ADSB::AdsbOption::Mode3_Only)) ? 0 : _frontend.out_state.ctrl.modeSEnabled;
 
-        last.operating_alt = _frontend._my_loc.alt;
+        last.operating_alt = _frontend._my_loc.get_alt_cm();
         last.packet_Operating_ms = now_ms;
         send_operating_msg();
     

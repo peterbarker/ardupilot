@@ -91,7 +91,7 @@ private:
     AP_BattMonitor battery{MASK_LOG_CURRENT,
                            FUNCTOR_BIND_MEMBER(&Tracker::handle_battery_failsafe, void, const char*, const int8_t),
                            nullptr};
-    Location current_loc;
+    AbsAltLocation current_loc;
 
     Mode *mode_from_mode_num(enum Mode::Number num);
 
@@ -108,8 +108,8 @@ private:
     // Vehicle state
     struct {
         bool location_valid;    // true if we have a valid location for the vehicle
-        Location location;      // lat, long in degrees * 10^7; alt in meters * 100
-        Location location_estimate; // lat, long in degrees * 10^7; alt in meters * 100
+        AbsAltLocation location;      // lat, long in degrees * 10^7; alt in meters * 100
+        AbsAltLocation location_estimate; // lat, long in degrees * 10^7; alt in meters * 100
         uint32_t last_update_us;    // last position update in microseconds
         uint32_t last_update_ms;    // last position update in milliseconds
         Vector3f vel;           // the vehicle's velocity in m/s
@@ -194,8 +194,8 @@ private:
 
     // system.cpp
     void init_ardupilot() override;
-    bool get_home_eeprom(Location &loc) const;
-    bool set_home_eeprom(const Location &temp) WARN_IF_UNUSED;
+    bool get_home_eeprom(AbsAltLocation &loc) const;
+    bool set_home_eeprom(const AbsAltLocation &temp) WARN_IF_UNUSED;
     bool set_home_to_current_location(bool lock) override WARN_IF_UNUSED;
     bool set_home(const Location &temp, bool lock) override WARN_IF_UNUSED;
     void prepare_servos();

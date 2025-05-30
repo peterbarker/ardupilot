@@ -168,7 +168,7 @@ public:
     void set_is_flying(const bool is_flying) { out_state.is_flying = is_flying; }
 
     // extract a location out of a vehicle item
-    Location get_location(const adsb_vehicle_t &vehicle) const;
+    AbsAltLocation get_location(const adsb_vehicle_t &vehicle) const;
 
     // ADSB is considered enabled if there are any configured backends
     bool enabled() const {

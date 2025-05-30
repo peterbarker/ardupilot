@@ -60,10 +60,10 @@ public:
         Vector3f accel_ef;
         Vector3f accel_bias;
 
-        Location location;
+        AbsAltLocation location;
         bool location_valid;
 
-        bool get_location(Location &loc) const {
+        bool get_location(AbsAltLocation &loc) const {
             loc = location;
             return location_valid;
         };

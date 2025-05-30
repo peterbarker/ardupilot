@@ -275,7 +275,7 @@ private:
     uint32_t _last_startup_ms;
 
     // last origin we returned, for DCM fallback from EKF
-    Location last_origin;
+    AbsAltLocation last_origin;
 
     // Declare filter states for HPF and LPF used by complementary
     // filter in AP_AHRS::groundspeed_vector

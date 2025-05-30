@@ -155,7 +155,7 @@ bool Plane::update_home()
     return ret;
 }
 
-bool Plane::set_home_persistently(const AbsAltLocation &loc)
+bool Plane::set_home_persistently(const Location &loc)
 {
     if (hal.util->was_watchdog_armed()) {
         return false;
