@@ -137,7 +137,8 @@ local json_log = nil
 gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: starting with %u beacons", #SSIM_GND_ALT))
 
 local function send_json(json)
-   local msg = string.format([[Content-Type: application/json
+   local msg = string.format([[HTTP/1.0 200 OK
+Content-Type: application/json
 Cache-Control: no-cache
 Content-Length: %u
 Server: silvus sim
@@ -148,8 +149,8 @@ Server: silvus sim
 end
 
 local function send_noise_level()
-   gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: send_temperature"))
-   noise_level = 17
+   gcs:send_text(MAV_SEVERITY.INFO, string.format("SilvusSim: send_noise_level"))
+   noise_level = 19
    local json = string.format([[{"result" : [%s],"id" : "sbkb5u0c", "jsonrpc" : "2.0"}]], noise_level)
    send_json(json)
 end
@@ -214,7 +215,8 @@ local function send_ranges()
       end
    end
    local json = string.format([[{"result" : [%s],"id" : "sbkb5u0c", "jsonrpc" : "2.0"}]], range_str)
-   local msg = string.format([[Content-Type: application/json
+   local msg = string.format([[
+Content-Type: application/json
 Cache-Control: no-cache
 Content-Length: %u
 Server: silvus sim
@@ -331,6 +333,7 @@ local function update()
    if not connection_sock then
       return
    end
+   connection_sock:set_blocking(true)
    http_request = ''
 end
 

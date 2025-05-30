@@ -204,11 +204,12 @@ local last_request_ms = nil
 local last_heartbeat_ms = nil
 local json = require("json")
 local json_log = nil
+local response_handler = nil
 
 --[[
    make a silvus API request
 --]]
-local function http_request(api)
+local function http_request(api, http_request_response_handler)
    if sock then
       sock:close()
       sock = nil
@@ -216,9 +217,11 @@ local function http_request(api)
    sock = Socket(0)
    local node_ip = silvus_ip()
    if not sock:connect(node_ip, SLV_HTTP_PORT:get()) then
-      gcs:send_text(MAV_SEVERITY.ERROR, string.format("Silvus: failed to connect", name))
+      gcs:send_text(MAV_SEVERITY.ERROR, string.format("Silvus: failed to connect to " .. node_ip .. ":" .. SLV_HTTP_PORT:get(), name))
+      sock = nil
       return nil
    end
+   sock:set_blocking(true)
    local json = string.format([[{"jsonrpc":"2.0","method":"%s","id":"sbkb5u0c"}]], api)
    local cmd = string.format([[POST /streamscape_api HTTP/1.1
 Host: %s
@@ -230,11 +233,12 @@ Content-Length: %u
    cmd = string.gsub(cmd,"\n","\r\n")
    local full_cmd = cmd .. json
    --save_to_file("json_req.txt", full_cmd)
-   sock:set_blocking(false)
+   -- sock:set_blocking(false)
    sock:send(cmd, #cmd)
    sock:send(json, #json)
    http_reply = ''
    reply_start = millis()
+   response_handler = http_request_response_handler
 end
 
 --[[
@@ -475,8 +479,14 @@ local function parse_reply()
    local result = req['result']
    if not result then
       -- badly formatted
+      print("badly formwatted")
       return
    end
+
+   response_handler(result)
+end
+
+local function handle_reply_TOF(result)
    local num_nodes = math.floor(#result / 3)
    for i = 1, num_nodes do
       local node_id = tonumber(result[1+(i-1)*3])
@@ -495,6 +505,10 @@ local function parse_reply()
    end
 end
 
+local function handle_reply_noise_level(result)
+   gcs:send_text(0, "Handle reply noise level!!!")
+end
+
 --[[
    see if we have a API reply
 --]]
@@ -507,11 +521,10 @@ local function check_reply()
       parse_reply()
       return
    end
+   sock:set_blocking(true)
    local r = sock:recv(1024)
    if r then
       http_reply = http_reply .. r
-   else
-      parse_reply()
    end
 end
 
@@ -562,7 +575,8 @@ local function update()
    local period_ms = 1000.0 / SLV_RATE:get()
    if not last_request_ms or now - last_request_ms >= period_ms then
       last_request_ms = now
-      http_request("current_tof")
+--      http_request("current_tof", handle_reply_TOF)
+      http_request("noise_level", handle_reply_noise_level)
    end
 end
 
