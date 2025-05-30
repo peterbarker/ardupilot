@@ -130,7 +130,7 @@ public:
 
         tmp_location[msg.instance].lat = msg.lat;
         tmp_location[msg.instance].lng = msg.lng;
-        tmp_location[msg.instance].alt = msg.alt;
+        tmp_location[msg.instance].set_alt_cm(msg.alt);
     }
 
 private:
@@ -139,5 +139,5 @@ private:
     struct log_RGPI _RGPI[GPS_MAX_INSTANCES];
     struct log_RGPJ _RGPJ[GPS_MAX_INSTANCES];
 
-    Location tmp_location[GPS_MAX_INSTANCES];
+    AbsAltLocation tmp_location[GPS_MAX_INSTANCES];
 };

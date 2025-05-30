@@ -92,7 +92,7 @@ public:
         Barometric = 0,  // we use a specific model for this?
         WGS84 = 1,
     };
-    struct Loc : Location {
+    struct Loc : AbsAltLocation {
         AltType loc_alt_type;  // more information on altitude in base class
 
         AP_GPS_FixType fix_type;
