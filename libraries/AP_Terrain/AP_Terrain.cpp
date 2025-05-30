@@ -172,7 +172,8 @@ bool AP_Terrain::height_amsl(const Location &loc, float &height, bool corrected)
         loc.lng == ahrs.get_home().lng) {
         // remember home altitude as a special case
         home_height = height;
-        home_loc = loc;
+        home_loc.lat = loc.lat;
+        home_loc.lng = loc.lng;
         have_home_height = true;
     }
 
@@ -205,7 +206,7 @@ bool AP_Terrain::height_terrain_difference_home(float &terrain_difference, bool 
         return false;
     }
 
-    Location loc;
+    AbsAltLocation loc;
     if (!ahrs.get_location(loc)) {
         // we don't know where we are
         return false;
@@ -242,7 +243,7 @@ bool AP_Terrain::height_above_terrain(float &terrain_altitude, bool extrapolate)
 {
     const AP_AHRS &ahrs = AP::ahrs();
 
-    Location current_loc;
+    AbsAltLocation current_loc;
     if (!ahrs.get_location(current_loc)) {
         // we don't know where we are
         return false;
@@ -320,7 +321,7 @@ float AP_Terrain::lookahead(float bearing, float distance, float climb_ratio)
         return 0;
     }
 
-    Location loc;
+    AbsAltLocation loc;
     if (!AP::ahrs().get_location(loc)) {
         // we don't know where we are
         return 0;
@@ -370,7 +371,7 @@ void AP_Terrain::update(void)
     height_amsl(ahrs.get_home(), height);
 
     // update the cached current location height
-    Location loc;
+    AbsAltLocation loc;
     bool pos_valid = ahrs.get_location(loc);
     bool terrain_valid = pos_valid && height_amsl(loc, height);
     if (pos_valid && terrain_valid) {
@@ -454,7 +455,7 @@ void AP_Terrain::log_terrain_data()
     if (!allocate()) {
         return;
     }
-    Location loc;
+    AbsAltLocation loc;
     if (!AP::ahrs().get_location(loc)) {
         // we don't know where we are
         return;

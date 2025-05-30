@@ -7,6 +7,7 @@
 class Location
 {
 public:
+    friend class AbsAltLocation;
 
     uint8_t relative_alt : 1;           // 1 if altitude is relative to home
     uint8_t loiter_ccw   : 1;           // 0 if clockwise, 1 if counter clockwise
@@ -15,7 +16,9 @@ public:
     uint8_t loiter_xtrack : 1;          // 0 to crosstrack from center of waypoint, 1 to crosstrack from tangent exit location
 
     // note that mission storage only stores 24 bits of altitude (~ +/- 83km)
+protected:
     int32_t alt; // in cm
+public:
     int32_t lat; // in 1E7 degrees
     int32_t lng; // in 1E7 degrees
 
@@ -216,19 +219,31 @@ private:
 // a Location object, but the stored altitude is always in AltFrame::ABSOLUTE:
 class AbsAltLocation : public Location {
 public:
+
+    using Location::get_alt_cm;
+    using Location::get_alt_m;
     int32_t get_alt_cm() const { return alt; }
     float get_alt_m() const { return alt * 0.01; }
 
     void set_alt_cm(int32_t alt_cm) { alt = alt_cm; }
     void set_alt_m(float alt_m) { alt = alt_m * 100; }
+    void set_alt_mm(float alt_mm) { alt = alt_mm * 10; }
 
     AbsAltLocation(int32_t latitude, int32_t longitude, int32_t alt_in_cm) {
         Location(latitude, longitude, alt_in_cm, Location::AltFrame::ABSOLUTE);
     }
+    AbsAltLocation(const Vector3f &ekf_offset_neu);
 
     bool from(const Location &loc);
 
+    // only allow copying from other AbsAltLocation objects:
+    void copy_alt_from(AbsAltLocation otherlocation) {
+        Location::copy_alt_from(otherlocation);
+    };
+
 private:
+
+    using Location::copy_alt_from;
 
     // privatise some methods
     using Location::change_alt_frame;

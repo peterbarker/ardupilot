@@ -26,7 +26,7 @@ public:
     GPS_Status status() const {
         return status(primary_sensor());
     }
-    const Location &location(uint8_t instance) const {
+    const AbsAltLocation &location(uint8_t instance) const {
         return tmp_location[instance];
     }
     bool have_vertical_velocity(uint8_t instance) const {
@@ -108,7 +108,7 @@ public:
     }
 
     // TODO: decide if this really, really should be here!
-    const Location &location() const {
+    const AbsAltLocation &location() const {
         return location(_RGPH.primary_sensor);
     }
 

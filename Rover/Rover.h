@@ -166,7 +166,7 @@ private:
     RC_Channels_Rover &rc() { return g2.rc_channels; }
 
     // The rover's current location
-    Location current_loc;
+    AbsAltLocation current_loc;
 
     // Camera
 #if AP_CAMERA_ENABLED

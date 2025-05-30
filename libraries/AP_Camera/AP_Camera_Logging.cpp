@@ -24,7 +24,7 @@ void AP_Camera_Backend::Write_CameraInfo(enum LogMessages msg, uint64_t timestam
 
     const AP_AHRS &ahrs = AP::ahrs();
 
-    Location current_loc;
+    AbsAltLocation current_loc;
     if (!ahrs.get_location(current_loc)) {
         // completely ignore this failure!  AHRS will provide its best guess.
     }

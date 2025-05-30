@@ -871,6 +871,13 @@ void Copter::update_simple_mode(void)
     channel_pitch->set_control_in(-rollx*ahrs.sin_yaw() + pitchx*ahrs.cos_yaw());
 }
 
+int32_t Copter::current_alt_above_home_cm() const
+{
+    int32_t ret;
+    UNUSED_RESULT(current_loc.get_alt_cm(current_loc.get_alt_frame(), ret));
+    return ret;
+}
+
 // update_super_simple_bearing - adjusts simple bearing based on location
 // should be called after home_bearing has been updated
 void Copter::update_super_simple_bearing(bool force_update)

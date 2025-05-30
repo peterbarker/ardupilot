@@ -473,6 +473,8 @@ private:
     // 3D Location vectors
     // Current location of the vehicle (altitude is relative to home)
     Location current_loc;
+    // return current location above home:
+    int32_t current_alt_above_home_cm() const;
 
     // Attitude, Position and Waypoint navigation objects
     // To-Do: move inertial nav up or other navigation variables down here
