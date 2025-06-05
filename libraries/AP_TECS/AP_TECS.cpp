@@ -284,7 +284,7 @@ const AP_Param::GroupInfo AP_TECS::var_info[] = {
 
     // @Param: HDEM_TCONST
     // @DisplayName: Height Demand Time Constant
-    // @Description: This sets the time constant of the low pass filter that is applied to the height demand input when bit 1 of TECS_OPTIONS is not selected.
+    // @Description: This sets the time constant of the low pass filter that is applied to the height demand input when bit 0 of TECS_OPTIONS is not selected.
     // @Range: 1.0 5.0
     // @Units: s
     // @Increment: 0.2
@@ -1540,7 +1540,7 @@ void AP_TECS::_update_pitch_limits(const int32_t ptchMinCO_cd) {
     if (_flight_stage == AP_FixedWing::FlightStage::TAKEOFF
         || _flight_stage == AP_FixedWing::FlightStage::ABORT_LANDING)
     {
-        _PITCHminf = CentiDegreesToRadians(ptchMinCO_cd);
+        _PITCHminf = cd_to_rad(ptchMinCO_cd);
     }
 
     // Apply external limits.

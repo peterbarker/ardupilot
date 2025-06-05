@@ -1136,7 +1136,7 @@ void QuadPlane::get_pilot_desired_lean_angles(float &roll_out_cd, float &pitch_o
     }
 
     // apply lateral tilt to euler roll conversion
-    roll_out_cd = 100 * degrees(atanf(cosf(radians(pitch_out_cd*0.01))*tanf(radians(roll_out_cd*0.01))));
+    roll_out_cd = 100 * degrees(atanf(cosf(cd_to_rad(pitch_out_cd)) * tanf(cd_to_rad(roll_out_cd))));
 }
 
 /*
@@ -1432,7 +1432,7 @@ float QuadPlane::desired_auto_yaw_rate_cds(void) const
     if (aspeed < 1) {
         aspeed = 1;
     }
-    float yaw_rate = degrees(GRAVITY_MSS * tanf(radians(plane.nav_roll_cd*0.01f))/aspeed) * 100;
+    float yaw_rate = degrees(GRAVITY_MSS * tanf(cd_to_rad(plane.nav_roll_cd))/aspeed) * 100;
     return yaw_rate;
 }
 
@@ -3110,7 +3110,7 @@ void QuadPlane::takeoff_controller(void)
     if (plane.arming.last_arm_method() == AP_Arming::Method::RUDDER &&
         (takeoff_last_run_ms == 0 ||
          now - takeoff_last_run_ms > 1000) &&
-        !plane.seen_neutral_rudder &&
+        !rc().seen_neutral_rudder() &&
         spool_state <= AP_Motors::DesiredSpoolState::GROUND_IDLE) {
         // start motor spinning if not spinning already so user sees it is armed
         set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);

@@ -39,7 +39,7 @@ bool Plane::auto_takeoff_check(void)
     
     //check if waiting for rudder neutral after rudder arm
     if (plane.arming.last_arm_method() == AP_Arming::Method::RUDDER &&
-        !seen_neutral_rudder) {
+        !rc().seen_neutral_rudder()) {
         // we were armed with rudder but have not seen rudder neutral yet
         takeoff_state.waiting_for_rudder_neutral = true;
         // warn if we have been waiting a long time
@@ -238,7 +238,7 @@ void Plane::takeoff_calc_pitch(void)
         // increase the robustness of hand launches, particularly
         // in cross-winds. If we start to roll over then we reduce
         // pitch demand until the roll recovers
-        float roll_error_rad = radians(constrain_float(labs(nav_roll_cd - ahrs.roll_sensor) * 0.01, 0, 90));
+        float roll_error_rad = cd_to_rad(constrain_float(labs(nav_roll_cd - ahrs.roll_sensor), 0, 9000));
         float reduction = sq(cosf(roll_error_rad));
         nav_pitch_cd *= reduction;
 

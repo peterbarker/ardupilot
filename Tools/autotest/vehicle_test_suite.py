@@ -489,6 +489,9 @@ class WaitAndMaintain(object):
         self.last_progress_print = 0
         self.progress_print_interval = progress_print_interval
         self.comparator = comparator
+        if self.minimum_duration is not None:
+            if self.timeout < self.minimum_duration:
+                raise ValueError("timeout less than min duration")
 
         self.fn = fn
         self.fn_interval = fn_interval
@@ -700,6 +703,17 @@ class WaitAndMaintainArmed(WaitAndMaintain):
 
     def announce_start_text(self):
         return "Ensuring vehicle remains armed"
+
+
+class WaitAndMaintainDisarmed(WaitAndMaintain):
+    def get_current_value(self):
+        return self.test_suite.armed()
+
+    def get_target_value(self):
+        return False
+
+    def announce_start_text(self):
+        return "Ensuring vehicle remains disarmed"
 
 
 class WaitAndMaintainServoChannelValue(WaitAndMaintain):
@@ -2430,6 +2444,10 @@ class TestSuite(ABC):
         if mark_context:
             self.context_get().reboot_sitl_was_done = True
 
+    def assert_armed(self):
+        if not self.armed():
+            raise NotAchievedException("Not armed")
+
     def reboot_sitl_mavproxy(self, required_bootcount=None):
         """Reboot SITL instance using MAVProxy and wait for it to reconnect."""
         old_bootcount = self.get_parameter('STAT_BOOTCNT')
@@ -3088,41 +3106,11 @@ class TestSuite(ABC):
 
         return ids
 
-    def LoggerDocumentation_greylist(self):
-        '''returns a set of messages should should be documented but
-        are currently known as undocumented'''
-        return set([
-
-            "SAF1",  # blimp-sim
-            "SAN1",  # blimp-sim
-            "SAN2",  # blimp-sim
-            "SBA1",  # blimp-sim
-            "SBLM",  # blimp-sim
-            "SFA1",  # blimp-sim
-            "SFAN",  # blimp-sim
-            "SFN",   # blimp-sim
-            "SFT",   # blimp-sim
-            "SFV1",  # blimp-sim
-            "SMGC",  # blimp-sim
-            "SRT1",  # blimp-sim
-            "SRT2",  # blimp-sim
-            "SRT3",  # blimp-sim
-            "SSAN",  # blimp-sim
-        ])
-
     def LoggerDocumentation_whitelist(self):
         '''returns a set of messages which we do not want to see
         documentation for'''
 
-        # we allow for no docs for replay messages, as these are not for end-users. They are
-        # effectively binary blobs for replay
-        # Documenting these is still useful! -pb
-        REPLAY_MSGS = ['RFRH', 'RFRF', 'REV2', 'RSO2', 'RWA2', 'REV3', 'RSO3', 'RWA3', 'RMGI',
-                       'REY3', 'RISH', 'RISI', 'RISJ', 'RBRH', 'RBRI', 'RRNH', 'RRNI',
-                       'RGPH', 'RGPI', 'RGPJ', 'RASH', 'RASI', 'RBCH', 'RBCI', 'RVOH', 'RMGH',
-                       'ROFH', 'REPH', 'REVH', 'RWOH', 'RBOH', 'RSLL']
-
-        ret = set(REPLAY_MSGS)
+        ret = set()
 
         # messages not expected to be on particular vehicles.  Nothing
         # needs fixing below this point, unless you can come up with a
@@ -3133,7 +3121,8 @@ class TestSuite(ABC):
         # those messages.  We *do* care about the documented messages
         # for a vehicle as we follow the tree created by the
         # documentation (eg. @Path:
-        # ../libraries/AP_LandingGear/AP_LandingGear.cpp).
+        # ../libraries/AP_LandingGear/AP_LandingGear.cpp).  The lists
+        # here have been created to fix this discrepancy.
         vinfo_key = self.vehicleinfo_key()
         if vinfo_key != 'ArduPlane' and vinfo_key != 'ArduCopter' and vinfo_key != 'Helicopter':
             ret.update([
@@ -3208,7 +3197,6 @@ class TestSuite(ABC):
         tree = objectify.fromstring(xml)
 
         whitelist = self.LoggerDocumentation_whitelist()
-        greylist = self.LoggerDocumentation_greylist()
 
         docco_ids = {}
         for thing in tree.logformat:
@@ -3235,9 +3223,6 @@ class TestSuite(ABC):
         overdocumented = set()
         for name in sorted(code_ids.keys()):
             if name not in docco_ids:
-                if name in greylist:
-                    self.progress(f"{name} should be documented but isn't")
-                    continue
                 if name not in whitelist:
                     undocumented.add(name)
                 continue
@@ -3287,11 +3272,6 @@ class TestSuite(ABC):
                                                (name, label))
         if len(missing) > 0:
             raise NotAchievedException("Documented messages (%s) not in code" % missing)
-
-        # ensure things in the whitelist are not documented:
-        for g in greylist:
-            if g in docco_ids:
-                raise NotAchievedException(f"greylisted ({g}) is actually documented")
 
     def initialise_after_reboot_sitl(self):
 

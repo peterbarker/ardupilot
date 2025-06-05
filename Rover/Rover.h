@@ -367,7 +367,6 @@ private:
     // radio.cpp
     void set_control_channels(void) override;
     void init_rc_in();
-    void rudder_arm_disarm_check();
     void read_radio();
     void radio_failsafe_check(uint16_t pwm);
 
@@ -416,7 +415,8 @@ private:
         Hold          = 2,
         SmartRTL      = 3,
         SmartRTL_Hold = 4,
-        Terminate     = 5
+        Terminate     = 5,
+        Loiter_Hold   = 6,
     };
 
     enum class Failsafe_Options : uint32_t {

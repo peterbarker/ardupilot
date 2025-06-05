@@ -1674,7 +1674,7 @@ void AP_OSD_Screen::draw_message(uint8_t x, uint8_t y)
 // draw a arrow at the given angle, and print the given magnitude
 void AP_OSD_Screen::draw_speed(uint8_t x, uint8_t y, float angle_rad, float magnitude)
 {
-    int32_t angle_cd = angle_rad * DEGX100;
+    int32_t angle_cd = rad_to_cd(angle_rad);
     char arrow = get_arrow_font_index(angle_cd);
     if (u_scale(SPEED, magnitude) < 9.95) {
         backend->write(x, y, false, "%c %1.1f%c", arrow, u_scale(SPEED, magnitude), u_icon(SPEED));
@@ -1803,7 +1803,7 @@ void AP_OSD_Screen::draw_home(uint8_t x, uint8_t y)
 void AP_OSD_Screen::draw_heading(uint8_t x, uint8_t y)
 {
     AP_AHRS &ahrs = AP::ahrs();
-    uint16_t yaw = ahrs.yaw_sensor / 100;
+    uint16_t yaw = ahrs.get_yaw_deg();
     backend->write(x, y, false, "%3d%c", yaw, SYMBOL(SYM_DEGR));
 }
 

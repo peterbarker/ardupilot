@@ -2902,79 +2902,72 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
     def AutoTune(self):
         """Test autotune mode"""
 
-        rlld = self.get_parameter("ATC_RAT_RLL_D")
-        rlli = self.get_parameter("ATC_RAT_RLL_I")
-        rllp = self.get_parameter("ATC_RAT_RLL_P")
+        gain_names = [
+            "ATC_RAT_RLL_D",
+            "ATC_RAT_RLL_I",
+            "ATC_RAT_RLL_P",
+        ]
+
+        ogains = self.get_parameters(gain_names)
+        # set these parameters so they get reverted at the end of the test:
+        self.set_parameters(ogains)
+
         self.set_parameter("ATC_RAT_RLL_SMAX", 1)
         self.takeoff(10)
 
-        # hold position in loiter
+        tstart = self.get_sim_time()
+
         self.change_mode('AUTOTUNE')
 
-        tstart = self.get_sim_time()
-        sim_time_expected = 5000
-        deadline = tstart + sim_time_expected
-        while self.get_sim_time_cached() < deadline:
-            now = self.get_sim_time_cached()
-            m = self.mav.recv_match(type='STATUSTEXT',
-                                    blocking=True,
-                                    timeout=1)
-            if m is None:
-                continue
-            self.progress("STATUSTEXT (%u<%u): %s" % (now, deadline, m.text))
-            if "AutoTune: Success" in m.text:
-                self.progress("AUTOTUNE OK (%u seconds)" % (now - tstart))
-                # near enough for now:
-                self.change_mode('LAND')
-                self.wait_landed_and_disarmed()
-                # check the original gains have been re-instated
-                if (rlld != self.get_parameter("ATC_RAT_RLL_D") or
-                        rlli != self.get_parameter("ATC_RAT_RLL_I") or
-                        rllp != self.get_parameter("ATC_RAT_RLL_P")):
-                    raise NotAchievedException("AUTOTUNE gains still present")
-                return
+        self.wait_statustext("AutoTune: Success", timeout=5000)
+        now = self.get_sim_time()
+        self.progress("AUTOTUNE OK (%u seconds)" % (now - tstart))
 
-        raise NotAchievedException("AUTOTUNE failed (%u seconds)" %
-                                   (self.get_sim_time() - tstart))
+        # near enough for now:
+        self.change_mode('LAND')
+        self.wait_landed_and_disarmed()
+
+        self.progress("checking the original gains have been re-instated")
+        ngains = self.get_parameters(gain_names)
+        for g in ngains.keys():
+            if ogains[g] != ngains[g]:
+                raise NotAchievedException(f"AUTOTUNE gains not discarded {ogains=} {ngains=}")
 
     def AutoTuneYawD(self):
         """Test autotune mode"""
 
-        rlld = self.get_parameter("ATC_RAT_RLL_D")
-        rlli = self.get_parameter("ATC_RAT_RLL_I")
-        rllp = self.get_parameter("ATC_RAT_RLL_P")
+        gain_names = [
+            "ATC_RAT_RLL_D",
+            "ATC_RAT_RLL_I",
+            "ATC_RAT_RLL_P",
+            "ATC_RAT_YAW_D",
+        ]
+        ogains = self.get_parameters(gain_names)
+        # set these parameters so they get reverted at the end of the test:
+        self.set_parameters(ogains)
+
         self.set_parameter("ATC_RAT_RLL_SMAX", 1)
         self.set_parameter("AUTOTUNE_AXES", 15)
         self.takeoff(10)
 
+        tstart = self.get_sim_time()
+
         # hold position in loiter
         self.change_mode('AUTOTUNE')
 
-        tstart = self.get_sim_time()
-        sim_time_expected = 5000
-        deadline = tstart + sim_time_expected
-        while self.get_sim_time_cached() < deadline:
-            now = self.get_sim_time_cached()
-            m = self.mav.recv_match(type='STATUSTEXT',
-                                    blocking=True,
-                                    timeout=1)
-            if m is None:
-                continue
-            self.progress("STATUSTEXT (%u<%u): %s" % (now, deadline, m.text))
-            if "AutoTune: Success" in m.text:
-                self.progress("AUTOTUNE OK (%u seconds)" % (now - tstart))
-                # near enough for now:
-                self.change_mode('LAND')
-                self.wait_landed_and_disarmed()
-                # check the original gains have been re-instated
-                if (rlld != self.get_parameter("ATC_RAT_RLL_D") or
-                        rlli != self.get_parameter("ATC_RAT_RLL_I") or
-                        rllp != self.get_parameter("ATC_RAT_RLL_P")):
-                    raise NotAchievedException("AUTOTUNE gains still present")
-                return
+        self.wait_statustext("AutoTune: Success", timeout=5000)
+        now = self.get_sim_time()
+        self.progress("AUTOTUNE OK (%u seconds)" % (now - tstart))
 
-        raise NotAchievedException("AUTOTUNE failed (%u seconds)" %
-                                   (self.get_sim_time() - tstart))
+        # near enough for now:
+        self.change_mode('LAND')
+        self.wait_landed_and_disarmed()
+
+        self.progress("checking the original gains have been re-instated")
+        ngains = self.get_parameters(gain_names)
+        for g in ngains.keys():
+            if ogains[g] != ngains[g]:
+                raise NotAchievedException(f"AUTOTUNE gains not discarded {ogains=} {ngains=}")
 
     def AutoTuneSwitch(self):
         """Test autotune on a switch with gains being saved"""
@@ -7963,14 +7956,14 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         })
         sensors = [  # tuples of name, prx_type
             ('ld06', 16, {
-                mavutil.mavlink.MAV_SENSOR_ROTATION_NONE: 273,
+                mavutil.mavlink.MAV_SENSOR_ROTATION_NONE: 275,
                 mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_45: 256,
                 mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_90: 1130,
-                mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_135: 696,
+                mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_135: 1200,
                 mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_180: 625,
                 mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_225: 967,
                 mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_270: 760,
-                mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_315: 771,
+                mavutil.mavlink.MAV_SENSOR_ROTATION_YAW_315: 765,
             }),
             ('sf45b', 8, {
                 mavutil.mavlink.MAV_SENSOR_ROTATION_NONE: 270,
@@ -8868,7 +8861,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
         self.set_parameters({
             "SERIAL5_PROTOCOL": 2,    # mavlink
-            "SERIAL5_OPTIONS": 1024,  # private
+            "MAV3_OPTIONS": 2,        # private
             "GEN_TYPE": 4,            # loweheiser
             "EFI_TYPE": 4,            # loweheiser
             "SIM_EFI_TYPE": 2,        # loweheiser sim
@@ -13673,6 +13666,40 @@ RTL_ALT 111
         self.reboot_sitl()
         self.assert_parameter_value("COMPASS_OFS_X", new_compass_ofs_x, epsilon=30)
 
+    def RudderDisarmMidair(self):
+        '''check disarm behaviour mid-air'''
+        self.change_mode('LOITER')
+        self.wait_ready_to_arm()
+        self.change_mode('STABILIZE')
+
+        # Set home current location, this gives a large home vs orgin difference
+        self.set_home(self.mav.location())
+
+        self.set_rc(4, 2000)
+        self.wait_armed()
+        self.set_rc(4, 1500)
+        self.set_rc(3, 2000)
+        self.wait_altitude(300, 20000, relative=True, timeout=10000)
+        self.hover()
+        self.set_rc(4, 1000)
+        self.delay_sim_time(11)
+        self.progress("Checking we are still armed")
+        self.assert_armed()
+
+        self.set_rc(3, 2000)
+        self.wait_altitude(300, 20000, relative=True)
+        self.set_rc(3, 1000)
+        self.set_rc(4, 1000)
+        self.delay_sim_time(11)
+        self.progress("Checking we disarm")
+        self.wait_disarmed(timeout=5)
+        self.set_rc(4, 1500)
+        self.arm_vehicle()
+        self.set_rc(3, 1600)
+        self.delay_sim_time(10)
+
+        self.do_RTL(timeout=600)
+
     def AHRSAutoTrim(self):
         '''calibrate AHRS trim using RC input'''
         self.progress("Making earth frame same as body frame")  # because I'm lazy
@@ -14009,6 +14036,7 @@ RTL_ALT 111
             self.AHRSTrimLand,
             self.IBus,
             self.GuidedYawRate,
+            self.RudderDisarmMidair,
             self.NoArmWithoutMissionItems,
             self.DO_CHANGE_SPEED_in_guided,
             self.ArmSwitchAfterReboot,
