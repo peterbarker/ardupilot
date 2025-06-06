@@ -246,6 +246,9 @@ public:
         SCRIPTING_6 =        305,
         SCRIPTING_7 =        306,
         SCRIPTING_8 =        307,
+
+        // custom RAPHE aux function; beware that conflicts may occur!
+        RAPHE_DISABLE_GPS_OR_YAW = 500,
     };
     typedef enum AUX_FUNC aux_func_t;
 

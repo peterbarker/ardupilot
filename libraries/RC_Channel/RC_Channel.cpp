@@ -508,6 +508,7 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
     case AUX_FUNC::FENCE:
     case AUX_FUNC::GPS_DISABLE:
     case AUX_FUNC::GPS_DISABLE_YAW:
+    case AUX_FUNC::RAPHE_DISABLE_GPS_OR_YAW:
     case AUX_FUNC::GRIPPER:
     case AUX_FUNC::KILL_IMU1:
     case AUX_FUNC::KILL_IMU2:
@@ -562,6 +563,7 @@ const RC_Channel::LookupTable RC_Channel::lookuptable[] = {
     { AUX_FUNC::SAILBOAT_TACK,"SailboatTack"},
     { AUX_FUNC::GPS_DISABLE,"GPSDisable"},
     { AUX_FUNC::GPS_DISABLE_YAW,"GPSDisableYaw"},
+    { AUX_FUNC::RAPHE_DISABLE_GPS_OR_YAW,"RapheDisableSomething"},
     { AUX_FUNC::DISABLE_AIRSPEED_USE,"DisableAirspeedUse"},
     { AUX_FUNC::RELAY5,"Relay5"},
     { AUX_FUNC::RELAY6,"Relay6"},
@@ -1043,6 +1045,26 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
 
     case AUX_FUNC::GPS_DISABLE_YAW:
         AP::gps().set_force_disable_yaw(ch_flag == AuxSwitchPos::HIGH);
+        break;
+
+    case AUX_FUNC::RAPHE_DISABLE_GPS_OR_YAW:
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "RDGOY: High");
+            AP::gps().force_disable(true);
+            AP::gps().set_force_disable_yaw(false);
+            break;
+        case AuxSwitchPos::MIDDLE:
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "RDGOY: Middle");
+            AP::gps().force_disable(false);
+            AP::gps().set_force_disable_yaw(true);
+            break;
+        case AuxSwitchPos::LOW:
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "RDGOY: Low");
+            AP::gps().force_disable(false);
+            AP::gps().set_force_disable_yaw(false);
+            break;
+        }
         break;
 
     case AUX_FUNC::DISABLE_AIRSPEED_USE: {
