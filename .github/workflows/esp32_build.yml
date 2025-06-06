@@ -1,5 +1,8 @@
 name: ESP32 Build
 
+permissions:
+  contents: read
+
 on:
   push:
     paths-ignore:

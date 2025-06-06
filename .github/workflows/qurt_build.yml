@@ -1,5 +1,8 @@
 name: QURT Build
 
+permissions:
+  contents: read
+
 on:
   push:
     paths-ignore:

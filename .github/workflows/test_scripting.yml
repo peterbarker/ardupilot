@@ -1,5 +1,8 @@
 name: test scripting
 
+permissions:
+  contents: read
+
 on:
   push:
     paths: # only run for scripting changes
