@@ -174,7 +174,7 @@ class TestBuildOptions(object):
 
     def get_enable_defines(self, feature, options):
         '''returns a hash of (name, value) defines to turn all features *but* feature (and whatever it depends on) on'''
-        ret = self.get_disable_all_defines()
+        ret = self.get_disable_all_defines(use_match_glob=False)
         self.update_get_enable_defines_for_feature(ret, feature, options)
         for define in self.must_have_defines_for_board(self._board):
             ret[define] = 1
@@ -598,12 +598,12 @@ class TestBuildOptions(object):
                 return x
         raise ValueError("No such option (%s)" % label)
 
-    def get_disable_all_defines(self):
+    def get_disable_all_defines(self, use_match_glob=True):
         '''returns a hash of defines which turns all features off'''
         options = self.get_build_options_from_ardupilot_tree()
         defines = {}
         for feature in options:
-            if self.match_glob is not None:
+            if use_match_glob is True and self.match_glob is not None:
                 if not fnmatch.fnmatch(feature.define, self.match_glob):
                     continue
             defines[feature.define] = 0
