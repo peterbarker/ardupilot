@@ -233,7 +233,6 @@ private:
         uint32_t last_crash_warn_ms; // last time a crash warning was sent to gcs
         uint32_t last_ekf_warn_ms; // last time an ekf warning was sent to gcs
 #if AP_SUB_RC_ENABLED
-        int8_t radio_counter;            // number of iterations with throttle below throttle_fs_value
         uint8_t radio               : 1; // A status flag for the radio failsafe
 #endif    
 

@@ -43,10 +43,10 @@ bool RC_Channels_Sub::in_rc_failsafe() const
 
 bool RC_Channels_Sub::has_valid_input() const
 {
-    if (in_rc_failsafe()) {
+    if (!RC_Channels::has_valid_input()) {
         return false;
     }
-    if (sub.failsafe.radio_counter != 0) {
+    if (in_rc_failsafe()) {
         return false;
     }
     return true;
@@ -65,6 +65,16 @@ int8_t RC_Channels_Sub::flight_mode_channel_number() const
     return 1; // sub does not have a flight mode channel
 }
 #endif
+
+// specifies the limit for the channel.  Must usually be >= this
+// number to be valid, but might be <= if the channel is reversed.  If this value is UINT16_MAX then throttle failsafe is disabled
+uint16_t RC_Channels_Sub::bindtime_value_failsafe_channel_limit() const
+{
+    if (sub.g.failsafe_throttle == FS_THR_DISABLED) {
+        return UINT16_MAX;
+    }
+    return sub.g.failsafe_throttle_value;
+}
 
 // returns true if min throttle arming checks should be run
 bool RC_Channels_Sub::arming_check_throttle() const {
