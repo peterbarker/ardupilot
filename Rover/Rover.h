@@ -360,7 +360,6 @@ private:
     void set_control_channels(void) override;
     void init_rc_in();
     void read_radio();
-    void radio_failsafe_check(uint16_t pwm);
 
     // sensors.cpp
     void update_compass(void);

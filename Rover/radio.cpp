@@ -65,27 +65,17 @@ void Rover::read_radio()
 {
     if (!rc().read_input()) {
         // check if we lost RC link
-        radio_failsafe_check(channel_throttle->get_radio_in());
+        if (!g.fs_throttle_enabled) {
+            return;
+        }
+        if (AP_HAL::millis() - failsafe.last_valid_rc_ms > 500) {
+            AP_Notify::flags.failsafe_radio = true;
+            failsafe_trigger(FAILSAFE_EVENT_THROTTLE, "Radio", true);
+        }
         return;
     }
 
     failsafe.last_valid_rc_ms = AP_HAL::millis();
-    // check that RC value are valid
-    radio_failsafe_check(channel_throttle->get_radio_in());
-}
-
-void Rover::radio_failsafe_check(uint16_t pwm)
-{
-    if (!g.fs_throttle_enabled) {
-        // radio failsafe disabled
-        AP_Notify::flags.failsafe_radio = false;
-        return;
-    }
-
-    bool failed = pwm < static_cast<uint16_t>(g.fs_throttle_value);
-    if (AP_HAL::millis() - failsafe.last_valid_rc_ms > 500) {
-        failed = true;
-    }
-    AP_Notify::flags.failsafe_radio = failed;
-    failsafe_trigger(FAILSAFE_EVENT_THROTTLE, "Radio", failed);
+    AP_Notify::flags.failsafe_radio = false;
+    failsafe_trigger(FAILSAFE_EVENT_THROTTLE, "Radio", false);
 }
