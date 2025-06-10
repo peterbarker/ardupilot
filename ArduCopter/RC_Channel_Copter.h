@@ -43,6 +43,12 @@ public:
         return &obj_channels[chan];
     }
 
+    // specifies the limit for the channel.  Must usually be >= this
+    // number to be valid, but might be <= if the channel is reversed.
+    // If this returns UINT16_MAX then bind-time-value failsafe is not
+    // used
+    uint16_t bindtime_value_failsafe_channel_limit() const override;
+
     // returns true if throttle arming checks should be run
     bool arming_check_throttle() const override;
 
