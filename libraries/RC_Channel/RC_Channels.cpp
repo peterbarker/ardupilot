@@ -72,6 +72,50 @@ uint8_t RC_Channels::get_radio_in(uint16_t *chans, const uint8_t num_channels)
     return read_channels;
 }
 
+bool RC_Channels::bindtime_value_failsafe_value_is_good()
+{
+    const auto *ch = bindtime_value_failsafe_channel();
+    if (ch == nullptr) {
+        // bindtime-value failsafe is not being used
+        return true;
+    }
+
+    const uint16_t ch_value = ch->get_radio_in();
+    if (ch_value == UINT16_MAX) {
+        // bindtime-value failsafe is not being used
+        return true;
+    }
+
+    const uint16_t ch_limit = bindtime_value_failsafe_channel_limit();
+
+    if (ch->get_reverse()) {
+        // abnormal case, good if value is less than limit
+        return ch_value <= ch_limit;
+    }
+
+    // normal case, good if value is above limit:
+    return ch_value > ch_limit;
+}
+
+void RC_Channels::update_bindtime_value_failsafe()
+{
+    const bool good_input = bindtime_value_failsafe_value_is_good();
+
+    // three bad throttle values in a row result in failsafe being
+    // declared.  Some hysteresis here so we don't start accepting
+    // RC again until it has been good for three samples:
+    if (good_input) {
+        if (bindtime_value_failsafe_counter > 0) {
+            bindtime_value_failsafe_counter--;
+        }
+    } else {
+        if (bindtime_value_failsafe_counter < 3) {
+            bindtime_value_failsafe_counter++;
+        }
+    }
+}
+
+
 // update all the input channels
 bool RC_Channels::read_input(void)
 {
@@ -91,12 +135,25 @@ bool RC_Channels::read_input(void)
     for (uint8_t i=0; i<NUM_RC_CHANNELS; i++) {
         success |= channel(i)->update();
     }
-
-    if (success) {
-        rudder_arm_disarm_check();
+    if (!success) {
+        return false;
     }
 
-    return success;
+    // check for throttle-based (bind-time-values) failsafe:
+
+    // ideally this goes into AP_RCProtocol, but the Linux HAL
+    // continues to supply data via hal.rcin which isn't from
+    // AP_RCProtocol.  This would allow AP_Periph to understand
+    // bind-time-value failsafes.  throttle channel reversal will be a
+    // problem
+    update_bindtime_value_failsafe();
+    if (in_bindtime_value_failsafe()) {
+        return false;
+    }
+
+    rudder_arm_disarm_check();
+
+    return true;
 }
 
 uint8_t RC_Channels::get_valid_channel_count(void)
