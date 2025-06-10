@@ -533,7 +533,25 @@ public:
     virtual void read_mode_switch();
 
     virtual bool in_rc_failsafe() const { return true; };
-    virtual bool has_valid_input() const { return false; };
+    virtual bool has_valid_input() const {
+        return bindtime_value_failsafe_counter == 0;
+    }
+    bool in_bindtime_value_failsafe() const {
+        return bindtime_value_failsafe_counter >= 3;
+    }
+
+    // support for bind-time-value failsafe ("throttle-based"
+    // failsafe).  This may be virtual in the future (eg. Tracker uses
+    // RC but has no throttle)
+    RC_Channel *bindtime_value_failsafe_channel() const {
+        return &get_throttle_channel();
+    }
+    // specifies the limit for the channel.  Must usually be >= this
+    // number to be valid, but might be <= if the channel is reversed.
+    // UINT16_MAX is "not supported"
+    virtual uint16_t bindtime_value_failsafe_channel_limit() const {
+        return UINT16_MAX;
+    }
 
     virtual RC_Channel *get_arming_channel(void) const { return nullptr; };
 
@@ -676,6 +694,11 @@ private:
 
     // true if GCS is performing a RC calibration
     bool gcs_is_calibrating;
+
+    // bind-time value failsafe support:
+    uint8_t bindtime_value_failsafe_counter;
+    bool bindtime_value_failsafe_value_is_good();
+    void update_bindtime_value_failsafe();
 
 #if AP_SCRIPTING_ENABLED
     // bitmask of last aux function value, 2 bits per function
