@@ -58,7 +58,9 @@ void Blimp::read_radio()
     if (rc().read_input()) {
         ap.new_radio_frame = true;
 
-        set_throttle_and_failsafe(channel_up->get_radio_in());
+        if (failsafe.radio) {
+            set_failsafe_radio(false);
+        }
         set_throttle_zero_flag(channel_up->get_control_in());
 
         const float dt = (tnow_ms - last_radio_update_ms)*1.0e-3f;
@@ -75,8 +77,10 @@ void Blimp::read_radio()
 
     const uint32_t elapsed = tnow_ms - last_radio_update_ms;
     // turn on throttle failsafe if no update from the RC Radio for 500ms or 2000ms if we are using RC_OVERRIDE
+    // *OR* bind-time values have been received indicating the receiver is not good
     const uint32_t timeout = RC_Channels::has_active_overrides() ? FS_RADIO_RC_OVERRIDE_TIMEOUT_MS : FS_RADIO_TIMEOUT_MS;
-    if (elapsed < timeout) {
+    if (elapsed < timeout &&
+        !rc().in_bindtime_value_failsafe()) {
         // not timed out yet
         return;
     }
@@ -92,45 +96,6 @@ void Blimp::read_radio()
     // Nobody ever talks to us.  Log an error and enter failsafe.
     LOGGER_WRITE_ERROR(LogErrorSubsystem::RADIO, LogErrorCode::RADIO_LATE_FRAME);
     set_failsafe_radio(true);
-}
-
-#define FS_COUNTER 3        // radio failsafe kicks in after 3 consecutive throttle values below failsafe_throttle_value
-void Blimp::set_throttle_and_failsafe(uint16_t throttle_pwm)
-{
-    // if failsafe not enabled pass through throttle and exit
-    if (g.failsafe_throttle == FS_THR_DISABLED) {
-        set_failsafe_radio(false);
-        return;
-    }
-
-    //check for low throttle value
-    if (throttle_pwm < (uint16_t)g.failsafe_throttle_value) {
-
-        // if we are already in failsafe or motors not armed pass through throttle and exit
-        if (failsafe.radio || !(rc().has_ever_seen_rc_input() || motors->armed())) {
-            return;
-        }
-
-        // check for 3 low throttle values
-        // Note: we do not pass through the low throttle until 3 low throttle values are received
-        failsafe.radio_counter++;
-        if ( failsafe.radio_counter >= FS_COUNTER ) {
-            failsafe.radio_counter = FS_COUNTER;  // check to ensure we don't overflow the counter
-            set_failsafe_radio(true);
-        }
-    } else {
-        // we have a good throttle so reduce failsafe counter
-        failsafe.radio_counter--;
-        if ( failsafe.radio_counter <= 0 ) {
-            failsafe.radio_counter = 0;   // check to ensure we don't underflow the counter
-
-            // disengage failsafe after three (nearly) consecutive valid throttle values
-            if (failsafe.radio) {
-                set_failsafe_radio(false);
-            }
-        }
-        // pass through throttle
-    }
 }
 
 #define THROTTLE_ZERO_DEBOUNCE_TIME_MS 400

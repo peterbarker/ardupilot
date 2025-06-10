@@ -43,14 +43,25 @@ bool RC_Channels_Blimp::in_rc_failsafe() const
 
 bool RC_Channels_Blimp::has_valid_input() const
 {
-    if (blimp.failsafe.radio) {
+    if (!RC_Channels::has_valid_input()) {
         return false;
     }
-    if (blimp.failsafe.radio_counter != 0) {
+    if (blimp.failsafe.radio) {
         return false;
     }
     return true;
 }
+
+// specifies the limit for the channel.  Must usually be >= this
+// number to be valid, but might be <= if the channel is reversed.  If this value is UINT16_MAX then throttle failsafe is disabled
+uint16_t RC_Channels_Blimp::bindtime_value_failsafe_channel_limit() const
+{
+    if (blimp.g.failsafe_throttle == FS_THR_DISABLED) {
+        return UINT16_MAX;
+    }
+    return blimp.g.failsafe_throttle_value;
+}
+
 
 RC_Channel * RC_Channels_Blimp::get_arming_channel(void) const
 {
