@@ -34,6 +34,12 @@ public:
         return &obj_channels[chan];
     }
 
+    // specifies the limit for the channel.  Must usually be >= this
+    // number to be valid, but might be <= if the channel is reversed.
+    // If this returns UINT16_MAX then bind-time-value failsafe is not
+    // used
+    uint16_t bindtime_value_failsafe_channel_limit() const override;
+
 protected:
 
     // note that these callbacks are not presently used on Plane:
@@ -65,6 +71,12 @@ public:
         }
         return &obj_channels[chan];
     }
+
+    // specifies the limit for the channel.  Must usually be >= this
+    // number to be valid, but might be <= if the channel is reversed.
+    // If this returns UINT16_MAX then bind-time-value failsafe is not
+    // used
+    uint16_t bindtime_value_failsafe_channel_limit() const override { return UINT16_MAX; }
 
     // tell the gimbal code all is good with RC input:
     bool in_rc_failsafe() const override { return false; };
