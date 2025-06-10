@@ -76,6 +76,16 @@ bool RC_Channels_Rover::has_valid_input() const
     return true;
 }
 
+// specifies the limit for the channel.  Must usually be >= this
+// number to be valid, but might be <= if the channel is reversed.  If this value is UINT16_MAX then throttle failsafe is disabled
+uint16_t RC_Channels_Rover::bindtime_value_failsafe_channel_limit() const
+{
+    if (rover.g.fs_throttle_enabled == FS_THR_DISABLED) {
+        return UINT16_MAX;
+    }
+    return rover.g.fs_throttle_value;
+}
+
 RC_Channel * RC_Channels_Rover::get_arming_channel(void) const
 {
     return rover.channel_steer;

@@ -369,7 +369,6 @@ private:
     void init_rc_in();
     void rudder_arm_disarm_check();
     void read_radio();
-    void radio_failsafe_check(uint16_t pwm);
 
     // sensors.cpp
     void update_compass(void);
