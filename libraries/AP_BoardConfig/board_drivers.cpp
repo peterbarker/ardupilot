@@ -341,10 +341,6 @@ void AP_BoardConfig::board_autodetect(void)
     } else {
         config_error("Unable to detect board type");
     }
-#elif defined(HAL_CHIBIOS_ARCH_MINDPXV2)
-    // only one choice
-    state.board_type.set_and_notify(PX4_BOARD_MINDPXV2);
-    DEV_PRINTF("Detected MindPX-V2\n");
 #elif defined(HAL_CHIBIOS_ARCH_FMUV4PRO)
     // only one choice
     state.board_type.set_and_notify(PX4_BOARD_PIXHAWK_PRO);
