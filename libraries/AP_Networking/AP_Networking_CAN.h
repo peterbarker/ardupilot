@@ -1,5 +1,9 @@
 #pragma once
 
+#include "AP_Networking_Config.h"
+
+#if AP_NETWORKING_CAN_MCAST_ENABLED
+
 #include "AP_Networking.h"
 #include <AP_HAL/utility/Socket.h>
 
@@ -21,3 +25,4 @@ private:
 #endif
 };
 
+#endif  // AP_NETWORKING_CAN_MCAST_ENABLED
