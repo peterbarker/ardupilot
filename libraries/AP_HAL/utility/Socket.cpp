@@ -30,7 +30,7 @@
 
 #if AP_NETWORKING_BACKEND_CHIBIOS || AP_NETWORKING_BACKEND_PPP
 #include <lwip/sockets.h>
-#else
+#elif AP_NETWORKING_BACKEND_POSIX
 // SITL or Linux
 #include <fcntl.h>
 #include <unistd.h>
