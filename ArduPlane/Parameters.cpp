@@ -264,7 +264,7 @@ const AP_Param::Info Plane::var_info[] = {
 
     // @Param: RTL_RADIUS
     // @DisplayName: RTL loiter radius
-    // @Description: Defines the radius of the loiter circle when in RTL mode. If this is zero then WP_LOITER_RAD is used. If the radius is negative then a counter-clockwise is used. If positive then a clockwise loiter is used.
+    // @Description: Defines the radius of the loiter circle when in RTL mode. If this is zero then WP_LOITER_RAD is used. If the radius is negative then a counter-clockwise is used. If positive then a clockwise loiter is used. For quadplanes with Q_RTL_MODE set to 1 (Enabled), this value is used to set the minimum radius at which the plane will transition from fixed-wing to VTOL mode for landing.
     // @Units: m
     // @Range: -32767 32767
     // @Increment: 1
@@ -1224,8 +1224,8 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @DisplayName: Oneshot output mask
     // @Description: Mask of output channels to use oneshot on
     // @User: Advanced
-    // @Bitmask: 0: Servo 1, 1: Servo 2, 2: Servo 3, 3: Servo 4, 4: Servo 5, 5: Servo 6, 6: Servo 7, 7: Servo 8, 8: Servo 9, 9: Servo 10, 10: Servo 11, 11: Servo 12, 12: Servo 13, 13: Servo 14, 14: Servo 15
-    AP_GROUPINFO("ONESHOT_MASK", 32, ParametersG2, oneshot_mask, 0),
+    // @Bitmask: 0: Servo 1, 1: Servo 2, 2: Servo 3, 3: Servo 4, 4: Servo 5, 5: Servo 6, 6: Servo 7, 7: Servo 8, 8: Servo 9, 9: Servo 10, 10: Servo 11, 11: Servo 12, 12: Servo 13, 13: Servo 14, 14: Servo 15, 15: Servo 16, 16: Servo 17, 17: Servo 18, 18: Servo 19, 19: Servo 20, 20: Servo 21, 21: Servo 22, 22: Servo 23, 23: Servo 24, 24: Servo 25, 25: Servo 26, 26: Servo 27, 27: Servo 28, 28: Servo 29, 29: Servo 30, 30: Servo 31, 31: Servo 32
+     AP_GROUPINFO("ONESHOT_MASK", 32, ParametersG2, oneshot_mask, 0),
 
 #if AP_SCRIPTING_ENABLED && AP_FOLLOW_ENABLED
     // @Group: FOLL

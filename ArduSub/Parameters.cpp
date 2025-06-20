@@ -99,8 +99,8 @@ const AP_Param::Info Sub::var_info[] = {
 #if AP_SUB_RC_ENABLED        
     // @Param: FS_THR_ENABLE
     // @DisplayName: Throttle Failsafe Enable
-    // @Description: The throttle failsafe allows you to configure a software failsafe activated by a setting on the throttle input channel
-    // @Values:  0:Disabled,1: Warn only but prevent arming,2:Surface on throttle failsafe 
+    // @Description: The throttle failsafe allows you to configure a software RC failsafe activated by a setting on the throttle input channel. It also enables RC failsafe on absence of RC signals being recieved.
+    // @Values:  0:Disabled,1: Force effective control inputs to trim positions and prevent arming,2:Surface and hold on surface on failsafe 
     // @User: Standard
     GSCALAR(failsafe_throttle,  "FS_THR_ENABLE",   0),
 
@@ -702,6 +702,12 @@ const AP_Param::Info Sub::var_info[] = {
     GOBJECT(optflow,   "FLOW", AP_OpticalFlow),
 #endif
 
+#if OSD_ENABLED || OSD_PARAM_ENABLED
+    // @Group: OSD
+    // @Path: ../libraries/AP_OSD/AP_OSD.cpp
+    GOBJECT(osd, "OSD", AP_OSD),
+#endif
+
 #if AP_RPM_ENABLED
     // @Group: RPM
     // @Path: ../libraries/AP_RPM/AP_RPM.cpp
@@ -788,6 +794,10 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Standard
     // @Range: -100 100
     AP_GROUPINFO("SFC_NOBARO_THST", 22, ParametersG2, surface_nobaro_thrust, 10),
+
+    // @Group: ACTUATOR
+    // @Path: ../ArduSub/actuators.cpp
+    AP_SUBGROUPINFO(actuators, "ACTUATOR", 23, ParametersG2, Actuators),
 
     AP_GROUPEND
 };

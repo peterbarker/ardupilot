@@ -60,6 +60,10 @@ void Sub::init_ardupilot()
     relay.init();
 #endif
 
+#if OSD_ENABLED
+    osd.init();
+#endif
+
     /*
      *  setup the 'main loop is dead' check. Note that this relies on
      *  the RC library being initialised.
@@ -155,6 +159,7 @@ void Sub::init_ardupilot()
     mainloop_failsafe_enable();
 
     ins.set_log_raw_bit(MASK_LOG_IMU_RAW);
+    g2.actuators.initialize_actuators();
 
     // flag that initialisation has completed
     ap.initialised = true;

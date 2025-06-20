@@ -5,7 +5,7 @@
 #include <AP_Common/AP_Common.h>
 
 #include <AP_Arming/AP_Arming.h>
-
+#include "actuators.h"
 // Global parameter class.
 //
 class Parameters {
@@ -48,6 +48,7 @@ public:
         k_param_g2, // 2nd block of parameters
 
         k_param_sitl, // Simulation
+        k_param_osd, //OSD
 
         // Telemetry
         k_param_gcs0_unused = 10,      // unused in ArduPilot-4.7
@@ -408,6 +409,8 @@ public:
     AP_Float backup_origin_lon;
     AP_Float backup_origin_alt;
     AP_Float surface_nobaro_thrust;
+    Actuators actuators;
+
 };
 
 extern const AP_Param::Info        var_info[];
