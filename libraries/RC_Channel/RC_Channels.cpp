@@ -400,10 +400,24 @@ void RC_Channels::rudder_arm_disarm_check()
     // time to try to arm or disarm:
     rudder_arm_timer = 0;
     if (control_in > 4000) {
-        AP::arming().arm(AP_Arming::Method::RUDDER);
+#if AP_ARMING_ENABLED
+        const bool do_arm = (AP::arming().get_rudder_arming_type() != AP_Arming::RudderArming::IS_DISABLED);
+#else
+        const bool do_arm = true;
+#endif  // AP_ARMING_ENABLED
+        if (do_arm) {
+            AP::arming().arm(AP_Arming::Method::RUDDER);
+        }
         have_seen_neutral_rudder = false;
     } else {
-        AP::arming().disarm(AP_Arming::Method::RUDDER);
+#if AP_ARMING_ENABLED
+        const bool do_disarm = (AP::arming().get_rudder_arming_type() == AP_Arming::RudderArming::ARMDISARM);
+#else
+        const bool do_disarm = true;
+#endif  // AP_ARMING_ENABLED
+        if (do_disarm) {
+            AP::arming().disarm(AP_Arming::Method::RUDDER);
+        }
     }
 }
 
