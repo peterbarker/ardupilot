@@ -169,13 +169,13 @@ BUILD_OPTIONS = [
     Feature('Mission', 'MISSION_NAV_PAYLOAD_PLACE', 'AP_MISSION_NAV_PAYLOAD_PLACE_ENABLED', 'Enable NAV_PAYLOAD_PLACE', 0, None),  # noqa
     Feature('Copter', 'AC_PAYLOAD_PLACE_ENABLED', 'AC_PAYLOAD_PLACE_ENABLED', 'Enable Copter Payload Place', 0, 'MISSION_NAV_PAYLOAD_PLACE'),  # noqa
 
-    Feature('Compass', 'AK09916', 'AP_COMPASS_AK09916_ENABLED', 'Enable AK09916 compasses', 1, None),
+    Feature('Compass', 'AK09916', 'AP_COMPASS_AK09916_ENABLED', 'Enable AK0991x compasses', 1, None),
     Feature('Compass', 'AK8963', 'AP_COMPASS_AK8963_ENABLED', 'Enable AK8963 compasses', 1, None),
     Feature('Compass', 'BMM150', 'AP_COMPASS_BMM150_ENABLED', 'Enable BMM150 compasses', 1, None),
     Feature('Compass', 'BMM350', 'AP_COMPASS_BMM350_ENABLED', 'Enable BMM350 compasses', 1, None),
     Feature('Compass', 'EXTERNALAHRS_COMPASS', 'AP_COMPASS_EXTERNALAHRS_ENABLED', 'Enable ExternalAHRS compasses', 0, "AHRS_EXT"),  # noqa
     Feature('Compass', 'HMC5843', 'AP_COMPASS_HMC5843_ENABLED', 'Enable HMC5843 compasses', 1, None),
-    Feature('Compass', 'ICM20948', 'AP_COMPASS_ICM20948_ENABLED', 'Enable AK09916 on ICM20948 compasses', 1, "AK09916"),
+    Feature('Compass', 'ICM20948', 'AP_COMPASS_ICM20948_ENABLED', 'Enable AK0991x on ICM20948 compasses', 1, "AK09916"),
     Feature('Compass', 'IST8308', 'AP_COMPASS_IST8308_ENABLED', 'Enable IST8308 compasses', 1, None),
     Feature('Compass', 'IIS2MDC', 'AP_COMPASS_IIS2MDC_ENABLED', 'Enable IIS2MDC compasses', 0, None),
     Feature('Compass', 'IST8310', 'AP_COMPASS_IST8310_ENABLED', 'Enable IST8310 compasses', 1, None),
@@ -378,6 +378,7 @@ BUILD_OPTIONS = [
     Feature('Other', 'Logging', 'HAL_LOGGING_ENABLED', 'Enable Logging', 0, None),
     Feature('Other', 'CUSTOM_ROTATIONS', 'AP_CUSTOMROTATIONS_ENABLED', 'Enable Custom  sensor rotations', 0, None),
     Feature('Other', 'PID_FILTERING', 'AP_FILTER_ENABLED', 'Enable PID filtering', 0, None),
+    Feature('Other', 'POLYFENCE_CIRCLE_INT_SUPPORT', 'AC_POLYFENCE_CIRCLE_INT_SUPPORT_ENABLED', 'Fence circle compatability', 0, None),  # NOQA:E501
 
     # MAVLink section for mavlink features and/or message handling,
     # rather than for e.g. mavlink-based sensor drivers
@@ -397,7 +398,7 @@ BUILD_OPTIONS = [
     Feature('MAVLink', 'VIDEO_STREAM_INFORMATION', 'AP_MAVLINK_MSG_VIDEO_STREAM_INFORMATION_ENABLED', 'Enable MAVLink VIDEO_STREAM_INFORMATION message', 0, "Camera"), # noqa
     Feature('Other', 'AP_FOLLOW', 'AP_FOLLOW_ENABLED', 'Enable Follow library', 0, None),
     Feature('MAVLink', 'MAVLINK_MSG_FLIGHT_INFORMATION', 'AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED', 'Enable FLIGHT_INFORMATION MAVLink message', 0, None),  # noqa
-    Feature('MAVLink', 'RANGEFINDER_SENDING', 'AP_MAVLINK_MSG_RANGEFINDER_SENDING_ENABLED', 'Enable sending of RANGEFINDER mavlink message', 0, None),  # noqa
+    Feature('MAVLink', 'RANGEFINDER_SENDING', 'AP_MAVLINK_MSG_RANGEFINDER_SENDING_ENABLED', 'Enable sending of RANGEFINDER mavlink message', 0, "RANGEFINDER"),  # noqa
 
     Feature('Developer', 'KILL_IMU', 'AP_INERTIALSENSOR_KILL_IMU_ENABLED', 'Allow IMUs to be disabled at runtime', 0, None),
     Feature('Developer', 'CRASHCATCHER', 'AP_CRASHDUMP_ENABLED', 'Enable CrashCatcher', 0, None),

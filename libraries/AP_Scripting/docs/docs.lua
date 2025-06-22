@@ -1288,6 +1288,14 @@ local AP_Scripting_SerialAccess_ud = {}
 ---@param baud_rate uint32_t_ud|integer|number
 function AP_Scripting_SerialAccess_ud:begin(baud_rate) end
 
+-- Set UART parity (no effect for device ports)
+---@param parity integer 0=None, 1=Odd, 2=Even
+function AP_Scripting_SerialAccess_ud:configure_parity(parity) end
+
+-- Set UART stop bits (no effect for device ports)
+---@param stop_bits integer 1 or 2
+function AP_Scripting_SerialAccess_ud:set_stop_bits(stop_bits) end
+
 -- Writes a single byte
 ---@param value integer -- byte to write
 ---@return uint32_t_ud -- 1 if success else 0
@@ -3446,6 +3454,10 @@ function gps:primary_sensor() end
 -- If GPS blending is turned on that will show up as the third sensor, and be reported here.
 ---@return integer -- number of sensors
 function gps:num_sensors() end
+
+-- Inject a packet of raw binary to a GPS (e.g., RTCM3)
+---@param data string -- binary data to inject
+function gps:inject_data(data) end
 
 -- desc
 ---@class (exact) BattMonitorScript_State_ud

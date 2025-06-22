@@ -3,6 +3,7 @@
 #include "Copter.h"
 #include <AP_Math/chirp.h>
 #include <AP_ExternalControl/AP_ExternalControl_config.h> // TODO why is this needed if Copter.h includes this
+#include <AP_HAL/Semaphores.h>
 
 #if AP_COPTER_ADVANCED_FAILSAFE_ENABLED
 #include "afs_copter.h"
@@ -173,7 +174,7 @@ public:
     virtual bool set_speed_up(float speed_xy_cms) {return false;}
     virtual bool set_speed_down(float speed_xy_cms) {return false;}
 
-    virtual int32_t get_alt_above_ground_cm(void);
+    virtual int32_t get_alt_above_ground_cm(void) const;
 
     // pilot input processing
     void get_pilot_desired_lean_angles(float &roll_out_cd, float &pitch_out_cd, float angle_max_cd, float angle_limit_cd) const;
@@ -427,7 +428,7 @@ public:
     bool is_autopilot() const override { return false; }
     bool init(bool ignore_checks) override;
     void exit() override;
-    // whether an air-mode aux switch has been toggled
+    // Called when air mode is enabled via AUX switch; prevents automatic reset to default air_mode state
     void air_mode_aux_changed();
     bool allows_save_trim() const override { return true; }
     bool allows_flip() const override { return true; }
@@ -438,9 +439,9 @@ protected:
     const char *name() const override { return "ACRO"; }
     const char *name4() const override { return "ACRO"; }
 
-    // get_pilot_desired_angle_rates - transform pilot's normalised roll pitch and yaw input into a desired lean angle rates
+    // get_pilot_desired_rates_cds - transform pilot's normalised roll pitch and yaw input into a desired lean angle rates
     // inputs are -1 to 1 and the function returns desired angle rates in centi-degrees-per-second
-    void get_pilot_desired_angle_rates(float roll_in, float pitch_in, float yaw_in, float &roll_out, float &pitch_out, float &yaw_out);
+    void get_pilot_desired_rates_cds(float roll_in_norm, float pitch_in_norm, float yaw_in_norm, float &roll_out_cds, float &pitch_out_cds, float &yaw_out_cds);
 
     float throttle_hover() const override;
 
@@ -607,7 +608,7 @@ public:
 #endif
 
     // Get height above ground, uses landing height if available
-    int32_t get_alt_above_ground_cm() override;
+    int32_t get_alt_above_ground_cm() const override;
 
 protected:
 
@@ -1016,7 +1017,7 @@ private:
     void update_height_estimate(void);
 
     // minimum assumed height
-    const float height_min = 0.1f;
+    const float height_min_m = 0.1f;
 
     // maximum scaling height
     const float height_max = 3.0f;
@@ -1034,16 +1035,16 @@ private:
     Vector2f xy_I;
 
     // accumulated INS delta velocity in north-east form since last flow update
-    Vector2f delta_velocity_ne;
+    Vector2f delta_velocity_ne_ms;
 
     // last flow rate in radians/sec in north-east axis
-    Vector2f last_flow_rate_rps;
+    Vector2f last_flow_rate_rads;
 
     // timestamp of last flow data
     uint32_t last_flow_ms;
 
-    float last_ins_height;
-    float height_offset;
+    float last_ins_height_m;
+    float height_offset_m;
 
     // are we braking after pilot input?
     bool braking;
@@ -1379,12 +1380,12 @@ protected:
 
 private:
 
-    void update_pilot_lean_angle(float &lean_angle_filtered, float &lean_angle_raw);
+    void update_pilot_lean_angle_cd(float &lean_angle_filtered, float &lean_angle_raw);
     float mix_controls(float mix_ratio, float first_control, float second_control);
-    void update_brake_angle_from_velocity(float &brake_angle, float velocity);
+    void update_brake_angle_from_velocity(float &brake_angle_cd, float velocity_cms);
     void init_wind_comp_estimate();
     void update_wind_comp_estimate();
-    void get_wind_comp_lean_angles(float &roll_angle, float &pitch_angle);
+    void get_wind_comp_lean_angles(float &roll_angle_cd, float &pitch_angle_cd);
     void roll_controller_to_pilot_override();
     void pitch_controller_to_pilot_override();
 
@@ -1401,41 +1402,41 @@ private:
     RPMode pitch_mode;
 
     // pilot input related variables
-    float pilot_roll;                         // pilot requested roll angle (filtered to slow returns to zero)
-    float pilot_pitch;                        // pilot requested roll angle (filtered to slow returns to zero)
+    float pilot_roll_cd;  // filtered roll lean angle commanded by the pilot. Slowly returns to zero when stick is released
+    float pilot_pitch_cd; // filtered pitch lean angle commanded by the pilot. Slowly returns to zero when stick is released
+
 
     // braking related variables
     struct {
-        uint8_t time_updated_roll   : 1;    // true once we have re-estimated the braking time.  This is done once as the vehicle begins to flatten out after braking
-        uint8_t time_updated_pitch  : 1;    // true once we have re-estimated the braking time.  This is done once as the vehicle begins to flatten out after braking
-
-        float gain;                         // gain used during conversion of vehicle's velocity to lean angle during braking (calculated from rate)
-        float roll;                         // target roll angle during braking periods
-        float pitch;                        // target pitch angle during braking periods
-        int16_t timeout_roll;               // number of cycles allowed for the braking to complete, this timeout will be updated at half-braking
-        int16_t timeout_pitch;              // number of cycles allowed for the braking to complete, this timeout will be updated at half-braking
-        float angle_max_roll;               // maximum lean angle achieved during braking.  Used to determine when the vehicle has begun to flatten out so that we can re-estimate the braking time
-        float angle_max_pitch;              // maximum lean angle achieved during braking  Used to determine when the vehicle has begun to flatten out so that we can re-estimate the braking time
-        int16_t to_loiter_timer;            // cycles to mix brake and loiter controls in POSHOLD_TO_LOITER
+        bool  time_updated_roll;            // true if braking timeout on roll axis has been re-estimated
+        bool  time_updated_pitch;           // true if braking timeout on pitch axis has been re-estimated
+        float gain;                         // braking gain used to convert velocity to lean angle
+        float roll_cd;                      // braking roll angle in centidegrees
+        float pitch_cd;                     // braking pitch angle in centidegrees
+        uint32_t start_time_roll_ms;        // time (ms) when braking on roll axis begins
+        uint32_t start_time_pitch_ms;       // time (ms) when braking on pitch axis begins
+        float angle_max_roll_cd;            // peak roll angle (deg x100) during braking, used to detect vehicle flattening
+        float angle_max_pitch_cd;           // peak pitch angle (deg x100) during braking, used to detect vehicle flattening
+        uint32_t loiter_transition_start_time_ms;   // time (ms) when transition from brake to loiter started
     } brake;
 
+
     // loiter related variables
-    int16_t controller_to_pilot_timer_roll;     // cycles to mix controller and pilot controls in POSHOLD_CONTROLLER_TO_PILOT
-    int16_t controller_to_pilot_timer_pitch;    // cycles to mix controller and pilot controls in POSHOLD_CONTROLLER_TO_PILOT
-    float controller_final_roll;                // final roll angle from controller as we exit brake or loiter mode (used for mixing with pilot input)
-    float controller_final_pitch;               // final pitch angle from controller as we exit brake or loiter mode (used for mixing with pilot input)
+    uint32_t controller_to_pilot_start_time_roll_ms;   // time (ms) when transition from controller to pilot roll input began
+    uint32_t controller_to_pilot_start_time_pitch_ms;  // time (ms) when transition from controller to pilot pitch input began
+
+    float controller_final_roll_cd;   // final roll output (deg x100) from controller before transition to pilot input
+    float controller_final_pitch_cd;  // final pitch output (deg x100) from controller before transition to pilot input
 
     // wind compensation related variables
-    Vector2f wind_comp_ef;                      // wind compensation in earth frame, filtered lean angles from position controller
-    float wind_comp_roll;                       // roll angle to compensate for wind
-    float wind_comp_pitch;                      // pitch angle to compensate for wind
-    uint16_t wind_comp_start_timer;             // counter to delay start of wind compensation for a short time after loiter is engaged
-    int8_t  wind_comp_timer;                    // counter to reduce wind comp roll/pitch lean angle calcs to 10hz
+    Vector2f wind_comp_ef;              // wind compensation acceleration vector (earth frame), low-pass filtered
+    float wind_comp_roll_cd;            // roll angle (deg x100) to counter wind based on earth-frame lean
+    float wind_comp_pitch_cd;           // pitch angle (deg x100) to counter wind based on earth-frame lean
+    uint32_t wind_comp_start_time_ms;   // time (ms) when wind compensation updates are started
 
     // final output
-    float roll;   // final roll angle sent to attitude controller
-    float pitch;  // final pitch angle sent to attitude controller
-
+    float roll_cd;   // final roll angle sent to attitude controller
+    float pitch_cd;  // final pitch angle sent to attitude controller
 };
 
 
@@ -1857,6 +1858,10 @@ private:
     float motors_output;
     Vector2f motors_input;
     uint32_t last_throttle_warning_output_ms;
+
+    // Semaphore to protect the motors from the arming state
+    HAL_Semaphore msem;
+    bool shutdown;
 };
 #endif
 
@@ -1982,8 +1987,8 @@ private:
     bool calculate_side_dest(Vector3f& next_dest, bool& terrain_alt) const;
     void move_to_side();
 
-    Vector2f dest_A;    // in NEU frame in cm relative to ekf origin
-    Vector2f dest_B;    // in NEU frame in cm relative to ekf origin
+    Vector2f dest_A_ne_cm;    // in NEU frame in cm relative to ekf origin
+    Vector2f dest_B_ne_cm;    // in NEU frame in cm relative to ekf origin
     Vector3f current_dest; // current target destination (use for resume after suspending)
     bool current_terr_alt;
 
@@ -1992,8 +1997,8 @@ private:
 #if HAL_SPRAYER_ENABLED
     AP_Int8  _spray_enabled;   // auto spray enable/disable
 #endif
-    AP_Int8  _wp_delay;        // delay for zigzag waypoint
-    AP_Float _side_dist;       // sideways distance
+    AP_Int8  _wp_delay_s;      // delay for zigzag waypoint
+    AP_Float _side_dist_m;     // sideways distance
     AP_Int8  _direction;       // sideways direction
     AP_Int16 _line_num;        // total number of lines
 
