@@ -95,9 +95,9 @@ void PS_LightWare_SF45B::update_input()
         if (errno != EAGAIN && errno != EWOULDBLOCK && errno != 0) {
             AP_HAL::panic("Failed to read from autopilot");
         }
-    } else {
-        _buflen += n;
+        return;
     }
+    _buflen += n;
 
     switch (_inputstate) {
     case InputState::WANT_PREAMBLE:
