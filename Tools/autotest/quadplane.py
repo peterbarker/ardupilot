@@ -22,6 +22,8 @@ from vehicle_test_suite import NotAchievedException
 from vehicle_test_suite import PreconditionFailedException
 from vehicle_test_suite import Test
 
+from pysim import vehicleinfo
+
 # get location of scripts
 testdir = os.path.dirname(os.path.realpath(__file__))
 WIND = "0,180,0.2"  # speed,direction,variance
@@ -2694,6 +2696,49 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.change_mode("QLAND")
         self.mav.motors_disarmed_wait()
 
+    def MaxonEPOS4(self):
+        '''test Maxon EPOS4 serially-connected servos in a mission'''
+        frame = 'quadplane-tilt'
+
+        vinfo = vehicleinfo.VehicleInfo()
+        vinfo_options = vinfo.options[self.vehicleinfo_key()]
+        frame_bits = vinfo_options["frames"][frame]
+        model = frame_bits.get("model", frame)
+        self.customise_SITL_commandline([
+            "--serial5=sim:maxon_epos4",
+            "--serial6=sim:maxon_epos4",
+        ],
+            defaults_filepath=self.model_defaults_filepath(frame),
+            model=model,
+            wipe=True,
+        )
+        self.set_parameters({
+            'RTL_AUTOLAND': 2,
+
+            'SERIAL5_PROTOCOL': 51,
+            'SERVO_EPS4_S1_C': 12,
+            'SIM_MAXON1_ENA': 1,
+            'SIM_MAXON1_SRV': 12,
+
+            'SERIAL6_PROTOCOL': 51,
+            'SERVO_EPS4_S2_C': 13,
+            'SIM_MAXON2_ENA': 1,
+            'SIM_MAXON2_SRV': 13,
+        })
+        self.reboot_sitl()
+
+        while True:
+            self.change_mode('FBWA')
+            self.delay_sim_time(5)
+            self.change_mode('QHOVER')
+            self.delay_sim_time(5)
+        self.delay_sim_time(2000000)
+
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.takeoff(100, mode='FBWA')
+        self.fly_home_land_and_disarm()
+
     def DoRepositionTerrain2(self):
         '''test handling of DO_REPOSITION terrain alt2'''
         self.install_terrain_handlers_context()
@@ -3183,5 +3228,6 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.FenceRelativeToAMSLCliff,
             self.FenceRelativeToTerrainMaxAlt,
             self.FenceRelativeToTerrainMinAlt,
+            self.MaxonEPOS4,
         ])
         return ret
