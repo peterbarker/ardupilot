@@ -199,6 +199,12 @@ const AP_Param::GroupInfo SRV_Channels::var_info[] = {
     AP_SUBGROUPINFO(fetteconwire, "_FTW_",  25, SRV_Channels, AP_FETtecOneWire),
 #endif
 
+#if AP_MAXON_EPOS4_ENABLED
+    // @Group: _EPS4_
+    // @Path: ../AP_Maxon_EPOS4/AP_Maxon_EPOS4.cpp
+    AP_SUBGROUPINFO(maxon_epos4, "_EPS4_",  50, SRV_Channels, AP_Maxon_EPOS4),
+#endif  // AP_MAXON_EPOS4_ENABLED
+
     // @Param: _DSHOT_RATE
     // @DisplayName: Servo DShot output rate
     // @Description: DShot output rate for all outputs as a multiple of the loop rate. 0 sets the output rate to be fixed at 1Khz for low loop rates. This value should never be set below 500Hz.
@@ -510,6 +516,10 @@ void SRV_Channels::push()
 #if AP_FETTEC_ONEWIRE_ENABLED
     fetteconwire.update();
 #endif
+
+#if AP_MAXON_EPOS4_ENABLED
+    maxon_epos4.update();
+#endif // AP_MAXON_EPOS4_ENABLED
 
 #if AP_KDECAN_ENABLED
     if (AP::kdecan() != nullptr) {

@@ -22,6 +22,7 @@
 #include <AP_SBusOut/AP_SBusOut.h>
 #include <AP_BLHeli/AP_BLHeli.h>
 #include <AP_FETtecOneWire/AP_FETtecOneWire.h>
+#include <AP_Maxon_EPOS4/AP_Maxon_EPOS4.h>
 
 #include "SRV_Channel_config.h"
 
@@ -663,6 +664,10 @@ private:
 #if AP_FETTEC_ONEWIRE_ENABLED
     AP_FETtecOneWire fetteconwire;
 #endif  // AP_FETTEC_ONEWIRE_ENABLED
+
+#if AP_MAXON_EPOS4_ENABLED
+    AP_Maxon_EPOS4 maxon_epos4;
+#endif  // AP_MAXON_EPOS4_PROTOCOL
 
     // mask of disabled channels
     static uint32_t disabled_mask;
