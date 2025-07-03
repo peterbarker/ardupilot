@@ -249,6 +249,10 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         sitl_model->add_gimbal_sim(*avt_cm62);
         return avt_cm62;
 #endif  // AP_SIM_AVT_CM62_ENABLED
+#if AP_SIM_MAXON_EPOS4_ENABLED
+    } else if (streq(name, "maxon_epos4")) {
+        return &_sitl->maxon.next_maxon_instance();
+#endif  // AP_SIM_MAXON_EPOS4_ENABLED
     } else if (streq(name, "megasquirt")) {
         if (efi_ms != nullptr) {
             AP_HAL::panic("Only one megasquirt at a time");

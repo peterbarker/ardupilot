@@ -63,7 +63,7 @@ public:
 private:
 
     // parameters / configuration
-    AP_Int8  _enabled;  // enable FETtec servo sim
+    AP_Int8  _enabled;  // enable Volz servo sim
     AP_Int32 _output_mask;  // mask of servo outputs to override
     AP_Int32 _failed_mask;  // mask of servo outputs to mark as failed
 
