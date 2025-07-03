@@ -209,6 +209,10 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         sitl_model->set_volz(&_sitl->volz_sim);
         return &_sitl->volz_sim;
 #endif  // AP_SIM_VOLZ_ENABLED
+#if AP_SIM_MAXON_EPOS4_ENABLED
+    } else if (streq(name, "maxon_epos4")) {
+        return &_sitl->maxon.next_maxon_instance();
+#endif  // AP_SIM_MAXON_EPOS4_ENABLED
     } else if (streq(name, "megasquirt")) {
         if (efi_ms != nullptr) {
             AP_HAL::panic("Only one megasquirt at a time");

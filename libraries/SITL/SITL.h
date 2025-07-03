@@ -24,6 +24,7 @@
 #include "SIM_EFI_MegaSquirt.h"
 #include "SIM_RichenPower.h"
 #include "SIM_Loweheiser.h"
+#include "SIM_Maxon_EPOS4.h"
 #include "SIM_FETtecOneWireESC.h"
 #include "SIM_IntelligentEnergy24.h"
 #include "SIM_Ship.h"
@@ -582,6 +583,20 @@ public:
     AP_Float imu_temp_fixed;
     AP_InertialSensor_TCal imu_tcal[INS_MAX_INSTANCES];
 #endif
+
+#if AP_SIM_MAXON_EPOS4_ENABLED
+    struct {
+        Maxon_EPOS4 instances[AP_SIM_MAXON_EPOS4_MAX_SIMS];
+        uint8_t num_maxon;
+        Maxon_EPOS4 &next_maxon_instance() {
+            if (num_maxon >= ARRAY_SIZE(instances)) {
+                AP_HAL::panic("Too many maxons!");
+            }
+            instances[num_maxon].active = true;
+            return instances[num_maxon++];
+        }
+    } maxon;
+#endif  // AP_SIM_MAXON_EPOS4_ENABLED
 
     // IMU control parameters
     AP_Float gyro_noise[INS_MAX_INSTANCES];  // in degrees/second

@@ -1260,6 +1260,21 @@ const AP_Param::GroupInfo SIM::var_ins[] = {
     // @Description: If non-zero the vehicle will be clamped in position until the value on this servo channel passes 1800PWM
     AP_GROUPINFO("CLAMP_CH",     49, SIM, clamp_ch, 0),
 
+#if AP_SIM_MAXON_EPOS4_ENABLED
+#if AP_SIM_MAXON_EPOS4_MAX_SIMS > 0
+    AP_SUBGROUPINFO(maxon.instances[0], "MAXON1_", 50, SIM, Maxon_EPOS4),
+#endif  // AP_SIM_MAXON_EPOS4_MAX_SIMS > 0
+#if AP_SIM_MAXON_EPOS4_MAX_SIMS > 1
+    AP_SUBGROUPINFO(maxon.instances[1], "MAXON2_", 51, SIM, Maxon_EPOS4),
+#endif  // AP_SIM_MAXON_EPOS4_MAX_SIMS > 1
+#if AP_SIM_MAXON_EPOS4_MAX_SIMS > 2
+    AP_SUBGROUPINFO(maxon.instances[2], "MAXON3_", 52, SIM, Maxon_EPOS4),
+#endif  // AP_SIM_MAXON_EPOS4_MAX_SIMS > 2
+#if AP_SIM_MAXON_EPOS4_MAX_SIMS > 3
+    AP_SUBGROUPINFO(maxon.instances[3], "MAXON4_", 53, SIM, Maxon_EPOS4),
+#endif  // AP_SIM_MAXON_EPOS4_MAX_SIMS > 3
+#endif
+
     // the IMUT parameters must be last due to the enable parameters
 #if HAL_INS_TEMPERATURE_CAL_ENABLE
     AP_SUBGROUPINFO(imu_tcal[0], "IMUT1_", 61, SIM, AP_InertialSensor_TCal),
