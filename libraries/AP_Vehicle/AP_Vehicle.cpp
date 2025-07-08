@@ -522,6 +522,16 @@ void AP_Vehicle::setup()
     }
 #endif
 
+#if AP_CHECKFIRMWARE_EMIT_CHECKSUMS_ENABLED
+    uint32_t crc1;
+    uint32_t crc2;
+    if (expected_good_firmware_crcs_signed(crc1, crc2)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SignedFirmware crc1=%u crc2=%u", crc1, crc2);
+    } else {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SignedFirmware crcs unavailable");
+    }
+#endif  // AP_CHECKFIRMWARE_EMIT_CHECKSUMS_ENABLED
+
     // invalidate count in case an enable parameter changed during
     // initialisation
     AP_Param::invalidate_count();

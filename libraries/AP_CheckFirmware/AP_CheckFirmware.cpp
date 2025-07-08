@@ -140,6 +140,21 @@ static check_fw_result_t check_good_firmware_signed(void)
     return ret;
 }
 
+#if AP_CHECKFIRMWARE_EMIT_CHECKSUMS_ENABLED
+static bool expected_good_firmware_crcs_signed(uint32_t &crc1, uint32_t &crc2)
+{
+    app_descriptor_signed *app_descriptor_signed;
+
+    bool have_app_descriptor = find_app_descriptor_signed(app_descriptor_signed);
+    if (have_app_descriptor != check_fw_result_t::CHECK_FW_OK) {
+        return false;
+    }
+    crc1 = app_descriptor_signed->image_crc1;
+    crc2 = app_descriptor_signed->image_crc2;
+    return true;
+}
+#endif  // AP_CHECKFIRMWARE_EMIT_CHECKSUMS_ENABLED
+
 /*
   check firmware CRC and board ID to see if it matches, using unsigned
   signature
