@@ -78,7 +78,8 @@ static check_fw_result_t check_firmware_signature(const app_descriptor_signed *a
 /*
   check firmware CRC and board ID to see if it matches
  */
-static check_fw_result_t check_good_firmware_signed(void)
+
+static check_fw_result_t find_app_descriptor_signed(app_descriptor_signed *& app_descriptor)
 {
     const uint8_t sig[8] = AP_APP_DESCRIPTOR_SIGNATURE_SIGNED;
     const uint8_t *flash1 = (const uint8_t *)(FLASH_LOAD_ADDRESS + (FLASH_BOOTLOADER_LOAD_KB + APP_START_OFFSET_KB)*1024);
@@ -102,6 +103,19 @@ static check_fw_result_t check_good_firmware_signed(void)
         return check_fw_result_t::FAIL_REASON_BAD_BOARD_ID;
     }
 
+    return check_fw_result_t::CHECK_FW_OK;
+}
+
+static check_fw_result_t check_good_firmware_signed(void)
+{
+    app_descriptor_signed *app_descriptor_signed;
+
+    bool have_app_descriptor = find_app_descriptor_signed(app_descriptor_signed);
+    if (have_app_descriptor != check_fw_result_t::CHECK_FW_OK) {
+        return have_app_descriptor;
+    }
+
+    const uint8_t *flash1 = (const uint8_t *)(FLASH_LOAD_ADDRESS + (FLASH_BOOTLOADER_LOAD_KB + APP_START_OFFSET_KB)*1024);
     const uint8_t *flash2 = (const uint8_t *)&ad->version_major;
     const uint8_t desc_len = offsetof(app_descriptor_signed, version_major) - offsetof(app_descriptor_signed, image_crc1);
     const uint32_t len1 = ((const uint8_t *)&ad->image_crc1) - flash1;
