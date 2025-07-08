@@ -230,11 +230,7 @@ AP_AdvancedFailsafe::check(uint32_t last_valid_rc_ms)
     bool gcs_link_ok = ((now - last_heartbeat_ms) < (_gcs_fail_time_seconds*1000.0f));
     bool gps_lock_ok = ((now - AP::gps().last_fix_time_ms()) < 3000);
 
-    AP_Mission *_mission = AP::mission();
-    if (_mission == nullptr) {
-        return;
-    }
-    AP_Mission &mission = *_mission;
+    AP_Mission &mission = AP::mission();
 
     switch (_state) {
     case STATE_PREFLIGHT:
