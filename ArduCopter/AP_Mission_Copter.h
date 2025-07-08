@@ -12,11 +12,8 @@ public:
 
     void complete();
 
-    bool start_nav_cmd() override;
-    bool nav_cmd_is_complete() const override;
-
-    bool start_do_cmd() override;
-    bool do_cmd_is_complete() const override;
+    void start_command(const AP_Mission::Mission_Command& cmd) override;
+    bool verify_command(const AP_Mission::Mission_Command& cmd) override;
 };
 
 #endif

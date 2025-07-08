@@ -762,10 +762,8 @@ bool ModeAuto::set_speed_down_ms(float speed_down_ms)
 }
 
 // start_command - this function will be called when the ap_mission lib wishes to start a new command
-bool AP_Mission_Copter::start_nav_cmd()
+bool AP_Mission_Copter::start_command(const AP_Mission::Mission_Command& cmd)
 {
-    const struct Mission_Command  &cmd = _nav_cmd;
-
     switch(cmd.id) {
 
     ///
@@ -836,17 +834,6 @@ bool AP_Mission_Copter::start_nav_cmd()
 
     case MAV_CMD_CONDITION_YAW:             // 115
         return do_yaw();
-
-    default:
-        return AP_Mission::start_nav_command();
-    }
-}
-
-bool AP_Mission_Copter::start_do_cmd()
-{
-    if (copter.should_log(MASK_LOG_CMD)) {
-        copter.logger.Write_Mission_Cmd(*this, _do_cmd);
-    }
 
     switch(_do_cmd.id) {
     case MAV_CMD_DO_CHANGE_SPEED:             // 178

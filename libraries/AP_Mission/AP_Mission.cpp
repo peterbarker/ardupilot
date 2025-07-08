@@ -412,7 +412,7 @@ bool AP_Mission::verify_command(const Mission_Command& cmd)
     }
 }
 
-bool AP_Mission::start_do_cmd()
+bool AP_Mission::start_command(const AP_Mission::Mission_Command& cmd)
 {
 #if HAL_LOGGING_ENABLED
     if (log_start_mission_item_bit != (uint32_t)-1) {

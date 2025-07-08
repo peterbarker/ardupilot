@@ -951,6 +951,7 @@ private:
     // internal variables
     bool                    _force_resume;  // when set true it forces mission to resume irrespective of MIS_RESTART param.
     uint16_t                _repeat_dist; // Distance to repeat on mission resume (m), can be set with MAV_CMD_DO_SET_RESUME_REPEAT_DIST
+    struct Mission_Command  _resume_cmd;  // virtual wp command that is used to resume mission if the mission needs to be rewound on resume.
     uint16_t                _prev_nav_cmd_id;       // id of the previous "navigation" command. (WAYPOINT, LOITER_TO_ALT, ect etc)
     uint16_t                _prev_nav_cmd_index;    // index of the previous "navigation" command.  Rarely used which is why we don't store the whole command
     uint16_t                _prev_nav_cmd_wp_index; // index of the previous "navigation" command that contains a waypoint.  Rarely used which is why we don't store the whole command
@@ -980,12 +981,12 @@ private:
     static HAL_Semaphore _rsem;
 
     // mission items common to all vehicles:
-    bool start_command_do_aux_function();
+    bool start_command_do_aux_function(const AP_Mission::Mission_Command& cmd);
     bool start_command_do_gripper();
     bool start_command_do_servorelayevents();
     bool start_command_camera();
     bool start_command_parachute();
-    bool command_do_set_repeat_dist();
+    bool command_do_set_repeat_dist(const AP_Mission::Mission_Command& cmd);
 
     bool start_command_do_sprayer(const AP_Mission::Mission_Command& cmd);
     bool start_command_do_scripting(const AP_Mission::Mission_Command& cmd);

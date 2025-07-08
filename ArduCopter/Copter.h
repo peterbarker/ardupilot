@@ -91,7 +91,6 @@
 #include "GCS_Copter.h"
 #include "AP_Rally.h"           // Rally point library
 #include "AP_Arming_Copter.h"
-#include "AP_Mission.h"     // Mission command library
 
 #include <AP_ExternalControl/AP_ExternalControl_config.h>
 #if AP_EXTERNAL_CONTROL_ENABLED
@@ -299,11 +298,6 @@ private:
 
     // Inertial Navigation EKF - different viewpoint
     AP_AHRS_View *ahrs_view;
-
-    // Mission library
-#if MODE_AUTO_ENABLED == ENABLED
-    AP_Mission_Copter mission;
-#endif
 
     // Arming/Disarming management class
     AP_Arming_Copter arming;
