@@ -482,7 +482,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
                     ds_last_print = now
 
             self.context_pop()
-            return self.did_rtl
+            return did_rtl
 
         while True:
             self.start_subtest(f"Flying to distance {flight_distance_to_rtl_at}")
