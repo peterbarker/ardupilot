@@ -449,6 +449,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.context_set_message_rate_hz('TERRAIN_REPORT', slow_rate)
         self.context_set_message_rate_hz('VFR_HUD', slow_rate)
         self.context_set_message_rate_hz('GLOBAL_POSITION_INT', slow_rate)
+        self.install_terrain_handlers_context()
 
         def fly_mission_rtl_at_distance(rtl_distance):
             '''flies the loaded mission, returns false if we disarmed
