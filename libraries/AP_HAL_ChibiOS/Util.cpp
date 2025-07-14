@@ -613,7 +613,7 @@ void Util::apply_persistent_params(void) const
                     strcmp(pname+strlen(pname)-6, "ACC_ID") == 0;
                 if (legacy_acc_id || new_acc_id) {
                     enum ap_var_type ptype;
-                    AP_Int32 *ap = (AP_Int32 *)AP_Param::find(pname, &ptype);
+                    AP_Int32 *ap = (AP_Int32 *)AP_Param::find(pname, ptype);
                     if (ap && ptype == AP_PARAM_INT32) {
                         if (ap->get() != int32_t(value)) {
                             // the accelerometer ID has changed since

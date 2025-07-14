@@ -351,24 +351,24 @@ void AP_OSD_ParamScreen::modify_configured_parameter(uint8_t number, Event ev)
     AP_Param* param;
 
     if (ev == Event::MENU_DOWN) {
-        param = AP_Param::next_scalar(&setting._current_token, &setting._param_type);
+        param = AP_Param::next_scalar(setting._current_token, setting._param_type);
     } else {
         // going backwards is somewhat convoluted as the param code is geared for going forward
         ap_var_type type = AP_PARAM_NONE, prev_type = AP_PARAM_NONE, prev_prev_type = AP_PARAM_NONE;
         AP_Param::ParamToken token {}, prev_token, prev_prev_token;
 
-        for (param = AP_Param::first(&token, &type);
+        for (param = AP_Param::first(token, type);
             param && (setting._current_token.key != token.key
                 || setting._current_token.idx != token.idx
                 || setting._current_token.group_element != token.group_element);
-            param = AP_Param::next_scalar(&token, &type)) {
+            param = AP_Param::next_scalar(token, type)) {
             prev_prev_token = prev_token;
             prev_prev_type = prev_type;
             prev_token = token;
             prev_type = type;
         }
         if (param != nullptr) {
-            param = AP_Param::next_scalar(&prev_prev_token, &prev_prev_type);
+            param = AP_Param::next_scalar(prev_prev_token, prev_prev_type);
             setting._current_token = prev_prev_token;
             setting._param_type = prev_prev_type;
         }

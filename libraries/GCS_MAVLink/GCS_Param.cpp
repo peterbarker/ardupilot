@@ -87,7 +87,7 @@ GCS_MAVLINK::queued_param_send()
             _queued_parameter_count,
             _queued_parameter_index);
 
-        _queued_parameter = AP_Param::next_scalar(&_queued_parameter_token, &_queued_parameter_type);
+        _queued_parameter = AP_Param::next_scalar(_queued_parameter_token, _queued_parameter_type);
         _queued_parameter_index++;
 
         if (AP_HAL::micros() - tstart > 1000) {
@@ -216,7 +216,7 @@ void GCS_MAVLINK::handle_param_request_list(const mavlink_message_t &msg)
     send_banner();
 
     // Start sending parameters - next call to ::update will kick the first one out
-    _queued_parameter = AP_Param::first(&_queued_parameter_token, &_queued_parameter_type);
+    _queued_parameter = AP_Param::first(_queued_parameter_token, _queued_parameter_type);
     _queued_parameter_index = 0;
     _queued_parameter_count = AP_Param::count_parameters();
     _queued_parameter_send_time_ms = AP_HAL::millis(); // avoid initial flooding
@@ -276,7 +276,7 @@ void GCS_MAVLINK::handle_param_set(const mavlink_message_t &msg)
 
     // find existing param so we can get the old value
     uint16_t parameter_flags = 0;
-    vp = AP_Param::find(key, &var_type, &parameter_flags);
+    vp = AP_Param::find(key, var_type, &parameter_flags);
     if (vp == nullptr) {
         send_param_error(msg, packet, MAV_PARAM_ERROR_DOES_NOT_EXIST);
         return;
@@ -395,7 +395,7 @@ void GCS_MAVLINK::param_io_timer(void)
 
     if (req.param_index != -1) {
         AP_Param::ParamToken token {};
-        vp = AP_Param::find_by_index(req.param_index, &reply.p_type, &token);
+        vp = AP_Param::find_by_index(req.param_index, reply.p_type, token);
         if (vp != nullptr) {
             vp->copy_name_token(token, reply.param_name, AP_MAX_NAME_SIZE, true);
         } else {
@@ -403,7 +403,7 @@ void GCS_MAVLINK::param_io_timer(void)
         }
     } else {
         strncpy(reply.param_name, req.param_name, AP_MAX_NAME_SIZE+1);
-        vp = AP_Param::find(req.param_name, &reply.p_type);
+        vp = AP_Param::find(req.param_name, reply.p_type);
     }
 
     reply.chan = req.chan;

@@ -1374,7 +1374,7 @@ void Plane::load_parameters(void)
 // PARAMETER_CONVERSION - Added: March 2021 for ArduPlane-4.1
 #if AP_FENCE_ENABLED
     enum ap_var_type ptype_fence_type;
-    AP_Int8 *fence_type_new = (AP_Int8*)AP_Param::find("FENCE_TYPE", &ptype_fence_type);
+    AP_Int8 *fence_type_new = (AP_Int8*)AP_Param::find("FENCE_TYPE", ptype_fence_type);
     if (fence_type_new && !fence_type_new->configured()) {
         // If we find the new parameter and it hasn't been configured
         // attempt to upgrade the altitude fences.
@@ -1418,7 +1418,7 @@ void Plane::load_parameters(void)
     };
     if (AP_Param::find_old_parameter(&fence_action_info_old, &fence_action_old)) {
         enum ap_var_type ptype;
-        AP_Int8 *fence_action_new = (AP_Int8*)AP_Param::find(&fence_action_info_old.new_name[0], &ptype);
+        AP_Int8 *fence_action_new = (AP_Int8*)AP_Param::find(&fence_action_info_old.new_name[0], ptype);
         AC_Fence::Action fence_action_new_val;
         if (fence_action_new && !fence_action_new->configured()) {
             switch(fence_action_old.get()) {
@@ -1441,7 +1441,7 @@ void Plane::load_parameters(void)
             
             // Now upgrade the new fence enable at the same time
             enum ap_var_type ptype_fence_enable;
-            AP_Int8 *fence_enable = (AP_Int8*)AP_Param::find("FENCE_ENABLE", &ptype_fence_enable);
+            AP_Int8 *fence_enable = (AP_Int8*)AP_Param::find("FENCE_ENABLE", ptype_fence_enable);
             // fences were used if there was a count, and the old fence action was not zero
             AC_Fence *ap_fence = AP::fence();
             bool fences_exist = false;

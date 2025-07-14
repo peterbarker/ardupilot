@@ -852,7 +852,7 @@ void AP_Param::copy_name_info(const struct AP_Param::Info *info,
 // Find a variable by name in a group
 AP_Param *
 AP_Param::find_group(const char *name, uint16_t vindex, ptrdiff_t group_offset,
-                     const struct GroupInfo *group_info, enum ap_var_type *ptype)
+                     const struct GroupInfo *group_info, enum ap_var_type &ptype)
 {
     uint8_t type;
     for (uint8_t i=0;
@@ -881,7 +881,7 @@ AP_Param::find_group(const char *name, uint16_t vindex, ptrdiff_t group_offset,
             if (!get_base(var_info(vindex), base)) {
                 continue;
             }
-            *ptype = (enum ap_var_type)type;
+            ptype = (enum ap_var_type)type;
             return (AP_Param *)(base + group_info[i].offset + group_offset);
         } else if (type == AP_PARAM_VECTOR3F) {
             // special case for finding Vector3f elements
@@ -896,7 +896,7 @@ AP_Param::find_group(const char *name, uint16_t vindex, ptrdiff_t group_offset,
                     continue;
                 }
                 AP_Float *v = (AP_Float *)(base + group_info[i].offset + group_offset);
-                *ptype = AP_PARAM_FLOAT;
+                ptype = AP_PARAM_FLOAT;
                 switch (name[suffix_len+1]) {
                 case 'X':
                     return (AP_Float *)&v[0];
@@ -915,7 +915,7 @@ AP_Param::find_group(const char *name, uint16_t vindex, ptrdiff_t group_offset,
 // Find a variable by name.
 //
 AP_Param *
-AP_Param::find(const char *name, enum ap_var_type *ptype, uint16_t *flags)
+AP_Param::find(const char *name, enum ap_var_type &ptype, uint16_t *flags)
 {
     for (uint16_t i=0; i<_num_vars; i++) {
         const auto &info = var_info(i);
@@ -949,7 +949,7 @@ AP_Param::find(const char *name, enum ap_var_type *ptype, uint16_t *flags)
             // parameter to have the same prefix name as group
             // parameters, for example CAM_P_G
         } else if (strcasecmp(name, info.name) == 0) {
-            *ptype = (enum ap_var_type)type;
+            ptype = (enum ap_var_type)type;
             ptrdiff_t base;
             if (!get_base(info, base)) {
                 return nullptr;
@@ -966,7 +966,7 @@ AP_Param::find(const char *name, enum ap_var_type *ptype, uint16_t *flags)
 // Find a variable by index. Note that this is quite slow.
 //
 AP_Param *
-AP_Param::find_by_index(uint16_t idx, enum ap_var_type *ptype, ParamToken *token)
+AP_Param::find_by_index(uint16_t idx, enum ap_var_type &ptype, ParamToken &token)
 {
     AP_Param *ap;
     uint16_t count=0;
@@ -979,22 +979,22 @@ AP_Param::find_by_index(uint16_t idx, enum ap_var_type *ptype, ParamToken *token
 }
 
 // by-name equivalent of find_by_index()
-AP_Param* AP_Param::find_by_name(const char* name, enum ap_var_type *ptype, ParamToken *token)
+AP_Param* AP_Param::find_by_name(const char* name, enum ap_var_type &ptype, ParamToken &token)
 {
     AP_Param *ap;
     for (ap = AP_Param::first(token, ptype);
-         ap && *ptype != AP_PARAM_GROUP && *ptype != AP_PARAM_NONE;
+         ap && ptype != AP_PARAM_GROUP && ptype != AP_PARAM_NONE;
          ap = AP_Param::next_scalar(token, ptype)) {
-        const auto nlen = strlen(var_info(token->key).name);
+        const auto nlen = strlen(var_info(token.key).name);
         /*
           the name must either match the token name (if a non-group top level param)
           or match up to the length (if a group).
           This check avoids us traversing down into most groups, saving a lot of calls to copy_name_token()
          */
-        int32_t ret = strncasecmp(name, var_info(token->key).name, nlen);
+        int32_t ret = strncasecmp(name, var_info(token.key).name, nlen);
         if (ret == 0) {
             char buf[AP_MAX_NAME_SIZE];
-            ap->copy_name_token(*token, buf, AP_MAX_NAME_SIZE);
+            ap->copy_name_token(token, buf, AP_MAX_NAME_SIZE);
             if (strncasecmp(name, buf, AP_MAX_NAME_SIZE) == 0) {
                 break;
             }
@@ -1750,11 +1750,11 @@ void AP_Param::load_object_from_eeprom(const void *object_pointer, const struct 
 
 
 // return the first variable in _var_info
-AP_Param *AP_Param::first(ParamToken *token, enum ap_var_type *ptype, float *default_val)
+AP_Param *AP_Param::first(ParamToken &token, enum ap_var_type &ptype, float *default_val)
 {
-    token->key = 0;
-    token->group_element = 0;
-    token->idx = 0;
+    token.key = 0;
+    token.group_element = 0;
+    token.idx = 0;
     if (_num_vars == 0) {
         return nullptr;
     }
@@ -1763,9 +1763,7 @@ AP_Param *AP_Param::first(ParamToken *token, enum ap_var_type *ptype, float *def
         // should be impossible, first var needs to be non-pointer
         return nullptr;
     }
-    if (ptype != nullptr) {
-        *ptype = (enum ap_var_type)var_info(0).type;
-    }
+    ptype = (enum ap_var_type)var_info(0).type;
 #if AP_PARAM_DEFAULTS_ENABLED
     if (default_val != nullptr) {
         *default_val = get_default_value((AP_Param *)base, var_info(0));
@@ -1782,8 +1780,8 @@ AP_Param *AP_Param::next_group(const uint16_t vindex, const struct GroupInfo *gr
                                const uint32_t group_base,
                                const uint8_t group_shift,
                                const ptrdiff_t group_offset,
-                               ParamToken *token,
-                               enum ap_var_type *ptype,
+                               ParamToken &token,
+                               enum ap_var_type &ptype,
                                bool skip_disabled,
                                float *default_val)
 {
@@ -1815,12 +1813,10 @@ AP_Param *AP_Param::next_group(const uint16_t vindex, const struct GroupInfo *gr
         } else {
             if (*found_current) {
                 // got a new one
-                token->key = vindex;
-                token->group_element = group_id(group_info, group_base, i, group_shift);
-                token->idx = 0;
-                if (ptype != nullptr) {
-                    *ptype = type;
-                }
+                token.key = vindex;
+                token.group_element = group_id(group_info, group_base, i, group_shift);
+                token.idx = 0;
+                ptype = type;
                 ptrdiff_t base;
                 if (!get_base(var_info(vindex), base)) {
                     continue;
@@ -1833,7 +1829,7 @@ AP_Param *AP_Param::next_group(const uint16_t vindex, const struct GroupInfo *gr
                     group_info[i].type == AP_PARAM_INT8 &&
                     (group_info[i].flags & AP_PARAM_FLAG_ENABLE) &&
                     ((AP_Int8 *)ret)->get() == 0) {
-                    token->last_disabled = 1;
+                    token.last_disabled = 1;
                 }
 #if AP_PARAM_DEFAULTS_ENABLED
                 if (default_val != nullptr) {
@@ -1842,25 +1838,23 @@ AP_Param *AP_Param::next_group(const uint16_t vindex, const struct GroupInfo *gr
 #endif
                 return ret;
             }
-            if (group_id(group_info, group_base, i, group_shift) == token->group_element) {
+            if (group_id(group_info, group_base, i, group_shift) == token.group_element) {
                 *found_current = true;
-                if (token->last_disabled) {
-                    token->last_disabled = 0;
+                if (token.last_disabled) {
+                    token.last_disabled = 0;
                     return nullptr;
                 }
-                if (type == AP_PARAM_VECTOR3F && token->idx < 3) {
+                if (type == AP_PARAM_VECTOR3F && token.idx < 3) {
                     // return the next element of the vector as a
                     // float
-                    token->idx++;
-                    if (ptype != nullptr) {
-                        *ptype = AP_PARAM_FLOAT;
-                    }
+                    token.idx++;
+                    ptype = AP_PARAM_FLOAT;
                     ptrdiff_t base;
                     if (!get_base(var_info(vindex), base)) {
                         continue;
                     }
                     ptrdiff_t ofs = base + group_info[i].offset + group_offset;
-                    ofs += sizeof(float)*(token->idx - 1u);
+                    ofs += sizeof(float)*(token.idx - 1u);
 #if AP_PARAM_DEFAULTS_ENABLED
                     if (default_val != nullptr) {
                         *default_val = get_default_value((AP_Param *)ofs, group_info[i]);
@@ -1876,9 +1870,9 @@ AP_Param *AP_Param::next_group(const uint16_t vindex, const struct GroupInfo *gr
 
 /// Returns the next variable in _var_info, recursing into groups
 /// as needed
-AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_disabled, float *default_val)
+AP_Param *AP_Param::next(ParamToken &token, enum ap_var_type &ptype, bool skip_disabled, float *default_val)
 {
-    uint16_t i = token->key;
+    uint16_t i = token.key;
     bool found_current = false;
     if (i >= _num_vars) {
         // illegal token
@@ -1888,12 +1882,10 @@ AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_d
 
     // allow Vector3f to be seen as 3 variables. First as a vector,
     // then as 3 separate floats
-    if (type == AP_PARAM_VECTOR3F && token->idx < 3) {
-        token->idx++;
-        if (ptype != nullptr) {
-            *ptype = AP_PARAM_FLOAT;
-        }
-        AP_Param *ret = (AP_Param *)(((token->idx - 1u)*sizeof(float))+(ptrdiff_t)var_info(i).ptr);
+    if (type == AP_PARAM_VECTOR3F && token.idx < 3) {
+        token.idx++;
+        ptype = AP_PARAM_FLOAT;
+        AP_Param *ret = (AP_Param *)(((token.idx - 1u)*sizeof(float))+(ptrdiff_t)var_info(i).ptr);
 #if AP_PARAM_DEFAULTS_ENABLED
         if (default_val != nullptr) {
             *default_val = get_default_value(ret, var_info(i));
@@ -1923,12 +1915,10 @@ AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_d
             }
         } else {
             // found the next one
-            token->key = i;
-            token->group_element = 0;
-            token->idx = 0;
-            if (ptype != nullptr) {
-                *ptype = type;
-            }
+            token.key = i;
+            token.group_element = 0;
+            token.idx = 0;
+            ptype = type;
 #if AP_PARAM_DEFAULTS_ENABLED
             if (default_val != nullptr) {
                 *default_val = get_default_value((AP_Param *)info.ptr, info);
@@ -1942,16 +1932,14 @@ AP_Param *AP_Param::next(ParamToken *token, enum ap_var_type *ptype, bool skip_d
 
 /// Returns the next scalar in _var_info, recursing into groups
 /// as needed
-AP_Param *AP_Param::next_scalar(ParamToken *token, enum ap_var_type *ptype, float *default_val)
+AP_Param *AP_Param::next_scalar(ParamToken &token, enum ap_var_type &ptype, float *default_val)
 {
     AP_Param *ap;
     enum ap_var_type type;
-    while ((ap = next(token, &type, true, default_val)) != nullptr && type > AP_PARAM_FLOAT) ;
+    while ((ap = next(token, type, true, default_val)) != nullptr && type > AP_PARAM_FLOAT) ;
 
     if (ap != nullptr) {
-        if (ptype != nullptr) {
-            *ptype = type;
-        }
+        ptype = type;
     }
 #if AP_PARAM_DEFAULTS_ENABLED
     check_default(ap, default_val);
@@ -2015,7 +2003,7 @@ void AP_Param::convert_old_parameter(const struct ConversionInfo *info, float sc
 
     // find the new variable in the variable structures
     enum ap_var_type ptype;
-    AP_Param *ap2 = find(&info->new_name[0], &ptype);
+    AP_Param *ap2 = find(&info->new_name[0], ptype);
     if (ap2 == nullptr) {
         DEV_PRINTF("Unknown conversion '%s'\n", info->new_name);
         return;
@@ -2353,7 +2341,7 @@ bool AP_Param::count_defaults_in_file(const char *filename, uint16_t &num_defaul
             continue;
         }
         enum ap_var_type var_type;
-        if (!find(pname, &var_type)) {
+        if (!find(pname, var_type)) {
             continue;
         }
         num_defaults++;
@@ -2382,7 +2370,7 @@ bool AP_Param::read_param_defaults_file(const char *filename, bool last_pass, ui
             continue;
         }
         enum ap_var_type var_type;
-        AP_Param *vp = find(pname, &var_type);
+        AP_Param *vp = find(pname, var_type);
         if (!vp) {
             if (last_pass) {
 #if ENABLE_DEBUG
@@ -2519,7 +2507,7 @@ bool AP_Param::count_param_defaults(const volatile char *ptr, int32_t length, ui
         }
 
         enum ap_var_type var_type;
-        if (!find(pname, &var_type)) {
+        if (!find(pname, var_type)) {
             continue;
         }
 
@@ -2582,7 +2570,7 @@ void AP_Param::load_param_defaults(const volatile char *ptr, int32_t length, boo
             continue;
         }
         enum ap_var_type var_type;
-        AP_Param *vp = find(pname, &var_type);
+        AP_Param *vp = find(pname, var_type);
         if (!vp) {
             if (last_pass) {
 #if ENABLE_DEBUG && (AP_PARAM_MAX_EMBEDDED_PARAM > 0)
@@ -2714,10 +2702,11 @@ uint16_t AP_Param::count_parameters(void)
         AP_Param::ParamToken token {};
         uint16_t count = 0;
         uint16_t marker = _count_marker;
+        enum ap_var_type type;  // result is unused
 
-        for (vp = AP_Param::first(&token, nullptr);
+        for (vp = AP_Param::first(token, type);
              vp != nullptr;
-             vp = AP_Param::next_scalar(&token, nullptr)) {
+             vp = AP_Param::next_scalar(token, type)) {
             count++;
         }
         _parameter_count = count;
@@ -2743,7 +2732,7 @@ void AP_Param::invalidate_count(void)
 bool AP_Param::set_default_by_name(const char *name, float value)
 {
     enum ap_var_type vtype;
-    AP_Param *vp = find(name, &vtype);
+    AP_Param *vp = find(name, vtype);
     if (vp == nullptr) {
         return false;
     }
@@ -2786,7 +2775,7 @@ void AP_Param::set_defaults_from_table(const struct defaults_table_struct *table
 bool AP_Param::set_by_name(const char *name, float value)
 {
     enum ap_var_type vtype;
-    AP_Param *vp = find(name, &vtype);
+    AP_Param *vp = find(name, vtype);
     if (vp == nullptr) {
         return false;
     }
@@ -2816,7 +2805,7 @@ bool AP_Param::set_by_name(const char *name, float value)
 bool AP_Param::get(const char *name, float &value)
 {
     enum ap_var_type vtype;
-    AP_Param *vp = find(name, &vtype);
+    AP_Param *vp = find(name, vtype);
     if (vp == nullptr) {
         return false;
     }
@@ -2849,7 +2838,7 @@ bool AP_Param::get(const char *name, float &value)
 bool AP_Param::set_and_save_by_name(const char *name, float value)
 {
     enum ap_var_type vtype;
-    AP_Param *vp = find(name, &vtype);
+    AP_Param *vp = find(name, vtype);
     if (vp == nullptr) {
         return false;
     }
@@ -2879,7 +2868,7 @@ bool AP_Param::set_and_save_by_name(const char *name, float value)
 bool AP_Param::set_and_save_by_name_ifchanged(const char *name, float value)
 {
     enum ap_var_type vtype;
-    AP_Param *vp = find(name, &vtype);
+    AP_Param *vp = find(name, vtype);
     if (vp == nullptr) {
         return false;
     }
@@ -3261,7 +3250,7 @@ bool AP_Param::add_param(uint8_t _key, uint8_t param_num, const char *pname, flo
 
     // Check for conflicting name
     enum ap_var_type existingType;
-    AP_Param* existingParam = find(fullName, &existingType);
+    AP_Param* existingParam = find(fullName, existingType);
     if ((existingParam != nullptr) && ((existingType != AP_PARAM_FLOAT) || ((AP_Float*)existingParam != &p))) {
         // There is a existing parameter with this name (which is not this parameter from a previous script run)
         return false;

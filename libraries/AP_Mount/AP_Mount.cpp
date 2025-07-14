@@ -1114,7 +1114,7 @@ void AP_Mount::convert_params()
             char pname[17];
             enum ap_var_type ptype;
             snprintf(pname, sizeof(pname), "RC%u_OPTION", (unsigned)mnt_rcin);
-            AP_Int16 *rcx_option = (AP_Int16 *)AP_Param::find(pname, &ptype);
+            AP_Int16 *rcx_option = (AP_Int16 *)AP_Param::find(pname, ptype);
             if ((rcx_option != nullptr) && !rcx_option->configured()) {
                 rcx_option->set_and_save(mnt_rc_conversion_table[i].new_rc_option);
             }

@@ -294,11 +294,11 @@ void AP_OSD_ParamSetting::update()
     // if a parameter was configured then use that
     _current_token = AP_Param::ParamToken {};
     // surely there is a more efficient way than brute-force search
-    for (_param = AP_Param::first(&_current_token, &_param_type);
+    for (_param = AP_Param::first(_current_token, _param_type);
         _param && (AP_Param::get_persistent_key(_current_token.key) != uint16_t(_param_key.get())
             || _current_token.idx != uint8_t(_param_idx.get())
             || _current_token.group_element != uint32_t(_param_group.get()));
-        _param = AP_Param::next_scalar(&_current_token, &_param_type)) {
+        _param = AP_Param::next_scalar(_current_token, _param_type)) {
     }
 
     if (_param == nullptr) {
@@ -313,7 +313,7 @@ bool AP_OSD_ParamSetting::set_by_name(const char* name, uint8_t config_type, flo
 {
     AP_Param::ParamToken token = AP_Param::ParamToken {};
     ap_var_type type;
-    AP_Param* param = AP_Param::find_by_name(name, &type, &token);
+    AP_Param* param = AP_Param::find_by_name(name, type, token);
 
     if (param == nullptr) {
         // leave unchanged

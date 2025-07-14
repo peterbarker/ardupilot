@@ -40,7 +40,7 @@ int lua_new_Parameter(lua_State *L) {
 // init by name
 bool Parameter::init(const char *name)
 {
-    vp = AP_Param::find(name, &vtype);
+    vp = AP_Param::find(name, vtype);
     if (vp == nullptr) {
         return false;
     }

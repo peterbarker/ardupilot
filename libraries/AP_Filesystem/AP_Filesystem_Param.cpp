@@ -181,15 +181,15 @@ uint8_t AP_Filesystem_Param::pack_param(const struct rfile &r, struct cursor &c,
 
     if (c.token_ofs == 0) {
         c.idx = 0;
-        ap = AP_Param::first(&c.token, &ptype, &default_val);
+        ap = AP_Param::first(c.token, ptype, &default_val);
         uint16_t idx = 0;
         while (idx < r.start && ap) {
-            ap = AP_Param::next_scalar(&c.token, &ptype, &default_val);
+            ap = AP_Param::next_scalar(c.token, ptype, &default_val);
             idx++;
         }
     } else {
         c.idx++;
-        ap = AP_Param::next_scalar(&c.token, &ptype, &default_val);
+        ap = AP_Param::next_scalar(c.token, ptype, &default_val);
     }
     if (ap == nullptr || (r.count && c.idx >= r.count)) {
         if (r.count == 0 && c.idx != AP_Param::count_parameters()) {
@@ -583,7 +583,7 @@ bool AP_Filesystem_Param::param_upload_parse(const rfile &r, bool &need_retry)
 
         // assume that this write to the Param filesystem is coming
         // via mavftp:
-        AP_Param *p = AP_Param::find(name, &ptype2, &flags2);
+        AP_Param *p = AP_Param::find(name, ptype2, &flags2);
         if (p == nullptr || !p->allow_set_via_mavlink(flags2)) {
             if (ptype == AP_PARAM_INT8) {
                 b++;

@@ -209,9 +209,8 @@ void AP_Frsky_MAVliteMsgHandler::handle_param_set(const AP_Frsky_MAVlite_Message
     // find existing param so we can get the old value
     enum ap_var_type var_type;
     // set parameter
-    AP_Param *vp;
     uint16_t parameter_flags = 0;
-    vp = AP_Param::find(param_name, &var_type, &parameter_flags);
+    const AP_Param *vp = AP_Param::find(param_name, var_type, &parameter_flags);
     if (vp == nullptr || isnan(param_value) || isinf(param_value)) {
         return;
     }

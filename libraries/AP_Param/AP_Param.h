@@ -318,7 +318,7 @@ public:
     /// @return                 A pointer to the variable, or nullptr if
     ///                         it does not exist.
     ///
-    static AP_Param * find(const char *name, enum ap_var_type *ptype, uint16_t *flags = nullptr);
+    static AP_Param * find(const char *name, enum ap_var_type &ptype, uint16_t *flags = nullptr);
 
     /// set a default value by name
     ///
@@ -362,10 +362,10 @@ public:
     /// @return                 A pointer to the variable, or nullptr if
     ///                         it does not exist.
     ///
-    static AP_Param * find_by_index(uint16_t idx, enum ap_var_type *ptype, ParamToken *token);
+    static AP_Param * find_by_index(uint16_t idx, enum ap_var_type &ptype, ParamToken &token);
 
     // by-name equivalent of find_by_index()
-    static AP_Param* find_by_name(const char* name, enum ap_var_type *ptype, ParamToken *token);
+    static AP_Param* find_by_name(const char* name, enum ap_var_type &ptype, ParamToken &token);
 
     /// Find a variable by pointer
     ///
@@ -540,16 +540,16 @@ public:
     /// @return             The first variable in _var_info, or nullptr if
     ///                     there are none.
     ///
-    static AP_Param *      first(ParamToken *token, enum ap_var_type *ptype, float *default_val = nullptr);
+    static AP_Param *      first(ParamToken &token, enum ap_var_type &ptype, float *default_val = nullptr);
 
     /// Returns the next variable in _var_info, recursing into groups
     /// as needed
-    static AP_Param *      next(ParamToken *token, enum ap_var_type *ptype) { return  next(token, ptype, false); }
-    static AP_Param *      next(ParamToken *token, enum ap_var_type *ptype, bool skip_disabled, float *default_val = nullptr);
+    static AP_Param *      next(ParamToken &token, enum ap_var_type &ptype) { return  next(token, ptype, false); }
+    static AP_Param *      next(ParamToken &token, enum ap_var_type &ptype, bool skip_disabled, float *default_val = nullptr);
 
     /// Returns the next scalar variable in _var_info, recursing into groups
     /// as needed
-    static AP_Param *       next_scalar(ParamToken *token, enum ap_var_type *ptype, float *default_val = nullptr);
+    static AP_Param *       next_scalar(ParamToken &token, enum ap_var_type &ptype, float *default_val = nullptr);
 
     /// get the size of a type in bytes
     static uint8_t				type_size(enum ap_var_type type);
@@ -743,7 +743,7 @@ private:
                                     uint16_t vindex,
                                     ptrdiff_t group_offset,
                                     const struct GroupInfo *group_info,
-                                    enum ap_var_type *ptype);
+                                    enum ap_var_type &ptype);
     static void                 write_sentinal(uint16_t ofs);
     static uint16_t             get_key(const Param_header &phdr);
     static void                 set_key(Param_header &phdr, uint16_t key);
@@ -762,8 +762,8 @@ private:
                                     const uint32_t group_base,
                                     const uint8_t group_shift,
                                     const ptrdiff_t group_offset,
-                                    ParamToken *token,
-                                    enum ap_var_type *ptype,
+                                    ParamToken &token,
+                                    enum ap_var_type &ptype,
                                     bool skip_disabled,
                                     float *default_val);
 
