@@ -121,26 +121,21 @@ bool Tracker::set_home_to_current_location(bool lock)
     return set_home(AP::gps().location(), lock);
 }
 
-bool Tracker::set_home(const Location &temp, bool lock)
+bool Tracker::set_home(const AbsAltLocation &temp, bool lock)
 {
-    AbsAltLocation abs_alt_temp;
-    if (!abs_alt_temp.from(temp)) {
-        return false;
-    }
-
     // check EKF origin has been set
     AbsAltLocation ekf_origin;
     if (ahrs.get_origin(ekf_origin)) {
-        if (!ahrs.set_home(abs_alt_temp)) {
+        if (!ahrs.set_home(temp)) {
             return false;
         }
     }
 
-    if (!set_home_eeprom(abs_alt_temp)) {
+    if (!set_home_eeprom(temp)) {
         return false;
     }
 
-    current_loc = abs_alt_temp;
+    current_loc = temp;
 
     return true;
 }
