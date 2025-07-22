@@ -419,7 +419,9 @@ void GCS_MAVLINK_Tracker::handle_message_mission_item(const mavlink_message_t &m
 
         // check if this is the HOME wp
         if (packet.seq == 0) {
-            if (!tracker.set_home(tell_command, false)) {
+            AbsAltLocation abs_loc;
+            if (!abs_loc.from(tell_command) ||
+                !tracker.set_home(abs_loc, false)) {
                 result = MAV_MISSION_ERROR;
                 goto mission_failed;
             }

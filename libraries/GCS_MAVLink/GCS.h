@@ -549,7 +549,7 @@ protected:
 #if AP_HOME_ENABLED
     MAV_RESULT handle_command_do_set_home(const mavlink_command_int_t &packet);
     bool set_home_to_current_location(bool lock);
-    bool set_home(const AbsAltLocation& loc, bool lock);
+    virtual bool set_home(const AbsAltLocation& loc, bool lock);
 #endif
 
 #if AP_ARMING_ENABLED

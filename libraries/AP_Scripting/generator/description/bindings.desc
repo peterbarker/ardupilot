@@ -4,7 +4,6 @@ include AP_Common/Location.h
 
 userdata Location field lat int32_t read write -900000000 900000000
 userdata Location field lng int32_t read write -1800000000 1800000000
-userdata Location field alt int32_t read write (-LOCATION_ALT_MAX_M*100+1) (LOCATION_ALT_MAX_M*100-1)
 userdata Location field relative_alt boolean read write
 userdata Location field terrain_alt boolean read write
 userdata Location field origin_alt boolean read write
@@ -28,8 +27,6 @@ userdata Location method get_alt_frame uint8_t
 userdata Location method change_alt_frame boolean Location::AltFrame'enum Location::AltFrame::ABSOLUTE Location::AltFrame::ABOVE_TERRAIN
 userdata Location method copy Location
 
-include AP_Common/AbsAltLocation.h
-
 userdata AbsAltLocation field lat int32_t read write -900000000 900000000
 userdata AbsAltLocation field lng int32_t read write -1800000000 1800000000
 userdata AbsAltLocation field relative_alt boolean read write
@@ -48,8 +45,10 @@ userdata AbsAltLocation method get_vector_from_origin_NEU_cm depends AP_AHRS_ENA
 userdata AbsAltLocation method get_vector_from_origin_NEU boolean Vector3f'Null
 userdata AbsAltLocation method get_vector_from_origin_NEU depends AP_AHRS_ENABLED
 userdata AbsAltLocation method get_vector_from_origin_NEU deprecate Use get_vector_from_origin_NEU_cm or get_vector_from_origin_NEU_m
-userdata AbsAltLocation method get_alt_m float # location in absolute frame, never nil
-userdata AbsAltLocation method get_alt_m Location:AltFrame float'Null  # location in specific frame, may return nil
+-- location in absolute frame, never nil:
+userdata AbsAltLocation method get_alt_m float
+-- location in specific frame, may return nil:
+userdata AbsAltLocation method get_alt_m_in_frame boolean Location::AltFrame'enum Location::AltFrame::ABSOLUTE Location::AltFrame::ABOVE_TERRAIN float'Null
 userdata AbsAltLocation method get_bearing float AbsAltLocation
 userdata AbsAltLocation method get_distance_NED Vector3f AbsAltLocation
 userdata AbsAltLocation method get_distance_NE Vector2f AbsAltLocation
@@ -70,7 +69,7 @@ singleton AP_AHRS method get_pitch deprecate Use get_pitch_rad
 singleton AP_AHRS method get_yaw_rad float
 singleton AP_AHRS method get_yaw float
 singleton AP_AHRS method get_yaw deprecate Use get_yaw_rad
-singleton AP_AHRS method get_location boolean Location'Null
+singleton AP_AHRS method get_location boolean AbsAltLocation'Null
 singleton AP_AHRS method get_location alias get_position
 singleton AP_AHRS method get_home Location
 singleton AP_AHRS method get_gyro Vector3f
@@ -97,8 +96,8 @@ singleton AP_AHRS method get_variances boolean float'Null float'Null float'Null 
 singleton AP_AHRS method set_posvelyaw_source_set void AP_NavEKF_Source::SourceSetSelection'enum AP_NavEKF_Source::SourceSetSelection::PRIMARY AP_NavEKF_Source::SourceSetSelection::TERTIARY
 singleton AP_AHRS method get_vel_innovations_and_variances_for_source boolean uint8_t 3 6 Vector3f'Null Vector3f'Null
 singleton AP_AHRS method set_home boolean Location
-singleton AP_AHRS method get_origin boolean Location'Null
-singleton AP_AHRS method set_origin boolean Location
+singleton AP_AHRS method get_origin boolean AbsAltLocation'Null
+singleton AP_AHRS method set_origin boolean AbsAltLocation
 singleton AP_AHRS method initialised boolean
 singleton AP_AHRS method get_posvelyaw_source_set uint8_t
 singleton AP_AHRS method get_quaternion boolean Quaternion'Null

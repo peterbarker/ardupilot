@@ -197,7 +197,7 @@ private:
     bool get_home_eeprom(AbsAltLocation &loc) const;
     bool set_home_eeprom(const AbsAltLocation &temp) WARN_IF_UNUSED;
     bool set_home_to_current_location(bool lock) override WARN_IF_UNUSED;
-    bool set_home(const Location &temp, bool lock) override WARN_IF_UNUSED;
+    bool set_home(const AbsAltLocation &temp, bool lock) override WARN_IF_UNUSED;
     void prepare_servos();
     void set_mode(Mode &newmode, ModeReason reason);
     bool set_mode(uint8_t new_mode, ModeReason reason) override;
