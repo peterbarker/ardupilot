@@ -55,7 +55,7 @@ bool Copter::set_home_to_current_location(bool lock) {
 
 // set_home - sets ahrs home (used for RTL) to specified location
 //  returns true if home location set successfully
-bool Copter::set_home(const Location& loc, bool lock)
+bool Copter::set_home(const AbsAltLocation& loc, bool lock)
 {
     // check EKF origin has been set
     AbsAltLocation ekf_origin;

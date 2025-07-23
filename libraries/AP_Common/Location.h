@@ -52,6 +52,7 @@ public:
     bool get_alt_cm(AltFrame desired_frame, int32_t &ret_alt_cm) const WARN_IF_UNUSED;
     // same as get_alt_cm but in metres:
     bool get_alt_m(AltFrame desired_frame, float &ret_alt) const WARN_IF_UNUSED;
+    bool get_alt_m_in_frame(AltFrame desired_frame, float &ret_alt) const WARN_IF_UNUSED { return get_alt_m(desired_frame, ret_alt); }
 
     // get altitude frame
     AltFrame get_alt_frame() const;
