@@ -35,7 +35,7 @@ CMTC can be disabled by setting TA_CMTC_ENABLE = 0. The loiter radius will be TA
 
 SCRIPT_NAME = "OvrhdIntl Terrain Avoid"
 SCRIPT_NAME_SHORT = "TerrAvoid"
-SCRIPT_VERSION = "4.7.0-014"
+SCRIPT_VERSION = "4.7.0-015"
 
 STARTUP_DELAY = 20  -- wait this many seconds for the FC to come up before starting the script
 
@@ -306,10 +306,27 @@ local mavlink = require("mavlink_wrappers")
 local location_tracker  -- forward declaration. See below for definition and instantiation.
 
 -- deal with deprecations in 4.7
-local get_yaw_function = ahrs.get_yaw_rad
+version47orhigher = true
+get_yaw_function = ahrs.get_yaw_rad
 if get_yaw_function == nil then
+    ---@diagnostic disable-next-line
     get_yaw_function = ahrs.get_yaw
+    version47orhigher = false
 end
+distance_orient_function = rangefinder.distance_orient
+if distance_orient_function == nil then
+    ---@diagnostic disable-next-line
+    distance_orient_fnction = rangefinder.distance_cm_orient
+end
+function rangefinder_distance_orient_m(orientation)
+    if version47orhigher then
+        return distance_orient_function(rangefinder,orientation)
+    else
+        -- the 4.6 function is in cm
+        return distance_orient_function(rangefinder,orientation) * 0.01
+    end
+end
+
 
 -- constrain a value between limits
 local function constrain(v, vmin, vmax)
@@ -681,6 +698,47 @@ local function do_pitching()
     end
 end
 
+
+-- This function decides if there is an obstacle for quading based on
+-- 1. if terrain height is < quad_down_min or
+-- 2. if there is a valid rangefinder down and rangefinder_down_value < pitch_quad_min or
+-- 3. if there is a valid rangefinder forward and rangefinder_forward_value < quad_forward_min
+--
+local function quad_obstacle_forward()
+    if rangefinder_forward_value > 0 and rangefinder_forward_value < MAX_RANGEFINDER_VALUE
+       and rangefinder_forward_value < quad_forward_min then
+        return true
+    end
+end
+
+local function quad_obstacle_down()
+    if rangefinder_down_value > 0 and rangefinder_down_value < MAX_RANGEFINDER_VALUE
+       and rangefinder_down_value < quad_down_min then
+        return true
+    end
+    return false
+end
+
+local function quad_obstacle_detected()
+    -- prevent quading if we are in a flyaway situation
+    if terrain_max_exceeded then
+        if quading_active then
+            gcs:send_text(MAV_SEVERITY.CRITICAL, SCRIPT_NAME_SHORT .. ": Quading " .. terrain_altitude .. " above: " .. altitude_max)
+        end
+        return false
+    end
+
+    if quad_obstacle_down() then
+        return true
+    end
+    if quad_obstacle_forward() then
+        return true
+    end
+
+    -- no obstacle, we are good
+    return false
+end
+
 local last_quading_location
 local quad_tolerance = QUAD_TOLERANCE
 
@@ -700,16 +758,19 @@ start_quading = function() -- forward declaration above
     cmtc_active = false
     THROTTLE_CHANNEL:set_override(THROTTLE_UP_PWM)
 
-    if last_quading_location ~= nil and current_location ~= nil then
-        -- if we seem to be repeatedly quading at the same location, try going a little higher this time
-        if current_location:get_distance(last_quading_location) < wp_loiter_rad_m then
-            gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": Quading repeat:" .. quad_tolerance)
-            quad_tolerance = quad_tolerance * QUAD_TOLERANCE
-        else 
-            quad_tolerance = QUAD_TOLERANCE
+    if current_location then
+        if last_quading_location then
+            -- if we seem to be repeatedly quading at the same location, try going a little higher this time
+            if current_location:get_distance(last_quading_location) < wp_loiter_rad_m then
+                gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": Quading repeat:" .. quad_tolerance)
+                quad_tolerance = quad_tolerance * QUAD_TOLERANCE
+            else 
+                quad_tolerance = QUAD_TOLERANCE
+            end
         end
+        -- remeber for next time
+        last_quading_location = current_location:copy()
     end
-    last_quading_location = current_location:copy()
 end
 
 local function check_quading()
@@ -808,46 +869,6 @@ pitch_obstacle_detected = function(multiplier)
     return false
 end
 
--- This function decides if there is an obstacle for quading based on
--- 1. if terrain height is < quad_down_min or
--- 2. if there is a valid rangefinder down and rangefinder_down_value < pitch_quad_min or
--- 3. if there is a valid rangefinder forward and rangefinder_forward_value < quad_forward_min
---
-function quad_obstacle_forward()
-    if rangefinder_forward_value > 0 and rangefinder_forward_value < MAX_RANGEFINDER_VALUE
-       and rangefinder_forward_value < quad_forward_min then
-        return true
-    end
-end
-
-function quad_obstacle_down()
-    if rangefinder_down_value > 0 and rangefinder_down_value < MAX_RANGEFINDER_VALUE
-       and rangefinder_down_value < quad_down_min then
-        return true
-    end
-    return false
-end
-
-function quad_obstacle_detected()
-    -- prevent quading if we are in a flyaway situation
-    if terrain_max_exceeded then
-        if quading_active then
-            gcs:send_text(MAV_SEVERITY.CRITICAL, SCRIPT_NAME_SHORT .. ": Quading " .. terrain_altitude .. " above: " .. altitude_max)
-        end
-        return false
-    end
-
-    if quad_obstacle_down() then
-        return true
-    end
-    if quad_obstacle_forward() then
-        return true
-    end
-
-    -- no obstacle, we are good
-    return false
-end
-
 -- this method checks the distance down and forward.
 -- and this uses RC8 to simulate forward rangefinder and RC5 to simulate downward
 local function populate_rangefinder_values()
@@ -857,14 +878,14 @@ local function populate_rangefinder_values()
 
     if rangefinder:has_data_orient(RANGEFINDER_ORIENT.DOWNWARD)
         and rangefinder:status_orient(RANGEFINDER_ORIENT.DOWNWARD) == RANGEFINDER_STATUS.GOOD then
-        rangefinder_down_value = rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.DOWNWARD) / 100.0
+        rangefinder_down_value = rangefinder_distance_orient_m(RANGEFINDER_ORIENT.DOWNWARD) -- rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.DOWNWARD) / 100.0
     else
         -- if we don't have a downward rangefinder revert to terrain altitude
         rangefinder_down_value = terrain:height_above_terrain(true) or 0.0
     end
     if rangefinder:has_data_orient(RANGEFINDER_ORIENT.FORWARD)
         and rangefinder:status_orient(RANGEFINDER_ORIENT.FORWARD) == RANGEFINDER_STATUS.GOOD then
-        rangefinder_forward_value = rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.FORWARD) / 100.0
+        rangefinder_down_value = rangefinder_distance_orient_m(RANGEFINDER_ORIENT.FORWARD) --rangefinder_forward_value = rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.FORWARD) / 100.0
     else
         rangefinder_forward_value = 0.0
     end
@@ -1134,7 +1155,7 @@ local function terravoid_active()
 end
 
 -- main update function called by protected_wrapper REFRESH_RATE times per second
-local function update()
+function update()
     now = millis():tofloat() * 0.001
     current_location = ahrs:get_location()
     if current_location ~= nil then
@@ -1267,7 +1288,7 @@ end
 -- wrapper around update(). This calls update() at 1/REFRESHRATE Hz,
 -- and if update faults then an error is displayed, but the script is not
 -- stopped
-local function protected_wrapper()
+function protected_wrapper()
     local success, err = pcall(update)
     if not success then
        gcs:send_text(0, SCRIPT_NAME_SHORT .. ": Error: " .. err)
@@ -1278,7 +1299,7 @@ local function protected_wrapper()
     return protected_wrapper, 1000 * REFRESH_RATE
 end
 
-local function delayed_startup()
+function delayed_startup()
     gcs:send_text(MAV_SEVERITY.INFO, string.format("%s %s script loaded", SCRIPT_NAME, SCRIPT_VERSION) )
     return protected_wrapper()
 end
