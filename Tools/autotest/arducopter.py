@@ -10800,6 +10800,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.SMART_RTL,
             self.RTL_TO_RALLY,
             self.FlyEachFrame,
+            self.ScriptParamRegistration,
             self.GPSBlending,
             self.DataFlash,
             Test(self.DataFlashErase, attempts=8),
