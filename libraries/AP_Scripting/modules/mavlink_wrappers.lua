@@ -71,7 +71,7 @@ function MAVLink.set_vehicle_speed(speed)
                                   p2 = new_speed,
                                   p3 = slew })
         if mavlink_result > 0 then
-            gcs:send_text(MAVLink.SEVERITY.ERROR, MAVLink.SCRIPT_NAME_SHORT .. string.format(": MAVLink GUIDED_CHANGE_SPEED returned %d", mavlink_result, vehicle_mode))
+            -- gcs:send_text(MAVLink.SEVERITY.ERROR, MAVLink.SCRIPT_NAME_SHORT .. string.format(": MAVLink GUIDED_CHANGE_SPEED returned %d", mavlink_result, vehicle_mode))
             return false
         end
     else
@@ -81,7 +81,7 @@ function MAVLink.set_vehicle_speed(speed)
                                   p2 = new_speed,
                                   p3 = throttle })
         if mavlink_result > 0 then
-            gcs:send_text(MAVLink.SEVERITY.ERROR, MAVLink.SCRIPT_NAME_SHORT .. string.format(": MAVLink DO_CHANGE_SPEED returned %d mode %d", mavlink_result, vehicle_mode))
+            -- gcs:send_text(MAVLink.SEVERITY.ERROR, MAVLink.SCRIPT_NAME_SHORT .. string.format(": MAVLink DO_CHANGE_SPEED returned %d mode %d", mavlink_result, vehicle_mode))
             return false
         end
     end

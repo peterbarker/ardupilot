@@ -35,11 +35,11 @@ CMTC can be disabled by setting TA_CMTC_ENABLE = 0. The loiter radius will be TA
 
 SCRIPT_NAME = "OvrhdIntl Terrain Avoid"
 SCRIPT_NAME_SHORT = "TerrAvoid"
-SCRIPT_VERSION = "4.7.0-015"
+SCRIPT_VERSION = "4.7.0-017"
 
 STARTUP_DELAY = 20  -- wait this many seconds for the FC to come up before starting the script
 
-FLIGHT_MODE = {FBWA=5, AUTO=10, RTL=11, LOITER=12, GUIDED=15, QHOVER=18, QLOITER=19, QRTL=21}
+FLIGHT_MODE = {FBWA=5, AUTO=10, RTL=11, LOITER=12, GUIDED=15, QHOVER=18, QLOITER=19, QLAND=20, QRTL=21}
 
 MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7}
 MAV_FRAME = { GLOBAL = 0, GLOBAL_RELATIVE_ALT = 3}
@@ -251,7 +251,7 @@ PITCH_FORWARD_PWM = 1350
 PITCH_NEUTRAL_PWM = 1500
 
 PITCH_TOLERANCE = 1.1
-QUAD_TOLERANCE = 1.5
+QUAD_TOLERANCE = 2.0
 
 local vehicle_mode = vehicle:get_mode()
 
@@ -305,7 +305,9 @@ local mavlink = require("mavlink_wrappers")
 
 local location_tracker  -- forward declaration. See below for definition and instantiation.
 
+-------------------------------------------------
 -- deal with deprecations in 4.7
+-------------------------------------------------
 version47orhigher = true
 get_yaw_function = ahrs.get_yaw_rad
 if get_yaw_function == nil then
@@ -313,18 +315,36 @@ if get_yaw_function == nil then
     get_yaw_function = ahrs.get_yaw
     version47orhigher = false
 end
-distance_orient_function = rangefinder.distance_orient
-if distance_orient_function == nil then
+Distance_Orient_Function = rangefinder.distance_orient
+if Distance_Orient_Function == nil then
     ---@diagnostic disable-next-line
-    distance_orient_fnction = rangefinder.distance_cm_orient
+    Distance_Orient_Function = rangefinder.distance_cm_orient
 end
-function rangefinder_distance_orient_m(orientation)
+function Rangefinder_Distance_Orient_m(orientation)
     if version47orhigher then
-        return distance_orient_function(rangefinder,orientation)
+        return Distance_Orient_Function(rangefinder,orientation)
     else
         -- the 4.6 function is in cm
-        return distance_orient_function(rangefinder,orientation) * 0.01
+        return Distance_Orient_Function(rangefinder,orientation) * 0.01
     end
+end
+
+Get_Roll_Function = ahrs.get_roll_rad
+if Get_Roll_Function == nil then
+    ---@diagnostic disable-next-line
+    Get_Roll_Function = ahrs.get_roll
+end
+function Get_Roll_Deg()
+    return math.deg(Get_Roll_Function(ahrs))
+end
+
+Get_Pitch_Function = ahrs.get_pitch_rad
+if Get_Pitch_Function == nil then
+    ---@diagnostic disable-next-line
+    Get_Pitch_Function = ahrs.get_pitch
+end
+function Get_Pitch_Deg()
+    return math.deg(Get_Pitch_Function(ahrs))
 end
 
 
@@ -339,7 +359,15 @@ local function constrain(v, vmin, vmax)
     return v
 end
 
-local function set_vehicle_mode(new_mode)
+-------------------------------------------------
+-- Mode functions
+-------------------------------------------------
+
+-------------------------------------------------
+-- wrap vehicle:set_mode to prevent accidentally setting invalid modes or manual mode
+-------------------------------------------------
+---@diagnostic disable-next-line
+function set_vehicle_mode(new_mode)
     if new_mode <= 0 or vehicle_mode == new_mode then
         return
     end
@@ -348,7 +376,8 @@ local function set_vehicle_mode(new_mode)
 end
 
 -- save the current mode and then enter the new mode
-local function set_avoid_mode(new_mode)
+---@diagnostic disable-next-line
+function set_avoid_mode(new_mode)
     if vehicle:get_mode() ~= new_mode then
         avoid_enter_mode = vehicle_mode
         set_vehicle_mode(new_mode)
@@ -356,7 +385,7 @@ local function set_avoid_mode(new_mode)
 end
 
 -- reset the flight mode to the previously saved flight mode (if valid) or AUTO
-local function reset_avoid_mode()
+function reset_avoid_mode()
     local new_mode = FLIGHT_MODE.AUTO
     if avoid_enter_mode == FLIGHT_MODE.AUTO or avoid_enter_mode == FLIGHT_MODE.GUIDED or avoid_enter_mode == FLIGHT_MODE.LOITER or
         avoid_enter_mode == FLIGHT_MODE.QHOVER or avoid_enter_mode == FLIGHT_MODE.QLOITER or avoid_enter_mode == FLIGHT_MODE.QRTL or
@@ -483,8 +512,7 @@ local function set_altitude_high()
 end
 
 -- Attempts to duplicate the code that updates the prev_WP_loc variable in the c++ code
-local function LocationTracker()
-
+function LocationTracker()
     local self = {}
 
     -- to get this to work, need to keep 2 prior generations of "target_location"
@@ -694,7 +722,7 @@ local function do_pitching()
             pitch_last_bad_timestamp = millis():tofloat() * 0.001
         end
         airspeed_desired = airspeed_cruise
-        -- gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": Pitching:" .. math.deg(ahrs:get_pitch_rad()))
+        -- gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": Pitching:" .. Get_Pitch_Deg()))
     end
 end
 
@@ -762,8 +790,8 @@ start_quading = function() -- forward declaration above
         if last_quading_location then
             -- if we seem to be repeatedly quading at the same location, try going a little higher this time
             if current_location:get_distance(last_quading_location) < wp_loiter_rad_m then
-                gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": Quading repeat:" .. quad_tolerance)
-                quad_tolerance = quad_tolerance * QUAD_TOLERANCE
+                gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": Quading repeat: " .. quad_tolerance)
+                quad_tolerance = quad_tolerance * 1.5
             else 
                 quad_tolerance = QUAD_TOLERANCE
             end
@@ -870,7 +898,6 @@ pitch_obstacle_detected = function(multiplier)
 end
 
 -- this method checks the distance down and forward.
--- and this uses RC8 to simulate forward rangefinder and RC5 to simulate downward
 local function populate_rangefinder_values()
     -- Get the new values of the range finders every update cycle
     -- We'll probably want some kind of certainty check for the range finders
@@ -878,14 +905,14 @@ local function populate_rangefinder_values()
 
     if rangefinder:has_data_orient(RANGEFINDER_ORIENT.DOWNWARD)
         and rangefinder:status_orient(RANGEFINDER_ORIENT.DOWNWARD) == RANGEFINDER_STATUS.GOOD then
-        rangefinder_down_value = rangefinder_distance_orient_m(RANGEFINDER_ORIENT.DOWNWARD) -- rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.DOWNWARD) / 100.0
+        rangefinder_down_value = Rangefinder_Distance_Orient_m(RANGEFINDER_ORIENT.DOWNWARD) -- rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.DOWNWARD) / 100.0
     else
         -- if we don't have a downward rangefinder revert to terrain altitude
         rangefinder_down_value = terrain:height_above_terrain(true) or 0.0
     end
     if rangefinder:has_data_orient(RANGEFINDER_ORIENT.FORWARD)
         and rangefinder:status_orient(RANGEFINDER_ORIENT.FORWARD) == RANGEFINDER_STATUS.GOOD then
-        rangefinder_down_value = rangefinder_distance_orient_m(RANGEFINDER_ORIENT.FORWARD) --rangefinder_forward_value = rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.FORWARD) / 100.0
+        rangefinder_down_value = Rangefinder_Distance_Orient_m(RANGEFINDER_ORIENT.FORWARD) --rangefinder_forward_value = rangefinder:distance_cm_orient(RANGEFINDER_ORIENT.FORWARD) / 100.0
     else
         rangefinder_forward_value = 0.0
     end
@@ -898,7 +925,6 @@ local function populate_rangefinder_values()
 
     if rangefinder_down_value == nil or rangefinder_down_value <= 0 or rangefinder_down_value > MAX_RANGEFINDER_VALUE then
         rangefinder_down_value = terrain_altitude or 0
-        -- gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": Use Terrain down: %.2f m", rangefinder_down_value) )
     end
     if rangefinder_forward_value == nil or rangefinder_forward_value <= 0 then
         rangefinder_forward_value = 0
@@ -917,7 +943,7 @@ local function wrap_360(angle)
 end
 
 --[[
-c++_code from AP_Terrain.cpp used as reference - i.e. this is not commented out code, it's the origin of the code below
+c++_code from AP_Terrain.cpp used as reference - i.e. this is not commented out code, it's the c++ origin of the Lua code below
 // check for terrain at grid spacing intervals
 while (distance > 0) {
     gcs().send_text(MAV_SEVERITY_INFO, "lookahead distance %.1f", distance);
@@ -938,7 +964,8 @@ while (distance > 0) {
 }
 --]]
 
-local function terrain_lookahead(start_location, search_bearing, search_distance, search_ratio)
+-- lookahead as
+function Terrain_Lookahead(start_location, search_bearing, search_distance, search_ratio)
     local highest_location = nil
     local climb = 0.0
     local highest_rise = 0.0
@@ -971,6 +998,7 @@ end
 
 -- returns required pitch to avoid hitting something between here and the next waypoint or other destination such as
 -- home location for RTL
+-- returns pitch required, altitude required, maximum alitude error
 terrain_approaching = function(clearance)
     if current_location == nil then
         gcs:send_text(MAV_SEVERITY.NOTICE, SCRIPT_NAME_SHORT .. string.format(": current_location NIL") )
@@ -990,7 +1018,7 @@ terrain_approaching = function(clearance)
         return 0.0, -1.0, 0.0
     end
 
-    highest_location = terrain_lookahead(current_location, wp_bearing, wp_distance, 0.5 * tecs_climb_max / groundspeed_current)
+    highest_location = Terrain_Lookahead(current_location, wp_bearing, wp_distance, 0.5 * tecs_climb_max / groundspeed_current)
     if highest_location == nil then
         return 0.0, -1.0, 0.0
     end
@@ -1013,22 +1041,27 @@ terrain_approaching = function(clearance)
     return pitch_required, alt_required_amsl, highest_alt_difference
 end
 
-local function highest_arc_terrain(loiter_center, bearing_start, bearing_step, arc_max, loiter_rad_m)
+-- search around an arch from loiter_center for the highest/lowest terrain altitude around the arc
+function Arc_Terrain_Altitude(loiter_center, bearing_start, bearing_step, arc_max, loiter_rad_m)
     local next_increment = bearing_step
-    local highest_terrain = 0.0
+    local highest_terrain_m = 0.0
+    --local lowest_terrain_m = 999999.0
     while math.abs(next_increment) < arc_max do
         local test_bearing = wrap_360(bearing_start + next_increment)
 
         local loiter_edge = loiter_center:copy()
         loiter_edge:offset_bearing(test_bearing, loiter_rad_m)
-        local terrain_height = terrain:height_amsl(loiter_edge, true)
-        if terrain_height > highest_terrain then
-            highest_terrain = terrain_height or 0.0
+        local terrain_height_m = terrain:height_amsl(loiter_edge, true)
+        if terrain_height_m > highest_terrain_m then
+            highest_terrain_m = terrain_height_m or 0.0
         end
+        --if terrain_height_m < lowest_terrain_m then
+        --    lowest_terrain_m = terrain_height_m or 999999.0
+        --end
         next_increment = next_increment + bearing_step
     end
 
-    return highest_terrain
+    return highest_terrain_m --, lowest_terrain_m
 end
 
 -- avoids upcoming terrain entering a loiter to altitude
@@ -1055,16 +1088,17 @@ avoid_terrain = function(target_alt_amsl) -- forward declaration above
     local spacing_degrees = (terrain_spacing * 360.0) / (2.0 * math.pi * radius_scaled_m)
 
     -- find the highest terrain we are likely to hit if we loiter left vs right
-    local highest_left_terrain = highest_arc_terrain(loiter_center_left, current_wp_bearing_deg, -spacing_degrees, 180, radius_scaled_m)
-    local highest_right_terrain = highest_arc_terrain(loiter_center_right, current_wp_bearing_deg, spacing_degrees, 180, radius_scaled_m)
+    local highest_left_terrain = Arc_Terrain_Altitude(loiter_center_left, current_wp_bearing_deg, -spacing_degrees, 180, radius_scaled_m)
+    local highest_right_terrain = Arc_Terrain_Altitude(loiter_center_right, current_wp_bearing_deg, spacing_degrees, 180, radius_scaled_m)
 
     set_avoid_mode(FLIGHT_MODE.GUIDED)
 
     -- loiter up to the requjired AMSL height, in the direction of lowest terrain
     -- except if the vehicle is already rolling > 30 degrees left then it won't try to "reverse" the roll
-    -- gcs:send_text(MAV_SEVERITY.WARNING, SCRIPT_NAME_SHORT .. string.format(": CMTC alt left %.0fm, right %.0f roll %.0f", highest_left_terrain, highest_right_terrain, math.deg(ahrs:get_roll() or 0)) )
+    -- gcs:send_text(MAV_SEVERITY.WARNING, SCRIPT_NAME_SHORT .. string.format(": CMTC alt left %.0fm, right %.0f roll %.0f", lowest_left_terrain, lowest_right_terrain, Get_Roll_Deg()) )
     -- gcs:send_text(MAV_SEVERITY.WARNING, SCRIPT_NAME_SHORT .. string.format(": CMTC curr lat %.3fm, lng %.0f alt %.0f", current_location:lat(), current_location:lng(), current_location:alt() * 0.01) )
-    if highest_left_terrain < highest_right_terrain then -- or math.deg(ahrs:get_roll) or 0) > 10 then
+    if highest_left_terrain < highest_right_terrain or Get_Roll_Deg() > 30 then
+    -- if lowest_left_terrain < lowest_right_terrain or Get_Roll_Deg() > 30 then
         --gcs:send_text(MAV_SEVERITY.WARNING, SCRIPT_NAME_SHORT .. string.format(": CMTC left lat %.3fm, lng %.0f alt %.0f dist %.0f",
         --                                                loiter_center_left:lat(), loiter_center_left:lng(), target_alt_amsl, current_location:get_distance(loiter_center_left)) )
         mavlink.set_vehicle_target_location({lat = loiter_center_left:lat(),
@@ -1129,7 +1163,7 @@ local function terravoid_active()
         return false
     end
     if not(vehicle_mode == FLIGHT_MODE.AUTO or vehicle_mode == FLIGHT_MODE.GUIDED or
-        vehicle_mode == FLIGHT_MODE.RTL or vehicle_mode == FLIGHT_MODE.QRTL or
+        vehicle_mode == FLIGHT_MODE.RTL or vehicle_mode == FLIGHT_MODE.QRTL or vehicle_mode == FLIGHT_MODE.QLAND or
         ((quading_active or airbrake_on) and (vehicle_mode == FLIGHT_MODE.QLOITER or vehicle_mode == FLIGHT_MODE.QHOVER))) then
         return false
     end
@@ -1139,7 +1173,8 @@ local function terravoid_active()
     if home ~= nil and current_location ~= nil then
         home_distance = home:get_distance(current_location) or 0.0
     end
-    if home_distance ~= nil and home_distance_max ~= nil and home_distance < home_distance_max then
+    -- we don't apply Terrain Avoidance around home otherwise we can't land!
+    if home_distance and home_distance_max and home_distance < home_distance_max then
         if not close_to_home then
             gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": close to home")
             close_to_home = true
@@ -1155,7 +1190,7 @@ local function terravoid_active()
 end
 
 -- main update function called by protected_wrapper REFRESH_RATE times per second
-function update()
+function Update()
     now = millis():tofloat() * 0.001
     current_location = ahrs:get_location()
     if current_location ~= nil then
@@ -1211,6 +1246,9 @@ function update()
     end
     check_activation_switch()
     if not terravoid_active() then
+        if cmtc_active then
+            stop_cmtc()
+        end
         if quading_active then
             stop_quading()
         end
@@ -1233,7 +1271,7 @@ function update()
             local pitch_required_deg, alt_required_amsl, terrain_diff_m = terrain_approaching(cmtc_height_m)
             if pitch_required_deg > (ptch_lim_max_deg * 0.5) then
                 --gcs:send_text(MAV_SEVERITY.WARNING, SCRIPT_NAME_SHORT .. string.format(": CMTC terrain_diff_m %.0fm alt_required %.0f", terrain_diff_m, alt_required_amsl) )
-                gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC pitch required %.0f deg", pitch_required_deg) )
+               --  gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC pitch required %.0f deg", pitch_required_deg) )
                 -- need to fly OVER the highest point - with TA_CMTC_HGT clearance
                 start_cmtc(alt_required_amsl)
             end
@@ -1277,7 +1315,7 @@ function update()
     if Q_TILT_ENABLE:get() == 1 and vehicle_mode == FLIGHT_MODE.AUTO then
         if airspeed_current < airspeed_min then
             PITCH_CHANNEL:set_override(PITCH_FORWARD_PWM)
-        elseif airspeed_current > airspeed_min and math.floor(math.abs(math.deg(ahrs:get_pitch_rad()))) > 5 then
+        elseif airspeed_current > airspeed_min and math.floor(math.abs(Get_Pitch_Deg())) > 5 then
             -- gcs:send_text(MAV_SEVERITY.INFO, string.format("%s %s pitch: %.1f", SCRIPT_NAME, SCRIPT_VERSION, math.floor(math.abs(math.deg(ahrs:get_pitch_rad())))) )
             PITCH_CHANNEL:set_override(PITCH_NEUTRAL_PWM)
         end
@@ -1289,7 +1327,7 @@ end
 -- and if update faults then an error is displayed, but the script is not
 -- stopped
 function protected_wrapper()
-    local success, err = pcall(update)
+    local success, err = pcall(Update)
     if not success then
        gcs:send_text(0, SCRIPT_NAME_SHORT .. ": Error: " .. err)
        -- when we fault we run the update function again after 1s, slowing it
@@ -1299,7 +1337,7 @@ function protected_wrapper()
     return protected_wrapper, 1000 * REFRESH_RATE
 end
 
-function delayed_startup()
+function Delayed_Startup()
     gcs:send_text(MAV_SEVERITY.INFO, string.format("%s %s script loaded", SCRIPT_NAME, SCRIPT_VERSION) )
     return protected_wrapper()
 end
@@ -1307,9 +1345,9 @@ end
 -- wait a bit for AP to come up then start running update loop
 if FWVersion:type() == 3 and Q_ENABLE:get() == 1 and TERRAIN_ENABLE:get() == 1 then
     if arming:is_armed() then -- no delay if armed
-        return delayed_startup()
+        return Delayed_Startup()
     else
-        return delayed_startup, 1000 * STARTUP_DELAY
+        return Delayed_Startup, 1000 * STARTUP_DELAY
     end
 else
     gcs:send_text(MAV_SEVERITY.NOTICE,string.format("%s: Must run on QuadPlane with terrain follow", SCRIPT_NAME_SHORT))
