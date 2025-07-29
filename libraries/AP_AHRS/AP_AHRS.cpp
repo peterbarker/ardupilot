@@ -391,6 +391,14 @@ void AP_AHRS::update_state(void)
 // update run at loop rate
 void AP_AHRS::update(bool skip_ins_update)
 {
+    // debugging memory-not-zero issue
+    extern uint8_t memory_was_not_zero;
+    static uint32_t last_debug_ms;
+    const auto now_ms = AP_HAL::millis();
+    if (now_ms - last_debug_ms > 5000) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "memory_was_not_zero=%u", memory_was_not_zero);
+    }
+
     // periodically checks to see if we should update the AHRS
     // orientation (e.g. based on the AHRS_ORIENTATION parameter)
     // allow for runtime change of orientation

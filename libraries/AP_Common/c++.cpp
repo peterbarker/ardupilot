@@ -141,6 +141,19 @@ void *__wrap_malloc(size_t size)
     and frees ptr (old_size can be <= actual original requested size)
   * returns nullptr if allocation fails and leaves ptr and its data unchanged
 */
+uint8_t memory_was_not_zero;
+
+bool mem_is_zero(void *ptr, size_t size);
+bool mem_is_zero(void *ptr, size_t size)
+{
+    for (size_t i=0; i<size; i++) {
+        if (((uint8_t *)ptr)[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void * WEAK mem_realloc(void *ptr, size_t old_size, size_t new_size)
 {
     if (new_size == 0) {
@@ -149,10 +162,20 @@ void * WEAK mem_realloc(void *ptr, size_t old_size, size_t new_size)
     }
 
     if (ptr == nullptr) {
-        return malloc(new_size);
+        void *ret = malloc(new_size);
+        if (!mem_is_zero(ret, new_size)) {
+            memory_was_not_zero = 1;
+            memset(ret, 0, new_size);
+        }
+        return ret;
     }
 
     void *new_ptr = malloc(new_size);
+    if (!mem_is_zero(new_ptr, new_size)) {
+        memory_was_not_zero = 2;
+        memset(new_ptr, 0, new_size);
+    }
+
     if (new_ptr != nullptr) {
         size_t copy_size = new_size > old_size ? old_size : new_size;
         memcpy(new_ptr, ptr, copy_size);
