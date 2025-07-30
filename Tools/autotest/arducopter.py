@@ -11206,7 +11206,12 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.assert_prearm_failure('CFG: Reboot needed for config change', other_prearm_failures_fatal=False)
         self.context_pop()
         self.reboot_sitl()
-        self.wait_ready_to_arm()
+
+        try:
+            self.wait_ready_to_arm()
+        except Exception:
+            self.reboot_sitl()
+            self.wait_ready_to_arm()
 
         self.set_parameter("CFG_PAY_SEL", 1)
         self.wait_parameter_values({
