@@ -2752,6 +2752,47 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.set_rc(4, 1500)
         self.disarm_vehicle()
 
+    def TerrainAvoidApplet(self):
+        '''Terrain Avoidance Sanity Check, not a detailed test'''
+        self.start_subtest("Terrain Avoidance Load and Start")
+
+        self.install_applet_script_context("quadplane_terrain_avoid.lua")
+        self.install_script_module(self.script_modules_source_path("mavlink_wrappers.lua"), "mavlink_wrappers.lua")
+
+        self.set_parameters({
+            "SCR_ENABLE": 1,
+            "SIM_SPEEDUP": 20, # need to give some cycles to lua
+            "RC7_OPTION": 305,
+            "TERRAIN_ENABLE": 1,
+        })
+
+        self.context_collect("STATUSTEXT")
+        self.reboot_sitl()
+        self.wait_ready_to_arm()
+
+        self.wait_text(".* Terrain Avoid .* script loaded", regex=True, check_context=True)
+
+        self.set_rc(7, 1000)
+        self.wait_text("TerrAvoid: activated", check_context=True)
+        self.set_rc(7, 2000)
+        self.wait_text("TerrAvoid: deactivated", check_context=True)
+        self.set_rc(7, 1000)
+        self.wait_text("TerrAvoid: activated", check_context=True)
+
+        filename = "TopOfTheWorldShort.waypoints"
+        self.progress("Flying mission %s" % filename)
+        num_wp = self.load_mission(filename)
+        self.arm_vehicle()
+        self.send_cmd_do_set_mode("AUTO")
+        self.wait_waypoint(1, num_wp-1)
+        self.wait_statustext('Land descend started')
+        self.wait_statustext('Land final started', timeout=60)
+        self.wait_disarmed(timeout=120) # give quadplane a long time to land
+
+        self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_MISSION)
+        self.disarm_vehicle()
+
+
     def tests(self):
         '''return list of all tests'''
 
@@ -2811,5 +2852,6 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.CruiseRecovery,
             self.RudderArmedTakeoffRequiresNeutralThrottle,
             self.RudderArmingWithARMING_CHECK_THROTTLEUnset,
+            self.TerrainAvoidApplet,
         ])
         return ret

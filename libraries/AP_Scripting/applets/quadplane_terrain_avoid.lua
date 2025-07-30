@@ -251,7 +251,7 @@ PITCH_FORWARD_PWM = 1350
 PITCH_NEUTRAL_PWM = 1500
 
 PITCH_TOLERANCE = 1.1
-QUAD_TOLERANCE = 2.0
+QUAD_TOLERANCE = 1.5
 
 local vehicle_mode = vehicle:get_mode()
 
@@ -284,13 +284,9 @@ local pre_pitch_target_location
 local quading_active = false
 local pitching_active = false
 local slowdown_quading = false
-local cmtc_active = false
-local pre_cmtc_heading_deg = 0.0
 
 local q_wvane_enable_save = Q_WVANE_ENABLE:get()
 local avoid_enter_mode = -1
-
-local cmtc_target_alt_amsl = -1
 
 -- function forward declarations
 local start_quading -- foward declaration of start_quading/stop_quading defined below
@@ -563,71 +559,85 @@ function LocationTracker()
 end
 location_tracker = LocationTracker()    -- instantiate previously declared instance
 
-local function start_cmtc(target_alt_amsl)
-    if cmtc_active then
-        gcs:send_text(MAV_SEVERITY.ERROR, SCRIPT_NAME_SHORT .. ": CMTC to ALREADY ACTIVE: " .. cmtc_target_alt_amsl)
-        return
-    end
-    if terrain_altitude > altitude_max then
-        return -- already too high
-    end
-    cmtc_active = true
-    pre_cmtc_heading_deg = current_heading_deg -- math.deg(ahrs:get_yaw_rad() or 0)
-    --    gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC start hdg pre %.0f now %.0f dif %0.1f",
-    --                    pre_cmtc_heading_deg, current_heading_deg
-    --                    , math.abs(pre_cmtc_heading_deg - current_heading_deg)) )
+-------------------------------------------------------------------------------
+-- CMTC - Can't make that climb. If the path isn't acheivable loiter to gain altitude
+-------------------------------------------------------------------------------
+local cmtc = {
+    active = false,
+    target_alt_amsl = -1,
+}
+(function ()
+    local pre_cmtc_heading_deg = 0.0
 
-    -- AP libraries use a 0.5m "near enough" buffer for matching altitude, we'll use 3 meters
-    cmtc_target_alt_amsl = target_alt_amsl - 3.0
+    function cmtc.start(target_alt_amsl)
+        if cmtc.active then
+            gcs:send_text(MAV_SEVERITY.ERROR, SCRIPT_NAME_SHORT .. ": CMTC to ALREADY ACTIVE: " .. cmtc.target_alt_amsl)
+            return
+        end
+        if terrain_altitude > altitude_max then
+            return -- already too high
+        end
+        cmtc.active = true
+        pre_cmtc_heading_deg = current_heading_deg -- math.deg(ahrs:get_yaw_rad() or 0)
+        --    gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC start hdg pre %.0f now %.0f dif %0.1f",
+        --                    pre_cmtc_heading_deg, current_heading_deg
+        --                    , math.abs(pre_cmtc_heading_deg - current_heading_deg)) )
 
-    gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC loiter %s to %.0f alt",
-            avoid_terrain(target_alt_amsl),
-            cmtc_target_alt_amsl) )
+        -- AP libraries use a 0.5m "near enough" buffer for matching altitude, we'll use 3 meters
+        cmtc.target_alt_amsl = target_alt_amsl - 3.0
 
-    -- mavlink.set_vehicle_target_altitude({alt = target_alt_amsl, alt_frame = mavlink.ALT_FRAME.ABSOLUTE})
-    airspeed_desired = airspeed_max
-end
+        gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC loiter %s to %.0f alt",
+                avoid_terrain(target_alt_amsl),
+                cmtc.target_alt_amsl) )
 
-local function stop_cmtc()
-    if current_location ~= nil then
-        gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC Done alt: %.0f", current_altitude_m) )
+        -- mavlink.set_vehicle_target_altitude({alt = target_alt_amsl, alt_frame = mavlink.ALT_FRAME.ABSOLUTE})
+        airspeed_desired = airspeed_max
     end
-    cmtc_active = false
-    cmtc_target_alt_amsl = -1
-    reset_avoid_mode()
-end
 
-local function do_cmtc()
-    if current_location == nil then
-        return
+    function cmtc.stop()
+        if current_location ~= nil then
+            gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC Done alt: %.0f", current_altitude_m) )
+        end
+        cmtc.active = false
+        cmtc.target_alt_amsl = -1
+        reset_avoid_mode()
     end
-    local current_location_amsl = current_location:copy()
-    current_location_amsl:change_alt_frame(mavlink.ALT_FRAME.ABSOLUTE)
-    -- if we've reached altitude and are pointing approximately where we were before we started CMTC
-    if now - now_debug > 2 and false then
-        gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC check hdg pre %.0f now %.0f dif %0.1f",
-                    pre_cmtc_heading_deg, current_heading_deg,
-                    math.abs(pre_cmtc_heading_deg - current_heading_deg)) )
-        gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC check alt curr %.0f trg %.0f max %0.1f",
-                    current_altitude_m, cmtc_target_alt_amsl,
-                    altitude_max) )
-        now_debug = now
-    end
-    -- if we are above TA_ALT_MAX exit immediately
-    -- if we are above the cmtc_target_alt_amsl then wait till we are pointing to the next WP
-    if (terrain_altitude > altitude_max) or
-            ((current_altitude_m > cmtc_target_alt_amsl) and
-            math.abs(pre_cmtc_heading_deg - current_heading_deg) < 45.0) then
-        gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC STOP alt curr %.0f trg %.0f max %0.1f",
-                    current_altitude_m, (current_location_amsl:alt() * 0.01)
-                    , altitude_max) )
-        stop_cmtc()
-    else
-        airspeed_desired = airspeed_cruise
-        mavlink.set_vehicle_speed({speed=airspeed_desired})
-    end
-end
 
+    function cmtc.update()
+        if current_location == nil then
+            return
+        end
+        local current_location_amsl = current_location:copy()
+        current_location_amsl:change_alt_frame(mavlink.ALT_FRAME.ABSOLUTE)
+        -- if we've reached altitude and are pointing approximately where we were before we started CMTC
+        if now - now_debug > 2 and false then
+            gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC check hdg pre %.0f now %.0f dif %0.1f",
+                        pre_cmtc_heading_deg, current_heading_deg,
+                        math.abs(pre_cmtc_heading_deg - current_heading_deg)) )
+            gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC check alt curr %.0f trg %.0f max %0.1f",
+                        current_altitude_m, cmtc.target_alt_amsl,
+                        altitude_max) )
+            now_debug = now
+        end
+        -- if we are above TA_ALT_MAX exit immediately
+        -- if we are above the cmtc.target_alt_amsl then wait till we are pointing to the next WP
+        if (terrain_altitude > altitude_max) or
+                ((current_altitude_m > cmtc.target_alt_amsl) and
+                math.abs(pre_cmtc_heading_deg - current_heading_deg) < 45.0) then
+            gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC STOP alt curr %.0f trg %.0f max %0.1f",
+                        current_altitude_m, (current_location_amsl:alt() * 0.01)
+                        , altitude_max) )
+            cmtc.stop()
+        else
+            airspeed_desired = airspeed_cruise
+            mavlink.set_vehicle_speed({speed=airspeed_desired})
+        end
+    end
+end)()
+
+-----------------------------------------------------------
+-- Pitching (aka quicky gain altiude in fixed wing mode)
+-----------------------------------------------------------
 local function start_pitching()
     if slowdown_quading then
         start_quading() -- we are already in multirotor mode, so go straight to quading
@@ -726,7 +736,9 @@ local function do_pitching()
     end
 end
 
-
+-------------------------------------------------------------------------------
+-- Quading - aka switch to quad mode and quickly gain altitude
+-------------------------------------------------------------------------------
 -- This function decides if there is an obstacle for quading based on
 -- 1. if terrain height is < quad_down_min or
 -- 2. if there is a valid rangefinder down and rangefinder_down_value < pitch_quad_min or
@@ -780,10 +792,10 @@ start_quading = function() -- forward declaration above
     end
     quading_active = true
     pitching_active = false
-    if cmtc_active then
-        gcs:send_text(MAV_SEVERITY.ERROR, SCRIPT_NAME_SHORT .. ": Quading overrides CMTC: " .. cmtc_target_alt_amsl)
+    if cmtc.active then
+        gcs:send_text(MAV_SEVERITY.ERROR, SCRIPT_NAME_SHORT .. ": Quading overrides CMTC: " .. cmtc.target_alt_amsl)
     end
-    cmtc_active = false
+    cmtc.active = false
     THROTTLE_CHANNEL:set_override(THROTTLE_UP_PWM)
 
     if current_location then
@@ -847,6 +859,10 @@ local function do_quading()
     end
 end
 
+-------------------------------------------------------------------------------
+-- Rangefinder functions
+-------------------------------------------------------------------------------
+
 -- This function decides if there is an obstacle for pitching based on
 -- 1. if terrain height is < pitch_down_min or
 -- 2. if there is a valid rangefinder down and rangefinder_down_value < pitch_down_min or
@@ -862,6 +878,7 @@ pitch_obstacle_down = function(multiplier)
     end
     return false
 end
+
 pitch_obstacle_forward = function(multiplier)
     if rangefinder_forward_value > 0 and 
             rangefinder_forward_value < MAX_RANGEFINDER_VALUE and
@@ -880,7 +897,7 @@ pitch_obstacle_detected = function(multiplier)
         if quading_active then
             gcs:send_text(MAV_SEVERITY.CRITICAL, SCRIPT_NAME_SHORT .. ": Quading " .. terrain_altitude .. " above: " .. altitude_max)
         end
-        if cmtc_active then
+        if cmtc.active then
             gcs:send_text(MAV_SEVERITY.CRITICAL, SCRIPT_NAME_SHORT .. ": CMTC " .. terrain_altitude .. " above: " .. altitude_max)
         end
         return false
@@ -898,6 +915,7 @@ pitch_obstacle_detected = function(multiplier)
 end
 
 -- this method checks the distance down and forward.
+-- and this uses RC8 to simulate forward rangefinder and RC5 to simulate downward
 local function populate_rangefinder_values()
     -- Get the new values of the range finders every update cycle
     -- We'll probably want some kind of certainty check for the range finders
@@ -925,6 +943,7 @@ local function populate_rangefinder_values()
 
     if rangefinder_down_value == nil or rangefinder_down_value <= 0 or rangefinder_down_value > MAX_RANGEFINDER_VALUE then
         rangefinder_down_value = terrain_altitude or 0
+        -- gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": Use Terrain down: %.2f m", rangefinder_down_value) )
     end
     if rangefinder_forward_value == nil or rangefinder_forward_value <= 0 then
         rangefinder_forward_value = 0
@@ -964,7 +983,9 @@ while (distance > 0) {
 }
 --]]
 
--- lookahead as
+-------------------------------------------------------------------------------
+-- Lookahead functions - replaces the c++ functions in AP_Terrain
+-------------------------------------------------------------------------------
 function Terrain_Lookahead(start_location, search_bearing, search_distance, search_ratio)
     local highest_location = nil
     local climb = 0.0
@@ -1045,7 +1066,6 @@ end
 function Arc_Terrain_Altitude(loiter_center, bearing_start, bearing_step, arc_max, loiter_rad_m)
     local next_increment = bearing_step
     local highest_terrain_m = 0.0
-    --local lowest_terrain_m = 999999.0
     while math.abs(next_increment) < arc_max do
         local test_bearing = wrap_360(bearing_start + next_increment)
 
@@ -1055,9 +1075,6 @@ function Arc_Terrain_Altitude(loiter_center, bearing_start, bearing_step, arc_ma
         if terrain_height_m > highest_terrain_m then
             highest_terrain_m = terrain_height_m or 0.0
         end
-        --if terrain_height_m < lowest_terrain_m then
-        --    lowest_terrain_m = terrain_height_m or 999999.0
-        --end
         next_increment = next_increment + bearing_step
     end
 
@@ -1173,8 +1190,7 @@ local function terravoid_active()
     if home ~= nil and current_location ~= nil then
         home_distance = home:get_distance(current_location) or 0.0
     end
-    -- we don't apply Terrain Avoidance around home otherwise we can't land!
-    if home_distance and home_distance_max and home_distance < home_distance_max then
+    if home_distance ~= nil and home_distance_max ~= nil and home_distance < home_distance_max then
         if not close_to_home then
             gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. ": close to home")
             close_to_home = true
@@ -1246,8 +1262,8 @@ function Update()
     end
     check_activation_switch()
     if not terravoid_active() then
-        if cmtc_active then
-            stop_cmtc()
+        if cmtc.active then
+            cmtc.stop()
         end
         if quading_active then
             stop_quading()
@@ -1257,7 +1273,7 @@ function Update()
         end
         pitching_active = false
         quading_active = false
-        cmtc_active = false
+        cmtc.active = false
         return
     end
 
@@ -1265,7 +1281,7 @@ function Update()
 
     -- first decide if we are seriously close to the terrain and need to start quading
     if not quading_active and not check_quading() then
-        if cmtc_enable == 1 and not cmtc_active then
+        if cmtc_enable == 1 and not cmtc.active then
             -- lets check if our current flight path is likely to hit terrain 
             -- sometime soon, and if so we need to avoid it.
             local pitch_required_deg, alt_required_amsl, terrain_diff_m = terrain_approaching(cmtc_height_m)
@@ -1273,16 +1289,16 @@ function Update()
                 --gcs:send_text(MAV_SEVERITY.WARNING, SCRIPT_NAME_SHORT .. string.format(": CMTC terrain_diff_m %.0fm alt_required %.0f", terrain_diff_m, alt_required_amsl) )
                --  gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT .. string.format(": CMTC pitch required %.0f deg", pitch_required_deg) )
                 -- need to fly OVER the highest point - with TA_CMTC_HGT clearance
-                start_cmtc(alt_required_amsl)
+                cmtc.start(alt_required_amsl)
             end
         end
-        if not cmtc_active then
+        if not cmtc.active then
             -- otherwise - lets see if we are close enough to need to start pitching
             check_pitching()
         end
     end
 
-    if terrain_max_exceeded and not cmtc_active then
+    if terrain_max_exceeded and not cmtc.active then
         if quading_active then
             stop_quading()
         end
@@ -1298,8 +1314,8 @@ function Update()
         return
     elseif pitching_active then
         do_pitching()
-    elseif cmtc_active then
-        do_cmtc()
+    elseif cmtc.active then
+        cmtc.update()
     end
 
     if groundspeed_vector ~= nil then
