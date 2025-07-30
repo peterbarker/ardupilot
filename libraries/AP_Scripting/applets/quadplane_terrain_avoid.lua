@@ -1158,12 +1158,12 @@ local function check_activation_switch()
         if switch_state == 0 then -- switch Low to activate - so defaults to on
             -- activate Terrain Avoidance
             switch_on = true
-            gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT ..": activated")
+            gcs:send_text(MAV_SEVERITY.NOTICE, SCRIPT_NAME_SHORT ..": activated")
             pitch_last_good_timestamp = now
         elseif switch_state == 2 then -- switch High to turn off
             -- deactivate Terrain Avoidance
             switch_on = false
-            gcs:send_text(MAV_SEVERITY.INFO, SCRIPT_NAME_SHORT ..": deactivated")
+            gcs:send_text(MAV_SEVERITY.NOTICE, SCRIPT_NAME_SHORT ..": deactivated")
         end
         -- Don't know what to do with the 3rd switch position right now.
         last_switch_state = switch_state
@@ -1271,9 +1271,6 @@ function Update()
         if pitching_active then
             stop_pitching()
         end
-        pitching_active = false
-        quading_active = false
-        cmtc.active = false
         return
     end
 
