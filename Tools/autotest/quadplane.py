@@ -2779,7 +2779,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.set_rc(7, 1000)
         self.wait_text("TerrAvoid: activated", check_context=True)
 
-        filename = "TopOfTheWorldShort.waypoints"
+        filename = "TopOfTheWorld.txt"
         self.progress("Flying mission %s" % filename)
         num_wp = self.load_mission(filename)
         self.arm_vehicle()

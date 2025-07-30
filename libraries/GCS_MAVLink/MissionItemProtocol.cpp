@@ -269,6 +269,7 @@ void MissionItemProtocol::handle_mission_item(const mavlink_message_t &msg, cons
     }
 
     // check if this is the requested waypoint
+    GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "handle_mission_item for %u, want-seq=%u", (unsigned)cmd.seq, (unsigned)request_i);
     if (cmd.seq != request_i) {
         send_mission_ack(msg, MAV_MISSION_INVALID_SEQUENCE);
         return;
