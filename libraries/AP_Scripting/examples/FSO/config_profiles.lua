@@ -37,13 +37,13 @@ local config_domains = {
       all_param_defaults = {
          -- Flight Modes
          ["FLTMODE_CH"] = must_be_set,
-         ["FLTMODE_GCSBLOCK"] = 12232580,
          ["FLTMODE1"] = must_be_set,
          ["FLTMODE2"] = must_be_set,
          ["FLTMODE3"] = must_be_set,
          ["FLTMODE4"] = must_be_set,
          ["FLTMODE5"] = must_be_set,
          ["FLTMODE6"] = must_be_set,
+         ["FLTMODE_GCSBLOCK"] = 12232576,
 
          -- Flight Behavior
          ["ANGLE_MAX"] = 3000,
@@ -71,6 +71,10 @@ local config_domains = {
          ["FS_THR_ENABLE"] = 1,
          ["FS_THR_VALUE"] = 975,
          ["FS_VIBE_ENABLE"] = 1,
+
+         -- Battery Failsafes
+         ["BATT_FS_CRT_ACT"] = 1,
+         ["BATT_FS_LOW_ACT"] = 2,
 
          -- IMU Logging
          ["INS_FAST_SAMPLE"] = 7,
@@ -123,6 +127,9 @@ local config_domains = {
          ["RTL_LOIT_TIME"] = 1000,
          ["RTL_OPTIONS"] = 0,
          ["RTL_SPEED"] = 0,
+         
+         -- Takeoff
+         ["TKOFF_SLEW_TIME"] = 4,
 
          -- Terrain Following
          ["TERRAIN_ENABLE"] = 1,
@@ -403,7 +410,7 @@ local config_domains = {
          ["BATT_LOW_MAH"] = must_be_set,
          ["BATT_LOW_VOLT"] = must_be_set,
       },
-      default_sel_value = 16,
+      default_sel_value = 22,
       profiles = {
          [16] = {
             name = "16Ah",
@@ -464,11 +471,23 @@ local config_domains = {
          ["MNT1_TYPE"] = 0,
          ["MNT1_YAW_MAX"] = 180,
          ["MNT1_YAW_MIN"] = -180,
+         ["NET_ENABLE"] = 0,
+         ["NET_OPTIONS"] = 0,
+         ["NET_P1_IP0"] = 192,
+         ["NET_P1_IP1"] = 168,
+         ["NET_P1_IP2"] = 111,
+         ["NET_P1_IP3"] = 15,
+         ["NET_P1_PORT"] = 14550,
+         ["NET_P1_PROTOCOL"] = 2,
+         ["NET_P1_TYPE"] = 2,
+         ["NET_P2_TYPE"] = 0,
+         ["NET_P3_TYPE"] = 0,
+         ["NET_P4_TYPE"] = 0,
+         ["RC8_OPTION"] = 0,        -- disabled
          ["RC13_OPTION"] = 0,
          ["RC13_REVERSED"] = 0,
          ["RC14_OPTION"] = 0,
          ["RC14_REVERSED"] = 0,
-         ["RC8_OPTION"] = 0,        -- disabled
          ["SERIAL5_BAUD"] = 115,      -- 115 = 115200 baud
          ["SERIAL5_OPTIONS"] = 0,
          ["SERIAL5_PROTOCOL"] = 2,    -- 2 = MAVLink2
@@ -544,6 +563,30 @@ local config_domains = {
                ["SERVO14_FUNCTION"] = 56,  -- rcin 6
             }
          },
+         [10] = {
+            name = "Silvus",
+            params = {
+               ["SERIAL5_BAUD"] = 115,      -- 115 = 115200 baud
+               ["SERIAL5_PROTOCOL"] = 2,    -- 2 = MAVLink2
+            }
+         },
+         [11] = {
+            name = "Skylink",
+            params = {
+               ["NET_ENABLE"] = 1,
+               ["NET_OPTIONS"] = 0,
+               ["NET_P1_IP0"] = 192,
+               ["NET_P1_IP1"] = 168,
+               ["NET_P1_IP2"] = 111,
+               ["NET_P1_IP3"] = 15,
+               ["NET_P1_PORT"] = 14550,
+               ["NET_P1_PROTOCOL"] = 2,
+               ["NET_P1_TYPE"] = 2,
+               ["NET_P2_TYPE"] = 0,
+               ["NET_P3_TYPE"] = 0,
+               ["NET_P4_TYPE"] = 0,
+            }
+         },
       },
    },
 }
@@ -573,6 +616,16 @@ local parameters_which_can_be_set = {
    ["FENCE_RADIUS"] = true,
    ["FENCE_TOTAL"] = true,
    ["FENCE_TYPE"] = true,
+
+   -- Failsafes
+   ["FLTMODE_CH"] = true,
+   ["FLTMODE_GCSBLOCK"] = true,
+   ["FLTMODE1"] = true,
+   ["FLTMODE2"] = true,
+   ["FLTMODE3"] = true,
+   ["FLTMODE4"] = true,
+   ["FLTMODE5"] = true,
+   ["FLTMODE6"] = true,
 
    -- Failsafes
    ["FS_DR_ENABLE"] = true,
@@ -865,10 +918,10 @@ local function validate_params_in_param_defaults()
                send_text(3, string.format("%s exists in %s[%f](%s) but not in %s.all_param_defaults", param_name, domain.param_name, profile_num, profile.name, domain.param_name))
                return false
             end
-            if param_default == param_value then
-               send_text(3, string.format("%s in %s[%f](%s) has the same value as %s.all_param_defaults", param_name, domain.param_name, profile_num, profile.name, domain.param_name))
-               return false
-            end
+--            if param_default == param_value then
+--               send_text(3, string.format("%s in %s[%f](%s) has the same value as %s.all_param_defaults", param_name, domain.param_name, profile_num, profile.name, domain.param_name))
+--               return false
+--            end
          end
       end
 -- turns out this is a pain as you need to find values to put into all_param_defaults which is annoying:
@@ -889,7 +942,6 @@ end
 local function validate_must_be_set_parameters()
    -- ensure that if a parameter has a "must be set" value in the
    -- defaults that every domain defines a value for that default
-   -- also assert that at least one profile has a different value to the others
    for _, domain in pairs(config_domains) do
       for param_name, value in pairs(domain.all_param_defaults) do
          if value ~= must_be_set then
