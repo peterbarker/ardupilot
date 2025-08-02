@@ -345,6 +345,9 @@ class Board:
                 HAL_DEBUG_BUILD = 1,
             )
 
+        #DEBUG, should not be in master!
+        cfg.options.debug_symbols = True
+
         # handle setting of include-debug-symbols in CFLAGS:
         if cfg.env.DEBUG or cfg.options.debug_symbols:
             env.CFLAGS += [
