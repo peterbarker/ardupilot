@@ -9693,6 +9693,7 @@ Also, ignores heartbeats not from our target system'''
         print("new home: %s %s %s" % (str(new_x), str(new_y), str(new_z)))
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_DO_SET_HOME,
+            p1=0,
             p5=new_x,
             p6=new_y,
             p7=new_z/1000.0, # mm => m
