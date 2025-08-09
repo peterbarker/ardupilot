@@ -2031,6 +2031,7 @@ class TestSuite(ABC):
         self.dronecan_tests = dronecan_tests
         self.statustext_id = 1
         self.message_hooks = []  # functions or MessageHook instances
+        self.pause_start_time = 0
 
     def __del__(self):
         if self.rc_thread is not None:
@@ -3369,11 +3370,12 @@ class TestSuite(ABC):
     def pause_SITL(self):
         '''temporarily stop the SITL process from running.  Note that
         simulation time will not move forward!'''
-        # self.progress("Pausing SITL")
+        self.pause_start_time = time.time()
+        self.progress("Pausing SITL")
         self.sitl.kill(signal.SIGSTOP)
 
     def unpause_SITL(self):
-        # self.progress("Unpausing SITL")
+        self.progress(f"Unpausing SITL {time.time()-self.pause_start_time}")
         self.sitl.kill(signal.SIGCONT)
 
     def stop_SITL(self):
