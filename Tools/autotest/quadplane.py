@@ -926,10 +926,11 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.set_rc(2, 1700)
         self.wait_pitch(lim_pitch_up_deg+15, accuracy=5)
         self.progress("Killing elevator servo output to force qassist to help")
+        servo2_out = self.get_servo_channel_value(2)
         self.set_parameters({
-            "SERVO2_MIN": 1480,
-            "SERVO2_MAX": 1480,
-            "SERVO2_TRIM": 1480,
+            "SERVO2_MIN": servo2_out,
+            "SERVO2_MAX": servo2_out,
+            "SERVO2_TRIM": servo2_out,
         })
         self.change_mode('FBWA')
         self.progress("Trying to pitch down hard")
