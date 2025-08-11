@@ -135,7 +135,8 @@ if args.frame:
             "octa-cwx": "AP_MOTORS_FRAME_OCTA_ENABLED",
             "octa-quad": "AP_MOTORS_FRAME_OCTAQUAD_ENABLED",
             "octa-quad-cwx": "AP_MOTORS_FRAME_OCTAQUAD_ENABLED",
-            "y6": "AP_MOTORS_FRAME_Y6_ENABLED"
+            "y6": "AP_MOTORS_FRAME_Y6_ENABLED",
+            "flightaxis": "AP_SIM_FLIGHTAXIS_ENABLED",
         }
         for frame, define in frame_defines.items():
             if args.frame == frame:

@@ -23,7 +23,7 @@
 
 #if AP_SIM_FLIGHTAXIS_ENABLED
 
-#include <AP_HAL/utility/Socket_native.h>
+#include <AP_HAL/utility/Socket.h>
 
 #include "SIM_Aircraft.h"
 
@@ -177,6 +177,7 @@ private:
     void socket_creator(void);
 
     struct state interpolate_frame(struct state& new_state, struct state& old_state, double new_time);
+    void delay_wallclock_microseconds(uint32_t micros);
 
     AP_Int32 _options;
     AP_Int16 _samplehz;

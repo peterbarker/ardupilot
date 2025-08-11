@@ -31,6 +31,7 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Logger/AP_Logger.h>
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -119,9 +120,15 @@ static const struct {
  */
 static double timestamp_sec()
 {
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     struct timeval tval;
     gettimeofday(&tval,NULL);
     return tval.tv_sec + (tval.tv_usec*1.0e-6);
+#else
+    // this is *not* a wallclock timestamp, which is really what is
+    // desired!
+    return AP_HAL::micros64() * 1e-6;
+#endif
 }
 
 #if defined(CYGWIN_BUILD)
@@ -228,6 +235,12 @@ void FlightAxis::parse_reply(const char *reply)
  */
 bool FlightAxis::soap_request_start(const char *action, const char *fmt, ...)
 {
+    static bool in_soap_request_start;
+    if (in_soap_request_start) {
+        return false;
+    }
+    in_soap_request_start = true;
+
     va_list ap;
     char *req1;
 
@@ -261,6 +274,9 @@ Connection: Keep-Alive
     sock->send(req, strlen(req));
     free(req1);
     free(req);
+
+    in_soap_request_start = false;
+
     return true;
 }
 
@@ -759,8 +775,10 @@ void FlightAxis::report_FPS(void)
             last_socket_frame_counter = socket_frame_counter;
             double dt = state.m_currentPhysicsTime_SEC - last_frame_count_s;
             if(!option_is_set(Option::SilenceFPS)) {
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
                 printf("%.2f/%.2f FPS avg=%.2f FPS net=%.2f glitches=%u\n",
                     frames / dt, _samplehz / dt, 1.0/average_frame_time_s, 1.0/average_delta_time_s, unsigned(glitch_count));
+#endif  // CONFIG_HAL_BOARD == HAL_BOARD_SITL
             }
         } else {
             printf("Initial position %f %f %f\n", position.x, position.y, position.z);
@@ -769,8 +787,16 @@ void FlightAxis::report_FPS(void)
     }
 }
 
-#include <errno.h>
+void FlightAxis::delay_wallclock_microseconds(uint32_t micros)
+{
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    us_wait(micros);
+#else
+    hal.scheduler->delay_microseconds(micros);
+#endif
+}
 
+#include <errno.h>
 void FlightAxis::socket_creator(void)
 {
     socket_pid = getpid();
@@ -778,9 +804,13 @@ void FlightAxis::socket_creator(void)
         while (socknext != nullptr) {
             sock_insem.wait_blocking();
         }
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
         auto *sck = NEW_NOTHROW SocketAPM_native(false);
+#else
+        auto *sck = NEW_NOTHROW SocketAPM(false);
+#endif
         if (sck == nullptr) {
-            us_wait(500);
+            delay_wallclock_microseconds(500);
             continue;
         }
         /*
@@ -788,9 +818,9 @@ void FlightAxis::socket_creator(void)
           than this and we are better off trying for a new socket
          */
         if (!sck->connect_timeout(controller_ip, controller_port, 10)) {
-            ::printf("connect failed\n");
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "flightaxis connect failed");
             delete sck;
-            us_wait(500);
+            delay_wallclock_microseconds(5000);
             continue;
         }
         sck->set_blocking(false);
