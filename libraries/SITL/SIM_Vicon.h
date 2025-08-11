@@ -93,6 +93,11 @@ private:
     Vector3d _position_prev;  // previous position from origin (m) MAV_FRAME_LOCAL_NED
 
     mavlink_status_t mav_status;
+
+    // only used update_vicon_position_estimate, out here to avoid
+    // breaking the 1300-byte limit on frame size:
+    Matrix3f body_ned_m;
+    float vel_cov[21];
 };
 
 }

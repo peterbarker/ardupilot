@@ -384,7 +384,6 @@ void Vicon::update_vicon_position_estimate(const Location &loc,
     // send ODOMETRY message
     if (should_send(ViconTypeMask::ODOMETRY) && get_free_msg_buf_index(msg_buf_index)) {
         const Vector3f vel_corrected_frd = attitude.inverse() * vel_corrected;
-        float vel_cov[21];
         memset(vel_cov, 0, sizeof(vel_cov));
         // Set variances (diagonal elements), assume no cross-correlation. TODO: figure out angular velocity variances
         const float vel_variance = _sitl->vicon.vel_stddev*_sitl->vicon.vel_stddev;
@@ -433,7 +432,6 @@ void Vicon::update_vicon_position_estimate(const Location &loc,
 
     Quaternion attitude_curr_prev = attitude_curr * _attitude_prev.inverse(); // Get rotation to current MAV_FRAME_BODY_FRD from previous MAV_FRAME_BODY_FRD
 
-    Matrix3f body_ned_m;
     attitude_curr.rotation_matrix(body_ned_m);
 
     Vector3f pos_delta = body_ned_m * (pos_corrected - _position_prev).tofloat();
