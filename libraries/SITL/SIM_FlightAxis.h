@@ -23,7 +23,7 @@
 
 #if AP_SIM_FLIGHTAXIS_ENABLED
 
-#include <AP_HAL/utility/Socket_native.h>
+#include <AP_HAL/utility/Socket.h>
 
 #include "SIM_Aircraft.h"
 
@@ -172,6 +172,8 @@ private:
     void report_FPS(void);
     void socket_creator(void);
 
+    void delay_wallclock_microseconds(uint32_t micros);
+
     struct sitl_input last_input;
 
     AP_Int32 _options;
@@ -206,8 +208,13 @@ private:
     uint16_t controller_port = 18083;
 
     // a list of sockets used to reduce inter-packet latency
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     ObjectBuffer_TS<SocketAPM_native*> socks{2};
     SocketAPM_native *sock;
+#else
+    ObjectBuffer_TS<SocketAPM*> socks{2};
+    SocketAPM *sock;
+#endif
 
     char replybuf[10000];
     pid_t socket_pid;
