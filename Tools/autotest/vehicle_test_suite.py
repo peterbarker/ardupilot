@@ -3276,12 +3276,22 @@ class TestSuite(ABC):
         if len(missing) > 0:
             raise NotAchievedException("Documented messages (%s) not in code" % missing)
 
+    def delay_until_boot_age_past(self, boot_time_seconds : float) -> None:
+        '''do not return until the autopilot uptime shows a certain vintage'''
+        while self.get_sim_time() < boot_time_seconds:
+            pass
+
     def initialise_after_reboot_sitl(self):
 
         # after reboot stream-rates may be zero.  Request streams.
         self.drain_mav()
         self.wait_heartbeat()
         self.set_streamrate(self.sitl_streamrate())
+        # we can't let tests run for at least 200ms.  If we do then
+        # they can change mode, then the ArduPilot process can finally
+        # decide that the mode RC channel is debounced and change
+        # modes away from the mode the test is expecting.
+        self.delay_until_boot_age_past(0.25)
         self.progress("Reboot complete")
 
     def customise_SITL_commandline(self,
