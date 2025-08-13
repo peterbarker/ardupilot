@@ -1083,6 +1083,25 @@ void AP_GPS::update(void)
 #endif
 }
 
+bool AP_GPS::is_healthy(void) const {
+#if GPS_MAX_RECEIVERS > 1
+    switch ((GPSAutoSwitch)_auto_switch.get()) {
+    case GPSAutoSwitch::NONE:
+    case GPSAutoSwitch::USE_BEST:
+    case GPSAutoSwitch::USE_PRIMARY_IF_3D_FIX:
+        break;
+    case GPSAutoSwitch::BLEND:
+#if AP_GPS_BLENDED_ENABLED
+        if (primary_instance != GPS_BLENDED_INSTANCE) {
+            return false;
+        }
+#endif  // AP_GPS_BLENDED_ENABLED
+        break;
+    }
+#endif
+    return is_healthy(primary_instance);
+}
+
 /*
   update primary GPS instance
  */
