@@ -17,6 +17,10 @@ extern const AP_HAL::HAL& hal;
  #define AC_ATTITUDE_CONTROL_AFTER_RATE_CONTROL 1
 #endif
 
+#ifndef AC_ATTITUDE_CONTROL_CD_METHODS_ENABLED
+#define AC_ATTITUDE_CONTROL_CD_METHODS_ENABLED !APM_BUILD_TYPE(APM_BUILD_Copter)
+#endif  // AC_ATTITUDE_CONTROL_CD_METHODS_ENABLED
+
 AC_AttitudeControl *AC_AttitudeControl::_singleton;
 
 // table of user settable parameters
@@ -347,6 +351,7 @@ void AC_AttitudeControl::input_quaternion(Quaternion& attitude_desired_quat, Vec
     attitude_controller_run_quat();
 }
 
+#if AC_ATTITUDE_CONTROL_CD_METHODS_ENABLED
 // Sets desired roll and pitch angles (in centidegrees) and yaw rate (in centidegrees/s).
 // See input_euler_angle_roll_pitch_euler_rate_yaw_rad() for full details.
 void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw_cd(float euler_roll_angle_cd, float euler_pitch_angle_cd, float euler_yaw_rate_cds)
@@ -357,6 +362,7 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw_cd(float eu
     const float euler_yaw_rate_rads = cd_to_rad(euler_yaw_rate_cds);
     input_euler_angle_roll_pitch_euler_rate_yaw_rad(euler_roll_angle_rad, euler_pitch_angle_rad, euler_yaw_rate_rads);
 }
+#endif  // AC_ATTITUDE_CONTROL_CD_METHODS_ENABLED
 
 void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw_rad(float euler_roll_angle_rad, float euler_pitch_angle_rad, float euler_yaw_rate_rads)
 {
