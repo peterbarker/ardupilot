@@ -302,6 +302,31 @@ class TestBuildOptions(object):
             feature_define_whitelist.add('AP_COPTER_AHRS_AUTO_TRIM_ENABLED')
             feature_define_whitelist.add('AP_RC_TRANSMITTER_TUNING_ENABLED')
 
+        if target.lower() != "AP_Periph":
+            feature_define_whitelist.update([
+                'AP_PERIPH_ADSB_ENABLED',
+                'AP_PERIPH_DEVICE_TEMPERATURE_ENABLED',
+                'AP_PERIPH_MSP_ENABLED',
+                'AP_PERIPH_NOTIFY_ENABLED',
+                'AP_PERIPH_SERIAL_OPTIONS_ENABLED',
+                'AP_PERIPH_BATTERY_ENABLED',
+                'AP_PERIPH_RELAY_ENABLED',
+                'AP_PERIPH_BATTERY_BALANCE_ENABLED',
+                'AP_PERIPH_BATTERY_TAG_ENABLED',
+                'AP_PERIPH_PROXIMITY_ENABLED',
+                'AP_PERIPH_GPS_ENABLED',
+                'AP_PERIPH_ADSB_ENABLED',
+                'AP_PERIPH_MAG_ENABLED',
+                'AP_PERIPH_BARO_ENABLED',
+                'AP_PERIPH_RANGEFINDER_ENABLED',
+                'AP_PERIPH_IMU_ENABLED',
+                'AP_PERIPH_RC_OUT_ENABLED',
+                'AP_PERIPH_EFI_ENABLED',
+                'AP_PERIPH_RCIN_ENABLED',
+                'AP_PERIPH_RPM_ENABLED',
+                'AP_PERIPH_AIRSPEED_ENABLED',
+            ])
+
         if target.lower() in ['antennatracker', 'blimp', 'sub', 'plane', 'copter']:
             # plane has a dependency for AP_Follow which is not
             # declared in build_options.py; we don't compile follow
