@@ -30,7 +30,7 @@ jobs:
         run: |
           git bisect reset || true
           git bisect start
-          git bisect bad master
+          git bisect bad HEAD
           git bisect good 4897b0c7917c057b524bf44ae78b4612334698ec
 
       - name: Run bisect with ArduPilot helper
