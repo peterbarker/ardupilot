@@ -1,0 +1,52 @@
+name: ArduPilot Bisect
+
+on:
+  push:
+
+jobs:
+  bisect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ArduPilot
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need full history for bisect
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip git
+          pip3 install --upgrade pip
+          # optional: install ArduPilot's requirements if needed
+          pip3 install future pymavlink
+
+      - name: Prepare bisect helper
+        run: |
+          rm -rf /tmp/bisect-debug/*
+          mkdir -p /tmp/bisect-debug
+          cp Tools/autotest/bisect-helper.py /tmp
+
+      - name: Start bisect
+        run: |
+          git bisect reset || true
+          git bisect start
+          git bisect bad master
+          git bisect good 4897b0c7917c057b524bf44ae78b4612334698ec
+
+      - name: Run bisect with ArduPilot helper
+        run: |
+          time git bisect run /tmp/bisect-helper.py \
+            --autotest \
+            --autotest-vehicle=Plane \
+            --autotest-test=DeadreckoningNoAirSpeed \
+            --autotest-branch=master \
+            --autotest-test-passes=10 \
+            --autotest-failure-require-string="diverged from simstate by 7"
+
+      - name: Show bisect result
+        if: always()
+        run: |
+          ls -l /tmp/bisect-debug
+          git bisect log || true
+          git bisect visualize || true
+          git bisect reset || true
