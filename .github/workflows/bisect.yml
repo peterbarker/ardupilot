@@ -19,6 +19,7 @@ jobs:
           pip3 install --upgrade pip
           # optional: install ArduPilot's requirements if needed
           pip3 install future pymavlink numpy mavproxy
+          python3 -m pip install empy==3.3.4
 
       - name: Prepare bisect helper
         run: |
