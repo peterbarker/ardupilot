@@ -39,7 +39,7 @@ jobs:
             --autotest \
             --autotest-vehicle=Plane \
             --autotest-test=DeadreckoningNoAirSpeed \
-            --autotest-branch=master \
+            --autotest-branch=${{ github.ref }} \
             --autotest-test-passes=10 \
             --autotest-failure-require-string="diverged from simstate by 7"
 
