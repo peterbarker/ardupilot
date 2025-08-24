@@ -7345,6 +7345,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             if m.get_type() != 'ATT':
                 continue
             if abs(m.Roll) < 5:
+                self.progress(f"Attitude is stabilised ({m})")
                 break
 
         self.progress("Ensure the roll integrator is wound up")
@@ -7355,19 +7356,26 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             if m.get_type() != 'PIDR':
                 continue
             if m.I > 5:
+                self.progress(f"Roll integrator is wound up ({m})")
                 break
 
         self.progress("Checking that aileron is stuck at some deflection")
-        while True:
+        good_count = 0
+        while good_count < 5:
             m = dfreader.recv_match()
             if m is None:
                 raise NotAchievedException("Did not see csrv Pos/PosCmd discrepancy")
             if m.get_type() != 'CSRV':
                 continue
-            if m.Id != 1:
+            if m.Id != 0:
                 continue
-            if abs(m.Pos - m.PosCmd) > 20:
-                break
+            delta = abs(m.Pos - m.PosCmd)
+            if delta <= 20:
+                self.progress(f"CSRV Pos/PosCmd {delta=:.2f} BAD {m}")
+                good_count = 0
+                continue
+            self.progress(f"CSRV Pos/PosCmd {delta=:.2f} OK {m}")
+            good_count += 1
 
     def MAV_CMD_NAV_LOITER_TURNS_zero_turn(self):
         '''Ensure air vehicle achieves loiter target before exiting'''
