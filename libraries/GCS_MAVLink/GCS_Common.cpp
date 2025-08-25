@@ -1780,6 +1780,12 @@ GCS_MAVLINK::update_receive(uint32_t max_time_us)
     uint32_t tstart_us = AP_HAL::micros();
     uint32_t now_ms = AP_HAL::millis();
 
+    static bool have_written_signing_key = false;
+    if (!have_written_signing_key && now_ms > 10000) {
+        have_written_signing_key = true;  // we hope
+        write_signing_key_to_SD();
+    }
+
     status.packet_rx_drop_count = 0;
 
     const uint16_t nbytes = _port->available();

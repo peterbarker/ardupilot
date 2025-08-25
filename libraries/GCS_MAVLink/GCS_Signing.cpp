@@ -19,6 +19,8 @@
 
 #if HAL_GCS_ENABLED
 
+#include <AP_Filesystem/AP_Filesystem.h>
+
 #include "GCS.h"
 
 extern const AP_HAL::HAL& hal;
@@ -224,6 +226,25 @@ void GCS_MAVLINK::save_signing_timestamp(bool force_save_now)
         // save updated key
         signing_key_save(key);
     }
+}
+
+void GCS_MAVLINK::write_signing_key_to_SD()
+{
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Writing signing key to SD card");
+    struct SigningKey key;
+    if (!signing_key_load(key)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Failed to read signing key");
+        return;
+    }
+    const char *signing_bin = "/signing.bin";
+    auto _x_fd = AP::FS().open(signing_bin, O_WRONLY|O_CREAT);
+    if (_x_fd == -1) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Failed to open %s", signing_bin);
+        return;
+    }
+    AP::FS().write(_x_fd, &key, sizeof(key));
+    AP::FS().close(_x_fd);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Wrote signing key to SD card");
 }
 
 /*

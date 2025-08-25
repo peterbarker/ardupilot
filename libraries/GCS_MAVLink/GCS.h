@@ -463,6 +463,9 @@ public:
     // update signing timestamp on GPS lock
     static void update_signing_timestamp(uint64_t timestamp_usec);
 
+    // diagnostic tool to work out how signing is getting accidentally enabled
+    void write_signing_key_to_SD();
+
     // return current packet overhead for a channel
     static uint8_t packet_overhead_chan(mavlink_channel_t chan);
 
