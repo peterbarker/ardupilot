@@ -5791,6 +5791,8 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             count += 1
 
     def MissionJumpTags_missing_jump_target(self, target_system=1, target_component=1):
+        '''try to jump via mavlink command to a jump tag which doesn't exist'''
+        self.wait_ready_to_arm()
         self.start_subtest("Check missing-jump-tag behaviour")
         jump_target = 2
         mission = [
@@ -5817,6 +5819,8 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.assert_current_waypoint(4)
 
     def MissionJumpTags_do_jump_to_bad_tag(self, target_system=1, target_component=1):
+        '''try jumping to bad tag number with mission command'''
+        self.wait_ready_to_arm()
         mission = [
             self.mission_home_point(),
             self.mission_anonymous_waypoint(),
@@ -5832,6 +5836,8 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.disarm_vehicle()
 
     def MissionJumpTags_jump_tag_at_end_of_mission(self, target_system=1, target_component=1):
+        '''check behaviour when bad jump tag at end of mission'''
+        self.wait_ready_to_arm()
         mission = [
             self.mission_home_point(),
             self.mission_anonymous_waypoint(),
@@ -5854,13 +5860,6 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             want_result=mavutil.mavlink.MAV_RESULT_FAILED
         )
         self.disarm_vehicle()
-
-    def MissionJumpTags(self):
-        '''test MAV_CMD_JUMP_TAG'''
-        self.wait_ready_to_arm()
-        self.MissionJumpTags_missing_jump_target()
-        self.MissionJumpTags_do_jump_to_bad_tag()
-        self.MissionJumpTags_jump_tag_at_end_of_mission()
 
     def AltResetBadGPS(self):
         '''Tests the handling of poor GPS lock pre-arm alt resets'''
@@ -7813,7 +7812,9 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.WindEstimates,
             self.AltResetBadGPS,
             self.AirspeedCal,
-            self.MissionJumpTags,
+            self.MissionJumpTags_missing_jump_target,
+            self.MissionJumpTags_do_jump_to_bad_tag,
+            self.MissionJumpTags_jump_tag_at_end_of_mission,
             Test(self.GCSFailsafe, speedup=8),
             self.SDCardWPTest,
             self.NoArmWithoutMissionItems,
