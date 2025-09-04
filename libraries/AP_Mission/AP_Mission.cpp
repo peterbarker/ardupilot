@@ -551,21 +551,7 @@ bool AP_Mission::is_nav_cmd(const Mission_Command& cmd)
 ///     accounts for do_jump commands but never increments the jump's num_times_run (advance_current_nav_cmd is responsible for this)
 bool AP_Mission::get_next_nav_cmd(uint16_t start_index, Mission_Command& cmd)
 {
-    // search until the end of the mission command list
-    for (uint16_t cmd_index = start_index; cmd_index < (unsigned)_cmd_total; cmd_index++) {
-        // get next command
-        if (!get_next_cmd(cmd_index, cmd, false)) {
-            // no more commands so return failure
-            return false;
-        }
-        // if found a "navigation" command then return it
-        if (is_nav_cmd(cmd)) {
-            return true;
-        }
-    }
-
-    // if we got this far we did not find a navigation command
-    return false;
+    return get_next_cmd(start_index, cmd, false, false, ItemType::NAV_CMD);
 }
 
 /// get the ground course of the next navigation leg in centidegrees
@@ -2169,7 +2155,7 @@ void AP_Mission::advance_current_do_cmd()
 ///     returns true if found, false if not found (i.e. mission complete)
 ///     accounts for do_jump commands
 ///     increment_jump_num_times_if_found should be set to true if advancing the active navigation command
-bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool increment_jump_num_times_if_found, bool send_gcs_msg)
+bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool increment_jump_num_times_if_found, bool send_gcs_msg, ItemType itemtype)
 {
     uint16_t cmd_index = start_index;
     Mission_Command temp_cmd;
@@ -2242,11 +2228,30 @@ bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool i
                 // jump has been run specified number of times so move search to next command in mission
                 cmd_index++;
             }
-        } else {
-            // this is a non-jump command so return it
+            continue;
+        }
+        // this is a non-jump command so return it (maybe)
+        bool good_item_type = false;
+        switch (itemtype) {
+        case ItemType::ANY:
+            good_item_type = true;
+            break;
+        case ItemType::NAV_CMD:
+            good_item_type = is_nav_cmd(temp_cmd);
+            break;
+        case ItemType::DO_CMD:
+            if (is_nav_cmd(temp_cmd)) {
+                // we do not process any DO commands past the next NAV_CMD
+                return false;
+            }
+            good_item_type = true;
+            break;
+        }
+        if (good_item_type) {
             cmd = temp_cmd;
             return true;
         }
+        cmd_index++;
     }
 
     // if we got this far we did not find a navigation command
@@ -2259,25 +2264,7 @@ bool AP_Mission::get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool i
 ///     accounts for do_jump commands but never increments the jump's num_times_run (advance_current_nav_cmd is responsible for this)
 bool AP_Mission::get_next_do_cmd(uint16_t start_index, Mission_Command& cmd)
 {
-    Mission_Command temp_cmd;
-
-    // check we have not passed the end of the mission list
-    if (start_index >= (unsigned)_cmd_total) {
-        return false;
-    }
-
-    // get next command
-    if (!get_next_cmd(start_index, temp_cmd, false)) {
-        // no more commands so return failure
-        return false;
-    } else if (is_nav_cmd(temp_cmd)) {
-        // if it's a "navigation" command then return false because we do not progress past nav commands
-        return false;
-    } else {
-        // this must be a "do" or "conditional" and is not a do-jump command so return it
-        cmd = temp_cmd;
-        return true;
-    }
+    return get_next_cmd(start_index, cmd, false, false, ItemType::DO_CMD);
 }
 
 ///

@@ -833,11 +833,17 @@ private:
     ///     returns true if successfully advanced (can it ever be unsuccessful?)
     void advance_current_do_cmd();
 
+    enum class ItemType {
+        ANY = 45,
+        NAV_CMD = 46,
+        DO_CMD = 47,
+    };
+
     /// get_next_cmd - gets next command found at or after start_index
     ///     returns true if found, false if not found (i.e. mission complete)
     ///     accounts for do_jump commands
     ///     increment_jump_num_times_if_found should be set to true if advancing the active navigation command
-    bool get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool increment_jump_num_times_if_found, bool send_gcs_msg = true);
+    bool get_next_cmd(uint16_t start_index, Mission_Command& cmd, bool increment_jump_num_times_if_found, bool send_gcs_msg = true, ItemType itemtype = ItemType::ANY);
 
     /// get_next_do_cmd - gets next "do" or "conditional" command after start_index
     ///     returns true if found, false if not found
