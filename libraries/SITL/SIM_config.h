@@ -257,10 +257,15 @@
 #define AP_SIM_FRAME_DEFAULT_ENABLED 1
 #endif
 
-// 32-motors, a stack of 8 quadcopters:
+// 32-motors, a stack of 4 coaxial-octocopter:
 #ifndef AP_SIM_FRAME_COPTER_DOTRIACONTA_OCTAQUAD_X_ENABLED
 #define AP_SIM_FRAME_COPTER_DOTRIACONTA_OCTAQUAD_X_ENABLED AP_SIM_FRAME_DEFAULT_ENABLED
 #endif
+
+// 64-motors, a stack of 8 coaxial octocopters:
+#ifndef AP_SIM_FRAME_COPTER_HEXACONTATETRA_OCTAQUAD_X_ENABLED
+#define AP_SIM_FRAME_COPTER_HEXACONTATETRA_OCTAQUAD_X_ENABLED AP_SIM_FRAME_DEFAULT_ENABLED
+#endif  // AP_SIM_FRAME_COPTER_HEXACONTATETRA_OCTAQUAD_X_ENABLED
 
 /*
  * defaults for defines gating which physics backends are supported:

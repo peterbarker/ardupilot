@@ -35,6 +35,8 @@
 #include "SIM_Volz.h"
 #include "SIM_AIS.h"
 
+#include "SITL_config.h"
+
 namespace SITL {
 
 enum class LedLayout {
@@ -75,7 +77,7 @@ struct sitl_fdm {
     double battery_remaining; // Ah, if non-zero capacity
     uint8_t num_motors;
     uint32_t motor_mask;
-    float rpm[32];         // RPM of all motors
+    float rpm[SITL_NUM_CHANNELS];         // RPM of all motors
     uint8_t rcin_chan_count;
     float  rcin[12];         // RC input 0..1
     double range;           // rangefinder value
@@ -106,9 +108,6 @@ struct sitl_fdm {
     float height_agl;
 
 };
-
-// number of rc output channels
-#define SITL_NUM_CHANNELS 32
 
 class SIM {
 public:
