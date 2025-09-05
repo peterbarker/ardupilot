@@ -3364,12 +3364,16 @@ bool GCS_MAVLINK::telemetry_delayed() const
  */
 void GCS_MAVLINK::send_servo_output_raw()
 {
-    const uint32_t enabled_mask = ~SRV_Channels::get_output_channel_mask(SRV_Channel::k_GPIO);
+    const SRV_Channel::servo_mask_t enabled_mask = ~SRV_Channels::get_output_channel_mask(SRV_Channel::k_GPIO);
     if (enabled_mask == 0) {
         return;
     }
 
-#if NUM_SERVO_CHANNELS >= 17
+#if NUM_SERVO_CHANNELS > 48
+    static const uint8_t max_channels = 64;
+#elif NUM_SERVO_CHANNELS > 32
+    static const uint8_t max_channels = 48;
+#elif NUM_SERVO_CHANNELS >= 17
     static const uint8_t max_channels = 32;
 #else
     static const uint8_t max_channels = 16;
@@ -3403,6 +3407,32 @@ void GCS_MAVLINK::send_servo_output_raw()
                 values[20],  values[21],  values[22],  values[23],
                 values[24],  values[25],  values[26], values[27],
                 values[28], values[29], values[30], values[31]);
+    }
+#endif
+
+#if NUM_SERVO_CHANNELS > 32
+    if ((enabled_mask & 0xFFFF00000000) != 0) {
+        mavlink_msg_servo_output_raw_send(
+                chan,
+                AP_HAL::micros(),
+                2,     // port
+                values[32],  values[33],  values[34],  values[35],
+                values[36],  values[37],  values[38],  values[39],
+                values[40],  values[41],  values[42],  values[43],
+                values[44],  values[45],  values[46],  values[47]);
+    }
+#endif
+
+#if NUM_SERVO_CHANNELS > 32
+    if ((enabled_mask & 0xFFFF000000000000) != 0) {
+        mavlink_msg_servo_output_raw_send(
+                chan,
+                AP_HAL::micros(),
+                3,     // port
+                values[48],  values[49],  values[50],  values[51],
+                values[52],  values[53],  values[54],  values[55],
+                values[56],  values[57],  values[58],  values[59],
+                values[60],  values[61],  values[62],  values[63]);
     }
 #endif
 }
