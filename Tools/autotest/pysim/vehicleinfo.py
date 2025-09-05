@@ -139,6 +139,14 @@ class VehicleInfo(object):
                 ],
                 "frame_example_script": "MotorMatrix_dotriaconta_octaquad_x.lua",
             },
+            "hexacontatetra_octaquad_x": {
+                "waf_target": "bin/arducopter",
+                "default_params_filename": [
+                    "default_params/copter.parm",
+                    "default_params/copter-hexacontatetra_octaquad_x.parm",
+                ],
+                "frame_example_script": "MotorMatrix_hexacontatetra_octaquad_x.lua",
+            },
             "hexadeca-octa": {
                 "waf_target": "bin/arducopter",
                 "default_params_filename": [
