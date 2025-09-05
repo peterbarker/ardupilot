@@ -101,7 +101,7 @@ void AP_Motors::set_radio_passthrough(float roll_input, float pitch_input, float
 void AP_Motors::rc_write(uint8_t chan, uint16_t pwm)
 {
     SRV_Channel::Function function = SRV_Channels::get_motor_function(chan);
-    if ((1U<<chan) & _motor_pwm_scaled.mask) {
+    if ((1LU<<chan) & _motor_pwm_scaled.mask) {
         // note that PWM_MIN/MAX has been forced to 1000/2000
         SRV_Channels::set_output_scaled(function, float(pwm) - _motor_pwm_scaled.offset);
     } else {
@@ -121,13 +121,13 @@ void AP_Motors::rc_write_angle(uint8_t chan, int16_t angle_cd)
 /*
   set frequency of a set of channels
  */
-void AP_Motors::rc_set_freq(uint32_t motor_mask, uint16_t freq_hz)
+void AP_Motors::rc_set_freq(motor_mask_t motor_mask, uint16_t freq_hz)
 {
     if (freq_hz > 50) {
         _motor_fast_mask |= motor_mask;
     }
 
-    const uint32_t mask = motor_mask_to_srv_channel_mask(motor_mask);
+    const motor_mask_t mask = motor_mask_to_srv_channel_mask(motor_mask);
     hal.rcout->set_freq(mask, freq_hz);
     hal.rcout->set_dshot_esc_type(SRV_Channels::get_dshot_esc_type());
 
@@ -200,11 +200,11 @@ void AP_Motors::rc_set_freq(uint32_t motor_mask, uint16_t freq_hz)
   SERVOn_FUNCTION mappings, and allowing for multiple outputs per
   motor number
  */
-uint32_t AP_Motors::motor_mask_to_srv_channel_mask(uint32_t mask) const
+SRV_Channel::servo_mask_t AP_Motors::motor_mask_to_srv_channel_mask(motor_mask_t mask) const
 {
-    uint32_t mask2 = 0;
-    for (uint8_t i = 0; i < 32; i++) {
-        uint32_t bit = 1UL << i;
+    SRV_Channel::servo_mask_t mask2 = 0;
+    for (uint8_t i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
+        motor_mask_t bit = 1UL << i;
         if (mask & bit) {
             SRV_Channel::Function function = SRV_Channels::get_motor_function(i);
             mask2 |= SRV_Channels::get_output_channel_mask(function);

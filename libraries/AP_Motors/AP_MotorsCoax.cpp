@@ -101,7 +101,7 @@ void AP_MotorsCoax::output_to_motors()
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors or servos (1 means being used)
 //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
-uint32_t AP_MotorsCoax::get_motor_mask()
+motor_mask_t AP_MotorsCoax::get_motor_mask()
 {
     uint32_t motor_mask =
         1U << AP_MOTORS_MOT_5 |

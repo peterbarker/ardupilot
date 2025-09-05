@@ -117,10 +117,10 @@ void AP_MotorsMatrix::set_update_rate(uint16_t speed_hz)
     // record requested speed
     _speed_hz = speed_hz;
 
-    uint32_t mask = 0;
+    motor_mask_t mask = 0;
     for (uint8_t i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
-            mask |= 1U << i;
+            mask |= 1LU << i;
         }
     }
     rc_set_freq(mask, _speed_hz);
@@ -184,15 +184,15 @@ void AP_MotorsMatrix::output_to_motors()
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
 //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
-uint32_t AP_MotorsMatrix::get_motor_mask()
+motor_mask_t AP_MotorsMatrix::get_motor_mask()
 {
-    uint32_t motor_mask = 0;
+    motor_mask_t motor_mask = 0;
     for (uint8_t i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
-            motor_mask |= 1U << i;
+            motor_mask |= 1LU << i;
         }
     }
-    uint32_t mask = motor_mask_to_srv_channel_mask(motor_mask);
+    SRV_Channel::servo_mask_t mask = motor_mask_to_srv_channel_mask(motor_mask);
 
     // add parent's mask
     mask |= AP_MotorsMulticopter::get_motor_mask();

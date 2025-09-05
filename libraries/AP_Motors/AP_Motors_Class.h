@@ -8,7 +8,7 @@
 #include <Filter/DerivativeFilter.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <AP_Logger/AP_Logger_config.h>
-#include <SRV_Channel/SRV_Channel_config.h>
+#include <SRV_Channel/SRV_Channel.h>
 
 // offsets for motors in motor_out and _motor_filtered arrays
 #define AP_MOTORS_MOT_1 0U
@@ -43,9 +43,47 @@
 #define AP_MOTORS_MOT_30 29U
 #define AP_MOTORS_MOT_31 30U
 #define AP_MOTORS_MOT_32 31U
+#define AP_MOTORS_MOT_33 32U
+#define AP_MOTORS_MOT_34 33U
+#define AP_MOTORS_MOT_35 34U
+#define AP_MOTORS_MOT_36 35U
+#define AP_MOTORS_MOT_37 36U
+#define AP_MOTORS_MOT_38 37U
+#define AP_MOTORS_MOT_39 38U
+#define AP_MOTORS_MOT_40 39U
+#define AP_MOTORS_MOT_41 40U
+#define AP_MOTORS_MOT_42 41U
+#define AP_MOTORS_MOT_43 42U
+#define AP_MOTORS_MOT_44 43U
+#define AP_MOTORS_MOT_45 44U
+#define AP_MOTORS_MOT_46 45U
+#define AP_MOTORS_MOT_47 46U
+#define AP_MOTORS_MOT_48 47U
+#define AP_MOTORS_MOT_49 48U
+#define AP_MOTORS_MOT_50 49U
+#define AP_MOTORS_MOT_51 50U
+#define AP_MOTORS_MOT_52 51U
+#define AP_MOTORS_MOT_53 52U
+#define AP_MOTORS_MOT_54 53U
+#define AP_MOTORS_MOT_55 54U
+#define AP_MOTORS_MOT_56 55U
+#define AP_MOTORS_MOT_57 56U
+#define AP_MOTORS_MOT_58 57U
+#define AP_MOTORS_MOT_59 58U
+#define AP_MOTORS_MOT_60 59U
+#define AP_MOTORS_MOT_61 60U
+#define AP_MOTORS_MOT_62 61U
+#define AP_MOTORS_MOT_63 62U
+#define AP_MOTORS_MOT_64 63U
 
 // motor update rate
 #define AP_MOTORS_SPEED_DEFAULT     490 // default output rate to the motors
+
+#if AP_MOTORS_MAX_NUM_MOTORS > 32
+typedef uint64_t motor_mask_t;
+#else
+typedef uint32_t motor_mask_t;
+#endif
 
 /// @class      AP_Motors
 class AP_Motors {
@@ -237,7 +275,7 @@ public:
 
     // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
     //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
-    virtual uint32_t    get_motor_mask() = 0;
+    virtual motor_mask_t    get_motor_mask() = 0;
 
     // pilot input in the -1 ~ +1 range for roll, pitch and yaw. 0~1 range for throttle
     void                set_radio_passthrough(float roll_input, float pitch_input, float throttle_input, float yaw_input);
@@ -288,7 +326,7 @@ protected:
     // output functions that should be overloaded by child classes
     virtual void        output_armed_stabilizing() = 0;
     virtual void        rc_write_angle(uint8_t chan, int16_t angle_cd);
-    virtual void        rc_set_freq(uint32_t mask, uint16_t freq_hz);
+    virtual void        rc_set_freq(motor_mask_t mask, uint16_t freq_hz);
 
 
     /*
@@ -296,7 +334,7 @@ protected:
       SERVOn_FUNCTION mappings, and allowing for multiple outputs per
       motor number
     */
-    uint32_t    motor_mask_to_srv_channel_mask(uint32_t mask) const;
+    SRV_Channel::servo_mask_t    motor_mask_to_srv_channel_mask(motor_mask_t mask) const;
 
     // add a motor to the motor map
     void add_motor_num(int8_t motor_num);
@@ -329,12 +367,12 @@ protected:
     SpoolState          _spool_state;               // current spool mode
 
     // mask of what channels need fast output
-    uint32_t            _motor_fast_mask;
+    motor_mask_t            _motor_fast_mask;
 
     // Used with PWMType::PWM_RANGE and PWMType::PWM_ANGLE
     struct {
         // Mask of motors using scaled output
-        uint32_t mask;
+        motor_mask_t mask;
 
         // Offset used to convert from PWM to scaled value
         float offset;

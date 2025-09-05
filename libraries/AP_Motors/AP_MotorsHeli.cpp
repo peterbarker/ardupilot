@@ -578,7 +578,7 @@ bool AP_MotorsHeli::motor_test_checks(size_t buflen, char *buffer) const
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors or servos (1 means being used)
 //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
-uint32_t AP_MotorsHeli::get_motor_mask()
+motor_mask_t AP_MotorsHeli::get_motor_mask()
 {
     return _main_rotor.get_output_mask();
 }
