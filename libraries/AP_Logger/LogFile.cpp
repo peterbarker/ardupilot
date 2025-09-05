@@ -186,7 +186,7 @@ void AP_Logger::Write_RCIN(void)
 // Write an SERVO packet
 void AP_Logger::Write_RCOUT(void)
 {
-    const uint32_t enabled_mask = ~SRV_Channels::get_output_channel_mask(SRV_Channel::k_GPIO);
+    const SRV_Channel::servo_mask_t enabled_mask = ~SRV_Channels::get_output_channel_mask(SRV_Channel::k_GPIO);
 
     if ((enabled_mask & 0x3FFF) != 0) {
         uint16_t channels[14] {};
@@ -250,6 +250,67 @@ void AP_Logger::Write_RCOUT(void)
     }
 #endif
 
+#if NUM_SERVO_CHANNELS >= 33
+    if ((enabled_mask & 0x3FFF00000000) != 0) {
+        const struct log_RCOUT pkt{
+            LOG_PACKET_HEADER_INIT(LOG_RCOUT4_MSG),
+            time_us       : AP_HAL::micros64(),
+            chan1         : hal.rcout->read(32),
+            chan2         : hal.rcout->read(33),
+            chan3         : hal.rcout->read(34),
+            chan4         : hal.rcout->read(35),
+            chan5         : hal.rcout->read(36),
+            chan6         : hal.rcout->read(37),
+            chan7         : hal.rcout->read(38),
+            chan8         : hal.rcout->read(39),
+            chan9         : hal.rcout->read(40),
+            chan10        : hal.rcout->read(41),
+            chan11        : hal.rcout->read(42),
+            chan12        : hal.rcout->read(43),
+            chan13        : hal.rcout->read(44),
+            chan14        : hal.rcout->read(45)
+        };
+        WriteBlock(&pkt, sizeof(pkt));
+    }
+#endif  // NUM_SERVO_CHANNELS >= 33
+
+#if NUM_SERVO_CHANNELS >= 47
+    if ((enabled_mask & 0xFFFC00000000000) != 0) {
+        const struct log_RCOUT pkt{
+            LOG_PACKET_HEADER_INIT(LOG_RCOUT5_MSG),
+            time_us       : AP_HAL::micros64(),
+            chan1         : hal.rcout->read(46),
+            chan2         : hal.rcout->read(47),
+            chan3         : hal.rcout->read(48),
+            chan4         : hal.rcout->read(49),
+            chan5         : hal.rcout->read(50),
+            chan6         : hal.rcout->read(51),
+            chan7         : hal.rcout->read(52),
+            chan8         : hal.rcout->read(53),
+            chan9         : hal.rcout->read(54),
+            chan10        : hal.rcout->read(55),
+            chan11        : hal.rcout->read(56),
+            chan12        : hal.rcout->read(57),
+            chan13        : hal.rcout->read(58),
+            chan14        : hal.rcout->read(59)
+        };
+        WriteBlock(&pkt, sizeof(pkt));
+    }
+#endif  // NUM_SERVO_CHANNELS >= 47
+
+#if NUM_SERVO_CHANNELS >= 61
+    if ((enabled_mask & 0xF000000000000000) != 0) {
+        const struct log_RCOUT2 pkt{
+            LOG_PACKET_HEADER_INIT(LOG_RCOUT6_MSG),
+            time_us       : AP_HAL::micros64(),
+            chan15         : hal.rcout->read(60),
+            chan16         : hal.rcout->read(61),
+            chan17         : hal.rcout->read(62),
+            chan18         : hal.rcout->read(63),
+        };
+        WriteBlock(&pkt, sizeof(pkt));
+    }
+#endif  // NUM_SERVO_CHANNELS >= 47
 }
 
 #if AP_RSSI_ENABLED

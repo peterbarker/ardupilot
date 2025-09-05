@@ -1164,6 +1164,12 @@ LOG_STRUCTURE_FROM_GPS \
       "RCO2",  "QHHHH",     "TimeUS,C15,C16,C17,C18", "sYYYY", "F----", true  }, \
     { LOG_RCOUT3_MSG, sizeof(log_RCOUT), \
       "RCO3",  "QHHHHHHHHHHHHHH",     "TimeUS,C19,C20,C21,C22,C23,C24,C25,C26,C27,C28,C29,C30,C31,C32", "sYYYYYYYYYYYYYY", "F--------------", true  }, \
+    { LOG_RCOUT4_MSG, sizeof(log_RCOUT), \
+      "RCO4",  "QHHHHHHHHHHHHHH",     "TimeUS,C33,C34,C35,C36,C37,C38,C39,C40,C41,C42,C43,C44,C45,C46", "sYYYYYYYYYYYYYY", "F--------------", true  }, \
+    { LOG_RCOUT5_MSG, sizeof(log_RCOUT), \
+      "RCO5",  "QHHHHHHHHHHHHHH",     "TimeUS,C47,C48,C49,C50,C51,C52,C53,C54,C55,C56,C57,C58,C59,C60", "sYYYYYYYYYYYYYY", "F--------------", true  }, \
+    { LOG_RCOUT6_MSG, sizeof(log_RCOUT2), \
+      "RCO6",  "QHHHH",     "TimeUS,C61,C62,C63,C64", "sYYYY", "F----", true  }, \
     { LOG_RSSI_MSG, sizeof(log_RSSI), \
       "RSSI",  "Qff",     "TimeUS,RXRSSI,RXLQ", "s-%", "F--", true  }, \
 LOG_STRUCTURE_FROM_BARO \
@@ -1346,6 +1352,9 @@ enum LogMessages : uint8_t {
     LOG_VER_MSG,
     LOG_RCOUT2_MSG,
     LOG_RCOUT3_MSG,
+    LOG_RCOUT4_MSG,
+    LOG_RCOUT5_MSG,
+    LOG_RCOUT6_MSG,
     LOG_IDS_FROM_FENCE,
     LOG_IDS_FROM_HAL,
 
