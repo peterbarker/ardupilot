@@ -379,7 +379,7 @@ void SRV_Channels::init(uint32_t motor_mask, AP_HAL::RCOutput::output_mode mode)
 void SRV_Channels::save_trim(void)
 {
     for (uint8_t i=0; i<NUM_SERVO_CHANNELS; i++) {
-        if (trimmed_mask & (1U<<i)) {
+        if (trimmed_mask & (1LU<<i)) {
             channels[i].servo_trim.set_and_save(channels[i].servo_trim.get());
         }
     }
@@ -390,7 +390,7 @@ void SRV_Channels::setup_failsafe_trim_all_non_motors(void)
 {
     for (uint8_t i = 0; i < NUM_SERVO_CHANNELS; i++) {
         if (!SRV_Channel::is_motor(channels[i].get_function())) {
-            hal.rcout->set_failsafe_pwm(1U<<channels[i].ch_num, channels[i].servo_trim);
+            hal.rcout->set_failsafe_pwm(1LU<<channels[i].ch_num, channels[i].servo_trim);
         }
     }
 }
@@ -455,10 +455,10 @@ void SRV_Channels::set_output_pwm_chan_timeout(uint8_t chan, uint16_t value, uin
     if (chan < NUM_SERVO_CHANNELS) {
         const uint32_t loop_period_us = AP::scheduler().get_loop_period_us();
         // round up so any non-zero requested value will result in at least one loop
-        const uint32_t loop_count = ((timeout_ms * 1000U) + (loop_period_us - 1U)) / loop_period_us;
+        const uint32_t loop_count = ((timeout_ms * 1000U) + (loop_period_us - 1LU)) / loop_period_us;
         override_counter[chan] = constrain_int32(loop_count, 0, UINT16_MAX);
         channels[chan].set_override(true);
-        const bool had_pwm = SRV_Channel::have_pwm_mask & (1U<<chan);
+        const bool had_pwm = SRV_Channel::have_pwm_mask & (1LU<<chan);
         channels[chan].set_output_pwm(value,true);
         if (!had_pwm) {
             // clear the have PWM mask so the channel will default back to the scaled value when timeout expires
@@ -466,7 +466,7 @@ void SRV_Channels::set_output_pwm_chan_timeout(uint8_t chan, uint16_t value, uin
             // after the timeout is applied
             // note that we can't default back to a pre-override PWM value as it is not stored
             // checking had_pwm means the PWM will not change after the timeout, this was the existing behaviour
-            SRV_Channel::have_pwm_mask &= ~(1U<<chan);
+            SRV_Channel::have_pwm_mask &= ~(1LU<<chan);
         }
     }
 }
@@ -571,7 +571,7 @@ bool SRV_Channels::is_GPIO(uint8_t channel)
     if (channel_function(channel) == SRV_Channel::k_GPIO) {
         return true;
     }
-    if (_singleton != nullptr && (_singleton->gpio_mask & (1U<<channel)) != 0) {
+    if (_singleton != nullptr && (_singleton->gpio_mask & (1LU<<channel)) != 0) {
         // user has set this channel in SERVO_GPIO_MASK
         return true;
     }

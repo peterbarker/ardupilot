@@ -25,7 +25,7 @@
 
 #include "SRV_Channel_config.h"
 
-static_assert(NUM_SERVO_CHANNELS <= 32, "More than 32 servos not supported");
+static_assert(NUM_SERVO_CHANNELS <= 64, "More than 32 servos not supported");
 
 class SRV_Channels;
 
@@ -219,6 +219,38 @@ public:
         k_actuator4             = 187,
         k_actuator5             = 188,
         k_actuator6             = 189,
+        k_motor33               = 190,
+        k_motor34               = 191,
+        k_motor35               = 192,
+        k_motor36               = 193,
+        k_motor37               = 194,
+        k_motor38               = 195,
+        k_motor39               = 196,
+        k_motor40               = 197,
+        k_motor41               = 198,
+        k_motor42               = 199,
+        k_motor43               = 200,
+        k_motor44               = 201,
+        k_motor45               = 202,
+        k_motor46               = 203,
+        k_motor47               = 204,
+        k_motor48               = 205,
+        k_motor49               = 206,
+        k_motor50               = 207,
+        k_motor51               = 208,
+        k_motor52               = 209,
+        k_motor53               = 210,
+        k_motor54               = 211,
+        k_motor55               = 212,
+        k_motor56               = 213,
+        k_motor57               = 214,
+        k_motor58               = 215,
+        k_motor59               = 216,
+        k_motor60               = 217,
+        k_motor61               = 218,
+        k_motor62               = 219,
+        k_motor63               = 220,
+        k_motor64               = 221,
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Function;
 
@@ -313,6 +345,13 @@ public:
     // used by DO_SET_SERVO commands
     void ignore_small_rcin_changes() { ign_small_rcin_changes = true; }
 
+    // a bitmask type wide enough for NUM_SERVO_CHANNELS
+#if NUM_SERVO_CHANNELS > 32
+    typedef uint64_t servo_mask_t;
+#else
+    typedef uint32_t servo_mask_t;
+#endif
+
 private:
     AP_Int16 servo_min;
     AP_Int16 servo_max;
@@ -356,9 +395,6 @@ private:
 
     // get normalised output from -1 to 1, assuming 0 at mid point of servo_min/servo_max
     float get_output_norm(void);
-
-    // a bitmask type wide enough for NUM_SERVO_CHANNELS
-    typedef uint32_t servo_mask_t;
 
     // mask of channels where we have a output_pwm value. Cleared when a
     // scaled value is written. 
@@ -425,7 +461,7 @@ public:
     static void set_output_norm(SRV_Channel::Function function, float value);
 
     // get output channel mask for a function
-    static uint32_t get_output_channel_mask(SRV_Channel::Function function);
+    static SRV_Channel::servo_mask_t get_output_channel_mask(SRV_Channel::Function function);
 
     // limit slew rate to given limit in percent per second
     static void set_slew_rate(SRV_Channel::Function function, float slew_rate, uint16_t range, float dt);
@@ -570,7 +606,10 @@ public:
         if (channel < 12) {
             return SRV_Channel::Function((SRV_Channel::k_motor9+(channel-8)));
         }
-        return SRV_Channel::Function((SRV_Channel::k_motor13+(channel-12)));
+        if (channel < 33) {
+            return SRV_Channel::Function((SRV_Channel::k_motor13+(channel-12)));
+        }
+        return SRV_Channel::Function((SRV_Channel::k_motor33+(channel-32)));
     }
 
     void cork();

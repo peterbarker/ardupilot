@@ -652,7 +652,7 @@ float SRV_Channels::get_slew_limited_output_scaled(SRV_Channel::Function functio
 /*
   get mask of output channels for a function
  */
-uint32_t SRV_Channels::get_output_channel_mask(SRV_Channel::Function function)
+SRV_Channel::servo_mask_t SRV_Channels::get_output_channel_mask(SRV_Channel::Function function)
 {
     if (!initialised) {
         update_aux_servo_function();

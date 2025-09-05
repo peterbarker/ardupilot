@@ -178,8 +178,7 @@ const AP_Param::GroupInfo SRV_Channel::var_info[] = {
 SRV_Channel::SRV_Channel(void)
 {
     AP_Param::setup_object_defaults(this, var_info);
-    // start with all pwm at zero
-    have_pwm_mask = ~uint32_t(0);
+    have_pwm_mask = -1;  // all outputs are considered pwm by default
 }
 
 // convert a 0..range_max to a pwm
@@ -223,7 +222,7 @@ uint16_t SRV_Channel::pwm_from_scaled_value(float scaled_value) const
 
 void SRV_Channel::calc_pwm(float output_scaled)
 {
-    if (have_pwm_mask & (1U<<ch_num)) {
+    if (have_pwm_mask & (1LU<<ch_num)) {
         // Note that this allows a set_output_pwm call to override E-Stop!!
         // tricky to fix because we would endup E-stoping to individual SEROVx_MIN not MOT_PWM_MIN on copter
         return;
@@ -248,7 +247,7 @@ void SRV_Channel::set_output_pwm(uint16_t pwm, bool force)
 {
     if (!override_active || force) {
         output_pwm = pwm;
-        have_pwm_mask |= (1U<<ch_num);
+        have_pwm_mask |= (1LU<<ch_num);
     }
 }
 
