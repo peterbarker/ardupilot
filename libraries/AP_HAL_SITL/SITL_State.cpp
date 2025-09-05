@@ -303,7 +303,7 @@ void SITL_State::_simulator_servos(struct sitl_input &input)
 
     if (last_update_usec == 0 || !output_ready) {
         if (_vehicle == ArduPlane) {
-            for (uint8_t i=0; i<SITL_NUM_CHANNELS; i++) {
+            for (uint8_t i=0; i<ARRAY_SIZE(pwm_output); i++) {
                 pwm_output[i] = 1000;
             }
         }
@@ -574,7 +574,7 @@ void SITL_State::check_servo_input(void)
 void SITL_State::multicast_servo_update(struct sitl_input &input)
 {
     for (uint8_t i=0; i<SITL_NUM_CHANNELS; i++) {
-        const uint32_t mask = (1U<<i);
+        const uint32_t mask = (1LU<<i);
         const uint32_t can_mask = uint32_t(_sitl->can_servo_mask.get());
         if (can_mask & mask) {
             input.servos[i] = mc_servo[i];
