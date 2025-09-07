@@ -59,9 +59,9 @@ def run_program(cmd_list):
 
 frame_options = sorted(vinfo.options[vehicle_map[args.vehicle]]["frames"].keys())
 frame_options_string = ' '.join(frame_options)
-if args.frame and args.frame not in frame_options:
-    print(f"ERROR: frame must be one of {frame_options_string}")
-    sys.exit(1)
+# if args.frame and args.frame not in frame_options and not args.simclass.startswith('json:'):
+#     print(f"ERROR: frame must be one of {frame_options_string}, not {args.frame}")
+#     sys.exit(1)
 
 extra_hwdef = tempfile.NamedTemporaryFile(mode='w')
 extra_defaults = tempfile.NamedTemporaryFile(mode='w')
