@@ -18830,6 +18830,7 @@ RTL_ALT_M 111
                 binary_path,
                 cwd=periph_rundir,
                 stdout_prefix="periph",
+                stdout_file=self.sitl_stdout_file(),
                 gdb=self.gdb,
                 valgrind=self.valgrind,
                 customisations=[
