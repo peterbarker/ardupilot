@@ -599,7 +599,7 @@ protected:
     AP_Enum<SBAS_Mode> _sbas_mode;
     AP_Int8 _min_elevation;
     AP_Int8 _raw_data;
-    AP_Int8 _gnss_mode[GPS_MAX_RECEIVERS];
+    AP_Int16 _gnss_mode[GPS_MAX_RECEIVERS];
     AP_Int16 _rate_ms[GPS_MAX_RECEIVERS];   // this parameter should always be accessed using get_rate_ms()
     AP_Int8 _save_config;
     AP_Int8 _auto_config;
@@ -632,7 +632,7 @@ protected:
 
     // check if an option is set
     bool option_set(const DriverOptions option) const {
-        return (uint8_t(_driver_options.get()) & uint8_t(option)) != 0;
+        return (uint16_t(_driver_options.get()) & uint16_t(option)) != 0;
     }
 
 private:
