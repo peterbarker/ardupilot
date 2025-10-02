@@ -9,8 +9,8 @@
 #define AP_SOCKET_NATIVE_ENABLED 1
 #define SOCKET_CLASS_NAME SocketAPM_native
 #include "Socket.hpp"
-#elif !AP_SIM_ENABLED
-#error "attempt to use Socket_native.h without native sockets"
+#else
+#define AP_SOCKET_NATIVE_ENABLED 0
 #endif
 
 #undef SOCKET_CLASS_NAME

@@ -3,7 +3,7 @@
 #include <AP_HAL/utility/Socket_native.h>
 #include "SerialDevice.h"
 
-#ifndef AP_SOCKET_NATIVE_ENABLED
+#if !AP_SOCKET_NATIVE_ENABLED
 #error "need native"
 #endif
 

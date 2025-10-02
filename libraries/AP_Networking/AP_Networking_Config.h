@@ -1,6 +1,7 @@
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_SerialManager/AP_SerialManager_config.h>
 #include <AP_Filesystem/AP_Filesystem_config.h>
+#include <AP_HAL/utility/Socket_native.h>
 
 #if defined(AP_NETWORKING_BACKEND_PPP) && !defined(AP_NETWORKING_ENABLED)
 // allow --enable-PPP to enable networking
@@ -52,7 +53,7 @@
 #define AP_NETWORKING_CONTROLS_HOST_IP_SETTINGS_ENABLED AP_NETWORKING_BACKEND_CHIBIOS
 #endif
 
-#define AP_NETWORKING_NEED_LWIP (AP_NETWORKING_BACKEND_CHIBIOS || AP_NETWORKING_BACKEND_PPP)
+#define AP_NETWORKING_NEED_LWIP (AP_NETWORKING_BACKEND_CHIBIOS || AP_NETWORKING_BACKEND_PPP || !AP_SOCKET_NATIVE_ENABLED)
 
 // ---------------------------
 // IP Features

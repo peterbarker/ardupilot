@@ -23,7 +23,7 @@
 
 #include "RCInput.h"
 
-#ifndef AP_SOCKET_NATIVE_ENABLED
+#if !AP_SOCKET_NATIVE_ENABLED
 #error "need native"
 #endif
 

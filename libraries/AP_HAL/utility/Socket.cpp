@@ -18,7 +18,7 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Networking/AP_Networking_Config.h>
-#if AP_NETWORKING_SOCKETS_ENABLED || defined(AP_SOCKET_NATIVE_ENABLED)
+#if AP_NETWORKING_SOCKETS_ENABLED || AP_SOCKET_NATIVE_ENABLED
 
 #ifndef SOCKET_CLASS_NAME
 #define SOCKET_CLASS_NAME SocketAPM
@@ -28,8 +28,9 @@
 #include "Socket.hpp"
 #endif
 
-#if AP_NETWORKING_BACKEND_CHIBIOS || AP_NETWORKING_BACKEND_PPP
+#if AP_NETWORKING_NEED_LWIP
 #include <lwip/sockets.h>
+#define CALL_PREFIX(x) ::lwip_##x
 #else
 // SITL or Linux
 #include <fcntl.h>
@@ -41,15 +42,10 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/time.h>
+#define CALL_PREFIX(x) ::x
 #endif
 
 #include <errno.h>
-
-#if AP_NETWORKING_BACKEND_CHIBIOS || AP_NETWORKING_BACKEND_PPP
-#define CALL_PREFIX(x) ::lwip_##x
-#else
-#define CALL_PREFIX(x) ::x
-#endif
 
 #ifndef MSG_NOSIGNAL
 #define MSG_NOSIGNAL 0
