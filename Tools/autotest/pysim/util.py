@@ -7,6 +7,7 @@ from __future__ import annotations
 import atexit
 import math
 import os
+import pathlib
 import re
 import shlex
 import signal
@@ -148,6 +149,7 @@ def build_SITL(
         board='sitl',
         clean=True,
         configure=True,
+        configure_if_required=False,
         coverage=False,
         debug=False,
         ekf_single=False,
@@ -168,6 +170,12 @@ def build_SITL(
         extra_defines = {}
 
     # first configure
+    if configure_if_required:
+        # we simply base this off whether the expected target directory exists
+        p = pathlib.Path(topdir(), "build", board)
+        if p.exists():
+            configure = False
+
     if configure:
         waf_configure(board,
                       j=j,
