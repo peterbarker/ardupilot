@@ -2270,7 +2270,7 @@ INCLUDE common.ld
             scale = p.extra_value('SCALE', default=None)
             analog = p.extra_value('ANALOG', type=int, default=chan) # default to ADC channel if not specified
             if analog in analogset:
-                self.error("Duplicate analog pin %u" % analog)
+                self.error("Duplicate analog pin %u for label %s" % (analog, label))
             analogset.add(analog)
             if p.label == 'VDD_5V_SENS':
                 f.write('#define ANALOG_VCC_5V_PIN %u\n' % (analog))
