@@ -585,8 +585,24 @@ ADC1_map = {
 }
 
 ADC2_map = {
-  "PA4" : 17,
-  "PA5" : 13,
-  "PA6" : 3,
-  "PA7" : 4,
+    "PA0" : 1,
+    "PA1" : 2,
+    "PA2" : 3,
+    "PA3" : 4,
+    "PA4" : 5,
+    "PA5" : 6,
+    "PA6" : 7,
+    "PA7" : 8,
+    "PB0" : 9,
+    "PB1" : 10,
+    "PC0" : 11,
+    "PC1" : 12,
+    "PC2" : 13,
+    "PC3" : 14,
+    "PC4" : 15,
+    "PC5" : 16,
+    # internal channels (optional)
+    "TEMP" : 17,
+    "VREF" : 18,
+    "VBAT" : 19,
 }
