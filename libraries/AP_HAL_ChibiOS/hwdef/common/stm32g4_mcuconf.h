@@ -178,7 +178,9 @@
 /*
  * ADC driver system settings.
  */
+#ifndef STM32_ADC_DUAL_MODE
 #define STM32_ADC_DUAL_MODE                 FALSE
+#endif
 #define STM32_ADC_COMPACT_SAMPLES           FALSE
 #define STM32_ADC_ADC1_DMA_PRIORITY         2
 #define STM32_ADC_ADC2_DMA_PRIORITY         2

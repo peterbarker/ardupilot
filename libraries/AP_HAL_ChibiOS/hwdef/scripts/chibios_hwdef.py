@@ -2320,7 +2320,6 @@ INCLUDE common.ld
         if len(adc_chans[1]) > 0:
             f.write('#define STM32_ADC_SAMPLES_SIZE 32\n')
             f.write('#define ADC12_CCR_DUAL ADC_CCR_DUAL_REG_INTERL\n')
-            f.write('#define STM32_ADC_DUAL_MODE TRUE\n')
             f.write('#define HAL_ANALOG2_PINS \\\n')
             for (chan, analog, scale, label, portpin) in adc_chans[1]:
                 scale_str = '%.2f/4096' % vdd
