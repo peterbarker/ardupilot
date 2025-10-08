@@ -39,6 +39,7 @@ rc 3 1600
 #include <stdio.h>
 #include <AP_Param/AP_Param.h>
 #include <GCS_MAVLink/GCS.h>
+#include <SITL/SITL_Input.h>
 
 namespace SITL {
 
@@ -50,6 +51,8 @@ public:
         { }
 
     void update(const class Aircraft &aircraft);
+
+    void update_sitl_input_pwm(struct sitl_input &input);
 
     static const AP_Param::GroupInfo var_info[];
 
@@ -190,6 +193,14 @@ private:
             memcpy(data, _data, ARRAY_SIZE(data));
         }
         const uint8_t *get_data() const { return data; }
+        int32_t get_data_int32() const {
+            return (
+                data[0] <<  0 |
+                data[1] <<  8 |
+                data[2] << 16 |
+                data[3] << 24
+                );
+        }
     private:
         uint8_t data[4];
     };
@@ -205,6 +216,7 @@ private:
     };
 
     EPOS4Object *find_epos4_object(ObjectID objectid);
+    const EPOS4Object *find_epos4_object(ObjectID objectid) const;
 
     /*
      *  Input Handling
@@ -276,7 +288,7 @@ private:
 
     void send(Maxon_EPOS4::ResponseOpCode opcode, uint8_t *data, uint16_t data_len, uint16_t checksum);
 
-
+    uint16_t pwm() const;
 };
 
 };

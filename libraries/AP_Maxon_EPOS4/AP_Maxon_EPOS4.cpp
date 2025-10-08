@@ -166,7 +166,7 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
         case State::WANT_WRITE_MODES_OF_OPERATION_ACK: {
             int32_t unused;
             if (handle_generic_response(unused)) {
-                set_state(State::RUN);
+                set_state(State::IDLE);
             } else {
                 set_state(State::UNKNOWN);
             }
@@ -176,14 +176,14 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
         // these states are taken care of in update_output:
         // case State::WANT_SEND_READ_STATUSWORD:
         case State::WANT_SEND_READ_HOME_POSITION:
+        case State::WANT_WRITE_TARGET_POSITION_ACK:
         case State::START:
             break;
 
         case State::UNKNOWN:
             // should not be here
             break;
-        case State::RUN:
-            // should not be here
+        case State::IDLE:
             break;
         }
         break;
@@ -206,6 +206,13 @@ bool AP_Maxon_EPOS4::ServoInstance::send_write_MODES_OF_OPERATION()
         0
     };
     return send_write_object_request(ObjectID::MODES_OF_OPERATION, 0, data);
+}
+
+bool AP_Maxon_EPOS4::ServoInstance::send_write_TARGET_POSITION()
+{
+    const float normalised_output = srv_channel->get_output_norm();
+    const uint32_t scaled_output = normalised_output * INT32_MAX;  // not *quite* correct...
+    return send_write_object_request(ObjectID::TARGET_POSITION, 0, scaled_output);
 }
 
 // bool AP_Maxon_EPOS4::ServoInstance::send_write_TARGET_POSITION()
@@ -301,10 +308,21 @@ bool AP_Maxon_EPOS4::ServoInstance::send_request(uint8_t *request, uint16_t requ
 
 void AP_Maxon_EPOS4::ServoInstance::update_output()
 {
+    const uint32_t now_ms = AP_HAL::millis();
+
     // check for timeouts
-    if (state != State::RUN) {
-        if (AP_HAL::millis() - state_start_ms > 600) {
+    if (state != State::IDLE) {
+        if (now_ms - state_start_ms > 600) {
+            abort();
             set_state(State::UNKNOWN);
+        }
+    }
+
+    if (state == State::IDLE) {
+        // see if it is time to send a packet of some sort...
+        if (now_ms - last_TARGET_POSITION_sent_ms > 20) {  // 50Hz
+            set_state(State::WANT_SEND_WRITE_TARGET_POSITION);
+            last_TARGET_POSITION_sent_ms = now_ms;
         }
     }
 
@@ -313,6 +331,7 @@ void AP_Maxon_EPOS4::ServoInstance::update_output()
     case State::START:
         set_state(State::WANT_SEND_READ_HOME_POSITION);
         // FALLTHROUGH
+
     case State::WANT_SEND_READ_HOME_POSITION:
         if (!send_read_HOME_POSITION()) {
             return;
@@ -323,6 +342,7 @@ void AP_Maxon_EPOS4::ServoInstance::update_output()
         // moving from this state to the next is done in the
         // handle_completed_frame paths
         return;
+
     case State::WANT_SEND_WRITE_MODES_OF_OPERATION:
         if (!send_write_MODES_OF_OPERATION()) {
             return;
@@ -333,8 +353,16 @@ void AP_Maxon_EPOS4::ServoInstance::update_output()
         // moving from this state to the next is done in the
         // handle_completed_frame paths
         return;
-    case State::RUN:
-        // send servo demands
+
+    case State::WANT_SEND_WRITE_TARGET_POSITION:
+        if (!send_write_TARGET_POSITION()) {
+            return;
+        }
+        set_state(State::WANT_WRITE_TARGET_POSITION_ACK);
+        return;
+    case State::WANT_WRITE_TARGET_POSITION_ACK:
+        // moving from this state to the next is done in the
+        // handle_completed_frame paths
         return;
     }
 }
@@ -456,7 +484,7 @@ bool AP_Maxon_EPOS4::ServoInstance::verify_frame_checksum() const
     switch (ResponseOpCode(frame.raw.opcode)) {
     case ResponseOpCode::GENERIC:
         
-        return frame.packed_generic_response.verify_checksum();
+        return frame.raw.verify_checksum();
     }
     AP_HAL::panic("Unexpected opcode %u", (unsigned)frame.raw.opcode);
 }

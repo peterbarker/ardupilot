@@ -61,9 +61,10 @@ private:
 
             // WANT_SEND_ENABLESWITCH_COMMAND = 65,
             // WANT_ENABLESWITCHCOMMAND_ACK = 66,
-            // WANT_SEND_TARGET_POSITION = 100,
-            // WANT_SEND_SERVO_COMMAND = 101,
-            RUN = 100,
+            WANT_SEND_WRITE_TARGET_POSITION = 100,
+            WANT_WRITE_TARGET_POSITION_ACK = 101,
+
+            IDLE = 100,
         };
         State state = State::UNKNOWN;
         void set_state(State newstate);
@@ -217,6 +218,7 @@ private:
                 ResponseOpCode opcode;
                 uint8_t len;
                 uint16_t parameters[256];  // parameters and crc
+                bool verify_frame_checksum() const;
             } raw;
             PackedResponse<ReadObjectResponse> packed_generic_response;
         } frame;
@@ -226,6 +228,8 @@ private:
         class SRV_Channel *srv_channel;
         class AP_HAL::UARTDriver *port;
     private:
+
+        uint32_t last_TARGET_POSITION_sent_ms;
 
         enum class ModeOfOperation : uint8_t {
             PROFILE_POSITION_MODE = 1,
@@ -239,6 +243,7 @@ private:
         void update_output();
 
         bool send_write_MODES_OF_OPERATION();
+        bool send_write_TARGET_POSITION();
 
         bool send_write_object_request(
             ObjectID object_id,

@@ -248,6 +248,9 @@ public:
     // set normalised output from -1 to 1, assuming 0 at mid point of servo_min/servo_max
     void set_output_norm(float value);
 
+    // get normalised output from -1 to 1, assuming 0 at mid point of servo_min/servo_max
+    float get_output_norm(void);
+
     // set angular range of scaled output
     void set_angle(int16_t angle);
 
@@ -354,9 +357,6 @@ private:
 
     // return PWM for a given limit value
     uint16_t get_limit_pwm(Limit limit) const;
-
-    // get normalised output from -1 to 1, assuming 0 at mid point of servo_min/servo_max
-    float get_output_norm(void);
 
     // a bitmask type wide enough for NUM_SERVO_CHANNELS
     typedef uint32_t servo_mask_t;

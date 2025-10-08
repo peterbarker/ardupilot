@@ -25,6 +25,7 @@
 #include <GCS_MAVLink/GCS.h>
 #include <stdio.h>
 #include <errno.h>
+#include <SITL/SITL_Input.h>
 
 using namespace SITL;
 
@@ -134,6 +135,16 @@ Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid)
     return nullptr;
 }
 
+const Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid) const
+{
+    for (const auto &obj : epos4_objects) {
+        if (obj.id == objectid) {
+            return &obj.object;
+        }
+    }
+    return nullptr;
+}
+
 void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
 {
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Received a write_object request!");
@@ -171,7 +182,7 @@ void Maxon_EPOS4::send_write_object_response(uint32_t errors)
 // handle a completed frame in the buffer:
 void Maxon_EPOS4::handle_completed_frame()
 {
-    // get his over with
+    // get this over with
     set_inputstate(InputState::WANT_DLE);
 
     switch (frame.raw.opcode) {
@@ -355,5 +366,34 @@ void Maxon_EPOS4::parse_char(uint8_t b)
     AP_HAL::panic("Invalid state %u", (unsigned)_inputstate);
 }
 
+uint16_t Maxon_EPOS4::pwm() const
+{
+    // FIXME: keep a pointer to this
+    const EPOS4Object *obj = find_epos4_object(ObjectID::TARGET_POSITION);
+    if (obj == nullptr) {
+        AP_HAL::panic("Bad");
+    }
+    const int32_t scaled_value = obj->get_data_int32();
+    const float normalised_value = scaled_value / INT32_MAX;  // -1 to 1
+    const uint16_t _pwm = 1000 + 1000*((normalised_value + 1) * 0.5);
+    return _pwm;
+}
+
+void Maxon_EPOS4::update_sitl_input_pwm(struct sitl_input &input)
+{
+    if (!enabled) {
+        return;
+    }
+    const uint8_t index = servo_number-1;
+    if (index > ARRAY_SIZE(input.servos)) {
+        return;
+    }
+
+    // check mode here
+
+    input.servos[index] = pwm();
+
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "output[%u]=%uus", index+1, input.servos[index]);
+}
 
 #endif  // AP_SIM_MAXON_EPOS4_ENABLED

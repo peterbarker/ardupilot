@@ -386,6 +386,23 @@ void SIMState::_simulator_servos(struct sitl_input &input)
     }
 #endif
 
+#if AP_SIM_MAXON_EPOS4_ENABLED
+    // update simulation input based on data received via "serial" to
+    // EPOS4 servos:
+    for (uint8_t i=0; i<_sitl->maxon.num_maxon; i++) {
+        const auto &maxon = _sitl->maxon[i];
+        if (!maxon.active) {
+            continue;
+        }
+        maxon.update_sitl_input_pwm(input);
+        for (uint8_t i=0; i<ARRAY_SIZE(input.servos); i++) {
+            if (input.servos[i] != 0 && input.servos[i] < 1000) {
+                AP_HAL::panic("Bad input servo value (%u)", input.servos[i]);
+            }
+        }
+    }
+#endif  // AP_SIM_MAXON_EPOS4_ENABLED
+
     float voltage = 0;
     _current = 0;
 
