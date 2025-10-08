@@ -87,8 +87,14 @@ void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
         }
     }
     switch ((ObjectID)req.index_of_object) {
+    case ObjectID::MODES_OF_OPERATION:
+        send_read_object_response(36865);  // test value
+        return;
     case ObjectID::HOME_POSITION:
         send_read_object_response(36865);  // test value
+        return;
+    case ObjectID::TARGET_POSITION:
+        send_read_object_response(1234);  // test value
         return;
     }
 }
@@ -112,16 +118,46 @@ void Maxon_EPOS4::send_read_object_response(int32_t value)
         );
 }
 
+Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid)
+{
+    for (auto &obj : epos4_objects) {
+        if (obj.id == objectid) {
+            return &obj.object;
+        }
+    }
+    return nullptr;
+}
+
 void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
 {
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Received a write_object request!");
-    const PackedResponse<WriteObjectResponse> packed_response{WriteObjectResponse{}};
+    if (req.node_id != 1 && strict_parsing) {
+        AP_HAL::panic("Unexpected node id");
+    }
+    if (req.subindex_of_object != 0) {
+        AP_HAL::panic("sim does not currently handle non-zero subindexes");
+    }
+
+    EPOS4Object *obj = find_epos4_object((ObjectID)req.index_of_object);
+    if (obj == nullptr && strict_parsing) {
+        AP_HAL::panic("Invalid object (0x%x) requested", req.index_of_object);
+    }
+
+    obj->set_data(req.data);
+
+    uint32_t errors = 0;
+    send_write_object_response(errors);
+}
+
+void Maxon_EPOS4::send_write_object_response(uint32_t errors)
+{
+    const PackedResponse<WriteObjectResponse> packed_response{WriteObjectResponse{errors}};
     // slightly odd construction here; all responses include errors,
     // but they're all part of the "parameters" of the packet rather
     // than a separate field:
     send(packed_response.opcode,
-         (uint8_t*)((&packed_response.parameters)-4),
-         uint8_t((packed_response.len+4)/2),  // potential bug on extreme packet sizes
+         (uint8_t*)(&packed_response.parameters),
+         uint8_t(packed_response.len),  // potential bug on extreme packet sizes
          packed_response.checksum
         );
 }

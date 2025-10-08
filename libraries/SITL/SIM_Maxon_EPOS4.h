@@ -155,7 +155,8 @@ private:
 
     class PACKED WriteObjectResponse {
     public:
-    WriteObjectResponse()
+    WriteObjectResponse(uint32_t _errors)
+    : errors{_errors}
         {
         }
         uint32_t errors;
@@ -165,20 +166,44 @@ private:
 
     enum class ObjectID : uint16_t {
         HOME_POSITION = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
-        // MODES_OF_OPERATION = 0x6060,
-        // TARGET_POSITION = 0x607a,
+        MODES_OF_OPERATION = 0x6060,
+        TARGET_POSITION = 0x607a,
     };
 
-    // class SubObject {
-        
-    // };
+    class EPOS4Object {
+    public:
+        EPOS4Object(uint8_t _data[4]) {
+            set_data(_data);
+        }
+        // convenience method to create from an integer in the static list:
+        EPOS4Object(int32_t _data) {
+            const uint8_t x[4] {
+                uint8_t(_data >> 0),
+                uint8_t(_data >> 8),
+                uint8_t(_data >> 16),
+                uint8_t(_data >> 24)
+            };
+            set_data(x);
+        }
+        void set_data(const uint8_t _data[4]) {
+            memcpy(data, _data, ARRAY_SIZE(data));
+        }
+    private:
+        uint8_t data[4];
+    };
 
-    // class RecordObject {
-    //     Index index;
-    //     Code code;
-    //     uint8_t highest_subindex;
-        
-    // };
+
+    // map from ObjectID -> Object:
+    struct {
+        ObjectID id;
+        EPOS4Object object;
+    } epos4_objects[3] {
+        { ObjectID::MODES_OF_OPERATION, { 0 } },  // check initial value
+        { ObjectID::HOME_POSITION, { 36865 } },  // check initial value
+        { ObjectID::TARGET_POSITION, { 0 } },  // check initial value
+    };
+
+    EPOS4Object *find_epos4_object(ObjectID objectid);
 
     /*
      *  Input Handling
@@ -194,6 +219,7 @@ private:
     void handle_completed_frame(const WriteObjectRequest& req);
 
     void send_read_object_response(int32_t value);
+    void send_write_object_response(uint32_t errors);
 
     static const uint8_t DLE = 0x90;  // Data Link Escape
     static const uint8_t STX = 0x02;  // Start of TeXt
