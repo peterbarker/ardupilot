@@ -19,6 +19,7 @@ from vehicle_test_suite import AutoTestTimeoutException, NotAchievedException, P
 
 import operator
 
+from pysim import vehicleinfo
 
 # get location of scripts
 testdir = os.path.dirname(os.path.realpath(__file__))
@@ -2622,6 +2623,20 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
 
     def MaxonEPOS4(self):
         '''test Maxon EPOS4 serially-connected servos in a mission'''
+        frame = 'quadplane-tilt'
+
+        vinfo = vehicleinfo.VehicleInfo()
+        vinfo_options = vinfo.options[self.vehicleinfo_key()]
+        frame_bits = vinfo_options["frames"][frame]
+        model = frame_bits.get("model", frame)
+        self.customise_SITL_commandline([
+            "--serial5=sim:maxon_epos4",
+            "--serial6=sim:maxon_epos4",
+        ],
+            defaults_filepath=self.model_defaults_filepath(frame),
+            model=model,
+            wipe=True,
+        )
         self.set_parameters({
             'RTL_AUTOLAND': 2,
 
@@ -2635,14 +2650,13 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             'SIM_MAXON2_ENA': 1,
             'SIM_MAXON2_SRV': 13,
         })
-        self.set_parameters({
-        })
-        self.customise_SITL_commandline([
-            "--serial5=sim:maxon_epos4",
-            "--serial6=sim:maxon_epos4",
-        ], model="quadplane-tilt",
-                                        )
+        self.reboot_sitl()
 
+        while True:
+            self.change_mode('FBWA')
+            self.delay_sim_time(5)
+            self.change_mode('QHOVER')
+            self.delay_sim_time(5)
         self.delay_sim_time(2000000)
 
         self.wait_ready_to_arm()

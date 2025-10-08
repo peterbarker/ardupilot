@@ -214,16 +214,29 @@ private:
 
         union u {
             u() { }
-            struct {
+            struct PACKED RawStruct {
                 ResponseOpCode opcode;
                 uint8_t len;
-                uint16_t parameters[256];  // parameters and crc
-                bool verify_frame_checksum() const;
+                uint8_t parameters[256];  // parameters and crc
+                bool verify_checksum() const {
+                    if (unsigned(len*2+2) > sizeof(*this)) {
+                        return false;
+                    }
+                    const uint16_t checksum = parameters[len*2+1] << 8 | parameters[len*2];
+                    return checksum == calculate_checksum();
+                }
+                uint16_t calculate_checksum() const WARN_IF_UNUSED {
+                    uint16_t crc = 0;
+                    for (uint8_t i=0; i<len*2+2; i += 2) {
+                        const uint16_t tmp = ((const uint8_t*)this)[i] << 8 | ((const uint8_t*)this)[i+1];
+                        crc = crc16_ccitt((uint8_t*)&tmp, 2, crc);
+                    }
+                    return crc;
+                }
             } raw;
             PackedResponse<ReadObjectResponse> packed_generic_response;
         } frame;
         uint8_t parameters_len;  // number of *bytes* in u.raw.parameters
-        bool verify_frame_checksum() const;
 
         class SRV_Channel *srv_channel;
         class AP_HAL::UARTDriver *port;
@@ -238,7 +251,8 @@ private:
         void update_input();
         void handle_completed_frame();
 
-        bool handle_generic_response(int32_t &value);
+        bool handle_generic_read_response(int32_t &value);
+        bool handle_generic_write_response();
 
         void update_output();
 

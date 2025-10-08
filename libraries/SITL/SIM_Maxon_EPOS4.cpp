@@ -81,7 +81,7 @@ void Maxon_EPOS4::send(Maxon_EPOS4::ResponseOpCode opcode, uint8_t *data, uint16
 
 void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
 {
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Received a read_object request! for node_id=%u object=%x subindex=%u", req.node_id, req.index_of_object, req.subindex_of_object);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a read_object request! for node_id=%u object=%x subindex=%u", this, req.node_id, req.index_of_object, req.subindex_of_object);
     if (strict_parsing) {
         if (req.node_id != 1) {
             AP_HAL::panic("Expected node 1 always");
@@ -147,7 +147,7 @@ const Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid
 
 void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
 {
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Received a write_object request!");
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a write_object request!", this);
     if (req.node_id != 1 && strict_parsing) {
         AP_HAL::panic("Unexpected node id");
     }
@@ -161,6 +161,8 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
     }
 
     obj->set_data(req.data);
+
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a write_object request (0x%x=%d)!", this, req.index_of_object, obj->get_data_int32());
 
     uint32_t errors = 0;
     send_write_object_response(errors);
@@ -187,11 +189,11 @@ void Maxon_EPOS4::handle_completed_frame()
 
     switch (frame.raw.opcode) {
     case RequestOpCode::READ_OBJECT:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "read object");
+        // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "read object");
         handle_completed_frame(frame.packed_read_object_request.parameters);
         return;
     case RequestOpCode::WRITE_OBJECT:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "write object");
+        // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "write object");
         handle_completed_frame(frame.packed_write_object_request.parameters);
         return;
     }
@@ -356,7 +358,7 @@ void Maxon_EPOS4::parse_char(uint8_t b)
                 AP_HAL::panic("Invalid CRC");
             }
         }
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "checksum valid");
+        // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "checksum valid");
         set_inputstate(InputState::COMPLETE);
         return;
     case InputState::COMPLETE:
@@ -374,7 +376,7 @@ uint16_t Maxon_EPOS4::pwm() const
         AP_HAL::panic("Bad");
     }
     const int32_t scaled_value = obj->get_data_int32();
-    const float normalised_value = scaled_value / INT32_MAX;  // -1 to 1
+    const float normalised_value = scaled_value / (INT32_MAX / 2);  // -1 to 1
     const uint16_t _pwm = 1000 + 1000*((normalised_value + 1) * 0.5);
     return _pwm;
 }
@@ -393,7 +395,7 @@ void Maxon_EPOS4::update_sitl_input_pwm(struct sitl_input &input)
 
     input.servos[index] = pwm();
 
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "output[%u]=%uus", index+1, input.servos[index]);
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "output[%u]=%uus", index+1, input.servos[index]);
 }
 
 #endif  // AP_SIM_MAXON_EPOS4_ENABLED

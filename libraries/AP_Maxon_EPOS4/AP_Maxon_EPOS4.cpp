@@ -27,7 +27,8 @@ const AP_Param::GroupInfo AP_Maxon_EPOS4::var_info[] = {
     // @Param: S1
     // @DisplayName: ArduPilot servo output channel to use
     // @Description: ArduPilot servo output channel to use
-    // @Values: 0:Channel1,1:Channel2,2:Channel3,3:Channel4,4:Channel5,5:Channel6,6:Channel7,7:Channel8,8:Channel9,9:Channel10,10:Channel11,11:Channel12,12:Channel13,13:Channel14,14:Channel15,15:Channel16,16:Channel17,17:Channel18,18:Channel19,19:Channel20,20:Channel21,21:Channel22,22:Channel23,23:Channel24,24:Channel25,25:Channel26,26:Channel27,28:Channel29,29:Channel30,30:Channel31,31:Channel32
+    // @Values: 1:Channel1,2:Channel2,3:Channel3,4:Channel4,5:Channel5,6:Channel6,7:Channel7,8:Channel8,9:Channel9,10:Channel10,11:Channel11,12:Channel12,13:Channel13,14:Channel14,15:Channel15,16:Channel16,17:Channel17,18:Channel18,19:Channel19,20:Channel20,21:Channel21,22:Channel22,23:Channel23,24:Channel24,25:Channel25,26:Channel26,27:Channel27,28:Channel28:29:Channel29,30:Channel30,31:Channel31,32:Channel32
+
     // @User: Standard
     AP_GROUPINFO("S1_C",  1, AP_Maxon_EPOS4, servo1_channel, 0),
 #endif  // AP_MAXON_EPOS4_MAX_INSTANCES > 0
@@ -74,7 +75,7 @@ void AP_Maxon_EPOS4::init(void)
             break;
         }
 
-        instance.srv_channel = SRV_Channels::srv_channel(x.servo_channel);
+        instance.srv_channel = SRV_Channels::srv_channel(x.servo_channel-1);
         if (instance.srv_channel == nullptr) {
             // invalid servo specified
             break;
@@ -124,7 +125,24 @@ void AP_Maxon_EPOS4::ServoInstance::update_input()
     }
 }
 
-bool AP_Maxon_EPOS4::ServoInstance::handle_generic_response(int32_t &value)
+bool AP_Maxon_EPOS4::ServoInstance::handle_generic_write_response()
+{
+    if (frame.raw.len != 2) {
+        // datasheet says this is wrong...
+        return false;
+    }
+    if (frame.packed_generic_response.opcode != ResponseOpCode::GENERIC) {
+        // datasheet says this is wrong...
+        return false;
+    }
+    if (frame.packed_generic_response.errors != 0) {
+        // we should probably try to interpret these
+        return false;
+    }
+    return true;
+}
+
+bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response(int32_t &value)
 {
     if (frame.raw.len != 4) {
         // datasheet says this is wrong...
@@ -152,7 +170,7 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
         switch (state) {
         case State::WANT_HOME_POSITION: {
             int32_t value;
-            if (handle_generic_response(value)) {
+            if (handle_generic_read_response(value)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "home position is %u", value);
                 set_state(State::WANT_SEND_WRITE_MODES_OF_OPERATION);
             } else {
@@ -160,12 +178,15 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
             }
             return;
         }
-        case State::WANT_SEND_WRITE_MODES_OF_OPERATION:
-            // should not be here
+        case State::WANT_WRITE_TARGET_POSITION_ACK:
+            if (handle_generic_write_response()) {
+                set_state(State::IDLE);
+            } else {
+                set_state(State::UNKNOWN);
+            }
             break;
         case State::WANT_WRITE_MODES_OF_OPERATION_ACK: {
-            int32_t unused;
-            if (handle_generic_response(unused)) {
+            if (handle_generic_write_response()) {
                 set_state(State::IDLE);
             } else {
                 set_state(State::UNKNOWN);
@@ -175,8 +196,8 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
 
         // these states are taken care of in update_output:
         // case State::WANT_SEND_READ_STATUSWORD:
+        case State::WANT_SEND_WRITE_MODES_OF_OPERATION:
         case State::WANT_SEND_READ_HOME_POSITION:
-        case State::WANT_WRITE_TARGET_POSITION_ACK:
         case State::START:
             break;
 
@@ -192,7 +213,7 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
 
 void AP_Maxon_EPOS4::ServoInstance::set_state(State new_state)
 {
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u", (unsigned)new_state);
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u", (unsigned)new_state);
     state = new_state;
     state_start_ms = AP_HAL::millis();
 }
@@ -211,7 +232,14 @@ bool AP_Maxon_EPOS4::ServoInstance::send_write_MODES_OF_OPERATION()
 bool AP_Maxon_EPOS4::ServoInstance::send_write_TARGET_POSITION()
 {
     const float normalised_output = srv_channel->get_output_norm();
-    const uint32_t scaled_output = normalised_output * INT32_MAX;  // not *quite* correct...
+    if (normalised_output < -1) {
+        // this can happen at boot, and is often 0us in the output_pwm
+        return true;
+    }
+    // we don't use full range here as you can get arithmetic
+    // exceptions if normalised_output is 1 here
+    const int32_t scaled_output = normalised_output * (INT32_MAX/2);  // not *quite* correct...
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p sending scaled=%d", this, scaled_output);
     return send_write_object_request(ObjectID::TARGET_POSITION, 0, scaled_output);
 }
 
@@ -313,7 +341,6 @@ void AP_Maxon_EPOS4::ServoInstance::update_output()
     // check for timeouts
     if (state != State::IDLE) {
         if (now_ms - state_start_ms > 600) {
-            abort();
             set_state(State::UNKNOWN);
         }
     }
@@ -454,7 +481,7 @@ void AP_Maxon_EPOS4::ServoInstance::parse_input_byte(uint8_t b)
     case ParseState::WANT_CRC2:
         // technically CRC isn't parameters...
         ((uint8_t*)frame.raw.parameters)[parameters_len++] = b;
-        if (!verify_frame_checksum()) {
+        if (!frame.raw.verify_checksum()) {
             if (strict_parsing) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Invalid CRC");
             }
@@ -479,16 +506,6 @@ bool AP_Maxon_EPOS4::ServoInstance::valid_response_opcode(uint8_t opcode) const
     return false;
 }
 
-bool AP_Maxon_EPOS4::ServoInstance::verify_frame_checksum() const
-{
-    switch (ResponseOpCode(frame.raw.opcode)) {
-    case ResponseOpCode::GENERIC:
-        
-        return frame.raw.verify_checksum();
-    }
-    AP_HAL::panic("Unexpected opcode %u", (unsigned)frame.raw.opcode);
-}
-
 // Called each time the servo outputs are sent
 void AP_Maxon_EPOS4::update()
 {
@@ -499,8 +516,8 @@ void AP_Maxon_EPOS4::update()
     }
 
     for (uint8_t i=0; i<num_instances; i++) {
-        instances[i].update();
-        return;
+        auto &instance = instances[i];
+        instance.update();
     }
 
 #if AP_SERVO_TELEM_ENABLED
