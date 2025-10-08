@@ -132,11 +132,12 @@ private:
 
     class PACKED ReadObjectResponse {
     public:
-    ReadObjectResponse(const uint8_t _data[4])
+    ReadObjectResponse(uint32_t _errors, const uint8_t _data[4])
+        : errors{_errors}
         {
             memcpy(data, _data, ARRAY_SIZE(data));
         }
-        uint32_t errors = 0;
+        uint32_t errors;
         uint8_t data[4];
 
         static ResponseOpCode opcode() { return ResponseOpCode::RESPONSE; }
@@ -219,7 +220,7 @@ private:
     void handle_completed_frame(const WriteObjectRequest& req);
 
     void send_read_object_response(int32_t value);  // FIXME: remove this
-    void send_read_object_response(const uint8_t data[4]);
+    void send_read_object_response(uint32_t errors, const uint8_t data[4]);
     void send_write_object_response(uint32_t errors);
 
     static const uint8_t DLE = 0x90;  // Data Link Escape
