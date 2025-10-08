@@ -86,17 +86,17 @@ void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
             AP_HAL::panic("Expected node 1 always");
         }
     }
-    switch ((ObjectID)req.index_of_object) {
-    case ObjectID::MODES_OF_OPERATION:
-        send_read_object_response(36865);  // test value
-        return;
-    case ObjectID::HOME_POSITION:
-        send_read_object_response(36865);  // test value
-        return;
-    case ObjectID::TARGET_POSITION:
-        send_read_object_response(1234);  // test value
+
+    EPOS4Object *obj = find_epos4_object((ObjectID)req.index_of_object);
+    if (obj == nullptr) {
+        if (strict_parsing) {
+            AP_HAL::panic("Invalid object (0x%x) requested", req.index_of_object);
+        }
+        send_read_object_response(36865);  // test value - FIXME, errors
         return;
     }
+
+    send_read_object_response(obj->get_data());  // test value
 }
 
 void Maxon_EPOS4::send_read_object_response(int32_t value)
@@ -110,6 +110,11 @@ void Maxon_EPOS4::send_read_object_response(int32_t value)
         uint8_t(value >> 16),
         uint8_t(value >> 24),
     };
+    send_read_object_response(data);
+}
+
+void Maxon_EPOS4::send_read_object_response(const uint8_t data[4])
+{
     const PackedResponse<ReadObjectResponse> packed_response{ReadObjectResponse{data}};
     send(packed_response.opcode,
          (uint8_t*)((&packed_response.parameters)),

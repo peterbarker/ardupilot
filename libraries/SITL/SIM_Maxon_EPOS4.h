@@ -188,10 +188,10 @@ private:
         void set_data(const uint8_t _data[4]) {
             memcpy(data, _data, ARRAY_SIZE(data));
         }
+        const uint8_t *get_data() const { return data; }
     private:
         uint8_t data[4];
     };
-
 
     // map from ObjectID -> Object:
     struct {
@@ -218,7 +218,8 @@ private:
     void handle_completed_frame(const ReadObjectRequest& req);
     void handle_completed_frame(const WriteObjectRequest& req);
 
-    void send_read_object_response(int32_t value);
+    void send_read_object_response(int32_t value);  // FIXME: remove this
+    void send_read_object_response(const uint8_t data[4]);
     void send_write_object_response(uint32_t errors);
 
     static const uint8_t DLE = 0x90;  // Data Link Escape
