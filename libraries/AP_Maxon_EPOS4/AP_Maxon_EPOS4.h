@@ -45,11 +45,17 @@ private:
 
             START = 2,
 
-            WANT_SEND_READ_HOME_POSITION = 35,
-            WANT_HOME_POSITION = 36,
+            WANT_SEND_READ  = 25,
+            WANT_READ_RESPONSE   = 26,
 
-            WANT_SEND_WRITE_MODES_OF_OPERATION = 45,
-            WANT_WRITE_MODES_OF_OPERATION_ACK = 46,
+            WANT_SEND_WRITE = 36,
+            WANT_WRITE_RESPONSE  = 26,
+
+            // WANT_SEND_READ_HOME_POSITION = 35,
+            // WANT_HOME_POSITION = 36,
+
+            // WANT_SEND_WRITE_MODES_OF_OPERATION = 45,
+            // WANT_WRITE_MODES_OF_OPERATION_ACK = 46,
 
             // WANT_SEND_WRITE_MODES_OF_OPERATION = 45,
             // WANT_WRITE_MODES_OF_OPERATION_ACK = 46,
@@ -61,8 +67,8 @@ private:
 
             // WANT_SEND_ENABLESWITCH_COMMAND = 65,
             // WANT_ENABLESWITCHCOMMAND_ACK = 66,
-            WANT_SEND_WRITE_TARGET_POSITION = 100,
-            WANT_WRITE_TARGET_POSITION_ACK = 101,
+            // WANT_SEND_WRITE_TARGET_POSITION = 100,
+            // WANT_WRITE_TARGET_POSITION_ACK = 101,
 
             IDLE = 100,
         };
@@ -171,9 +177,21 @@ private:
         };
 
         enum class ObjectID : uint16_t {
-            HOME_POSITION = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
-            MODES_OF_OPERATION = 0x6060,
-            TARGET_POSITION = 0x607a,
+            MAX_GEAR_INPUT_SPEED    = 0x3003,
+            HOME_POSITION           = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
+            CONTROLWORD             = 0x6040,
+            STATUSWORD              = 0x6041,
+            MODES_OF_OPERATION      = 0x6060,
+            POSITION_DEMAND_VALUE   = 0x6062,
+            TARGET_POSITION         = 0x607a,
+            SOFTWARE_POSITION_LIMIT = 0x607d,
+            MAX_PROFILE_VELOCITY    = 0x607f,
+            MAX_MOTOR_SPEED         = 0x6080,
+            PROFILE_ACCELERATION    = 0x6083,
+            PROFILE_DECELERATION    = 0x6084,
+            QUICK_STOP_DECELERATION = 0x6085,
+            MOTION_PROFILE_TYPE     = 0x6086,
+            MAX_ACCELERATION        = 0x60c5,
         };
         class PACKED ReadObjectRequest {
         public:
@@ -251,7 +269,7 @@ private:
         void update_input();
         void handle_completed_frame();
 
-        bool handle_generic_read_response(int32_t &value);
+        bool handle_generic_read_response();
         bool handle_generic_write_response();
 
         void update_output();
@@ -272,12 +290,25 @@ private:
         );
 
         bool send_read_object_request(ObjectID object_id, uint8_t subindex);
-        bool send_read_HOME_POSITION();
 
         bool send_request(uint8_t *request, uint16_t size);
     };
     ServoInstance instances[AP_MAXON_EPOS4_MAX_INSTANCES];
     uint8_t num_instances;
+
+    // state we think the device is in (see 2.2.1):
+    enum class DeviceState {
+        UNKNOWN                = 40,
+        NOT_READY_TO_SWITCH_ON = 56,
+        SWITCH_ON_DISABLED     = 57,
+        READY_TO_SWITCH_ON     = 58,
+        SWITCHED_ON            = 59,
+        OPERATION_ENABLED      = 60,
+        QUICK_STOP_ACTIVE      = 61,
+        FAULT_REACTION_ACTIVE  = 62,
+        FAULT                  = 63,
+    };
+    DeviceState device_state = DeviceState::UNKNOWN;
 
 #if AP_MAXON_EPOS4_MAX_INSTANCES > 0
     AP_Int8 servo1_channel;
@@ -285,6 +316,161 @@ private:
 #if AP_MAXON_EPOS4_MAX_INSTANCES > 1
     AP_Int8 servo2_channel;
 #endif
+
+    class PACKED EPOS4Object {
+    public:
+    // 6.1.1:
+        enum class DataType {
+            BOOLEAN        = 0x0001,
+            INTEGER8       = 0x0002,
+            INTEGER16      = 0x0003,
+            INTEGER32      = 0x0004,
+            INTEGER64      = 0x0015,
+            UNSIGNED8      = 0x0005,
+            UNSIGNED16     = 0x0006,
+            UNSIGNED32     = 0x0007,
+            UNSIGNED64     = 0x001B,
+            VISIBLE_STRING = 0x0009,
+            OCTET_STRING   = 0x000A,
+            PDO_MAPPING    = 0x0021,
+            IDENTITY       = 0x0023,
+        };
+
+        virtual DataType datatype() const = 0;
+
+        EPOS4Object(uint8_t _data[4]) {
+            set_data(_data);
+        }
+        // convenience method to create from an integer in the static list:
+        EPOS4Object(int32_t _data) {
+            set_data(_data);
+        }
+
+        void set_data(int32_t _data) {
+            const uint8_t x[4] {
+                uint8_t(_data >> 0),
+                uint8_t(_data >> 8),
+                uint8_t(_data >> 16),
+                uint8_t(_data >> 24)
+            };
+            set_data(x);
+        }
+
+        void set_data(const uint8_t _data[4]) {
+            memcpy(data, _data, ARRAY_SIZE(data));
+        }
+        const uint8_t *get_data() const { return data; }
+        int32_t get_data_int32() const {
+            return (
+                data[0] << 24 |
+                data[1] << 16 |
+                data[2] <<  8 |
+                data[3] <<  0
+                );
+        }
+        uint16_t get_data_uint16() const {
+            // check this, it is probably garbage:
+            return (
+                data[2] <<  8 |
+                data[3] <<  0
+                );
+        }
+        int16_t get_data_int16() const {
+            // check this, it is probably garbage:
+            return (
+                data[2] <<  8 |
+                data[3] <<  0
+                );
+        }
+
+        int8_t get_data_int8() const {
+            // check this, it is probably garbage:
+            return (
+                data[2] <<  0
+                );
+        }
+
+        uint8_t data[4];
+    };
+
+    class StatusWord : public EPOS4Object {
+    public:
+        using EPOS4Object::EPOS4Object;
+        DataType data_type() const override { return DataType::; }
+        class BitMask {
+        public:
+            uint16_t value;
+        };
+        class Bit {
+        public:
+            uint16_t value;
+            BitMask operator |(Bit otherbit) {
+                return BitMask{uint16_t(otherbit.value | value)};
+            }
+
+            static constexpr uint16_t POSITION_REFERENCED_TO_HOME = 1U<<15;
+            static constexpr uint16_t RESERVED_14                 = 1U<<14;
+            static constexpr uint16_t OPERATING_MODE_SPECIFIC_13  = 1U<<13;  // PPM=following error
+            static constexpr uint16_t OPERATING_MODE_SPECIFIC_12  = 1U<<12;  // PPM=setpoint ACK
+            static constexpr uint16_t INTERNAL_LIMIT_ACTIVE       = 1U<<11;
+            static constexpr uint16_t OPERATING_MODE_SPECIFIC_10  = 1U<<10;  // PPM=Target-reached
+            static constexpr uint16_t REMOTE                      = 1U<< 9;
+            static constexpr uint16_t RESERVED_8                  = 1U<< 8;
+            static constexpr uint16_t WARNING                     = 1U<< 7;
+            static constexpr uint16_t SWITCH_ON_DISABLED          = 1U<< 6;
+            static constexpr uint16_t QUICK_STOP                  = 1U<< 5;
+            static constexpr uint16_t VOLTAGE_ENABLED             = 1U<< 4;
+            static constexpr uint16_t FAULT                       = 1U<< 3;
+            static constexpr uint16_t OPERATION_ENABLED           = 1U<< 2;
+            static constexpr uint16_t SWITCHED_ON                 = 1U<< 1;
+            static constexpr uint16_t READY_TO_SWITCH_ON          = 1U<< 0;
+        };
+
+        bool bit_is_set(Bit bit) const {
+            return (get_data_uint16() & bit.value) != 0;
+        }
+        // set the bits (and only the bits corresponding to State in
+        // the statusword
+        // void set_state_bits(uint32_t mask) {
+        //     uint16_t value = get_data_uint16();
+        //     const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
+        //     if (mask & ~status_bit_mask) {
+        //         AP_HAL::panic("Attempt to set bits not in state mask");
+        //     }
+        //     value &= ~status_bit_mask;
+        //     value |= mask;
+        //     static const uint32_t last_value = -1;
+        //     if (value != last_value) {
+        //         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
+        //     }
+        //     set_data(value);
+        // }
+    };
+
+
+    StatusWord statusword;
+
+    // map from ObjectID -> Object:
+    struct ObjectIDMap {
+        ObjectIDMap(ObjectId _id, EPOS4Object &_object, uint32_t _fetch_interval_ms) :
+            id{_id},
+            object{_object},
+            fetch_interval_ms{_fetch_interval_ms}
+            { }
+        ObjectID id;
+        EPOS4Object &object;
+        const uint32_t fetch_interval_ms;
+
+        uint32_t last_fetch_ms;
+    } epos4_objects[1] {
+        // { ObjectID::HOME_POSITION, home_position },
+        // { ObjectID::CONTROLWORD, controlword },
+        // { ObjectID::MODES_OF_OPERATION, modes_of_operation },
+        { ObjectID::STATUSWORD, statusword, 500 },
+        // { ObjectID::TARGET_POSITION, target_position },
+        // { ObjectID::MOTION_PROFILE_TYPE, motion_profile_type },
+    };
+
 };
 
 #endif  // AP_MAXON_EPOS4_PROTOCOL

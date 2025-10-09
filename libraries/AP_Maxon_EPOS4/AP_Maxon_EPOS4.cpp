@@ -101,6 +101,36 @@ void AP_Maxon_EPOS4::ServoInstance::update()
     }
 
     update_input();
+
+    // a detected device state can cause us to reset our own state
+    // (think a reset of the device)
+    switch (device_state) {
+    case DeviceState::UNKNOWN:
+        need_config = true;
+        if (state != State::WANT_SEND_READ_STATUSWORD &&
+            state != State::WANT_STATUSWORD) {
+            set_state(State::WANT_SEND_READ_STATUSWORD);
+        }
+        break;
+    case DeviceState::NOT_READY_TO_SWITCH_ON:
+        // we just have to wait for this to clear
+        break;
+    case DeviceState::SWITCH_ON_DISABLED:
+        break;
+    case DeviceState::READY_TO_SWITCH_ON:
+        break;
+    case DeviceState::SWITCHED_ON:
+        break;
+    case DeviceState::OPERATION_ENABLED:
+        break;
+    case DeviceState::QUICK_STOP_ACTIVE:
+        break;
+    case DeviceState::FAULT_REACTION_ACTIVE:
+        break;
+    case DeviceState::FAULT:
+        break;
+    }
+
     update_output();
 }
 
@@ -142,7 +172,7 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_write_response()
     return true;
 }
 
-bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response(int32_t &value)
+bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
 {
     if (frame.raw.len != 4) {
         // datasheet says this is wrong...
@@ -156,10 +186,18 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response(int32_t &value)
         // we should probably try to interpret these
         return false;
     }
-    value = frame.packed_generic_response.parameters.data[3] << 24 |
+    const int32_t value {
+        frame.packed_generic_response.parameters.data[3] << 24 |
         frame.packed_generic_response.parameters.data[2] << 16 |
         frame.packed_generic_response.parameters.data[1] << 8 |
-        frame.packed_generic_response.parameters.data[0];
+        frame.packed_generic_response.parameters.data[0]
+    };
+
+    if (read_obj == nullptr) {
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        return false;
+    }
+
     return true;
 }
 
@@ -168,47 +206,20 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
     switch (frame.raw.opcode) {
     case ResponseOpCode::GENERIC:
         switch (state) {
-        case State::WANT_HOME_POSITION: {
-            int32_t value;
-            if (handle_generic_read_response(value)) {
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "home position is %u", value);
-                set_state(State::WANT_SEND_WRITE_MODES_OF_OPERATION);
-            } else {
-                set_state(State::UNKNOWN);
-            }
+        case State::WANT_READ_RESPONSE:
+            handle_generic_read_response();
+            return;
+        case State::WANT_WRITE_RESPONSE:
+            handle_generic_write_response();
+            return;
+        case State::START:
+        case State::UNKNOWN:
+        case State::IDLE:
+            INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
             return;
         }
-        case State::WANT_WRITE_MODES_OF_OPERATION_ACK: {
-            if (handle_generic_write_response()) {
-                set_state(State::IDLE);
-            } else {
-                set_state(State::UNKNOWN);
-            }
-            break;
-        }
-        case State::WANT_WRITE_TARGET_POSITION_ACK:
-            if (handle_generic_write_response()) {
-                set_state(State::IDLE);
-            } else {
-                set_state(State::UNKNOWN);
-            }
-            break;
-
-        // these states are taken care of in update_output:
-        // case State::WANT_SEND_READ_STATUSWORD:
-        case State::WANT_SEND_WRITE_MODES_OF_OPERATION:
-        case State::WANT_SEND_READ_HOME_POSITION:
-        case State::START:
-            break;
-
-        case State::UNKNOWN:
-            // should not be here
-            break;
-        case State::IDLE:
-            break;
-        }
-        break;
     }
+    INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
 }
 
 void AP_Maxon_EPOS4::ServoInstance::set_state(State new_state)
@@ -303,7 +314,7 @@ bool AP_Maxon_EPOS4::ServoInstance::send_read_object_request(ObjectID object_id,
 
 bool AP_Maxon_EPOS4::ServoInstance::send_read_HOME_POSITION()
 {
-    return send_read_object_request(ObjectID::HOME_POSITION, 0);
+    return ;
 }
 
 bool AP_Maxon_EPOS4::ServoInstance::send_request(uint8_t *request, uint16_t request_size)
@@ -359,8 +370,15 @@ void AP_Maxon_EPOS4::ServoInstance::update_output()
         set_state(State::WANT_SEND_READ_HOME_POSITION);
         // FALLTHROUGH
 
+    case State::WANT_SEND_READ_STATUSWORD:
+        if (!send_read_object_request(ObjectID::STATUSWORD, 0)) {
+            return;
+        }
+        set_state(State::WANT_STATUSWORD);
+        return;
+
     case State::WANT_SEND_READ_HOME_POSITION:
-        if (!send_read_HOME_POSITION()) {
+        if (!send_read_object_request(ObjectID::HOME_POSITION, 0)) {
             return;
         }
         set_state(State::WANT_HOME_POSITION);
