@@ -191,6 +191,11 @@ private:
         }
         // convenience method to create from an integer in the static list:
         EPOS4Object(int32_t _data) {
+            set_data(_data);
+        }
+        virtual AccessType access_type() const = 0;
+
+        void set_data(int32_t _data) {
             const uint8_t x[4] {
                 uint8_t(_data >> 0),
                 uint8_t(_data >> 8),
@@ -199,7 +204,6 @@ private:
             };
             set_data(x);
         }
-        virtual AccessType access_type() const = 0;
 
         void set_data(const uint8_t _data[4]) {
             memcpy(data, _data, ARRAY_SIZE(data));
@@ -228,6 +232,13 @@ private:
                 );
         }
 
+        int8_t get_data_int8() const {
+            // check this, it is probably garbage:
+            return (
+                data[2] <<  0
+                );
+        }
+
         uint8_t data[4];
     };
 
@@ -237,51 +248,80 @@ private:
         AccessType access_type() const override { return AccessType::READ_WRITE; }
     };
 
+    // see 2.2.3 and 6.2.94
     class PACKED ControlWord : public EPOS4Object {
         using EPOS4Object::EPOS4Object;
         AccessType access_type() const override { return AccessType::READ_WRITE; }
-        // uint32_t reserved_15 : 1;
-        // uint32_t reserved_14 : 1;
-        // uint32_t reserved_13 : 1;
-        // uint32_t reserved_12 : 1;
-        // uint32_t reserved_11 : 1;
-        // uint32_t reserved_10 : 1;
-        // uint32_t reserved_9 : 1;
-        // uint32_t operating_mode_specific_8 : 1;  // Halt in PPM
-        // uint32_t fault_reset : 1;
-        // uint32_t operating_mode_specific_6 : 1;  // abs/rel in PPM
-        // uint32_t operating_mode_specific_5 : 1;  // "change set immediately"
-        // uint32_t operating_mode_specific_4 : 1;  // new setpoint
-        // uint32_t enable_operation : 1;
-        // uint32_t quick_stop : 1;
-        // uint32_t enable_voltage : 1;
-        // uint32_t switched_on : 1;
+        enum class Bit : uint32_t {
+            RESERVED_15               = (1U << 15),
+            RESERVED_14               = (1U << 14),
+            RESERVED_13               = (1U << 13),
+            RESERVED_12               = (1U << 12),
+            RESERVED_11               = (1U << 11),
+            RESERVED_10               = (1U << 10),
+            RESERVED_9                = (1U <<  9),
+            OPERATING_MODE_SPECIFIC_8 = (1U <<  8),  // Halt in PPM
+            FAULT_RESET               = (1U <<  7),
+            OPERATING_MODE_SPECIFIC_6 = (1U <<  6),  // abs/rel in PPM
+            OPERATING_MODE_SPECIFIC_5 = (1U <<  5),  // "change set immediately"
+            OPERATING_MODE_SPECIFIC_4 = (1U <<  4),  // new setpoint
+            ENABLE_OPERATION          = (1U <<  3),
+            QUICK_STOP                = (1U <<  2),
+            ENABLE_VOLTAGE            = (1U <<  1),
+            SWITCHED_ON               = (1U <<  0),
+        };
+    };
+
+    enum class ModeOfOperation : int8_t {
+        PROFILE_POSITION_MODE = 1,
     };
 
     class ModesOfOperation : public EPOS4Object {
         using EPOS4Object::EPOS4Object;
         AccessType access_type() const override { return AccessType::READ_WRITE; }
+        ModeOfOperation get_mode() const { return ModeOfOperation(get_data_int8()); }
+    };
+
+    class ModesOfOperationDisplay : public EPOS4Object {
+        using EPOS4Object::EPOS4Object;
+        AccessType access_type() const override { return AccessType::READ_ONLY; }
+        ModeOfOperation get_mode() const { return ModeOfOperation(get_data_int8()); }
     };
 
     class StatusWord : public EPOS4Object {
+    public:
         using EPOS4Object::EPOS4Object;
         AccessType access_type() const override { return AccessType::READ_ONLY; }
-        // uint32_t reserved_15 : 1;
-        // uint32_t reserved_14 : 1;
-        // uint32_t reserved_13 : 1;
-        // uint32_t reserved_12 : 1;
-        // uint32_t reserved_11 : 1;
-        // uint32_t reserved_10 : 1;
-        // uint32_t reserved_9 : 1;
-        // uint32_t operating_mode_specific_8 : 1;  // Halt in PPM
-        // uint32_t fault_reset : 1;
-        // uint32_t operating_mode_specific_6 : 1;  // abs/rel in PPM
-        // uint32_t operating_mode_specific_5 : 1;  // "change set immediately"
-        // uint32_t operating_mode_specific_4 : 1;  // new setpoint
-        // uint32_t enable_operation : 1;
-        // uint32_t quick_stop : 1;
-        // uint32_t enable_voltage : 1;
-        // uint32_t switched_on : 1;
+        enum class Bit : uint16_t {
+            POSITION_REFERENCED_TO_HOME = (1U << 15),
+            RESERVED_14                 = (1U << 14),
+            OPERATING_MODE_SPECIFIC_13  = (1U << 13),  // PPM=following error
+            OPERATING_MODE_SPECIFIC_12  = (1U << 12),  // PPM=setpoint ACK
+            INTERNAL_LIMIT_ACTIVE       = (1U << 11),
+            OPERATING_MODE_SPECIFIC_10  = (1U << 10),  // PPM=Target-reached
+            REMOTE                      = (1U <<  9),
+            RESERVED_8                  = (1U <<  8),
+            WARNING                     = (1U <<  7),
+            SWITCH_ON_DISABLED          = (1U <<  6),
+            QUICK_STOP                  = (1U <<  5),
+            VOLTAGE_ENABLED             = (1U <<  4),
+            FAULT                       = (1U <<  3),
+            OPERATION_ENABLED           = (1U <<  2),
+            SWITCHED_ON                 = (1U <<  1),
+            READY_TO_SWITCH_ON          = (1U <<  0),
+        };
+        bool bit_is_set(Bit bit) const {
+            return (get_data_uint16() & (uint16_t)bit) != 0;
+        }
+        // set the bits (and only the bits corresponding to State in
+        // the statusword
+        void set_state_bits(uint32_t mask) {
+            uint16_t value = get_data_uint16();
+            const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
+            value &= ~status_bit_mask;
+            value |= mask;
+            set_data(value);
+        }
     };
 
     class TargetPosition : public EPOS4Object {
@@ -305,6 +345,7 @@ private:
     HomePosition home_position{36865};  // initial value is actually 0 in datasheet
     ControlWord controlword{0};
     ModesOfOperation modes_of_operation{1};
+    ModesOfOperationDisplay modes_of_operation_display{0};
     StatusWord statusword{0};
     TargetPosition target_position{0};
     MotionProfileType motion_profile_type{0};
@@ -347,6 +388,24 @@ private:
     // we currently only simulate Profile Position Mode (see 3.3.2 in
     // "EPOS4 Firmware Specifications.pdf")
 
+
+    // machine state
+    enum class State {
+        START                  = 40,
+        NOT_READY_TO_SWITCH_ON = 56,
+        SWITCH_ON_DISABLED     = 57,
+        READY_TO_SWITCH_ON     = 58,
+        SWITCHED_ON            = 59,
+        OPERATION_ENABLED      = 60,
+        QUICK_STOP_ACTIVE      = 61,
+        FAULT_REACTION_ACTIVE  = 62,
+        FAULT                  = 63,
+    };
+    State state = State::START;
+    void set_state(State newstate);
+    uint32_t state_start_ms;
+    uint32_t time_in_state_ms() const { return AP_HAL::millis() - state_start_ms; }
+    void update_state_machine();
 
     /*
      *  Input Handling
@@ -407,10 +466,11 @@ private:
      */
 
     void update_output();
+    void update_output_pwm();
+    uint16_t output_pwm;
 
     void send(Maxon_EPOS4::ResponseOpCode opcode, uint8_t *data, uint16_t data_len, uint16_t checksum);
 
-    uint16_t pwm() const;
 };
 
 };

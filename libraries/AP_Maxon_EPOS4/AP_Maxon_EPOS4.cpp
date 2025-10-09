@@ -178,13 +178,6 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
             }
             return;
         }
-        case State::WANT_WRITE_TARGET_POSITION_ACK:
-            if (handle_generic_write_response()) {
-                set_state(State::IDLE);
-            } else {
-                set_state(State::UNKNOWN);
-            }
-            break;
         case State::WANT_WRITE_MODES_OF_OPERATION_ACK: {
             if (handle_generic_write_response()) {
                 set_state(State::IDLE);
@@ -193,6 +186,13 @@ void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
             }
             break;
         }
+        case State::WANT_WRITE_TARGET_POSITION_ACK:
+            if (handle_generic_write_response()) {
+                set_state(State::IDLE);
+            } else {
+                set_state(State::UNKNOWN);
+            }
+            break;
 
         // these states are taken care of in update_output:
         // case State::WANT_SEND_READ_STATUSWORD:
