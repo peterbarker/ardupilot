@@ -67,6 +67,9 @@ public:
 
 private:
 
+    void init(const class Aircraft &aircraft);
+    bool initialised;
+
     // parameters / configuration
     AP_Int8 enabled;  // enable sim
     AP_Int8 servo_number;  // output/input servo number (from 1==e.g. aileron!)
@@ -175,13 +178,13 @@ private:
         static ResponseOpCode opcode() { return ResponseOpCode::RESPONSE; }
     };
 
-    enum class ObjectID : uint16_t {
-        HOME_POSITION = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
-        MODES_OF_OPERATION = 0x6060,
-        TARGET_POSITION = 0x607a,
+    enum class AccessType : uint8_t {
+        READ_ONLY = 22,
+        WRITE_ONLY = 23,
+        READ_WRITE = 24,
     };
 
-    class EPOS4Object {
+    class PACKED EPOS4Object {
     public:
         EPOS4Object(uint8_t _data[4]) {
             set_data(_data);
@@ -196,6 +199,8 @@ private:
             };
             set_data(x);
         }
+        virtual AccessType access_type() const = 0;
+
         void set_data(const uint8_t _data[4]) {
             memcpy(data, _data, ARRAY_SIZE(data));
         }
@@ -208,22 +213,140 @@ private:
                 data[3] <<  0
                 );
         }
-    private:
+        uint16_t get_data_uint16() const {
+            // check this, it is probably garbage:
+            return (
+                data[2] <<  8 |
+                data[3] <<  0
+                );
+        }
+        int16_t get_data_int16() const {
+            // check this, it is probably garbage:
+            return (
+                data[2] <<  8 |
+                data[3] <<  0
+                );
+        }
+
         uint8_t data[4];
+    };
+
+    class PACKED HomePosition : public EPOS4Object {
+    public:
+        using EPOS4Object::EPOS4Object;
+        AccessType access_type() const override { return AccessType::READ_WRITE; }
+    };
+
+    class PACKED ControlWord : public EPOS4Object {
+        using EPOS4Object::EPOS4Object;
+        AccessType access_type() const override { return AccessType::READ_WRITE; }
+        // uint32_t reserved_15 : 1;
+        // uint32_t reserved_14 : 1;
+        // uint32_t reserved_13 : 1;
+        // uint32_t reserved_12 : 1;
+        // uint32_t reserved_11 : 1;
+        // uint32_t reserved_10 : 1;
+        // uint32_t reserved_9 : 1;
+        // uint32_t operating_mode_specific_8 : 1;  // Halt in PPM
+        // uint32_t fault_reset : 1;
+        // uint32_t operating_mode_specific_6 : 1;  // abs/rel in PPM
+        // uint32_t operating_mode_specific_5 : 1;  // "change set immediately"
+        // uint32_t operating_mode_specific_4 : 1;  // new setpoint
+        // uint32_t enable_operation : 1;
+        // uint32_t quick_stop : 1;
+        // uint32_t enable_voltage : 1;
+        // uint32_t switched_on : 1;
+    };
+
+    class ModesOfOperation : public EPOS4Object {
+        using EPOS4Object::EPOS4Object;
+        AccessType access_type() const override { return AccessType::READ_WRITE; }
+    };
+
+    class StatusWord : public EPOS4Object {
+        using EPOS4Object::EPOS4Object;
+        AccessType access_type() const override { return AccessType::READ_ONLY; }
+        // uint32_t reserved_15 : 1;
+        // uint32_t reserved_14 : 1;
+        // uint32_t reserved_13 : 1;
+        // uint32_t reserved_12 : 1;
+        // uint32_t reserved_11 : 1;
+        // uint32_t reserved_10 : 1;
+        // uint32_t reserved_9 : 1;
+        // uint32_t operating_mode_specific_8 : 1;  // Halt in PPM
+        // uint32_t fault_reset : 1;
+        // uint32_t operating_mode_specific_6 : 1;  // abs/rel in PPM
+        // uint32_t operating_mode_specific_5 : 1;  // "change set immediately"
+        // uint32_t operating_mode_specific_4 : 1;  // new setpoint
+        // uint32_t enable_operation : 1;
+        // uint32_t quick_stop : 1;
+        // uint32_t enable_voltage : 1;
+        // uint32_t switched_on : 1;
+    };
+
+    class TargetPosition : public EPOS4Object {
+        using EPOS4Object::EPOS4Object;
+        AccessType access_type() const override { return AccessType::READ_WRITE; }
+    };
+
+    class MotionProfileType : public EPOS4Object {
+    public:
+        using EPOS4Object::EPOS4Object;
+        AccessType access_type() const override { return AccessType::READ_WRITE; }
+
+        enum class Type : int32_t {
+            TRAPEZOID = 0,
+        };
+        Type get_type() {
+            return (Type)get_data_int16();
+        }
+    };
+
+    HomePosition home_position{36865};  // initial value is actually 0 in datasheet
+    ControlWord controlword{0};
+    ModesOfOperation modes_of_operation{1};
+    StatusWord statusword{0};
+    TargetPosition target_position{0};
+    MotionProfileType motion_profile_type{0};
+
+
+    enum class ObjectID : uint16_t {
+        MAX_GEAR_INPUT_SPEED    = 0x3003,
+        HOME_POSITION           = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
+        CONTROLWORD             = 0x6040,
+        STATUSWORD              = 0x6041,
+        MODES_OF_OPERATION      = 0x6060,
+        POSITION_DEMAND_VALUE   = 0x6062,
+        TARGET_POSITION         = 0x607a,
+        SOFTWARE_POSITION_LIMIT = 0x607d,
+        MAX_PROFILE_VELOCITY    = 0x607f,
+        MAX_MOTOR_SPEED         = 0x6080,
+        PROFILE_ACCELERATION    = 0x6083,
+        PROFILE_DECELERATION    = 0x6084,
+        QUICK_STOP_DECELERATION = 0x6085,
+        MOTION_PROFILE_TYPE     = 0x6086,
+        MAX_ACCELERATION        = 0x60c5,
     };
 
     // map from ObjectID -> Object:
     struct {
         ObjectID id;
-        EPOS4Object object;
-    } epos4_objects[3] {
-        { ObjectID::MODES_OF_OPERATION, { 0 } },  // check initial value
-        { ObjectID::HOME_POSITION, { 36865 } },  // check initial value
-        { ObjectID::TARGET_POSITION, { 0 } },  // check initial value
+        EPOS4Object *object;
+    } epos4_objects[6] {
+        { ObjectID::HOME_POSITION, &home_position },
+        { ObjectID::CONTROLWORD, &controlword },
+        { ObjectID::MODES_OF_OPERATION, &modes_of_operation },
+        { ObjectID::STATUSWORD, &statusword },
+        { ObjectID::TARGET_POSITION, &target_position },
+        { ObjectID::MOTION_PROFILE_TYPE, &motion_profile_type },
     };
 
     EPOS4Object *find_epos4_object(ObjectID objectid);
     const EPOS4Object *find_epos4_object(ObjectID objectid) const;
+
+    // we currently only simulate Profile Position Mode (see 3.3.2 in
+    // "EPOS4 Firmware Specifications.pdf")
+
 
     /*
      *  Input Handling
@@ -280,18 +403,10 @@ private:
     uint8_t parameters_len;  // number of *bytes* in u.raw.parameters
 
     /*
-     * Objects
-     */
-    class PACKED Object {
-        uint16_t node_id;
-    };
-    class PACKED StatusWord {
-        uint16_t data;
-    };
-
-    /*
      * OUTPUT HANDLING
      */
+
+    void update_output();
 
     void send(Maxon_EPOS4::ResponseOpCode opcode, uint8_t *data, uint16_t data_len, uint16_t checksum);
 

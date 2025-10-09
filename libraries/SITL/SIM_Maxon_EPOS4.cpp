@@ -88,7 +88,8 @@ void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
         }
     }
 
-    EPOS4Object *obj = find_epos4_object((ObjectID)req.index_of_object);
+    const ObjectID id = (ObjectID)req.index_of_object;
+    EPOS4Object *obj = find_epos4_object(id);
     if (obj == nullptr) {
         if (strict_parsing) {
             AP_HAL::panic("Invalid object (0x%x) requested", req.index_of_object);
@@ -98,7 +99,7 @@ void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
     }
 
     uint32_t errors = 0;
-    send_read_object_response(errors, obj->get_data());  // test value
+    send_read_object_response(errors, obj->get_data());
 }
 
 void Maxon_EPOS4::send_read_object_response(int32_t value)
@@ -129,7 +130,7 @@ Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid)
 {
     for (auto &obj : epos4_objects) {
         if (obj.id == objectid) {
-            return &obj.object;
+            return obj.object;
         }
     }
     return nullptr;
@@ -139,7 +140,7 @@ const Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid
 {
     for (const auto &obj : epos4_objects) {
         if (obj.id == objectid) {
-            return &obj.object;
+            return obj.object;
         }
     }
     return nullptr;
@@ -155,12 +156,29 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
         AP_HAL::panic("sim does not currently handle non-zero subindexes");
     }
 
-    EPOS4Object *obj = find_epos4_object((ObjectID)req.index_of_object);
+    const ObjectID id = (ObjectID)req.index_of_object;
+    EPOS4Object *obj = find_epos4_object(id);
     if (obj == nullptr && strict_parsing) {
-        AP_HAL::panic("Invalid object (0x%x) requested", req.index_of_object);
+        AP_HAL::panic("Invalid object (0x%x) requested", (unsigned)id);
+    }
+
+    if (obj->access_type() == AccessType::READ_ONLY) {
+        // this should probaby just send a write-object response with errors set
+        AP_HAL::panic("Write of read-only object");
     }
 
     obj->set_data(req.data);
+
+    // set-time validation of various parameters; if the driver ever
+    // sets these then we have a bug!
+    switch (id) {
+    case ObjectID::MOTION_PROFILE_TYPE:
+        if (motion_profile_type.get_type() != MotionProfileType::Type::TRAPEZOID) {
+            AP_HAL::panic("Unexpected motion profile type %d", (signed)(motion_profile_type.get_type()));
+        }
+    default:
+        break;
+    }
 
     // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a write_object request (0x%x=%d)!", this, req.index_of_object, obj->get_data_int32());
 
@@ -206,9 +224,29 @@ void Maxon_EPOS4::reset_input()
     waiting_bytestuffed_DLE = false;
 }
 
+void Maxon_EPOS4::init(const class Aircraft &aircraft)
+{
+    // ASSERT_STORAGE_SIZE(EPOS4Object, 4);
+    // ASSERT_STORAGE_SIZE(HomePosition, 4);
+    // ASSERT_STORAGE_SIZE(ControlWord, 4);
+    // ASSERT_STORAGE_SIZE(StatusWord, 4);
+    // ASSERT_STORAGE_SIZE(MotionProfileType, 4);
+}
+
 void Maxon_EPOS4::update(const class Aircraft &aircraft)
 {
+    if (!initialised) {
+        init(aircraft);
+        initialised = true;
+    }
+
     update_input();
+    update_output();
+}
+
+void Maxon_EPOS4::update_output()
+{
+    // verify registers are as we think they should be:
 }
 
 void Maxon_EPOS4::update_input()
