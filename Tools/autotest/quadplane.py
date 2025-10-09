@@ -2727,12 +2727,25 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         })
         self.reboot_sitl()
 
-        while True:
-            self.change_mode('FBWA')
-            self.delay_sim_time(5)
-            self.change_mode('QHOVER')
-            self.delay_sim_time(5)
-        self.delay_sim_time(2000000)
+        self.wait_ready_to_arm()
+
+        self.progress("Check movement when changing modes on ground")
+        # note that 1100us is pointing straight up; 1000 is pointing
+        # slightly backwards to allow for yaw control
+        self.change_mode('FBWA')
+        self.wait_servo_channel_value(12, 2000, minimum_duration=1, timeout=3)
+        self.wait_servo_channel_value(13, 2000, minimum_duration=1, timeout=3)
+        self.change_mode('QHOVER')
+        self.wait_servo_channel_value(12, 1100, minimum_duration=1, timeout=3)
+        self.wait_servo_channel_value(13, 1100, minimum_duration=1, timeout=3)
+        self.change_mode('FBWA')
+        self.wait_servo_channel_value(12, 2000, minimum_duration=1, timeout=3)
+        self.wait_servo_channel_value(13, 2000, minimum_duration=1, timeout=3)
+        self.change_mode('QHOVER')
+        self.wait_servo_channel_value(12, 1100, minimum_duration=1, timeout=3)
+        self.wait_servo_channel_value(13, 1100, minimum_duration=1, timeout=3)
+
+        return
 
         self.wait_ready_to_arm()
         self.arm_vehicle()
