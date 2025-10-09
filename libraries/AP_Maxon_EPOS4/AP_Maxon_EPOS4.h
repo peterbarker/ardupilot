@@ -40,16 +40,15 @@ private:
 
     class ServoInstance {
     public:
+        ServoInstance() {}
         enum class State {
-            UNKNOWN = 1,
-
-            START = 2,
+            IDLE = 10,
 
             WANT_SEND_READ  = 25,
             WANT_READ_RESPONSE   = 26,
 
-            WANT_SEND_WRITE = 36,
-            WANT_WRITE_RESPONSE  = 26,
+            WANT_SEND_WRITE = 35,
+            WANT_WRITE_RESPONSE  = 36,
 
             // WANT_SEND_READ_HOME_POSITION = 35,
             // WANT_HOME_POSITION = 36,
@@ -69,10 +68,8 @@ private:
             // WANT_ENABLESWITCHCOMMAND_ACK = 66,
             // WANT_SEND_WRITE_TARGET_POSITION = 100,
             // WANT_WRITE_TARGET_POSITION_ACK = 101,
-
-            IDLE = 100,
         };
-        State state = State::UNKNOWN;
+        State state = State::IDLE;
         void set_state(State newstate);
         uint32_t state_start_ms;  // time we entered the current state
 
@@ -176,23 +173,6 @@ private:
             static ResponseOpCode opcode() { return ResponseOpCode::GENERIC; }
         };
 
-        enum class ObjectID : uint16_t {
-            MAX_GEAR_INPUT_SPEED    = 0x3003,
-            HOME_POSITION           = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
-            CONTROLWORD             = 0x6040,
-            STATUSWORD              = 0x6041,
-            MODES_OF_OPERATION      = 0x6060,
-            POSITION_DEMAND_VALUE   = 0x6062,
-            TARGET_POSITION         = 0x607a,
-            SOFTWARE_POSITION_LIMIT = 0x607d,
-            MAX_PROFILE_VELOCITY    = 0x607f,
-            MAX_MOTOR_SPEED         = 0x6080,
-            PROFILE_ACCELERATION    = 0x6083,
-            PROFILE_DECELERATION    = 0x6084,
-            QUICK_STOP_DECELERATION = 0x6085,
-            MOTION_PROFILE_TYPE     = 0x6086,
-            MAX_ACCELERATION        = 0x60c5,
-        };
         class PACKED ReadObjectRequest {
         public:
              // ReadObjectRequest() { }
@@ -277,49 +257,62 @@ private:
         bool send_write_MODES_OF_OPERATION();
         bool send_write_TARGET_POSITION();
 
-        bool send_write_object_request(
+        enum class ObjectID : uint16_t {
+            MAX_GEAR_INPUT_SPEED    = 0x3003,
+            HOME_POSITION           = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
+            CONTROLWORD             = 0x6040,
+            STATUSWORD              = 0x6041,
+            MODES_OF_OPERATION      = 0x6060,
+            POSITION_DEMAND_VALUE   = 0x6062,
+            TARGET_POSITION         = 0x607a,
+            SOFTWARE_POSITION_LIMIT = 0x607d,
+            MAX_PROFILE_VELOCITY    = 0x607f,
+            MAX_MOTOR_SPEED         = 0x6080,
+            PROFILE_ACCELERATION    = 0x6083,
+            PROFILE_DECELERATION    = 0x6084,
+            QUICK_STOP_DECELERATION = 0x6085,
+            MOTION_PROFILE_TYPE     = 0x6086,
+            MAX_ACCELERATION        = 0x60c5,
+        };
+
+        bool send_write_request(
             ObjectID object_id,
             uint8_t subobject,
             const uint8_t data[4]
         );
+        bool send_write_object_request();
+
         // if the "Data type" is INTEGER32
-        bool send_write_object_request(
+        bool send_write_request(
             ObjectID object_id,
             uint8_t subobject,
             int32_t data
         );
-
-        bool send_read_object_request(ObjectID object_id, uint8_t subindex);
+        bool send_read_object_request();
 
         bool send_request(uint8_t *request, uint16_t size);
-    };
-    ServoInstance instances[AP_MAXON_EPOS4_MAX_INSTANCES];
-    uint8_t num_instances;
+        uint32_t last_request_sent_ms;
+        uint32_t last_frame_received_ms;
 
-    // state we think the device is in (see 2.2.1):
-    enum class DeviceState {
-        UNKNOWN                = 40,
-        NOT_READY_TO_SWITCH_ON = 56,
-        SWITCH_ON_DISABLED     = 57,
-        READY_TO_SWITCH_ON     = 58,
-        SWITCHED_ON            = 59,
-        OPERATION_ENABLED      = 60,
-        QUICK_STOP_ACTIVE      = 61,
-        FAULT_REACTION_ACTIVE  = 62,
-        FAULT                  = 63,
-    };
-    DeviceState device_state = DeviceState::UNKNOWN;
+        // state we think the device is in (see 2.2.1):
+        enum class DeviceState {
+            UNKNOWN_RESET          = 30,
+            UNKNOWN                = 40,
+            NOT_READY_TO_SWITCH_ON = 56,
+            SWITCH_ON_DISABLED     = 57,
+            READY_TO_SWITCH_ON     = 58,
+            SWITCHED_ON            = 59,
+            OPERATION_ENABLED      = 60,
+            QUICK_STOP_ACTIVE      = 61,
+            FAULT_REACTION_ACTIVE  = 62,
+            FAULT                  = 63,
+        };
+        DeviceState device_state = DeviceState::UNKNOWN;
+        void set_device_state(DeviceState newstate);
 
-#if AP_MAXON_EPOS4_MAX_INSTANCES > 0
-    AP_Int8 servo1_channel;
-#endif
-#if AP_MAXON_EPOS4_MAX_INSTANCES > 1
-    AP_Int8 servo2_channel;
-#endif
-
-    class PACKED EPOS4Object {
-    public:
-    // 6.1.1:
+        class PACKED EPOS4Object {
+        public:
+        // 6.1.1:
         enum class DataType {
             BOOLEAN        = 0x0001,
             INTEGER8       = 0x0002,
@@ -336,7 +329,7 @@ private:
             IDENTITY       = 0x0023,
         };
 
-        virtual DataType datatype() const = 0;
+        virtual DataType data_type() const = 0;
 
         EPOS4Object(uint8_t _data[4]) {
             set_data(_data);
@@ -371,8 +364,8 @@ private:
         uint16_t get_data_uint16() const {
             // check this, it is probably garbage:
             return (
-                data[2] <<  8 |
-                data[3] <<  0
+                data[1] <<  8 |
+                data[0] <<  0
                 );
         }
         int16_t get_data_int16() const {
@@ -390,87 +383,117 @@ private:
                 );
         }
 
+        uint32_t last_fetched_ms;
         uint8_t data[4];
-    };
-
-    class StatusWord : public EPOS4Object {
-    public:
-        using EPOS4Object::EPOS4Object;
-        DataType data_type() const override { return DataType::; }
-        class BitMask {
-        public:
-            uint16_t value;
         };
-        class Bit {
+
+        class StatusWord : public EPOS4Object {
         public:
-            uint16_t value;
-            BitMask operator |(Bit otherbit) {
-                return BitMask{uint16_t(otherbit.value | value)};
+            using EPOS4Object::EPOS4Object;
+            DataType data_type() const override { return DataType::UNSIGNED16; }
+            class BitMask {
+            public:
+                uint16_t value;
+            };
+            class Bit {
+            public:
+                uint16_t value;
+                BitMask operator |(Bit otherbit) {
+                    return BitMask{uint16_t(otherbit.value | value)};
+                }
+
+                static constexpr uint16_t POSITION_REFERENCED_TO_HOME = 1U<<15;
+                static constexpr uint16_t RESERVED_14                 = 1U<<14;
+                static constexpr uint16_t OPERATING_MODE_SPECIFIC_13  = 1U<<13;  // PPM=following error
+                static constexpr uint16_t OPERATING_MODE_SPECIFIC_12  = 1U<<12;  // PPM=setpoint ACK
+                static constexpr uint16_t INTERNAL_LIMIT_ACTIVE       = 1U<<11;
+                static constexpr uint16_t OPERATING_MODE_SPECIFIC_10  = 1U<<10;  // PPM=Target-reached
+                static constexpr uint16_t REMOTE                      = 1U<< 9;
+                static constexpr uint16_t RESERVED_8                  = 1U<< 8;
+                static constexpr uint16_t WARNING                     = 1U<< 7;
+                static constexpr uint16_t SWITCH_ON_DISABLED          = 1U<< 6;
+                static constexpr uint16_t QUICK_STOP                  = 1U<< 5;
+                static constexpr uint16_t VOLTAGE_ENABLED             = 1U<< 4;
+                static constexpr uint16_t FAULT                       = 1U<< 3;
+                static constexpr uint16_t OPERATION_ENABLED           = 1U<< 2;
+                static constexpr uint16_t SWITCHED_ON                 = 1U<< 1;
+                static constexpr uint16_t READY_TO_SWITCH_ON          = 1U<< 0;
+            };
+
+            class StateBitMask {
+            public:
+                static constexpr uint16_t SWITCH_ON_DISABLED = Bit::SWITCH_ON_DISABLED;
+            };
+
+            bool bit_is_set(Bit bit) const {
+                return (get_data_uint16() & bit.value) != 0;
             }
+            // set the bits (and only the bits corresponding to State in
+            // the statusword
+            // void set_state_bits(uint32_t mask) {
+            //     uint16_t value = get_data_uint16();
+            //     const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
+            //     if (mask & ~status_bit_mask) {
+            //         AP_HAL::panic("Attempt to set bits not in state mask");
+            //     }
+            //     value &= ~status_bit_mask;
+            //     value |= mask;
+            //     static const uint32_t last_value = -1;
+            //     if (value != last_value) {
+            //         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
+            //     }
+            //     set_data(value);
+            // }
 
-            static constexpr uint16_t POSITION_REFERENCED_TO_HOME = 1U<<15;
-            static constexpr uint16_t RESERVED_14                 = 1U<<14;
-            static constexpr uint16_t OPERATING_MODE_SPECIFIC_13  = 1U<<13;  // PPM=following error
-            static constexpr uint16_t OPERATING_MODE_SPECIFIC_12  = 1U<<12;  // PPM=setpoint ACK
-            static constexpr uint16_t INTERNAL_LIMIT_ACTIVE       = 1U<<11;
-            static constexpr uint16_t OPERATING_MODE_SPECIFIC_10  = 1U<<10;  // PPM=Target-reached
-            static constexpr uint16_t REMOTE                      = 1U<< 9;
-            static constexpr uint16_t RESERVED_8                  = 1U<< 8;
-            static constexpr uint16_t WARNING                     = 1U<< 7;
-            static constexpr uint16_t SWITCH_ON_DISABLED          = 1U<< 6;
-            static constexpr uint16_t QUICK_STOP                  = 1U<< 5;
-            static constexpr uint16_t VOLTAGE_ENABLED             = 1U<< 4;
-            static constexpr uint16_t FAULT                       = 1U<< 3;
-            static constexpr uint16_t OPERATION_ENABLED           = 1U<< 2;
-            static constexpr uint16_t SWITCHED_ON                 = 1U<< 1;
-            static constexpr uint16_t READY_TO_SWITCH_ON          = 1U<< 0;
+            DeviceState get_device_state() const;
         };
 
-        bool bit_is_set(Bit bit) const {
-            return (get_data_uint16() & bit.value) != 0;
-        }
-        // set the bits (and only the bits corresponding to State in
-        // the statusword
-        // void set_state_bits(uint32_t mask) {
-        //     uint16_t value = get_data_uint16();
-        //     const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
-        //     if (mask & ~status_bit_mask) {
-        //         AP_HAL::panic("Attempt to set bits not in state mask");
-        //     }
-        //     value &= ~status_bit_mask;
-        //     value |= mask;
-        //     static const uint32_t last_value = -1;
-        //     if (value != last_value) {
-        //         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
-        //     }
-        //     set_data(value);
-        // }
+
+        StatusWord statusword{0};
+
+        void set_read_object(ObjectID id, EPOS4Object &object);
+        ObjectID generic_read_object_id;
+        EPOS4Object *generic_read_object;
+
+        void set_write_object(ObjectID id, EPOS4Object &object);
+        void set_write_object(ObjectID id, const uint8_t data[4]);
+        void set_write_object(ObjectID id, uint32_t data);
+
+        ObjectID generic_write_object_id;
+        uint8_t generic_write_data[4];
+
+        // map from ObjectID -> Object:
+        class ObjectIDMap {
+        public:
+            ObjectIDMap(ObjectID _id, EPOS4Object &_object, uint32_t _fetch_interval_ms) :
+                id{_id},
+                object{_object},
+                fetch_interval_ms{_fetch_interval_ms}
+                { }
+            ObjectID id;
+            EPOS4Object &object;
+            const uint32_t fetch_interval_ms;
+
+            uint32_t last_fetch_ms;
+        } epos4_objects[1] {
+            // { ObjectID::HOME_POSITION, home_position },
+            // { ObjectID::CONTROLWORD, controlword },
+            // { ObjectID::MODES_OF_OPERATION, modes_of_operation },
+            { ObjectID::STATUSWORD, statusword, 500 },
+            // { ObjectID::TARGET_POSITION, target_position },
+            // { ObjectID::MOTION_PROFILE_TYPE, motion_profile_type },
+        };
     };
 
+    ServoInstance instances[AP_MAXON_EPOS4_MAX_INSTANCES];
+    uint8_t num_instances;
 
-    StatusWord statusword;
-
-    // map from ObjectID -> Object:
-    struct ObjectIDMap {
-        ObjectIDMap(ObjectId _id, EPOS4Object &_object, uint32_t _fetch_interval_ms) :
-            id{_id},
-            object{_object},
-            fetch_interval_ms{_fetch_interval_ms}
-            { }
-        ObjectID id;
-        EPOS4Object &object;
-        const uint32_t fetch_interval_ms;
-
-        uint32_t last_fetch_ms;
-    } epos4_objects[1] {
-        // { ObjectID::HOME_POSITION, home_position },
-        // { ObjectID::CONTROLWORD, controlword },
-        // { ObjectID::MODES_OF_OPERATION, modes_of_operation },
-        { ObjectID::STATUSWORD, statusword, 500 },
-        // { ObjectID::TARGET_POSITION, target_position },
-        // { ObjectID::MOTION_PROFILE_TYPE, motion_profile_type },
-    };
-
+#if AP_MAXON_EPOS4_MAX_INSTANCES > 0
+    AP_Int8 servo1_channel;
+#endif
+#if AP_MAXON_EPOS4_MAX_INSTANCES > 1
+    AP_Int8 servo2_channel;
+#endif
 };
 
 #endif  // AP_MAXON_EPOS4_PROTOCOL

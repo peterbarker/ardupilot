@@ -89,6 +89,40 @@ void AP_Maxon_EPOS4::init(void)
     }
 }
 
+void AP_Maxon_EPOS4::ServoInstance::set_read_object(ObjectID id, EPOS4Object &object)
+{
+    if (state != State::IDLE) {
+        return;
+    }
+
+    generic_read_object = &object;
+    generic_read_object_id = id;
+
+    set_state(State::WANT_SEND_READ);
+}
+
+void AP_Maxon_EPOS4::ServoInstance::set_write_object(ObjectID id, const uint8_t data[4])
+{
+    if (state != State::IDLE) {
+        return;
+    }
+
+    generic_write_object_id = id;
+    memcpy(generic_write_data, data, sizeof(generic_write_data));
+
+    set_state(State::WANT_SEND_WRITE);
+}
+void AP_Maxon_EPOS4::ServoInstance::set_write_object(ObjectID id, uint32_t data)
+{
+    const uint8_t data_bytes[4] {
+        uint8_t((uint32_t(data) >> 24) & 0xff),  // FIXME, prune
+        uint8_t((uint32_t(data) >> 16) & 0xff),
+        uint8_t((uint32_t(data) >> 8) & 0xff),
+        uint8_t((uint32_t(data) >> 0) & 0xff)
+    };
+    set_write_object(id, data_bytes);
+}
+
 void AP_Maxon_EPOS4::ServoInstance::update()
 {
     if (port == nullptr) {
@@ -105,13 +139,20 @@ void AP_Maxon_EPOS4::ServoInstance::update()
     // a detected device state can cause us to reset our own state
     // (think a reset of the device)
     switch (device_state) {
-    case DeviceState::UNKNOWN:
-        need_config = true;
-        if (state != State::WANT_SEND_READ_STATUSWORD &&
-            state != State::WANT_STATUSWORD) {
-            set_state(State::WANT_SEND_READ_STATUSWORD);
-        }
+    case DeviceState::UNKNOWN_RESET:
+        statusword.last_fetched_ms = 0;
         break;
+    case DeviceState::UNKNOWN: {
+        set_read_object(ObjectID::STATUSWORD, statusword);
+        if (statusword.last_fetched_ms == 0) {
+            break;
+        }
+        const DeviceState new_device_state = statusword.get_device_state();
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Detected device state %u", (unsigned)new_device_state);
+        // switch (device_state) {
+        // }
+        break;
+    }
     case DeviceState::NOT_READY_TO_SWITCH_ON:
         // we just have to wait for this to clear
         break;
@@ -132,6 +173,13 @@ void AP_Maxon_EPOS4::ServoInstance::update()
     }
 
     update_output();
+}
+
+void AP_Maxon_EPOS4::ServoInstance::set_device_state(DeviceState new_state)
+{
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u", (unsigned)new_state);
+    device_state = new_state;
+    // state_start_ms = AP_HAL::millis();
 }
 
 void AP_Maxon_EPOS4::ServoInstance::update_input()
@@ -186,36 +234,49 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
         // we should probably try to interpret these
         return false;
     }
-    const int32_t value {
-        frame.packed_generic_response.parameters.data[3] << 24 |
-        frame.packed_generic_response.parameters.data[2] << 16 |
-        frame.packed_generic_response.parameters.data[1] << 8 |
-        frame.packed_generic_response.parameters.data[0]
-    };
 
-    if (read_obj == nullptr) {
+    if (generic_read_object == nullptr) {
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         return false;
     }
 
+    generic_read_object->set_data(frame.packed_generic_response.parameters.data);
+    generic_read_object->last_fetched_ms = AP_HAL::millis();
+
     return true;
+}
+
+AP_Maxon_EPOS4::ServoInstance::DeviceState AP_Maxon_EPOS4::ServoInstance::StatusWord::get_device_state() const
+{
+    const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
+    const uint16_t value = get_data_int16() & status_bit_mask;
+    if (value == StateBitMask::SWITCH_ON_DISABLED) {
+        return DeviceState::SWITCH_ON_DISABLED;
+    }
+
+    return DeviceState::UNKNOWN;
 }
 
 void AP_Maxon_EPOS4::ServoInstance::handle_completed_frame()
 {
+    last_frame_received_ms = AP_HAL::millis();  // we can send straight away
+
     switch (frame.raw.opcode) {
     case ResponseOpCode::GENERIC:
         switch (state) {
         case State::WANT_READ_RESPONSE:
             handle_generic_read_response();
+            set_state(State::IDLE);
             return;
         case State::WANT_WRITE_RESPONSE:
             handle_generic_write_response();
+            set_state(State::IDLE);
             return;
-        case State::START:
-        case State::UNKNOWN:
         case State::IDLE:
+        case State::WANT_SEND_READ:
+        case State::WANT_SEND_WRITE:
             INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+            set_state(State::IDLE);
             return;
         }
     }
@@ -229,16 +290,16 @@ void AP_Maxon_EPOS4::ServoInstance::set_state(State new_state)
     state_start_ms = AP_HAL::millis();
 }
 
-bool AP_Maxon_EPOS4::ServoInstance::send_write_MODES_OF_OPERATION()
-{
-    const uint8_t data[4] {
-        0,
-        0,
-        (uint8_t)ModeOfOperation::PROFILE_POSITION_MODE,
-        0
-    };
-    return send_write_object_request(ObjectID::MODES_OF_OPERATION, 0, data);
-}
+// bool AP_Maxon_EPOS4::ServoInstance::send_write_MODES_OF_OPERATION()
+// {
+//     const uint8_t data[4] {
+//         0,
+//         0,
+//         (uint8_t)ModeOfOperation::PROFILE_POSITION_MODE,
+//         0
+//     };
+//     return send_write_object_request(ObjectID::MODES_OF_OPERATION, 0, data);
+// }
 
 bool AP_Maxon_EPOS4::ServoInstance::send_write_TARGET_POSITION()
 {
@@ -251,60 +312,52 @@ bool AP_Maxon_EPOS4::ServoInstance::send_write_TARGET_POSITION()
     // exceptions if normalised_output is 1 here
     const int32_t scaled_output = normalised_output * (INT32_MAX/2);  // not *quite* correct...
     // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p sending normalised=%f scaled=%d", this, normalised_output, scaled_output);
-    return send_write_object_request(ObjectID::TARGET_POSITION, 0, scaled_output);
+    set_write_object(ObjectID::TARGET_POSITION, scaled_output);
+    return true;
 }
 
-// bool AP_Maxon_EPOS4::ServoInstance::send_write_TARGET_POSITION()
+// bool AP_Maxon_EPOS4::ServoInstance::send_write_object_request(ObjectID object_id, uint8_t subindex, int32_t data)
 // {
-//     const uint8_t data[4] {
-//         0,
-//         0,
-//         (uint8_t)ModeOfOperation::,
-//         0
+//     const uint8_t data_bytes[4] {
+//         uint8_t((uint32_t(data) >> 24) & 0xff),
+//         uint8_t((uint32_t(data) >> 16) & 0xff),
+//         uint8_t((uint32_t(data) >> 8) & 0xff),
+//         uint8_t((uint32_t(data) >> 0) & 0xff)
 //     };
-//     return send_write_object_request(ObjectID::TARGET_POSITION, 0, data);
+//     const PackedRequest<WriteObjectRequest> packed_request{
+//         WriteObjectRequest{
+//             1,  // node-id
+//             (uint16_t)object_id,
+//             subindex,
+//             data_bytes
+//         },
+//     };
+
+//     return send_request((uint8_t*)&packed_request, sizeof(packed_request));
 // }
 
-bool AP_Maxon_EPOS4::ServoInstance::send_write_object_request(ObjectID object_id, uint8_t subindex, int32_t data)
+bool AP_Maxon_EPOS4::ServoInstance::send_write_object_request()
 {
-    const uint8_t data_bytes[4] {
-        uint8_t((uint32_t(data) >> 24) & 0xff),
-        uint8_t((uint32_t(data) >> 16) & 0xff),
-        uint8_t((uint32_t(data) >> 8) & 0xff),
-        uint8_t((uint32_t(data) >> 0) & 0xff)
-    };
+    uint8_t subindex = 0;
     const PackedRequest<WriteObjectRequest> packed_request{
         WriteObjectRequest{
             1,  // node-id
-            (uint16_t)object_id,
+            (uint16_t)generic_write_object_id,
             subindex,
-            data_bytes
+            generic_write_data
         },
     };
 
     return send_request((uint8_t*)&packed_request, sizeof(packed_request));
 }
 
-bool AP_Maxon_EPOS4::ServoInstance::send_write_object_request(ObjectID object_id, uint8_t subindex, const uint8_t data[4])
+bool AP_Maxon_EPOS4::ServoInstance::send_read_object_request()
 {
-    const PackedRequest<WriteObjectRequest> packed_request{
-        WriteObjectRequest{
-            1,  // node-id
-            (uint16_t)object_id,
-            subindex,
-            data
-        },
-    };
-
-    return send_request((uint8_t*)&packed_request, sizeof(packed_request));
-}
-
-bool AP_Maxon_EPOS4::ServoInstance::send_read_object_request(ObjectID object_id, uint8_t subindex)
-{
+    uint8_t subindex = 0;
     const PackedRequest<ReadObjectRequest> packed_request{
         ReadObjectRequest{
             1,  // node-id
-            (uint16_t)object_id,
+            (uint16_t)generic_read_object_id,
             subindex
         },
     };
@@ -312,13 +365,13 @@ bool AP_Maxon_EPOS4::ServoInstance::send_read_object_request(ObjectID object_id,
     return send_request((uint8_t*)&packed_request, sizeof(packed_request));
 }
 
-bool AP_Maxon_EPOS4::ServoInstance::send_read_HOME_POSITION()
-{
-    return ;
-}
-
 bool AP_Maxon_EPOS4::ServoInstance::send_request(uint8_t *request, uint16_t request_size)
 {
+    // const uint32_t now_ms = AP_HAL::millis();
+    // if (now_ms - last_request_sent_ms < 600) {
+    //     return false;
+    // }
+
     uint8_t send_buffer[128];
     uint8_t send_buffer_ofs = 0;
     send_buffer[send_buffer_ofs++] = DLE;
@@ -337,6 +390,7 @@ bool AP_Maxon_EPOS4::ServoInstance::send_request(uint8_t *request, uint16_t requ
     if (send_buffer_ofs > port->txspace()) {
         return false;
     }
+    // last_request_sent_ms = now_ms;
     if (port->write(send_buffer, send_buffer_ofs) < send_buffer_ofs) {
         // should not happen
         return false;
@@ -352,64 +406,71 @@ void AP_Maxon_EPOS4::ServoInstance::update_output()
     // check for timeouts
     if (state != State::IDLE) {
         if (now_ms - state_start_ms > 600) {
-            set_state(State::UNKNOWN);
+            set_device_state(DeviceState::UNKNOWN);
         }
     }
 
     if (state == State::IDLE) {
         // see if it is time to send a packet of some sort...
         if (now_ms - last_TARGET_POSITION_sent_ms > 20) {  // 50Hz
-            set_state(State::WANT_SEND_WRITE_TARGET_POSITION);
+            // set_state(State::WANT_SEND_WRITE_TARGET_POSITION);
             last_TARGET_POSITION_sent_ms = now_ms;
         }
     }
 
     switch (state) {
-    case State::UNKNOWN:
-    case State::START:
-        set_state(State::WANT_SEND_READ_HOME_POSITION);
-        // FALLTHROUGH
-
-    case State::WANT_SEND_READ_STATUSWORD:
-        if (!send_read_object_request(ObjectID::STATUSWORD, 0)) {
+    case State::WANT_SEND_READ:
+        if (!send_read_object_request()) {
             return;
         }
-        set_state(State::WANT_STATUSWORD);
+        set_state(State::WANT_READ_RESPONSE);
         return;
 
-    case State::WANT_SEND_READ_HOME_POSITION:
-        if (!send_read_object_request(ObjectID::HOME_POSITION, 0)) {
+    case State::WANT_SEND_WRITE:
+        if (!send_write_object_request()) {
             return;
         }
-        set_state(State::WANT_HOME_POSITION);
+        set_state(State::WANT_READ_RESPONSE);
         return;
-    case State::WANT_HOME_POSITION:
-        // moving from this state to the next is done in the
-        // handle_completed_frame paths
-        return;
-
-    case State::WANT_SEND_WRITE_MODES_OF_OPERATION:
-        if (!send_write_MODES_OF_OPERATION()) {
-            return;
-        }
-        set_state(State::WANT_WRITE_MODES_OF_OPERATION_ACK);
-        return;
-    case State::WANT_WRITE_MODES_OF_OPERATION_ACK:
-        // moving from this state to the next is done in the
-        // handle_completed_frame paths
-        return;
-
-    case State::WANT_SEND_WRITE_TARGET_POSITION:
-        if (!send_write_TARGET_POSITION()) {
-            return;
-        }
-        set_state(State::WANT_WRITE_TARGET_POSITION_ACK);
-        return;
-    case State::WANT_WRITE_TARGET_POSITION_ACK:
-        // moving from this state to the next is done in the
-        // handle_completed_frame paths
+    case State::WANT_READ_RESPONSE:
+    case State::WANT_WRITE_RESPONSE:
+    case State::IDLE:
         return;
     }
+
+    // case State::WANT_SEND_READ_HOME_POSITION:
+    //     if (!send_read_object_request(ObjectID::HOME_POSITION, home_position0)) {
+    //         return;
+    //     }
+    //     set_state(State::WANT_HOME_POSITION);
+    //     return;
+    // case State::WANT_HOME_POSITION:
+        // moving from this state to the next is done in the
+        // handle_completed_frame paths
+        // return;
+
+    // case State::WANT_SEND_WRITE_MODES_OF_OPERATION:
+    //     if (!send_write_MODES_OF_OPERATION()) {
+    //         return;
+    //     }
+    //     set_state(State::WANT_WRITE_MODES_OF_OPERATION_ACK);
+    //     return;
+    // case State::WANT_WRITE_MODES_OF_OPERATION_ACK:
+    //     // moving from this state to the next is done in the
+    //     // handle_completed_frame paths
+    //     return;
+
+    // case State::WANT_SEND_WRITE_TARGET_POSITION:
+    //     if (!send_write_TARGET_POSITION()) {
+    //         return;
+    //     }
+    //     set_state(State::WANT_WRITE_TARGET_POSITION_ACK);
+    //     return;
+    // case State::WANT_WRITE_TARGET_POSITION_ACK:
+    //     // moving from this state to the next is done in the
+    //     // handle_completed_frame paths
+    //     return;
+    // }
 }
 
 void AP_Maxon_EPOS4::ServoInstance::set_parsestate(ParseState newstate)
