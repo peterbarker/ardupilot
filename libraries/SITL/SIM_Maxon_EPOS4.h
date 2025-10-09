@@ -292,11 +292,15 @@ private:
     public:
         using EPOS4Object::EPOS4Object;
         AccessType access_type() const override { return AccessType::READ_ONLY; }
+        class BitMask {
+        public:
+            uint16_t value;
+        };
         class Bit {
         public:
-            static const uint16_t value;
-            uint16_t operator |(Bit otherbit) {
-                return otherbit.value | value;
+            uint16_t value;
+            BitMask operator |(Bit otherbit) {
+                return BitMask{uint16_t(otherbit.value | value)};
             }
 
             static constexpr uint16_t POSITION_REFERENCED_TO_HOME = 1U<<15;
@@ -344,8 +348,15 @@ private:
         void set_state_bits(uint32_t mask) {
             uint16_t value = get_data_uint16();
             const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
+            if (mask & ~status_bit_mask) {
+                AP_HAL::panic("Attempt to set bits not in state mask");
+            }
             value &= ~status_bit_mask;
             value |= mask;
+            static const uint32_t last_value = -1;
+            if (value != last_value) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
+            }
             set_data(value);
         }
     };
