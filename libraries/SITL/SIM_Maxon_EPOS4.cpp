@@ -427,42 +427,42 @@ void Maxon_EPOS4::update_output()
         break;
     case State::READY_TO_SWITCH_ON:
         statusword.set_state_bits(
-            uint16_t(StatusWord::Bit::QUICK_STOP) |
-            uint16_t(StatusWord::Bit::READY_TO_SWITCH_ON)
+            StatusWord::Bit::QUICK_STOP |
+            StatusWord::Bit::READY_TO_SWITCH_ON
         );
         break;
     case State::SWITCHED_ON:
         statusword.set_state_bits(
-            uint16_t(StatusWord::Bit::QUICK_STOP) |
-            uint16_t(StatusWord::Bit::READY_TO_SWITCH_ON) |
-            uint16_t(StatusWord::Bit::SWITCHED_ON)
+            StatusWord::Bit::QUICK_STOP |
+            StatusWord::Bit::READY_TO_SWITCH_ON |
+            StatusWord::Bit::SWITCHED_ON
         );
         break;
     case State::OPERATION_ENABLED:
         statusword.set_state_bits(
-            uint16_t(StatusWord::Bit::QUICK_STOP) |
-            uint16_t(StatusWord::Bit::OPERATION_ENABLED) |
-            uint16_t(StatusWord::Bit::READY_TO_SWITCH_ON) |
-            uint16_t(StatusWord::Bit::SWITCHED_ON)
+            StatusWord::Bit::QUICK_STOP |
+            StatusWord::Bit::OPERATION_ENABLED |
+            StatusWord::Bit::READY_TO_SWITCH_ON |
+            StatusWord::Bit::SWITCHED_ON
         );
         break;
     case State::QUICK_STOP_ACTIVE:
         statusword.set_state_bits(
-            uint16_t(StatusWord::Bit::OPERATION_ENABLED) |
-            uint16_t(StatusWord::Bit::READY_TO_SWITCH_ON) |
-            uint16_t(StatusWord::Bit::SWITCHED_ON)
+            StatusWord::Bit::OPERATION_ENABLED |
+            StatusWord::Bit::READY_TO_SWITCH_ON |
+            StatusWord::Bit::SWITCHED_ON
         );
         break;
     case State::FAULT_REACTION_ACTIVE:
         statusword.set_state_bits(
-            uint16_t(StatusWord::Bit::FAULT) |
-            uint16_t(StatusWord::Bit::OPERATION_ENABLED) |
-            uint16_t(StatusWord::Bit::READY_TO_SWITCH_ON) |
-            uint16_t(StatusWord::Bit::SWITCHED_ON)
+            StatusWord::Bit::FAULT |
+            StatusWord::Bit::OPERATION_ENABLED |
+            StatusWord::Bit::READY_TO_SWITCH_ON |
+            StatusWord::Bit::SWITCHED_ON
         );
         break;
     case State::FAULT:
-        statusword.set_state_bits(uint16_t(StatusWord::Bit::FAULT));
+        statusword.set_state_bits(StatusWord::Bit::FAULT);
         break;
     }
 

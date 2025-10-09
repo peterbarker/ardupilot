@@ -292,26 +292,52 @@ private:
     public:
         using EPOS4Object::EPOS4Object;
         AccessType access_type() const override { return AccessType::READ_ONLY; }
-        enum class Bit : uint16_t {
-            POSITION_REFERENCED_TO_HOME = (1U << 15),
-            RESERVED_14                 = (1U << 14),
-            OPERATING_MODE_SPECIFIC_13  = (1U << 13),  // PPM=following error
-            OPERATING_MODE_SPECIFIC_12  = (1U << 12),  // PPM=setpoint ACK
-            INTERNAL_LIMIT_ACTIVE       = (1U << 11),
-            OPERATING_MODE_SPECIFIC_10  = (1U << 10),  // PPM=Target-reached
-            REMOTE                      = (1U <<  9),
-            RESERVED_8                  = (1U <<  8),
-            WARNING                     = (1U <<  7),
-            SWITCH_ON_DISABLED          = (1U <<  6),
-            QUICK_STOP                  = (1U <<  5),
-            VOLTAGE_ENABLED             = (1U <<  4),
-            FAULT                       = (1U <<  3),
-            OPERATION_ENABLED           = (1U <<  2),
-            SWITCHED_ON                 = (1U <<  1),
-            READY_TO_SWITCH_ON          = (1U <<  0),
+        class Bit {
+        public:
+            static const uint16_t value;
+            uint16_t operator |(Bit otherbit) {
+                return otherbit.value | value;
+            }
+
+            static constexpr uint16_t POSITION_REFERENCED_TO_HOME = 1U<<15;
+            static constexpr uint16_t RESERVED_14 = 1U<<14;
+            static constexpr uint16_t OPERATING_MODE_SPECIFIC_13  = (1U << 13);  // PPM=following error
+            static constexpr uint16_t OPERATING_MODE_SPECIFIC_12  = (1U << 12);  // PPM=setpoint ACK
+            static constexpr uint16_t INTERNAL_LIMIT_ACTIVE       = (1U << 11);
+            static constexpr uint16_t OPERATING_MODE_SPECIFIC_10  = (1U << 10);  // PPM=Target-reached
+            static constexpr uint16_t REMOTE                      = (1U <<  9);
+            static constexpr uint16_t RESERVED_8                  = (1U <<  8);
+            static constexpr uint16_t WARNING                     = (1U <<  7);
+            static constexpr uint16_t SWITCH_ON_DISABLED          = (1U <<  6);
+            static constexpr uint16_t QUICK_STOP                  = (1U <<  5);
+            static constexpr uint16_t VOLTAGE_ENABLED             = (1U <<  4);
+            static constexpr uint16_t FAULT                       = (1U <<  3);
+            static constexpr uint16_t OPERATION_ENABLED           = (1U <<  2);
+            static constexpr uint16_t SWITCHED_ON                 = (1U <<  1);
+            static constexpr uint16_t READY_TO_SWITCH_ON          = (1U <<  0);
         };
+
+        // class StatusWord::Bit:: public Bit { }
+        // enum class Bit : uint16_t {
+        //     POSITION_REFERENCED_TO_HOME = (1U << 15),
+        //     RESERVED_14                 = (1U << 14),
+        //     OPERATING_MODE_SPECIFIC_13  = (1U << 13),  // PPM=following error
+        //     OPERATING_MODE_SPECIFIC_12  = (1U << 12),  // PPM=setpoint ACK
+        //     INTERNAL_LIMIT_ACTIVE       = (1U << 11),
+        //     OPERATING_MODE_SPECIFIC_10  = (1U << 10),  // PPM=Target-reached
+        //     REMOTE                      = (1U <<  9),
+        //     RESERVED_8                  = (1U <<  8),
+        //     WARNING                     = (1U <<  7),
+        //     SWITCH_ON_DISABLED          = (1U <<  6),
+        //     QUICK_STOP                  = (1U <<  5),
+        //     VOLTAGE_ENABLED             = (1U <<  4),
+        //     FAULT                       = (1U <<  3),
+        //     OPERATION_ENABLED           = (1U <<  2),
+        //     SWITCHED_ON                 = (1U <<  1),
+        //     READY_TO_SWITCH_ON          = (1U <<  0),
+        // };
         bool bit_is_set(Bit bit) const {
-            return (get_data_uint16() & (uint16_t)bit) != 0;
+            return (get_data_uint16() & bit.value) != 0;
         }
         // set the bits (and only the bits corresponding to State in
         // the statusword
