@@ -475,6 +475,10 @@ private:
                 DISABLE_VOLTAGE,
                 FAULT_RESET,
                 SHUTDOWN,
+                SWITCH_ON,
+                DISABLE_OPERATION,
+                ENABLE_OPERATION,
+                QUICK_STOP,
             };
         };
 

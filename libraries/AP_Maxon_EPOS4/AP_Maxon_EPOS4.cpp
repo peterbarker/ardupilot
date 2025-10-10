@@ -120,6 +120,22 @@ void AP_Maxon_EPOS4::ServoInstance::set_write_ControlWord(ControlWord::Command c
         mask       = 0b10000111;
         state_bits = 0b00000110;
         break;
+    case ControlWord::Command::SWITCH_ON:
+        mask       = 0b10000111;
+        state_bits = 0b00000111;
+        break;
+    case ControlWord::Command::DISABLE_OPERATION:
+        mask       = 0b10001111;
+        state_bits = 0b00000111;
+        break;
+    case ControlWord::Command::ENABLE_OPERATION:
+        mask       = 0b10001111;
+        state_bits = 0b00001111;
+        break;
+    case ControlWord::Command::QUICK_STOP:
+        mask       = 0b10000110;
+        state_bits = 0b00000010;
+        break;
     }
     control_word &= ~mask;
     control_word |= state_bits;
@@ -202,12 +218,15 @@ void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
         case DeviceState::OPERATION_ENABLED:
             // state transition 9 - use "Disable voltage" (2.2.3)
             set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+            break;
         case DeviceState::QUICK_STOP_ACTIVE:
             // state transition 12 - use "Disable voltage" (2.2.3)
             set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+            break;
         case DeviceState::FAULT:
             // state transition 15 - use "Fault Reset" (2.2.3)
             set_write_ControlWord(ControlWord::Command::FAULT_RESET);
+            break;
         }
         break;
     case DeviceState::READY_TO_SWITCH_ON:
@@ -236,7 +255,7 @@ void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
             set_write_ControlWord(ControlWord::Command::SHUTDOWN);
             break;
         case DeviceState::QUICK_STOP_ACTIVE:
-            // state transition 12, use "disable voltage" to go via switch-on-disabled
+            // state transition 12, use "disable voltage" to go via SWITCH_ON_DISABLED
             set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
             break;
         case DeviceState::FAULT:
@@ -255,6 +274,29 @@ void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
         case DeviceState::FAULT_REACTION_ACTIVE:
             // this will automatically shift into Fault
             break;
+        case DeviceState::SWITCHED_ON:
+            // already in correct mode
+            break;
+        case DeviceState::SWITCH_ON_DISABLED:
+            // transition 2, move to READY_TO_SWITCH_ON on using shutdown (we will then go to switched on from READY_TO_SWITCH_ON)
+            set_write_ControlWord(ControlWord::Command::SHUTDOWN);
+            break;
+        case DeviceState::READY_TO_SWITCH_ON:
+            // transition 3, move to SWITCHED_ON using SWITCH_ON
+            set_write_ControlWord(ControlWord::Command::SWITCH_ON);
+            break;
+        case DeviceState::OPERATION_ENABLED:
+            // transition 5 - move to SWITCHED_ON using DISABLE_OPERATION
+            set_write_ControlWord(ControlWord::Command::DISABLE_OPERATION);
+            break;
+        case DeviceState::QUICK_STOP_ACTIVE:
+            // state transition 12, use DISABLE_VOLTAGE to go via SWITCH_ON_DISABLED
+            set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+            break;
+        case DeviceState::FAULT:
+            // state transition 15 - use "Fault Reset" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::FAULT_RESET);
+            break;
         }
         break;
     case DeviceState::OPERATION_ENABLED:
@@ -264,10 +306,34 @@ void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
         case DeviceState::NOT_READY_TO_SWITCH_ON:
             // just have to wait; we'll be probing the status word
             break;
-        }
         case DeviceState::FAULT_REACTION_ACTIVE:
             // this will automatically shift into Fault
             break;
+        case DeviceState::OPERATION_ENABLED:
+            // already in correct state
+            break;
+        case DeviceState::SWITCH_ON_DISABLED:
+            // transition 2 - move to READY_TO_SWITCH_ON where we'll
+            // keep moving...
+            set_write_ControlWord(ControlWord::Command::SHUTDOWN);
+            break;
+        case DeviceState::READY_TO_SWITCH_ON:
+            // transition 3 - move to SWITCHED_ON using where we'll keep moving
+            set_write_ControlWord(ControlWord::Command::SWITCH_ON);
+            break;
+        case DeviceState::SWITCHED_ON:
+            // transition 4 - move to OPERATION_ENABLED using ENABLE_OPERATION
+            set_write_ControlWord(ControlWord::Command::ENABLE_OPERATION);
+            break;
+        case DeviceState::QUICK_STOP_ACTIVE:
+            // state transition 16, use ENABLE_OPERATION
+            set_write_ControlWord(ControlWord::Command::ENABLE_OPERATION);
+            break;
+        case DeviceState::FAULT:
+            // state transition 15 - use "Fault Reset" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::FAULT_RESET);
+            break;
+        }
         break;
     case DeviceState::QUICK_STOP_ACTIVE:
         switch (device_state) {
@@ -276,8 +342,32 @@ void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
         case DeviceState::NOT_READY_TO_SWITCH_ON:
             // just have to wait; we'll be probing the status word
             break;
+        case DeviceState::QUICK_STOP_ACTIVE:
+            // already in correct state
+            break;
         case DeviceState::FAULT_REACTION_ACTIVE:
             // this will automatically shift into Fault
+            break;
+        case DeviceState::SWITCH_ON_DISABLED:
+            // transition 2 - move to READY_TO_SWITCH_ON where we'll
+            // keep moving...
+            set_write_ControlWord(ControlWord::Command::SHUTDOWN);
+            break;
+        case DeviceState::READY_TO_SWITCH_ON:
+            // transition 3 - move to SWITCHED_ON using where we'll keep moving
+            set_write_ControlWord(ControlWord::Command::SWITCH_ON);
+            break;
+        case DeviceState::SWITCHED_ON:
+            // transition 4 - move to OPERATION_ENABLED using ENABLE_OPERATION
+            set_write_ControlWord(ControlWord::Command::ENABLE_OPERATION);
+            break;
+        case DeviceState::OPERATION_ENABLED:
+            // transition 11 - quick stop command
+            set_write_ControlWord(ControlWord::Command::QUICK_STOP);
+            break;
+        case DeviceState::FAULT:
+            // state transition 15 - use "Fault Reset" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::FAULT_RESET);
             break;
         }
         break;
