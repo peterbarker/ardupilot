@@ -383,9 +383,10 @@ private:
             }
             value &= ~status_bit_mask;
             value |= mask;
-            static const uint32_t last_value = -1;
+            static uint32_t last_value = -1;
             if (value != last_value) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
+                last_value = value;
             }
             set_data_uint16(value);
         }

@@ -257,6 +257,8 @@ private:
         bool have_all_parameters;
         void effect_desired_device_state_change();
 
+        void process_fetch_parameters();
+
         bool send_write_MODES_OF_OPERATION();
         bool send_write_TARGET_POSITION();
 
@@ -319,19 +321,19 @@ private:
         public:
         // 6.1.1:
         enum class DataType {
-            BOOLEAN        = 0x0001,
+            // BOOLEAN        = 0x0001,
             INTEGER8       = 0x0002,
             INTEGER16      = 0x0003,
             INTEGER32      = 0x0004,
-            INTEGER64      = 0x0015,
-            UNSIGNED8      = 0x0005,
+            // INTEGER64      = 0x0015,
+            // UNSIGNED8      = 0x0005,
             UNSIGNED16     = 0x0006,
-            UNSIGNED32     = 0x0007,
-            UNSIGNED64     = 0x001B,
-            VISIBLE_STRING = 0x0009,
-            OCTET_STRING   = 0x000A,
-            PDO_MAPPING    = 0x0021,
-            IDENTITY       = 0x0023,
+            // UNSIGNED32     = 0x0007,
+            // UNSIGNED64     = 0x001B,
+            // VISIBLE_STRING = 0x0009,
+            // OCTET_STRING   = 0x000A,
+            // PDO_MAPPING    = 0x0021,
+            // IDENTITY       = 0x0023,
         };
 
         virtual DataType data_type() const = 0;
@@ -446,22 +448,6 @@ private:
             bool bit_is_set(Bit bit) const {
                 return (get_data_uint16() & bit.value) != 0;
             }
-            // set the bits (and only the bits corresponding to State in
-            // the statusword
-            // void set_state_bits(uint32_t mask) {
-            //     uint16_t value = get_data_uint16();
-            //     const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
-            //     if (mask & ~status_bit_mask) {
-            //         AP_HAL::panic("Attempt to set bits not in state mask");
-            //     }
-            //     value &= ~status_bit_mask;
-            //     value |= mask;
-            //     static const uint32_t last_value = -1;
-            //     if (value != last_value) {
-            //         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
-            //     }
-            //     set_data(value);
-            // }
 
             DeviceState get_device_state() const;
         };
@@ -482,7 +468,14 @@ private:
             };
         };
 
+        class HomePosition : public EPOS4Object {
+        public:
+            using EPOS4Object::EPOS4Object;
+            DataType data_type() const override { return DataType::INTEGER32; }
+        };
+
         StatusWord statusword{0};
+        HomePosition home_position{0};
 
         void set_read_object(ObjectID id, EPOS4Object &object);
         ObjectID generic_read_object_id;
@@ -511,8 +504,8 @@ private:
             const uint32_t fetch_interval_ms;
 
             uint32_t last_fetch_ms;
-        } epos4_objects[1] {
-            // { ObjectID::HOME_POSITION, home_position },
+        } epos4_objects[2] {
+            { ObjectID::HOME_POSITION, home_position, 10000 },
             // { ObjectID::CONTROLWORD, controlword },
             // { ObjectID::MODES_OF_OPERATION, modes_of_operation },
             { ObjectID::STATUSWORD, statusword, 500 },

@@ -183,6 +183,9 @@ void AP_Maxon_EPOS4::ServoInstance::update_desired_device_state()
     }
 }
 
+// consider re-encoding this as a n*n table of to find a transition
+// number from a current state and a desired state.  This will reduce
+// flexibility (e.g. throwing internal errors) for bad situations
 void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
 {
     switch (desired_device_state) {
@@ -375,6 +378,19 @@ void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
 }
 
 
+void AP_Maxon_EPOS4::ServoInstance::process_fetch_parameters()
+{
+    for (auto &map : epos4_objects) {
+        if (map.object.last_fetched_ms) {
+            continue;
+        }
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Fetching parameter 0x%x", (unsigned)map.id);
+        set_read_object(map.id, map.object);
+        return;
+    }
+    have_all_parameters = true;
+}
+
 void AP_Maxon_EPOS4::ServoInstance::update()
 {
     if (port == nullptr) {
@@ -392,6 +408,31 @@ void AP_Maxon_EPOS4::ServoInstance::update()
     if (desired_device_state != device_state) {
         effect_desired_device_state_change();
     } else {
+        // work out what we want to do in the current device state, then!
+        switch (device_state) {
+        case DeviceState::UNKNOWN_RESET:
+        case DeviceState::UNKNOWN:
+        case DeviceState::NOT_READY_TO_SWITCH_ON:
+            // wait and hope for the best
+            break;
+        case DeviceState::SWITCH_ON_DISABLED:
+            if (!have_all_parameters) {
+                process_fetch_parameters();
+            }
+            break;
+        case DeviceState::OPERATION_ENABLED:
+            // send position commands, poll statusword, current position etc etc
+            abort();
+            break;
+        case DeviceState::READY_TO_SWITCH_ON:
+        case DeviceState::SWITCHED_ON:
+        case DeviceState::QUICK_STOP_ACTIVE:
+        case DeviceState::FAULT_REACTION_ACTIVE:
+        case DeviceState::FAULT:
+            // we can't desire to be in these states!
+            INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+            break;
+        }
     }
 
     // a detected device state can cause us to reset our own state
@@ -504,7 +545,22 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
     }
 
     generic_read_object->set_data(frame.packed_generic_response.parameters.data);
-    generic_read_object->last_fetched_ms = AP_HAL::millis();
+    generic_read_object->last_fetched_ms = MIN(AP_HAL::millis(), 1U);
+
+    switch (generic_read_object->data_type()) {
+    case EPOS4Object::DataType::INTEGER8:
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int8());
+        break;
+    case EPOS4Object::DataType::INTEGER16:
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int16());
+        break;
+    case EPOS4Object::DataType::INTEGER32:
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int32());
+        break;
+    case EPOS4Object::DataType::UNSIGNED16:
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %u", (unsigned)generic_read_object_id, generic_read_object->get_data_uint16());
+        break;
+    }
 
     return true;
 }
