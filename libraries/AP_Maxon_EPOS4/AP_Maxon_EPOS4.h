@@ -331,6 +331,13 @@ private:
 
         virtual DataType data_type() const = 0;
 
+        void assert_data_type(DataType t) const {
+            if (data_type() == t) {
+                return;
+            }
+            AP_HAL::panic("Invalid data type");
+        }
+
         EPOS4Object(uint8_t _data[4]) {
             set_data(_data);
         }
@@ -354,6 +361,7 @@ private:
         }
         const uint8_t *get_data() const { return data; }
         int32_t get_data_int32() const {
+            assert_data_type(DataType::INTEGER32);
             return (
                 data[0] << 24 |
                 data[1] << 16 |
@@ -363,13 +371,15 @@ private:
         }
         uint16_t get_data_uint16() const {
             // check this, it is probably garbage:
+            assert_data_type(DataType::UNSIGNED16);
             return (
-                data[1] <<  8 |
-                data[0] <<  0
+                data[0] <<  8 |
+                data[1] <<  0
                 );
         }
         int16_t get_data_int16() const {
             // check this, it is probably garbage:
+            assert_data_type(DataType::INTEGER16);
             return (
                 data[2] <<  8 |
                 data[3] <<  0
@@ -378,6 +388,7 @@ private:
 
         int8_t get_data_int8() const {
             // check this, it is probably garbage:
+            assert_data_type(DataType::INTEGER8);
             return (
                 data[2] <<  0
                 );

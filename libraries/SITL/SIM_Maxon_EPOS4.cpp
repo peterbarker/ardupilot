@@ -209,6 +209,48 @@ void Maxon_EPOS4::send(Maxon_EPOS4::ResponseOpCode opcode, uint8_t *data, uint16
     }
 }
 
+void Maxon_EPOS4::wire_data4_from_object_data(uint8_t data[4], const EPOS4Object &obj)
+{
+    switch (obj.data_type()) {
+    case DataType::INTEGER8: {
+        // this is probably wrong:
+        const int8_t v = obj.get_data_int8();
+        data[3] = v;
+        break;
+    }
+    case DataType::INTEGER16: {
+        // this is probably wrong:
+        const int16_t v = obj.get_data_int16();
+        data[0] = v >> 8;
+        data[1] = v >> 0;
+        break;
+    }
+    case DataType::UNSIGNED16: {
+        // this is probably wrong:
+        const uint16_t v = obj.get_data_uint16();
+        data[0] = v >> 8;
+        data[1] = v >> 0;
+        break;
+    }
+    case DataType::INTEGER32: {
+        const int32_t v = obj.get_data_int32();
+        data[0] = v >> 24;
+        data[1] = v >> 16;
+        data[2] = v >> 8;
+        data[3] = v >> 0;
+        break;
+    }
+    // case DataType::UNSIGNED32: {
+    //     const uint32_t v = obj.get_data_uint32();
+    //     data[0] = v >> 24;
+    //     data[1] = v >> 16;
+    //     data[2] = v >> 8;
+    //     data[3] = v >> 0;
+    //     break;
+    // }
+    }
+}
+
 void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
 {
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a read_object request! for node_id=%u object=%x subindex=%u", this, req.node_id, req.index_of_object, req.subindex_of_object);
@@ -229,7 +271,9 @@ void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
     }
 
     uint32_t errors = 0;
-    send_read_object_response(errors, obj->get_data());
+    uint8_t wire_data[4];
+    wire_data4_from_object_data(wire_data, *obj);
+    send_read_object_response(errors, wire_data);
 }
 
 void Maxon_EPOS4::send_read_object_response(int32_t value)
@@ -276,6 +320,40 @@ const Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid
     return nullptr;
 }
 
+void Maxon_EPOS4::set_object_data_from_wire_data4(EPOS4Object &obj, const uint8_t data[4])
+{
+    switch (obj.data_type()) {
+    case DataType::INTEGER8: {
+        // this is probably wrong:
+        const int8_t v = data[3];
+        obj.set_data_int8(v);
+        break;
+    }
+    case DataType::INTEGER16: {
+        // this is probably wrong:
+        const int16_t v = data[0] << 8 | data[1] << 0;
+        obj.set_data_int16(v);
+        break;
+    }
+    case DataType::UNSIGNED16: {
+        // this is probably wrong:
+        const uint16_t v = data[0] << 8 | data[1] << 0;
+        obj.set_data_uint16(v);
+        break;
+    }
+    case DataType::INTEGER32: {
+        const int32_t v = (
+            data[0] << 24 |
+            data[1] << 16 |
+            data[2] <<  8 |
+            data[3] <<  0
+        );
+        obj.set_data_int32(v);
+        break;
+    }
+    }
+}
+
 void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
 {
     // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a write_object request!", this);
@@ -297,7 +375,7 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
         AP_HAL::panic("Write of read-only object");
     }
 
-    obj->set_data(req.data);
+    set_object_data_from_wire_data4(*obj, req.data);
 
     // set-time validation of various parameters; if the driver ever
     // sets these then we have a bug!
@@ -417,7 +495,7 @@ void Maxon_EPOS4::update_output()
     // update StatusWord - see 2.2.1
     switch (state) {
     case State::START:
-        statusword.set_data(0);
+        statusword.set_data_uint16(0);
         break;
     case State::NOT_READY_TO_SWITCH_ON:
         statusword.set_state_bits(0);

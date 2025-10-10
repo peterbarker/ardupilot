@@ -184,74 +184,96 @@ private:
         READ_WRITE = 24,
     };
 
+    // 6.1.1:
+    enum class DataType {
+        // BOOLEAN        = 0x0001,
+        INTEGER8       = 0x0002,
+        INTEGER16      = 0x0003,
+        INTEGER32      = 0x0004,
+        // INTEGER64      = 0x0015,
+        // UNSIGNED8      = 0x0005,
+        UNSIGNED16     = 0x0006,
+        // UNSIGNED32     = 0x0007,
+        // UNSIGNED64     = 0x001B,
+        // VISIBLE_STRING = 0x0009,
+        // OCTET_STRING   = 0x000A,
+        // PDO_MAPPING    = 0x0021,
+        // IDENTITY       = 0x0023,
+    };
+
     class PACKED EPOS4Object {
     public:
-        EPOS4Object(uint8_t _data[4]) {
-            set_data(_data);
-        }
-        // convenience method to create from an integer in the static list:
-        EPOS4Object(int32_t _data) {
-            set_data(_data);
-        }
         virtual AccessType access_type() const = 0;
+        virtual DataType data_type() const = 0;
 
-        void set_data(int32_t _data) {
-            const uint8_t x[4] {
-                uint8_t(_data >> 0),
-                uint8_t(_data >> 8),
-                uint8_t(_data >> 16),
-                uint8_t(_data >> 24)
-            };
-            set_data(x);
+        void set_data_int32(int32_t _data) {
+            assert_data_type(DataType::INTEGER32);
+            data_int32 = _data;
         }
-
-        void set_data(const uint8_t _data[4]) {
-            memcpy(data, _data, ARRAY_SIZE(data));
-        }
-        const uint8_t *get_data() const { return data; }
         int32_t get_data_int32() const {
-            return (
-                data[0] << 24 |
-                data[1] << 16 |
-                data[2] <<  8 |
-                data[3] <<  0
-                );
+            assert_data_type(DataType::INTEGER32);
+            return data_int32;
         }
-        uint16_t get_data_uint16() const {
-            // check this, it is probably garbage:
-            return (
-                data[2] <<  8 |
-                data[3] <<  0
-                );
+
+        void set_data_int16(int16_t _data) {
+            assert_data_type(DataType::INTEGER16);
+            data_int16 = _data;
         }
         int16_t get_data_int16() const {
-            // check this, it is probably garbage:
-            return (
-                data[2] <<  8 |
-                data[3] <<  0
-                );
+            assert_data_type(DataType::INTEGER16);
+            return data_int16;
         }
 
-        int8_t get_data_int8() const {
-            // check this, it is probably garbage:
-            return (
-                data[2] <<  0
-                );
+        void set_data_uint16(uint16_t _data) {
+            assert_data_type(DataType::UNSIGNED16);
+            data_uint16 = _data;
+        }
+        uint16_t get_data_uint16() const {
+            assert_data_type(DataType::UNSIGNED16);
+            return data_uint16;
         }
 
-        uint8_t data[4];
+        void set_data_int8(uint16_t _data) {
+            assert_data_type(DataType::INTEGER8);
+            data_int8 = _data;
+        }
+        uint16_t get_data_int8() const {
+            assert_data_type(DataType::INTEGER8);
+            return data_int8;
+        }
+
+        union {
+            int32_t data_int32;
+            uint16_t data_uint16;
+            int16_t data_int16;
+            int8_t data_int8;
+        };
+
+        void assert_data_type(DataType t) const {
+            if (data_type() == t) {
+                return;
+            }
+            AP_HAL::panic("Invalid data type");
+        }
     };
 
     class PACKED HomePosition : public EPOS4Object {
     public:
-        using EPOS4Object::EPOS4Object;
+        HomePosition(int32_t value) {
+            set_data_int32(value);
+        }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
+        DataType data_type() const override { return DataType::INTEGER32; }
     };
 
     // see 2.2.3 and 6.2.94
     class PACKED ControlWord : public EPOS4Object {
-        using EPOS4Object::EPOS4Object;
+    public:
+        ControlWord(uint16_t value) {
+            set_data_uint16(value);
+        }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
+        DataType data_type() const override { return DataType::UNSIGNED16; }
         enum class Bit : uint32_t {
             RESERVED_15               = (1U << 15),
             RESERVED_14               = (1U << 14),
@@ -277,21 +299,29 @@ private:
     };
 
     class ModesOfOperation : public EPOS4Object {
-        using EPOS4Object::EPOS4Object;
+    public:
+        ModesOfOperation(int8_t v) { set_data_int8(v); }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
+        DataType data_type() const override { return DataType::INTEGER8; }
+
         ModeOfOperation get_mode() const { return ModeOfOperation(get_data_int8()); }
     };
 
     class ModesOfOperationDisplay : public EPOS4Object {
-        using EPOS4Object::EPOS4Object;
+    public:
+        ModesOfOperationDisplay(int8_t v) { set_data_int8(v); }
         AccessType access_type() const override { return AccessType::READ_ONLY; }
+        DataType data_type() const override { return DataType::INTEGER8; }
+
         ModeOfOperation get_mode() const { return ModeOfOperation(get_data_int8()); }
     };
 
     class StatusWord : public EPOS4Object {
     public:
-        using EPOS4Object::EPOS4Object;
+        StatusWord(uint16_t v) { set_data_uint16(v); }
         AccessType access_type() const override { return AccessType::READ_ONLY; }
+        DataType data_type() const override { return DataType::UNSIGNED16; }
+
         class BitMask {
         public:
             uint16_t value;
@@ -357,19 +387,22 @@ private:
             if (value != last_value) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
             }
-            set_data(value);
+            set_data_uint16(value);
         }
     };
 
     class TargetPosition : public EPOS4Object {
-        using EPOS4Object::EPOS4Object;
+    public:
+        TargetPosition(int32_t v) { set_data_int32(v); }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
+        DataType data_type() const override { return DataType::INTEGER32; }
     };
 
     class MotionProfileType : public EPOS4Object {
     public:
-        using EPOS4Object::EPOS4Object;
+        MotionProfileType(int16_t v) { set_data_int16(v); }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
+        DataType data_type() const override { return DataType::INTEGER16; }
 
         enum class Type : int32_t {
             TRAPEZOID = 0,
@@ -460,6 +493,9 @@ private:
     void send_read_object_response(int32_t value);  // FIXME: remove this
     void send_read_object_response(uint32_t errors, const uint8_t data[4]);
     void send_write_object_response(uint32_t errors);
+
+    void wire_data4_from_object_data(uint8_t data[4], const EPOS4Object &obj);
+    void set_object_data_from_wire_data4(EPOS4Object &obj, const uint8_t data[4]);
 
     static const uint8_t DLE = 0x90;  // Data Link Escape
     static const uint8_t STX = 0x02;  // Start of TeXt

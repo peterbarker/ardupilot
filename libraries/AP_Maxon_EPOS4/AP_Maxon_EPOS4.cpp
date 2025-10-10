@@ -249,7 +249,7 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
 AP_Maxon_EPOS4::ServoInstance::DeviceState AP_Maxon_EPOS4::ServoInstance::StatusWord::get_device_state() const
 {
     const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
-    const uint16_t value = get_data_int16() & status_bit_mask;
+    const uint16_t value = get_data_uint16() & status_bit_mask;
     if (value == StateBitMask::SWITCH_ON_DISABLED) {
         return DeviceState::SWITCH_ON_DISABLED;
     }
