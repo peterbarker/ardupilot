@@ -252,6 +252,38 @@ class AutoTestTracker(vehicle_test_suite.TestSuite):
         if phase != "done":
             raise NotAchievedException(f"Did not get message text; {phase=}")  # noqa:E501
 
+    def ScriptingLocationBindings(self):
+        self.install_script_content_context("test-scripting-bindings.lua", """
+function main()
+  here = ahrs:get_location()
+  if here == nil then
+     gcs:send_text(0, "Need location")
+     return
+  end
+  if here.alt == 0 then
+     gcs:send_text(0, "zero altitude?!")
+     return
+  end
+  ALT_FRAME = { ABSOLUTE = 0, ABOVE_HOME = 1, ABOVE_ORIGIN = 2, ABOVE_TERRAIN = 3 }
+  here:set_alt_m(12.34, ALT_FRAME.ABSOLUTE)
+  want = 1234
+  if here:alt() ~= want then
+     gcs:send_text(0, string.format("Bad altitude" .. here:alt() .. " want " .. want))
+     return
+  end
+  gcs:send_text(0, "Tests OK")
+end
+function update()
+  main()
+  return update, 1000
+end
+
+return update()
+""")
+        self.set_parameter('SCR_ENABLE', 1)
+        self.reboot_sitl()
+        self.wait_statustext('Tests OK')
+
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestTracker, self).tests()
@@ -266,5 +298,6 @@ class AutoTestTracker(vehicle_test_suite.TestSuite):
             self.GPSForYaw,
             self.LoggerMsgChunks,
             self.StationaryGlobalPositionIntAlt,
+            self.ScriptingLocationBindings,
         ])
         return ret
