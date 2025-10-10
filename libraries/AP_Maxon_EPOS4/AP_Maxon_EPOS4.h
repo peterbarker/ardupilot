@@ -345,69 +345,57 @@ private:
             AP_HAL::panic("Invalid data type");
         }
 
-        EPOS4Object(uint8_t _data[4]) {
-            set_data(_data);
-        }
-        // convenience method to create from an integer in the static list:
-        EPOS4Object(int32_t _data) {
-            set_data(_data);
-        }
+        uint32_t last_fetched_ms;
 
-        void set_data(int32_t _data) {
-            const uint8_t x[4] {
-                uint8_t(_data >> 0),
-                uint8_t(_data >> 8),
-                uint8_t(_data >> 16),
-                uint8_t(_data >> 24)
-            };
-            set_data(x);
+        void set_data_int32(int32_t _data) {
+            assert_data_type(DataType::INTEGER32);
+            data_int32 = _data;
         }
-
-        void set_data(const uint8_t _data[4]) {
-            memcpy(data, _data, ARRAY_SIZE(data));
-        }
-        const uint8_t *get_data() const { return data; }
         int32_t get_data_int32() const {
             assert_data_type(DataType::INTEGER32);
-            return (
-                data[0] << 24 |
-                data[1] << 16 |
-                data[2] <<  8 |
-                data[3] <<  0
-                );
+            return data_int32;
         }
-        uint16_t get_data_uint16() const {
-            // check this, it is probably garbage:
-            assert_data_type(DataType::UNSIGNED16);
-            return (
-                data[0] <<  8 |
-                data[1] <<  0
-                );
+
+        void set_data_int16(int16_t _data) {
+            assert_data_type(DataType::INTEGER16);
+            data_int16 = _data;
         }
         int16_t get_data_int16() const {
-            // check this, it is probably garbage:
             assert_data_type(DataType::INTEGER16);
-            return (
-                data[2] <<  8 |
-                data[3] <<  0
-                );
+            return data_int16;
         }
 
-        int8_t get_data_int8() const {
-            // check this, it is probably garbage:
+        void set_data_uint16(uint16_t _data) {
+            assert_data_type(DataType::UNSIGNED16);
+            data_uint16 = _data;
+        }
+        uint16_t get_data_uint16() const {
+            assert_data_type(DataType::UNSIGNED16);
+            return data_uint16;
+        }
+
+        void set_data_int8(uint16_t _data) {
             assert_data_type(DataType::INTEGER8);
-            return (
-                data[2] <<  0
-                );
+            data_int8 = _data;
+        }
+        uint16_t get_data_int8() const {
+            assert_data_type(DataType::INTEGER8);
+            return data_int8;
         }
 
-        uint32_t last_fetched_ms;
-        uint8_t data[4];
+        union {
+            int32_t data_int32;
+            uint16_t data_uint16;
+            int16_t data_int16;
+            int8_t data_int8;
         };
+        };
+
+        void set_object_data_from_wire_data4(EPOS4Object &object, uint8_t data[4]);
 
         class StatusWord : public EPOS4Object {
         public:
-            using EPOS4Object::EPOS4Object;
+            StatusWord(uint16_t v) { set_data_uint16(v); }
             DataType data_type() const override { return DataType::UNSIGNED16; }
             class BitMask {
             public:
@@ -454,7 +442,6 @@ private:
 
         class ControlWord : public EPOS4Object {
         public:
-            using EPOS4Object::EPOS4Object;
             DataType data_type() const override { return DataType::UNSIGNED16; }
 
             enum class Command {
@@ -470,7 +457,7 @@ private:
 
         class HomePosition : public EPOS4Object {
         public:
-            using EPOS4Object::EPOS4Object;
+            HomePosition(int32_t v) { set_data_int32(v); }
             DataType data_type() const override { return DataType::INTEGER32; }
         };
 

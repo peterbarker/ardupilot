@@ -524,6 +524,90 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_write_response()
     return true;
 }
 
+void AP_Maxon_EPOS4::ServoInstance::set_object_data_from_wire_data4(EPOS4Object &object, uint8_t data[4])
+{
+    switch (object.data_type()) {
+    case EPOS4Object::DataType::INTEGER8: {
+        // this is probably wrong:
+        const int8_t v = data[3];
+        object.set_data_int8(v);
+        break;
+    }
+    case EPOS4Object::DataType::INTEGER16: {
+        // this is probably wrong:
+        const int16_t v = data[0] << 8 | data[1] << 0;
+        object.set_data_int16(v);
+        break;
+    }
+    case EPOS4Object::DataType::UNSIGNED16: {
+        // this is probably wrong:
+        const uint16_t v = data[0] << 8 | data[1] << 0;
+        object.set_data_uint16(v);
+        break;
+    }
+    case EPOS4Object::DataType::INTEGER32: {
+        const int32_t v = (
+            data[0] << 24 |
+            data[1] << 16 |
+            data[2] <<  8 |
+            data[3] <<  0
+        );
+        object.set_data_int32(v);
+        break;
+    }
+    }
+}
+
+        // void set_data(int32_t _data) {
+        //     const uint8_t x[4] {
+        //         uint8_t(_data >> 0),
+        //         uint8_t(_data >> 8),
+        //         uint8_t(_data >> 16),
+        //         uint8_t(_data >> 24)
+        //     };
+        //     set_data(x);
+        // }
+
+        // void set_data(const uint8_t _data[4]) {
+        //     memcpy(data, _data, ARRAY_SIZE(data));
+        // }
+        // const uint8_t *get_data() const { return data; }
+        // int32_t get_data_int32() const {
+        //     assert_data_type(DataType::INTEGER32);
+        //     return (
+        //         data[0] << 24 |
+        //         data[1] << 16 |
+        //         data[2] <<  8 |
+        //         data[3] <<  0
+        //         );
+        // }
+        // uint16_t get_data_uint16() const {
+        //     // check this, it is probably garbage:
+        //     assert_data_type(DataType::UNSIGNED16);
+        //     return (
+        //         data[0] <<  8 |
+        //         data[1] <<  0
+        //         );
+        // }
+        // int16_t get_data_int16() const {
+        //     // check this, it is probably garbage:
+        //     assert_data_type(DataType::INTEGER16);
+        //     return (
+        //         data[2] <<  8 |
+        //         data[3] <<  0
+        //         );
+        // }
+
+        // int8_t get_data_int8() const {
+        //     // check this, it is probably garbage:
+        //     assert_data_type(DataType::INTEGER8);
+        //     return (
+        //         data[2] <<  0
+        //         );
+        // }
+
+
+
 bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
 {
     if (frame.raw.len != 4) {
@@ -544,7 +628,8 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
         return false;
     }
 
-    generic_read_object->set_data(frame.packed_generic_response.parameters.data);
+    set_object_data_from_wire_data4(*generic_read_object, frame.packed_generic_response.parameters.data);
+
     generic_read_object->last_fetched_ms = MIN(AP_HAL::millis(), 1U);
 
     switch (generic_read_object->data_type()) {
