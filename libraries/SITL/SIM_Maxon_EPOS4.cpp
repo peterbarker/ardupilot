@@ -253,7 +253,7 @@ void Maxon_EPOS4::wire_data4_from_object_data(uint8_t data[4], const EPOS4Object
 
 void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
 {
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a read_object request! for node_id=%u object=%x subindex=%u", this, req.node_id, req.index_of_object, req.subindex_of_object);
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a read_object request! for node_id=%u object=%x subindex=%u", this, req.node_id, req.index_of_object, req.subindex_of_object);
     if (strict_parsing) {
         if (req.node_id != 1) {
             AP_HAL::panic("Expected node 1 always");
@@ -356,7 +356,7 @@ void Maxon_EPOS4::set_object_data_from_wire_data4(EPOS4Object &obj, const uint8_
 
 void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
 {
-    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a write_object request!", this);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%p Received a write_object request!", this);
     if (req.node_id != 1 && strict_parsing) {
         AP_HAL::panic("Unexpected node id");
     }
@@ -490,9 +490,8 @@ void Maxon_EPOS4::update_state_machine()
     }
 }
 
-void Maxon_EPOS4::update_output()
+void Maxon_EPOS4::update_StatusWord()
 {
-    // update StatusWord - see 2.2.1
     switch (state) {
     case State::START:
         statusword.set_data_uint16(0);
@@ -543,7 +542,33 @@ void Maxon_EPOS4::update_output()
         statusword.set_state_bits(StatusWord::Bit::FAULT);
         break;
     }
+}
 
+void Maxon_EPOS4::update_ModesOfOperationDisplay()
+{
+    switch (state) {
+    case State::START:
+        break;
+    case State::NOT_READY_TO_SWITCH_ON:
+    case State::SWITCH_ON_DISABLED:
+    case State::READY_TO_SWITCH_ON:
+        // can only change mode of operation in these states
+        modes_of_operation_display.set_data_int8(modes_of_operation.get_data_int8());
+        break;
+    case State::SWITCHED_ON:
+    case State::OPERATION_ENABLED:
+    case State::QUICK_STOP_ACTIVE:
+    case State::FAULT_REACTION_ACTIVE:
+    case State::FAULT:
+        break;
+    }
+}
+
+void Maxon_EPOS4::update_output()
+{
+    // update StatusWord - see 2.2.1
+    update_StatusWord();
+    update_ModesOfOperationDisplay();
 
     if (state == State::OPERATION_ENABLED) {
         update_output_pwm();

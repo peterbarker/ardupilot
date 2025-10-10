@@ -428,6 +428,7 @@ private:
         CONTROLWORD             = 0x6040,
         STATUSWORD              = 0x6041,
         MODES_OF_OPERATION      = 0x6060,
+        MODES_OF_OPERATION_DISPLAY = 0x6061,
         POSITION_DEMAND_VALUE   = 0x6062,
         TARGET_POSITION         = 0x607a,
         SOFTWARE_POSITION_LIMIT = 0x607d,
@@ -444,10 +445,11 @@ private:
     struct {
         ObjectID id;
         EPOS4Object *object;
-    } epos4_objects[6] {
+    } epos4_objects[7] {
         { ObjectID::HOME_POSITION, &home_position },
         { ObjectID::CONTROLWORD, &controlword },
         { ObjectID::MODES_OF_OPERATION, &modes_of_operation },
+        { ObjectID::MODES_OF_OPERATION_DISPLAY, &modes_of_operation_display },
         { ObjectID::STATUSWORD, &statusword },
         { ObjectID::TARGET_POSITION, &target_position },
         { ObjectID::MOTION_PROFILE_TYPE, &motion_profile_type },
@@ -477,6 +479,8 @@ private:
     uint32_t state_start_ms;
     uint32_t time_in_state_ms() const { return AP_HAL::millis() - state_start_ms; }
     void update_state_machine();
+    void update_StatusWord();
+    void update_ModesOfOperationDisplay();
 
     /*
      *  Input Handling

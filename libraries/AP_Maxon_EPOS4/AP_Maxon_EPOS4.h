@@ -49,25 +49,6 @@ private:
 
             WANT_SEND_WRITE = 35,
             WANT_WRITE_RESPONSE  = 36,
-
-            // WANT_SEND_READ_HOME_POSITION = 35,
-            // WANT_HOME_POSITION = 36,
-
-            // WANT_SEND_WRITE_MODES_OF_OPERATION = 45,
-            // WANT_WRITE_MODES_OF_OPERATION_ACK = 46,
-
-            // WANT_SEND_WRITE_MODES_OF_OPERATION = 45,
-            // WANT_WRITE_MODES_OF_OPERATION_ACK = 46,
-
-            // WANT_SEND_READ_STATUSWORD = 55,
-            // WANT_SEND_WRITE_ENABLEPPM_COMMAND = 55,
-
-            // WANT_ENABLEPPMCOMMAND_ACK = 56,
-
-            // WANT_SEND_ENABLESWITCH_COMMAND = 65,
-            // WANT_ENABLESWITCHCOMMAND_ACK = 66,
-            // WANT_SEND_WRITE_TARGET_POSITION = 100,
-            // WANT_WRITE_TARGET_POSITION_ACK = 101,
         };
         State state = State::IDLE;
         void set_state(State newstate);
@@ -240,11 +221,10 @@ private:
         class AP_HAL::UARTDriver *port;
     private:
 
-        uint32_t last_TARGET_POSITION_sent_ms;
+        void init();
+        bool initialised;
 
-        enum class ModeOfOperation : uint8_t {
-            PROFILE_POSITION_MODE = 1,
-        };
+        uint32_t last_TARGET_POSITION_sent_ms;
 
         void update_input();
         void handle_completed_frame();
@@ -271,6 +251,7 @@ private:
             CONTROLWORD             = 0x6040,
             STATUSWORD              = 0x6041,
             MODES_OF_OPERATION      = 0x6060,
+            MODES_OF_OPERATION_DISPLAY = 0x6061,
             POSITION_DEMAND_VALUE   = 0x6062,
             TARGET_POSITION         = 0x607a,
             SOFTWARE_POSITION_LIMIT = 0x607d,
@@ -347,6 +328,7 @@ private:
             }
             AP_HAL::panic("Invalid data type");
         }
+        virtual bool read_only() const { return false; }
 
         uint32_t last_fetched_ms;
 
@@ -405,7 +387,23 @@ private:
             desired_data.data_int32 = v;
             has_desired_data = true;
         }
-        bool dirty() const;
+        void set_desired_data_int8(int8_t v) {
+            desired_data.data_int8 = v;
+            has_desired_data = true;
+        }
+        bool value_as_desired() const {
+            switch (data_type()) {
+            case EPOS4Object::DataType::INTEGER8:
+                return data_int8 == desired_data.data_int8;
+            case EPOS4Object::DataType::INTEGER16:
+                return data_int16 == desired_data.data_int16;
+            case EPOS4Object::DataType::UNSIGNED16:
+                return data_uint16 == desired_data.data_uint16;
+            case EPOS4Object::DataType::INTEGER32:
+                return data_int32 == desired_data.data_int32;
+            }
+            return false;
+        }
 
         };
 
@@ -480,8 +478,30 @@ private:
             DataType data_type() const override { return DataType::INTEGER32; }
         };
 
-        StatusWord statusword{0};
+        enum class ModeOfOperation : int8_t {
+            PROFILE_POSITION_MODE = 1,
+        };
+
+        class ModesOfOperation : public EPOS4Object {
+        public:
+            DataType data_type() const override { return DataType::INTEGER8; }
+            void set_desired_mode(ModeOfOperation _mode) {
+                desired_data.data_int8 = (int8_t)_mode;
+            }
+        };
+        class ModesOfOperationDisplay : public EPOS4Object {
+        public:
+            DataType data_type() const override { return DataType::INTEGER8; }
+            void set_desired_mode(ModeOfOperation _mode) {
+                desired_data.data_int8 = (int8_t)_mode;
+            }
+            bool read_only() const override { return true; }
+        };
+
         HomePosition home_position{0};
+        ModesOfOperation modes_of_operation;
+        ModesOfOperationDisplay modes_of_operation_display;
+        StatusWord statusword{0};
 
         void set_read_object(ObjectID id, EPOS4Object &object);
         ObjectID generic_read_object_id;
@@ -512,10 +532,11 @@ private:
             const uint32_t fetch_interval_ms;
 
             uint32_t last_fetch_ms;
-        } epos4_objects[2] {
+        } epos4_objects[4] {
             { ObjectID::HOME_POSITION, home_position, 10000 },
             // { ObjectID::CONTROLWORD, controlword },
-            // { ObjectID::MODES_OF_OPERATION, modes_of_operation },
+            { ObjectID::MODES_OF_OPERATION, modes_of_operation, 10000 },
+            { ObjectID::MODES_OF_OPERATION_DISPLAY, modes_of_operation_display, 1000 },
             { ObjectID::STATUSWORD, statusword, 500 },
             // { ObjectID::TARGET_POSITION, target_position },
             // { ObjectID::MOTION_PROFILE_TYPE, motion_profile_type },

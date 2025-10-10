@@ -392,43 +392,59 @@ void AP_Maxon_EPOS4::ServoInstance::process_fetch_parameters()
         if (map.object.last_fetched_ms) {
             continue;
         }
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Fetching parameter 0x%x", (unsigned)map.id);
+        // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Fetching parameter 0x%x", (unsigned)map.id);
         set_read_object(map.id, map.object);
         return;
     }
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon: parameter fetch complete");
     have_all_parameters = true;
-}
-
-bool AP_Maxon_EPOS4::ServoInstance::EPOS4Object::dirty() const
-{
-    if (!has_desired_data) {
-        return false;
-    }
-    if (last_fetched_ms == 0) {
-        return true;
-    }
-    switch (data_type()) {
-    case EPOS4Object::DataType::INTEGER8:
-        return data_int8 != desired_data.data_int8;
-    case EPOS4Object::DataType::INTEGER16:
-        return data_int16 != desired_data.data_int16;
-    case EPOS4Object::DataType::UNSIGNED16:
-        return data_uint16 != desired_data.data_uint16;
-    case EPOS4Object::DataType::INTEGER32:
-        return data_int32 != desired_data.data_int32;
-    }
-    return false;
 }
 
 void AP_Maxon_EPOS4::ServoInstance::process_fix_parameters()
 {
+    bool good = true;
     for (auto &map : epos4_objects) {
-        if (!map.object.dirty()) {
+        auto &object = map.object;
+        if (!object.has_desired_data) {
             continue;
         }
-        set_write_object_desired(map.id, map.object);
+        if (object.last_fetched_ms == 0) {
+            // well, this is definitely a problem... should have
+            // happened first-thing!
+            set_read_object(map.id, object);
+            return;
+        }
+        if (!object.value_as_desired()) {
+            if (!object.read_only()) {
+                set_write_object_desired(map.id, object);
+                map.object.last_fetched_ms = 0;  // so we fetch the new value
+                return;
+            }
+            good = false;
+        }
     }
-    parameters_as_desired = true;
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon[%u]: parameter configuration complete:", srv_channel->servo_output_number());
+    parameters_as_desired = good;
+    for (auto &map : epos4_objects) {
+        const auto &object = map.object;
+        if (!object.has_desired_data) {
+            continue;
+        }
+        switch (object.data_type()) {
+        case EPOS4Object::DataType::INTEGER8:
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon[%u]: 0x%x=%d", srv_channel->servo_output_number(), (uint16_t)map.id, object.get_data_int8());
+            break;
+        case EPOS4Object::DataType::INTEGER16:
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon[%u]: 0x%x=%d", srv_channel->servo_output_number(), (uint16_t)map.id, object.get_data_int16());
+            break;
+        case EPOS4Object::DataType::UNSIGNED16:
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon[%u]: 0x%x=%x (%u)", srv_channel->servo_output_number(), (uint16_t)map.id, object.get_data_uint16(), object.get_data_uint16());
+            break;
+        case EPOS4Object::DataType::INTEGER32:
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon[%u]: 0x%x=%d", srv_channel->servo_output_number(), (uint16_t)map.id, object.get_data_int32());
+            break;
+        }
+    }
 }
 
 void AP_Maxon_EPOS4::ServoInstance::handle_device_state_SWITCH_ON_DISABLED()
@@ -443,6 +459,13 @@ void AP_Maxon_EPOS4::ServoInstance::handle_device_state_SWITCH_ON_DISABLED()
     }
 }
 
+void AP_Maxon_EPOS4::ServoInstance::init()
+{
+    // set up desired register values:
+    modes_of_operation.set_desired_data_int8(uint8_t(ModeOfOperation::PROFILE_POSITION_MODE));
+    modes_of_operation_display.set_desired_data_int8(uint8_t(ModeOfOperation::PROFILE_POSITION_MODE));
+}
+
 void AP_Maxon_EPOS4::ServoInstance::update()
 {
     if (port == nullptr) {
@@ -452,6 +475,10 @@ void AP_Maxon_EPOS4::ServoInstance::update()
     if (srv_channel == nullptr) {
         // should not happen
         return;
+    }
+    if (!initialised) {
+        init();
+        initialised = true;
     }
 
     update_input();
@@ -724,20 +751,20 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
 
     generic_read_object->last_fetched_ms = MIN(AP_HAL::millis(), 1U);
 
-    switch (generic_read_object->data_type()) {
-    case EPOS4Object::DataType::INTEGER8:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int8());
-        break;
-    case EPOS4Object::DataType::INTEGER16:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int16());
-        break;
-    case EPOS4Object::DataType::INTEGER32:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int32());
-        break;
-    case EPOS4Object::DataType::UNSIGNED16:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %u", (unsigned)generic_read_object_id, generic_read_object->get_data_uint16());
-        break;
-    }
+    // switch (generic_read_object->data_type()) {
+    // case EPOS4Object::DataType::INTEGER8:
+    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int8());
+    //     break;
+    // case EPOS4Object::DataType::INTEGER16:
+    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int16());
+    //     break;
+    // case EPOS4Object::DataType::INTEGER32:
+    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %d", (unsigned)generic_read_object_id, generic_read_object->get_data_int32());
+    //     break;
+    // case EPOS4Object::DataType::UNSIGNED16:
+    //     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Object 0x%x has value %u", (unsigned)generic_read_object_id, generic_read_object->get_data_uint16());
+    //     break;
+    // }
 
     return true;
 }

@@ -320,6 +320,10 @@ public:
     // used by DO_SET_SERVO commands
     void ignore_small_rcin_changes() { ign_small_rcin_changes = true; }
 
+    // servo offset starting from 1 - i.e. 3 is often throttle-out on
+    // Planes, 1,2,3,4 are motors on a typical quadcopter.
+    uint8_t servo_output_number() const { return ch_num + 1; }
+
 private:
     AP_Int16 servo_min;
     AP_Int16 servo_max;
