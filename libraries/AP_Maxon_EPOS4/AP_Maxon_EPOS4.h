@@ -255,9 +255,12 @@ private:
         void update_output();
         void update_desired_device_state();
         bool have_all_parameters;
+        bool parameters_as_desired;
         void effect_desired_device_state_change();
+        void handle_device_state_SWITCH_ON_DISABLED();
 
         void process_fetch_parameters();
+        void process_fix_parameters();
 
         bool send_write_MODES_OF_OPERATION();
         bool send_write_TARGET_POSITION();
@@ -389,9 +392,25 @@ private:
             int16_t data_int16;
             int8_t data_int8;
         };
+
+
+        union {
+            int32_t data_int32;
+            uint16_t data_uint16;
+            int16_t data_int16;
+            int8_t data_int8;
+        } desired_data;
+        bool has_desired_data;
+        void set_desired_data_int32(int32_t v) {
+            desired_data.data_int32 = v;
+            has_desired_data = true;
+        }
+        bool dirty() const;
+
         };
 
         void set_object_data_from_wire_data4(EPOS4Object &object, uint8_t data[4]);
+        void wire_data4_from_object_desired_data(uint8_t data[4], const EPOS4Object &obj);
 
         class StatusWord : public EPOS4Object {
         public:
@@ -473,6 +492,8 @@ private:
         void set_write_object(ObjectID id, uint32_t data);
         void set_write_object_uint16(ObjectID id, uint16_t data);
 
+        bool set_write_object_desired(ObjectID id, const EPOS4Object &obj);
+
         void set_write_ControlWord(ControlWord::Command command);
 
         ObjectID generic_write_object_id;
@@ -499,6 +520,7 @@ private:
             // { ObjectID::TARGET_POSITION, target_position },
             // { ObjectID::MOTION_PROFILE_TYPE, motion_profile_type },
         };
+
     };
 
     ServoInstance instances[AP_MAXON_EPOS4_MAX_INSTANCES];
@@ -510,8 +532,6 @@ private:
 #if AP_MAXON_EPOS4_MAX_INSTANCES > 1
     AP_Int8 servo2_channel;
 #endif
-
-    bool have_all_parameters;
 };
 
 #endif  // AP_MAXON_EPOS4_PROTOCOL

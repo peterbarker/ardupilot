@@ -101,6 +101,14 @@ void AP_Maxon_EPOS4::ServoInstance::set_read_object(ObjectID id, EPOS4Object &ob
     set_state(State::WANT_SEND_READ);
 }
 
+bool AP_Maxon_EPOS4::ServoInstance::set_write_object_desired(ObjectID id, const EPOS4Object &obj)
+{
+    uint8_t data[4];
+    wire_data4_from_object_desired_data(data, obj);
+    set_write_object(id, data);
+    return true;
+}
+
 void AP_Maxon_EPOS4::ServoInstance::set_write_ControlWord(ControlWord::Command command)
 {
     uint16_t control_word = 0;
@@ -391,6 +399,50 @@ void AP_Maxon_EPOS4::ServoInstance::process_fetch_parameters()
     have_all_parameters = true;
 }
 
+bool AP_Maxon_EPOS4::ServoInstance::EPOS4Object::dirty() const
+{
+    if (!has_desired_data) {
+        return false;
+    }
+    if (last_fetched_ms == 0) {
+        return true;
+    }
+    switch (data_type()) {
+    case EPOS4Object::DataType::INTEGER8:
+        return data_int8 != desired_data.data_int8;
+    case EPOS4Object::DataType::INTEGER16:
+        return data_int16 != desired_data.data_int16;
+    case EPOS4Object::DataType::UNSIGNED16:
+        return data_uint16 != desired_data.data_uint16;
+    case EPOS4Object::DataType::INTEGER32:
+        return data_int32 != desired_data.data_int32;
+    }
+    return false;
+}
+
+void AP_Maxon_EPOS4::ServoInstance::process_fix_parameters()
+{
+    for (auto &map : epos4_objects) {
+        if (!map.object.dirty()) {
+            continue;
+        }
+        set_write_object_desired(map.id, map.object);
+    }
+    parameters_as_desired = true;
+}
+
+void AP_Maxon_EPOS4::ServoInstance::handle_device_state_SWITCH_ON_DISABLED()
+{
+    if (!have_all_parameters) {
+        process_fetch_parameters();
+        return;
+    }
+    if (!parameters_as_desired) {
+        process_fix_parameters();
+        return;
+    }
+}
+
 void AP_Maxon_EPOS4::ServoInstance::update()
 {
     if (port == nullptr) {
@@ -416,9 +468,7 @@ void AP_Maxon_EPOS4::ServoInstance::update()
             // wait and hope for the best
             break;
         case DeviceState::SWITCH_ON_DISABLED:
-            if (!have_all_parameters) {
-                process_fetch_parameters();
-            }
+            handle_device_state_SWITCH_ON_DISABLED();
             break;
         case DeviceState::OPERATION_ENABLED:
             // send position commands, poll statusword, current position etc etc
@@ -555,6 +605,48 @@ void AP_Maxon_EPOS4::ServoInstance::set_object_data_from_wire_data4(EPOS4Object 
         object.set_data_int32(v);
         break;
     }
+    }
+}
+
+void AP_Maxon_EPOS4::ServoInstance::wire_data4_from_object_desired_data(uint8_t data[4], const EPOS4Object &object)
+{
+    switch (object.data_type()) {
+    case EPOS4Object::DataType::INTEGER8: {
+        // this is probably wrong:
+        const int8_t v = object.get_data_int8();
+        data[3] = v;
+        break;
+    }
+    case EPOS4Object::DataType::INTEGER16: {
+        // this is probably wrong:
+        const int16_t v = object.get_data_int16();
+        data[0] = v >> 8;
+        data[1] = v >> 0;
+        break;
+    }
+    case EPOS4Object::DataType::UNSIGNED16: {
+        // this is probably wrong:
+        const uint16_t v = object.get_data_uint16();
+        data[0] = v >> 8;
+        data[1] = v >> 0;
+        break;
+    }
+    case EPOS4Object::DataType::INTEGER32: {
+        const int32_t v = object.get_data_int32();
+        data[0] = v >> 24;
+        data[1] = v >> 16;
+        data[2] = v >> 8;
+        data[3] = v >> 0;
+        break;
+    }
+    // case DataType::UNSIGNED32: {
+    //     const uint32_t v = object.get_data_uint32();
+    //     data[0] = v >> 24;
+    //     data[1] = v >> 16;
+    //     data[2] = v >> 8;
+    //     data[3] = v >> 0;
+    //     break;
+    // }
     }
 }
 
