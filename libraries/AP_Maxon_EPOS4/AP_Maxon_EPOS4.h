@@ -253,6 +253,9 @@ private:
         bool handle_generic_write_response();
 
         void update_output();
+        void update_desired_device_state();
+        bool have_all_parameters;
+        void effect_desired_device_state_change();
 
         bool send_write_MODES_OF_OPERATION();
         bool send_write_TARGET_POSITION();
@@ -309,6 +312,8 @@ private:
         };
         DeviceState device_state = DeviceState::UNKNOWN;
         void set_device_state(DeviceState newstate);
+        DeviceState desired_device_state = DeviceState::SWITCH_ON_DISABLED;
+        void set_desired_device_state(DeviceState newstate);
 
         class PACKED EPOS4Object {
         public:
@@ -435,6 +440,8 @@ private:
             public:
                 static constexpr uint16_t SWITCH_ON_DISABLED = Bit::SWITCH_ON_DISABLED;
             };
+            // these are the bits involved in setting the state:
+            const uint16_t state_bitmask{0b1101111};
 
             bool bit_is_set(Bit bit) const {
                 return (get_data_uint16() & bit.value) != 0;
@@ -459,6 +466,17 @@ private:
             DeviceState get_device_state() const;
         };
 
+        class ControlWord : public EPOS4Object {
+        public:
+            using EPOS4Object::EPOS4Object;
+            DataType data_type() const override { return DataType::UNSIGNED16; }
+
+            enum class Command {
+                DISABLE_VOLTAGE,
+                FAULT_RESET,
+                SHUTDOWN,
+            };
+        };
 
         StatusWord statusword{0};
 
@@ -469,6 +487,9 @@ private:
         void set_write_object(ObjectID id, EPOS4Object &object);
         void set_write_object(ObjectID id, const uint8_t data[4]);
         void set_write_object(ObjectID id, uint32_t data);
+        void set_write_object_uint16(ObjectID id, uint16_t data);
+
+        void set_write_ControlWord(ControlWord::Command command);
 
         ObjectID generic_write_object_id;
         uint8_t generic_write_data[4];
@@ -505,6 +526,8 @@ private:
 #if AP_MAXON_EPOS4_MAX_INSTANCES > 1
     AP_Int8 servo2_channel;
 #endif
+
+    bool have_all_parameters;
 };
 
 #endif  // AP_MAXON_EPOS4_PROTOCOL

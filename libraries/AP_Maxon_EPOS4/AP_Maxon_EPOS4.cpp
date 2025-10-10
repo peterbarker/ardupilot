@@ -101,6 +101,32 @@ void AP_Maxon_EPOS4::ServoInstance::set_read_object(ObjectID id, EPOS4Object &ob
     set_state(State::WANT_SEND_READ);
 }
 
+void AP_Maxon_EPOS4::ServoInstance::set_write_ControlWord(ControlWord::Command command)
+{
+    uint16_t control_word = 0;
+    // more bits here to set PPM etc!
+    uint16_t mask;
+    uint16_t state_bits;
+    switch (command) {  // see 2.2.3
+    case ControlWord::Command::DISABLE_VOLTAGE:
+        mask       = 0b10000010;
+        state_bits = 0b00000000;
+        break;
+    case ControlWord::Command::FAULT_RESET:
+        mask       = 0b10000000;
+        state_bits = 0b10000000;
+        break;
+    case ControlWord::Command::SHUTDOWN:
+        mask       = 0b10000111;
+        state_bits = 0b00000110;
+        break;
+    }
+    control_word &= ~mask;
+    control_word |= state_bits;
+
+    set_write_object_uint16(ObjectID::CONTROLWORD, control_word);
+}
+
 void AP_Maxon_EPOS4::ServoInstance::set_write_object(ObjectID id, const uint8_t data[4])
 {
     if (state != State::IDLE) {
@@ -122,6 +148,142 @@ void AP_Maxon_EPOS4::ServoInstance::set_write_object(ObjectID id, uint32_t data)
     };
     set_write_object(id, data_bytes);
 }
+void AP_Maxon_EPOS4::ServoInstance::set_write_object_uint16(ObjectID id, uint16_t data)
+{
+    const uint8_t data_bytes[4] {
+        uint8_t((uint32_t(data) >> 8) & 0xff),
+        uint8_t((uint32_t(data) >> 0) & 0xff),
+        0,
+        0
+    };
+    set_write_object(id, data_bytes);
+}
+
+void AP_Maxon_EPOS4::ServoInstance::update_desired_device_state()
+{
+    if (!have_all_parameters) {
+        set_desired_device_state(DeviceState::SWITCH_ON_DISABLED);
+        return;
+    }
+}
+
+void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
+{
+    switch (desired_device_state) {
+    case DeviceState::UNKNOWN_RESET:
+    case DeviceState::UNKNOWN:
+    case DeviceState::FAULT_REACTION_ACTIVE:
+    case DeviceState::FAULT:
+    case DeviceState::NOT_READY_TO_SWITCH_ON:
+        // these are not desirable!
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        break;
+    case DeviceState::SWITCH_ON_DISABLED:
+        switch (device_state) {
+        case DeviceState::UNKNOWN_RESET:
+        case DeviceState::UNKNOWN:
+        case DeviceState::NOT_READY_TO_SWITCH_ON:
+            // just have to wait; we'll be probing the status word
+            break;
+        case DeviceState::FAULT_REACTION_ACTIVE:
+            // this will automatically shift into Fault, wait for that
+            break;
+        case DeviceState::SWITCH_ON_DISABLED:
+            // already in correct state
+            break;
+        case DeviceState::READY_TO_SWITCH_ON:
+            // state transition 7 - use "Disable voltage" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+            break;
+        case DeviceState::SWITCHED_ON:
+            // state transition 10 - use "Disable voltage" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+            break;
+        case DeviceState::OPERATION_ENABLED:
+            // state transition 9 - use "Disable voltage" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+        case DeviceState::QUICK_STOP_ACTIVE:
+            // state transition 12 - use "Disable voltage" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+        case DeviceState::FAULT:
+            // state transition 15 - use "Fault Reset" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::FAULT_RESET);
+        }
+        break;
+    case DeviceState::READY_TO_SWITCH_ON:
+        switch (device_state) {
+        case DeviceState::UNKNOWN_RESET:
+        case DeviceState::UNKNOWN:
+        case DeviceState::NOT_READY_TO_SWITCH_ON:
+            // just have to wait; we'll be probing the status word
+            break;
+        case DeviceState::FAULT_REACTION_ACTIVE:
+            // this will automatically shift into Fault
+            break;
+        case DeviceState::READY_TO_SWITCH_ON:
+            // already in correct state
+            break;
+        case DeviceState::SWITCH_ON_DISABLED:
+            // state transition 2 - use "shutdown" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::SHUTDOWN);
+            break;
+        case DeviceState::SWITCHED_ON:
+            // state transition 6 - use "shutdown" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::SHUTDOWN);
+            break;
+        case DeviceState::OPERATION_ENABLED:
+            // state transition 8 - use "shutdown" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::SHUTDOWN);
+            break;
+        case DeviceState::QUICK_STOP_ACTIVE:
+            // state transition 12, use "disable voltage" to go via switch-on-disabled
+            set_write_ControlWord(ControlWord::Command::DISABLE_VOLTAGE);
+            break;
+        case DeviceState::FAULT:
+            // state transition 15 - use "Fault Reset" (2.2.3)
+            set_write_ControlWord(ControlWord::Command::FAULT_RESET);
+            break;
+        }
+        break;
+    case DeviceState::SWITCHED_ON:
+        switch (device_state) {
+        case DeviceState::UNKNOWN_RESET:
+        case DeviceState::UNKNOWN:
+        case DeviceState::NOT_READY_TO_SWITCH_ON:
+            // just have to wait; we'll be probing the status word
+            break;
+        case DeviceState::FAULT_REACTION_ACTIVE:
+            // this will automatically shift into Fault
+            break;
+        }
+        break;
+    case DeviceState::OPERATION_ENABLED:
+        switch (device_state) {
+        case DeviceState::UNKNOWN_RESET:
+        case DeviceState::UNKNOWN:
+        case DeviceState::NOT_READY_TO_SWITCH_ON:
+            // just have to wait; we'll be probing the status word
+            break;
+        }
+        case DeviceState::FAULT_REACTION_ACTIVE:
+            // this will automatically shift into Fault
+            break;
+        break;
+    case DeviceState::QUICK_STOP_ACTIVE:
+        switch (device_state) {
+        case DeviceState::UNKNOWN_RESET:
+        case DeviceState::UNKNOWN:
+        case DeviceState::NOT_READY_TO_SWITCH_ON:
+            // just have to wait; we'll be probing the status word
+            break;
+        case DeviceState::FAULT_REACTION_ACTIVE:
+            // this will automatically shift into Fault
+            break;
+        }
+        break;
+    }
+}
+
 
 void AP_Maxon_EPOS4::ServoInstance::update()
 {
@@ -136,6 +298,12 @@ void AP_Maxon_EPOS4::ServoInstance::update()
 
     update_input();
 
+    update_desired_device_state();
+    if (desired_device_state != device_state) {
+        effect_desired_device_state_change();
+    } else {
+    }
+
     // a detected device state can cause us to reset our own state
     // (think a reset of the device)
     switch (device_state) {
@@ -148,9 +316,7 @@ void AP_Maxon_EPOS4::ServoInstance::update()
             break;
         }
         const DeviceState new_device_state = statusword.get_device_state();
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Detected device state %u", (unsigned)new_device_state);
-        // switch (device_state) {
-        // }
+        set_device_state(new_device_state);
         break;
     }
     case DeviceState::NOT_READY_TO_SWITCH_ON:
@@ -179,6 +345,13 @@ void AP_Maxon_EPOS4::ServoInstance::set_device_state(DeviceState new_state)
 {
     // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u", (unsigned)new_state);
     device_state = new_state;
+    // state_start_ms = AP_HAL::millis();
+}
+
+void AP_Maxon_EPOS4::ServoInstance::set_desired_device_state(DeviceState new_state)
+{
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u", (unsigned)new_state);
+    desired_device_state = new_state;
     // state_start_ms = AP_HAL::millis();
 }
 
