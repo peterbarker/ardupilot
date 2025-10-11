@@ -866,7 +866,7 @@ void Maxon_EPOS4::update_output_pwm()
     const int32_t scaled = target_position.get_data_int32();
     const float normalised = float(scaled) / (INT32_MAX / 2);  // -1 to 1
     const uint16_t _pwm = 1000 + 1000*((normalised + 1) * 0.5);
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SIM: %p scaled=%d norm=%f pwm=%u", this, scaled, normalised, _pwm);
+    // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SIM-Maxon[%u]: scaled=%d norm=%f pwm=%u", servo_number.get(), scaled, normalised, _pwm);
     output_pwm = _pwm;
 }
 
