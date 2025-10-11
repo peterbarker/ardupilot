@@ -257,6 +257,32 @@ private:
         }
     };
 
+    class PACKED RS232BitRate : public EPOS4Object {
+    public:
+        RS232BitRate(int32_t value) {
+            set_data_int8(value);
+        }
+        AccessType access_type() const override { return AccessType::READ_WRITE; }
+        DataType data_type() const override { return DataType::INTEGER8; }
+        enum class Rate {
+            b9600   = 0,
+            b14400  = 1,
+            b19200  = 2,
+            b38400  = 3,
+            b57600  = 4,
+            b115200 = 5,
+        };
+    };
+
+    class PACKED RS232FrameTimeout : public EPOS4Object {
+    public:
+        RS232FrameTimeout(int32_t value) {
+            set_data_uint16(value);
+        }
+        AccessType access_type() const override { return AccessType::READ_WRITE; }
+        DataType data_type() const override { return DataType::UNSIGNED16; }
+    };
+
     class PACKED HomePosition : public EPOS4Object {
     public:
         HomePosition(int32_t value) {
@@ -409,6 +435,8 @@ private:
         }
     };
 
+    HomePosition RS232BitRate{5};
+    HomePosition RS232FrameTimeout{500};
     HomePosition home_position{36865};  // initial value is actually 0 in datasheet
     ControlWord controlword{0};
     ModesOfOperation modes_of_operation{1};
@@ -429,6 +457,8 @@ private:
     bool operation_enabled;
 
     enum class ObjectID : uint16_t {
+        RS232_BIT_RATE          = 0x2002,
+        RS232_FRAME_TIMEOUT     = 0x2005,
         MAX_GEAR_INPUT_SPEED    = 0x3003,
         HOME_POSITION           = 0x30b0, // example on page 2.2.9 in EPOS4 "Communication Guide-En.pdf"
         CONTROLWORD             = 0x6040,
@@ -452,6 +482,8 @@ private:
         ObjectID id;
         EPOS4Object *object;
     } epos4_objects[7] {
+        { ObjectID::RS232_BIT_RATE, &rs232_bit_rate },
+        { ObjectID::RS232_FRAME_TIMEOUT, &rs232_frame_timeout },
         { ObjectID::HOME_POSITION, &home_position },
         { ObjectID::CONTROLWORD, &controlword },
         { ObjectID::MODES_OF_OPERATION, &modes_of_operation },
