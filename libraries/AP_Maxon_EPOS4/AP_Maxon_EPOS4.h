@@ -238,12 +238,17 @@ private:
         bool parameters_as_desired;
         void effect_desired_device_state_change();
         void handle_device_state_SWITCH_ON_DISABLED();
+        void handle_device_state_OPERATION_ENABLED();
+        bool should_estop() const;
 
         void process_fetch_parameters();
         void process_fix_parameters();
 
         bool send_write_MODES_OF_OPERATION();
         bool send_write_TARGET_POSITION();
+        bool have_valid_position_output() const {
+            return true;  // FIXME
+        }
 
         enum class ObjectID : uint16_t {
             MAX_GEAR_INPUT_SPEED    = 0x3003,
@@ -285,21 +290,27 @@ private:
 
         // state we think the device is in (see 2.2.1):
         enum class DeviceState {
-            UNKNOWN_RESET          = 30,
-            UNKNOWN                = 40,
-            NOT_READY_TO_SWITCH_ON = 56,
-            SWITCH_ON_DISABLED     = 57,
-            READY_TO_SWITCH_ON     = 58,
-            SWITCHED_ON            = 59,
-            OPERATION_ENABLED      = 60,
-            QUICK_STOP_ACTIVE      = 61,
-            FAULT_REACTION_ACTIVE  = 62,
-            FAULT                  = 63,
+            UNKNOWN_RESET          = 0,
+            UNKNOWN                = 1,
+            NOT_READY_TO_SWITCH_ON = 2,
+            SWITCH_ON_DISABLED     = 3,
+            READY_TO_SWITCH_ON     = 4,
+            SWITCHED_ON            = 5,
+            OPERATION_ENABLED      = 6,
+            QUICK_STOP_ACTIVE      = 7,
+            FAULT_REACTION_ACTIVE  = 8,
+            FAULT                  = 9,
         };
         DeviceState device_state = DeviceState::UNKNOWN;
         void set_device_state(DeviceState newstate);
         DeviceState desired_device_state = DeviceState::SWITCH_ON_DISABLED;
         void set_desired_device_state(DeviceState newstate);
+        uint32_t device_state_start_ms;
+        // returns how long we've been in the current state
+        uint32_t time_in_device_state_ms() const {
+            return AP_HAL::millis() - device_state_start_ms;
+        }
+
 
         class PACKED EPOS4Object {
         public:
@@ -462,13 +473,13 @@ private:
             DataType data_type() const override { return DataType::UNSIGNED16; }
 
             enum class Command {
-                DISABLE_VOLTAGE,
-                FAULT_RESET,
-                SHUTDOWN,
-                SWITCH_ON,
-                DISABLE_OPERATION,
-                ENABLE_OPERATION,
-                QUICK_STOP,
+                DISABLE_VOLTAGE   = 0,
+                FAULT_RESET       = 1,
+                SHUTDOWN          = 2,
+                SWITCH_ON         = 3,
+                DISABLE_OPERATION = 4,
+                ENABLE_OPERATION  = 5,
+                QUICK_STOP        = 6,
             };
         };
 

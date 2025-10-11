@@ -183,12 +183,31 @@ void AP_Maxon_EPOS4::ServoInstance::set_write_object_uint16(ObjectID id, uint16_
     set_write_object(id, data_bytes);
 }
 
+bool AP_Maxon_EPOS4::ServoInstance::should_estop() const
+{
+    if (hal.util->safety_switch_state() != AP_HAL::Util::SAFETY_ARMED) {
+        return true;
+    }
+    if (SRV_Channels::get_emergency_stop()) {
+        return true;
+    }
+    if (!have_valid_position_output()) {
+        return true;
+    }
+    return false;
+}
+
 void AP_Maxon_EPOS4::ServoInstance::update_desired_device_state()
 {
+    if (should_estop()) {
+        set_desired_device_state(DeviceState::SWITCH_ON_DISABLED);
+        return;
+    }
     if (!have_all_parameters) {
         set_desired_device_state(DeviceState::SWITCH_ON_DISABLED);
         return;
     }
+    set_desired_device_state(DeviceState::OPERATION_ENABLED);
 }
 
 // consider re-encoding this as a n*n table of to find a transition
@@ -459,6 +478,11 @@ void AP_Maxon_EPOS4::ServoInstance::handle_device_state_SWITCH_ON_DISABLED()
     }
 }
 
+void AP_Maxon_EPOS4::ServoInstance::handle_device_state_OPERATION_ENABLED()
+{
+    abort();
+}
+
 void AP_Maxon_EPOS4::ServoInstance::init()
 {
     // set up desired register values:
@@ -482,35 +506,6 @@ void AP_Maxon_EPOS4::ServoInstance::update()
     }
 
     update_input();
-
-    update_desired_device_state();
-    if (desired_device_state != device_state) {
-        effect_desired_device_state_change();
-    } else {
-        // work out what we want to do in the current device state, then!
-        switch (device_state) {
-        case DeviceState::UNKNOWN_RESET:
-        case DeviceState::UNKNOWN:
-        case DeviceState::NOT_READY_TO_SWITCH_ON:
-            // wait and hope for the best
-            break;
-        case DeviceState::SWITCH_ON_DISABLED:
-            handle_device_state_SWITCH_ON_DISABLED();
-            break;
-        case DeviceState::OPERATION_ENABLED:
-            // send position commands, poll statusword, current position etc etc
-            abort();
-            break;
-        case DeviceState::READY_TO_SWITCH_ON:
-        case DeviceState::SWITCHED_ON:
-        case DeviceState::QUICK_STOP_ACTIVE:
-        case DeviceState::FAULT_REACTION_ACTIVE:
-        case DeviceState::FAULT:
-            // we can't desire to be in these states!
-            INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
-            break;
-        }
-    }
 
     // a detected device state can cause us to reset our own state
     // (think a reset of the device)
@@ -546,6 +541,40 @@ void AP_Maxon_EPOS4::ServoInstance::update()
         break;
     }
 
+    update_desired_device_state();
+
+    if (desired_device_state != device_state) {
+        effect_desired_device_state_change();
+    } else {
+        // work out what we want to do in the current device state, then!
+        switch (device_state) {
+        case DeviceState::UNKNOWN_RESET:
+        case DeviceState::UNKNOWN:
+        case DeviceState::NOT_READY_TO_SWITCH_ON:
+            // wait and hope for the best
+            break;
+        case DeviceState::SWITCH_ON_DISABLED:
+            handle_device_state_SWITCH_ON_DISABLED();
+            break;
+        case DeviceState::OPERATION_ENABLED:
+            // send position commands, poll statusword, current position etc etc
+            handle_device_state_OPERATION_ENABLED();
+            break;
+        case DeviceState::READY_TO_SWITCH_ON:
+        case DeviceState::SWITCHED_ON:
+        case DeviceState::QUICK_STOP_ACTIVE:
+        case DeviceState::FAULT_REACTION_ACTIVE:
+        case DeviceState::FAULT:
+            // we should never spend any considerable amount of time
+            // in these states.  If we do then there's a bug in
+            // effect_desired_device_state_change
+            if (time_in_device_state_ms() > 1000) {
+                INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+            }
+            break;
+        }
+    }
+
     update_output();
 }
 
@@ -553,7 +582,7 @@ void AP_Maxon_EPOS4::ServoInstance::set_device_state(DeviceState new_state)
 {
     // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u", (unsigned)new_state);
     device_state = new_state;
-    // state_start_ms = AP_HAL::millis();
+    device_state_start_ms = AP_HAL::millis();
 }
 
 void AP_Maxon_EPOS4::ServoInstance::set_desired_device_state(DeviceState new_state)

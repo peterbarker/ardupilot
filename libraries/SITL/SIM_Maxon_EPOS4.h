@@ -292,6 +292,22 @@ private:
             ENABLE_VOLTAGE            = (1U <<  1),
             SWITCHED_ON               = (1U <<  0),
         };
+
+        bool switched_on;
+        bool voltage_enabled;
+        bool quick_stopped;
+
+        enum class Command {
+            DISABLE_VOLTAGE,
+            FAULT_RESET,
+            SHUTDOWN,
+            SWITCH_ON,
+            DISABLE_OPERATION,
+            ENABLE_OPERATION,
+            QUICK_STOP,
+        };
+
+        Command command() const;
     };
 
     enum class ModeOfOperation : int8_t {

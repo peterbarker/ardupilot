@@ -50,7 +50,7 @@ const AP_Param::GroupInfo Maxon_EPOS4::var_info[] = {
 
 void Maxon_EPOS4::set_state(State new_state)
 {
-    // these sanity checks aer from 2.2, Device Control
+    // these sanity checks are from 2.2, Device Control
     switch (new_state) {
     case State::START:
         break;
@@ -375,7 +375,62 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
         AP_HAL::panic("Write of read-only object");
     }
 
-    set_object_data_from_wire_data4(*obj, req.data);
+    bool process_sets = false;
+    switch (state) {
+    case State::READY_TO_SWITCH_ON:
+    case State::SWITCH_ON_DISABLED:
+        process_sets = true;
+        break;
+    case State::NOT_READY_TO_SWITCH_ON:
+    case State::START:
+    case State::SWITCHED_ON:
+    case State::OPERATION_ENABLED:
+    case State::QUICK_STOP_ACTIVE:
+    case State::FAULT_REACTION_ACTIVE:
+    case State::FAULT:
+        process_sets = (id == ObjectID::CONTROLWORD);
+        break;
+    }
+
+    // ignore attempts to set parameters in these modes - except
+    // for the control word!
+    if (process_sets) {
+        set_object_data_from_wire_data4(*obj, req.data);
+    }
+
+    // TODO: consider stop looking for commands and actually emulate
+    // the things that the commands change - i.e. honour the bit
+    // values being set in the commands!
+
+    // -1 is "ignore this command in the current state"
+    // -2 is "this command is invalid in the current state"
+    // non-negative is the new state
+    // #define x -1
+    // #define X -2
+    // static const int8_t command_transition_table[10][7] {
+    //     { x, x, x, x, x, x, x },  // 0 UNKNOWN_RESET
+    //     { x, x, x, x, x, x, x },  // 1 UNKNOWN
+    //     { x, x, x, x, x, x, x },  // 2 NOT_READY_TO_SWITCH_ON
+    //     { X, X, 4, X, X, X, X },  // 3 SWITCH_ON_DISABLED
+    //     { 3, X, X, 5, X, X, 3 },  // 4 READY_TO_SWITCH_ON
+    //     { 3, X, 4, X, X, 6, 3 },  // 5 SWITCHED_ON
+    //     { 3, X, 4, X, 5, X, 7 },  // 6 OPERATION_ENABLED
+    //     { 3, X, X, X, X, 6, X },  // 7 QUICK_STOP_ACTIVE
+    //     { x, x, x, x, x, x, x },  // 8 FAULT_REACTION_ACTIVE
+    //     { X, 3, X, X, X, X, X },  // 9 FAULT
+    // };
+    // #undef X
+    // #undef x
+    // if (id == ObjectID::CONTROLWORD) {
+    //     const uint8_t command_idx = (uint8_t)controlword.command();
+    //     const uint8_t current_device_state_idx = (uint8_t)device_state;
+    //     const int8_t new_state_idx = command_transition_table[current_device_state_idx][command_idx];
+    //     if (new_state_idx < 0) {
+    //         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Invalid command %u for state %u", command_idx, current_device_state_idx);
+    //     } else {
+    //         set_state(State(new_state_id));
+    //     }
+    // }
 
     // set-time validation of various parameters; if the driver ever
     // sets these then we have a bug!
