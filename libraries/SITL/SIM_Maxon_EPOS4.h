@@ -274,7 +274,7 @@ private:
         }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
         DataType data_type() const override { return DataType::UNSIGNED16; }
-        enum class Bit : uint32_t {
+        enum class Bit : uint16_t {
             RESERVED_15               = (1U << 15),
             RESERVED_14               = (1U << 14),
             RESERVED_13               = (1U << 13),
@@ -288,14 +288,13 @@ private:
             OPERATING_MODE_SPECIFIC_5 = (1U <<  5),  // "change set immediately"
             OPERATING_MODE_SPECIFIC_4 = (1U <<  4),  // new setpoint
             ENABLE_OPERATION          = (1U <<  3),
-            QUICK_STOP                = (1U <<  2),
+            INHIBIT_QUICK_STOP        = (1U <<  2),
             ENABLE_VOLTAGE            = (1U <<  1),
             SWITCHED_ON               = (1U <<  0),
         };
-
-        bool switched_on;
-        bool voltage_enabled;
-        bool quick_stopped;
+        bool bit_is_set(Bit bit) const {
+            return get_data_uint16() & (uint16_t)bit;
+        }
 
         enum class Command {
             DISABLE_VOLTAGE,
@@ -338,74 +337,55 @@ private:
         AccessType access_type() const override { return AccessType::READ_ONLY; }
         DataType data_type() const override { return DataType::UNSIGNED16; }
 
-        class BitMask {
-        public:
-            uint16_t value;
+        enum class Bit : uint16_t {
+            POSITION_REFERENCED_TO_HOME = (1U << 15),
+            RESERVED_14                 = (1U << 14),
+            OPERATING_MODE_SPECIFIC_13  = (1U << 13),  // PPM=following error
+            OPERATING_MODE_SPECIFIC_12  = (1U << 12),  // PPM=setpoint ACK
+            INTERNAL_LIMIT_ACTIVE       = (1U << 11),
+            OPERATING_MODE_SPECIFIC_10  = (1U << 10),  // PPM=Target-reached
+            REMOTE                      = (1U <<  9),
+            RESERVED_8                  = (1U <<  8),
+            WARNING                     = (1U <<  7),
+            SWITCH_ON_DISABLED          = (1U <<  6),
+            QUICK_STOP_INACTIVE         = (1U <<  5),
+            VOLTAGE_ENABLED             = (1U <<  4),
+            FAULT                       = (1U <<  3),
+            OPERATION_ENABLED           = (1U <<  2),
+            SWITCHED_ON                 = (1U <<  1),
+            READY_TO_SWITCH_ON          = (1U <<  0),
         };
-        class Bit {
-        public:
-            uint16_t value;
-            BitMask operator |(Bit otherbit) {
-                return BitMask{uint16_t(otherbit.value | value)};
-            }
-
-            static constexpr uint16_t POSITION_REFERENCED_TO_HOME = 1U<<15;
-            static constexpr uint16_t RESERVED_14 = 1U<<14;
-            static constexpr uint16_t OPERATING_MODE_SPECIFIC_13  = (1U << 13);  // PPM=following error
-            static constexpr uint16_t OPERATING_MODE_SPECIFIC_12  = (1U << 12);  // PPM=setpoint ACK
-            static constexpr uint16_t INTERNAL_LIMIT_ACTIVE       = (1U << 11);
-            static constexpr uint16_t OPERATING_MODE_SPECIFIC_10  = (1U << 10);  // PPM=Target-reached
-            static constexpr uint16_t REMOTE                      = (1U <<  9);
-            static constexpr uint16_t RESERVED_8                  = (1U <<  8);
-            static constexpr uint16_t WARNING                     = (1U <<  7);
-            static constexpr uint16_t SWITCH_ON_DISABLED          = (1U <<  6);
-            static constexpr uint16_t QUICK_STOP                  = (1U <<  5);
-            static constexpr uint16_t VOLTAGE_ENABLED             = (1U <<  4);
-            static constexpr uint16_t FAULT                       = (1U <<  3);
-            static constexpr uint16_t OPERATION_ENABLED           = (1U <<  2);
-            static constexpr uint16_t SWITCHED_ON                 = (1U <<  1);
-            static constexpr uint16_t READY_TO_SWITCH_ON          = (1U <<  0);
-        };
-
-        // class StatusWord::Bit:: public Bit { }
-        // enum class Bit : uint16_t {
-        //     POSITION_REFERENCED_TO_HOME = (1U << 15),
-        //     RESERVED_14                 = (1U << 14),
-        //     OPERATING_MODE_SPECIFIC_13  = (1U << 13),  // PPM=following error
-        //     OPERATING_MODE_SPECIFIC_12  = (1U << 12),  // PPM=setpoint ACK
-        //     INTERNAL_LIMIT_ACTIVE       = (1U << 11),
-        //     OPERATING_MODE_SPECIFIC_10  = (1U << 10),  // PPM=Target-reached
-        //     REMOTE                      = (1U <<  9),
-        //     RESERVED_8                  = (1U <<  8),
-        //     WARNING                     = (1U <<  7),
-        //     SWITCH_ON_DISABLED          = (1U <<  6),
-        //     QUICK_STOP                  = (1U <<  5),
-        //     VOLTAGE_ENABLED             = (1U <<  4),
-        //     FAULT                       = (1U <<  3),
-        //     OPERATION_ENABLED           = (1U <<  2),
-        //     SWITCHED_ON                 = (1U <<  1),
-        //     READY_TO_SWITCH_ON          = (1U <<  0),
-        // };
         bool bit_is_set(Bit bit) const {
-            return (get_data_uint16() & bit.value) != 0;
+            return (get_data_uint16() & (uint16_t)bit) != 0;
         }
+        void set_bit(Bit bit, bool value) {
+            // FIXME: use the value directly?
+            uint16_t v = get_data_uint16();
+            if (value) {
+                v |= (uint16_t)(bit);
+            } else {
+                v &= ~((uint16_t)(bit));
+            }
+            set_data_uint16(v);
+        }
+
         // set the bits (and only the bits corresponding to State in
         // the statusword
-        void set_state_bits(uint32_t mask) {
-            uint16_t value = get_data_uint16();
-            const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
-            if (mask & ~status_bit_mask) {
-                AP_HAL::panic("Attempt to set bits not in state mask");
-            }
-            value &= ~status_bit_mask;
-            value |= mask;
-            static uint32_t last_value = -1;
-            if (value != last_value) {
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
-                last_value = value;
-            }
-            set_data_uint16(value);
-        }
+        // void set_state_bits(uint32_t mask) {
+        //     uint16_t value = get_data_uint16();
+        //     const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
+        //     if (mask & ~status_bit_mask) {
+        //         AP_HAL::panic("Attempt to set bits not in state mask");
+        //     }
+        //     value &= ~status_bit_mask;
+        //     value |= mask;
+        //     static uint32_t last_value = -1;
+        //     if (value != last_value) {
+        //         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "New value: %u", value);
+        //         last_value = value;
+        //     }
+        //     set_data_uint16(value);
+        // }
     };
 
     class TargetPosition : public EPOS4Object {
@@ -437,6 +417,16 @@ private:
     TargetPosition target_position{0};
     MotionProfileType motion_profile_type{0};
 
+    bool startup_done;
+    bool ready_to_switch_on = false;
+    bool switch_on_disabled = true;
+    bool fault;
+
+    // bits controlled via ControlWord:
+    bool quick_stop_active;
+    bool voltage_enabled;
+    bool switched_on;
+    bool operation_enabled;
 
     enum class ObjectID : uint16_t {
         MAX_GEAR_INPUT_SPEED    = 0x3003,
@@ -479,22 +469,23 @@ private:
 
 
     // machine state
-    enum class State {
-        START                  = 40,
-        NOT_READY_TO_SWITCH_ON = 56,
-        SWITCH_ON_DISABLED     = 57,
-        READY_TO_SWITCH_ON     = 58,
-        SWITCHED_ON            = 59,
-        OPERATION_ENABLED      = 60,
-        QUICK_STOP_ACTIVE      = 61,
-        FAULT_REACTION_ACTIVE  = 62,
-        FAULT                  = 63,
-    };
-    State state = State::START;
-    void set_state(State newstate);
-    uint32_t state_start_ms;
-    uint32_t time_in_state_ms() const { return AP_HAL::millis() - state_start_ms; }
-    void update_state_machine();
+    // enum class State {
+    //     START                  = 40,
+    //     NOT_READY_TO_SWITCH_ON = 56,
+    //     SWITCH_ON_DISABLED     = 57,
+    //     READY_TO_SWITCH_ON     = 58,
+    //     SWITCHED_ON            = 59,
+    //     OPERATION_ENABLED      = 60,
+    //     QUICK_STOP_ACTIVE      = 61,
+    //     FAULT_REACTION_ACTIVE  = 62,
+    //     FAULT                  = 63,
+    // };
+    // State state = State::START;
+    // void set_state(State newstate);
+    // uint32_t state_start_ms;
+    // uint32_t time_in_state_ms() const { return AP_HAL::millis() - state_start_ms; }
+    void update_state();
+
     void update_StatusWord();
     void update_ModesOfOperationDisplay();
 

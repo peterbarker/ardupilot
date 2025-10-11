@@ -48,135 +48,135 @@ const AP_Param::GroupInfo Maxon_EPOS4::var_info[] = {
     AP_GROUPEND
 };
 
-void Maxon_EPOS4::set_state(State new_state)
-{
-    // these sanity checks are from 2.2, Device Control
-    switch (new_state) {
-    case State::START:
-        break;
-    case State::NOT_READY_TO_SWITCH_ON:
-        if (state != State::START) {
-            AP_HAL::panic("Illegal state transition");
-        }
-        break;
-    case State::SWITCH_ON_DISABLED:
-        switch (state) {
-        case State::START:
-        case State::NOT_READY_TO_SWITCH_ON:
-        case State::READY_TO_SWITCH_ON:
-        case State::SWITCHED_ON:
-        case State::OPERATION_ENABLED:
-        case State::QUICK_STOP_ACTIVE:
-        case State::FAULT:
-            // valid transition
-            break;
-        case State::SWITCH_ON_DISABLED:
-        case State::FAULT_REACTION_ACTIVE:
-            AP_HAL::panic("Illegal state transition");
-        }
-        break;
-    case State::READY_TO_SWITCH_ON:
-        switch (state) {
-        case State::SWITCH_ON_DISABLED:
-        case State::SWITCHED_ON:
-        case State::OPERATION_ENABLED:
-            // valid transition
-            break;
-        case State::START:
-        case State::READY_TO_SWITCH_ON:
-        case State::QUICK_STOP_ACTIVE:
-        case State::FAULT:
-        case State::FAULT_REACTION_ACTIVE:
-        case State::NOT_READY_TO_SWITCH_ON:
-            AP_HAL::panic("Illegal state transition");
-        }
-        break;
-    case State::SWITCHED_ON:
-        switch (state) {
-        case State::READY_TO_SWITCH_ON:
-        case State::OPERATION_ENABLED:
-            // valid transition
-            break;
-        case State::SWITCH_ON_DISABLED:
-        case State::SWITCHED_ON:
-        case State::START:
-        case State::QUICK_STOP_ACTIVE:
-        case State::FAULT:
-        case State::FAULT_REACTION_ACTIVE:
-        case State::NOT_READY_TO_SWITCH_ON:
-            AP_HAL::panic("Illegal state transition");
-        }
-        break;
-    case State::OPERATION_ENABLED:
-        switch (state) {
-        case State::SWITCHED_ON:
-        case State::QUICK_STOP_ACTIVE:
-            // valid transition
-            break;
-        case State::READY_TO_SWITCH_ON:
-        case State::OPERATION_ENABLED:
-        case State::SWITCH_ON_DISABLED:
-        case State::START:
-        case State::FAULT:
-        case State::FAULT_REACTION_ACTIVE:
-        case State::NOT_READY_TO_SWITCH_ON:
-            AP_HAL::panic("Illegal state transition");
-        }
-        break;
-    case State::QUICK_STOP_ACTIVE:
-        switch (state) {
-        case State::OPERATION_ENABLED:
-            // valid transition
-            break;
-        case State::SWITCHED_ON:
-        case State::QUICK_STOP_ACTIVE:
-        case State::READY_TO_SWITCH_ON:
-        case State::SWITCH_ON_DISABLED:
-        case State::START:
-        case State::FAULT:
-        case State::FAULT_REACTION_ACTIVE:
-        case State::NOT_READY_TO_SWITCH_ON:
-            AP_HAL::panic("Illegal state transition");
-        }
-        break;
-    case State::FAULT_REACTION_ACTIVE:
-        switch (state) {
-        case State::OPERATION_ENABLED:
-        case State::SWITCHED_ON:
-        case State::QUICK_STOP_ACTIVE:
-        case State::READY_TO_SWITCH_ON:
-        case State::SWITCH_ON_DISABLED:
-        case State::START:
-        case State::FAULT:
-        case State::FAULT_REACTION_ACTIVE:
-        case State::NOT_READY_TO_SWITCH_ON:
-            // valid transition - can fail from any other state
-            break;
-        }
-        break;
-    case State::FAULT:
-        switch (state) {
-        case State::FAULT_REACTION_ACTIVE:
-            // valid transition - can fail from any other state
-            break;
-        case State::OPERATION_ENABLED:
-        case State::SWITCHED_ON:
-        case State::QUICK_STOP_ACTIVE:
-        case State::READY_TO_SWITCH_ON:
-        case State::SWITCH_ON_DISABLED:
-        case State::START:
-        case State::FAULT:
-        case State::NOT_READY_TO_SWITCH_ON:
-            AP_HAL::panic("Illegal state transition");
-        }
-        break;
-    }
+// void Maxon_EPOS4::set_state(State new_state)
+// {
+//     // these sanity checks are from 2.2, Device Control
+//     switch (new_state) {
+//     case State::START:
+//         break;
+//     case State::NOT_READY_TO_SWITCH_ON:
+//         if (state != State::START) {
+//             AP_HAL::panic("Illegal state transition");
+//         }
+//         break;
+//     case State::SWITCH_ON_DISABLED:
+//         switch (state) {
+//         case State::START:
+//         case State::NOT_READY_TO_SWITCH_ON:
+//         case State::READY_TO_SWITCH_ON:
+//         case State::SWITCHED_ON:
+//         case State::OPERATION_ENABLED:
+//         case State::QUICK_STOP_ACTIVE:
+//         case State::FAULT:
+//             // valid transition
+//             break;
+//         case State::SWITCH_ON_DISABLED:
+//         case State::FAULT_REACTION_ACTIVE:
+//             AP_HAL::panic("Illegal state transition");
+//         }
+//         break;
+//     case State::READY_TO_SWITCH_ON:
+//         switch (state) {
+//         case State::SWITCH_ON_DISABLED:
+//         case State::SWITCHED_ON:
+//         case State::OPERATION_ENABLED:
+//             // valid transition
+//             break;
+//         case State::START:
+//         case State::READY_TO_SWITCH_ON:
+//         case State::QUICK_STOP_ACTIVE:
+//         case State::FAULT:
+//         case State::FAULT_REACTION_ACTIVE:
+//         case State::NOT_READY_TO_SWITCH_ON:
+//             AP_HAL::panic("Illegal state transition");
+//         }
+//         break;
+//     case State::SWITCHED_ON:
+//         switch (state) {
+//         case State::READY_TO_SWITCH_ON:
+//         case State::OPERATION_ENABLED:
+//             // valid transition
+//             break;
+//         case State::SWITCH_ON_DISABLED:
+//         case State::SWITCHED_ON:
+//         case State::START:
+//         case State::QUICK_STOP_ACTIVE:
+//         case State::FAULT:
+//         case State::FAULT_REACTION_ACTIVE:
+//         case State::NOT_READY_TO_SWITCH_ON:
+//             AP_HAL::panic("Illegal state transition");
+//         }
+//         break;
+//     case State::OPERATION_ENABLED:
+//         switch (state) {
+//         case State::SWITCHED_ON:
+//         case State::QUICK_STOP_ACTIVE:
+//             // valid transition
+//             break;
+//         case State::READY_TO_SWITCH_ON:
+//         case State::OPERATION_ENABLED:
+//         case State::SWITCH_ON_DISABLED:
+//         case State::START:
+//         case State::FAULT:
+//         case State::FAULT_REACTION_ACTIVE:
+//         case State::NOT_READY_TO_SWITCH_ON:
+//             AP_HAL::panic("Illegal state transition");
+//         }
+//         break;
+//     case State::QUICK_STOP_ACTIVE:
+//         switch (state) {
+//         case State::OPERATION_ENABLED:
+//             // valid transition
+//             break;
+//         case State::SWITCHED_ON:
+//         case State::QUICK_STOP_ACTIVE:
+//         case State::READY_TO_SWITCH_ON:
+//         case State::SWITCH_ON_DISABLED:
+//         case State::START:
+//         case State::FAULT:
+//         case State::FAULT_REACTION_ACTIVE:
+//         case State::NOT_READY_TO_SWITCH_ON:
+//             AP_HAL::panic("Illegal state transition");
+//         }
+//         break;
+//     case State::FAULT_REACTION_ACTIVE:
+//         switch (state) {
+//         case State::OPERATION_ENABLED:
+//         case State::SWITCHED_ON:
+//         case State::QUICK_STOP_ACTIVE:
+//         case State::READY_TO_SWITCH_ON:
+//         case State::SWITCH_ON_DISABLED:
+//         case State::START:
+//         case State::FAULT:
+//         case State::FAULT_REACTION_ACTIVE:
+//         case State::NOT_READY_TO_SWITCH_ON:
+//             // valid transition - can fail from any other state
+//             break;
+//         }
+//         break;
+//     case State::FAULT:
+//         switch (state) {
+//         case State::FAULT_REACTION_ACTIVE:
+//             // valid transition - can fail from any other state
+//             break;
+//         case State::OPERATION_ENABLED:
+//         case State::SWITCHED_ON:
+//         case State::QUICK_STOP_ACTIVE:
+//         case State::READY_TO_SWITCH_ON:
+//         case State::SWITCH_ON_DISABLED:
+//         case State::START:
+//         case State::FAULT:
+//         case State::NOT_READY_TO_SWITCH_ON:
+//             AP_HAL::panic("Illegal state transition");
+//         }
+//         break;
+//     }
 
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u from state %u", (unsigned)new_state, (unsigned)state);
+//     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u from state %u", (unsigned)new_state, (unsigned)state);
 
-    state = new_state;
-    state_start_ms = AP_HAL::millis();
-}
+//     state = new_state;
+//     state_start_ms = AP_HAL::millis();
+// }
 
 void Maxon_EPOS4::send(Maxon_EPOS4::ResponseOpCode opcode, uint8_t *data, uint16_t data_len, uint16_t checksum)
 {
@@ -375,22 +375,23 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
         AP_HAL::panic("Write of read-only object");
     }
 
-    bool process_sets = false;
-    switch (state) {
-    case State::READY_TO_SWITCH_ON:
-    case State::SWITCH_ON_DISABLED:
-        process_sets = true;
-        break;
-    case State::NOT_READY_TO_SWITCH_ON:
-    case State::START:
-    case State::SWITCHED_ON:
-    case State::OPERATION_ENABLED:
-    case State::QUICK_STOP_ACTIVE:
-    case State::FAULT_REACTION_ACTIVE:
-    case State::FAULT:
-        process_sets = (id == ObjectID::CONTROLWORD);
-        break;
-    }
+    const bool process_sets = !switched_on  || id == ObjectID::CONTROLWORD;
+
+    // switch (state) {
+    // case State::READY_TO_SWITCH_ON:
+    // case State::SWITCH_ON_DISABLED:
+    //     process_sets = true;
+    //     break;
+    // case State::NOT_READY_TO_SWITCH_ON:
+    // case State::START:
+    // case State::SWITCHED_ON:
+    // case State::OPERATION_ENABLED:
+    // case State::QUICK_STOP_ACTIVE:
+    // case State::FAULT_REACTION_ACTIVE:
+    // case State::FAULT:
+    //     process_sets = (id == ObjectID::CONTROLWORD);
+    //     break;
+    // }
 
     // ignore attempts to set parameters in these modes - except
     // for the control word!
@@ -431,6 +432,36 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
     //         set_state(State(new_state_id));
     //     }
     // }
+
+    if (id == ObjectID::CONTROLWORD && startup_done) {
+        // update state straight away from control word...
+        operation_enabled = controlword.bit_is_set(ControlWord::Bit::ENABLE_OPERATION);
+
+        quick_stop_active = !controlword.bit_is_set(ControlWord::Bit::INHIBIT_QUICK_STOP);
+
+        voltage_enabled = controlword.bit_is_set(ControlWord::Bit::ENABLE_VOLTAGE);
+
+        const bool so = controlword.bit_is_set(ControlWord::Bit::SWITCHED_ON);
+        if (so) {
+            if (!ready_to_switch_on) {
+                AP_HAL::panic("Not ready to switch on");
+            }
+        }
+        switched_on = so;
+
+        // if (switch_on_disabled) {
+            // FIXME: this should only happen in the "switch on disabled" state
+            if (!controlword.bit_is_set(ControlWord::Bit::SWITCHED_ON) &&
+                controlword.bit_is_set(ControlWord::Bit::ENABLE_VOLTAGE) &&
+                controlword.bit_is_set(ControlWord::Bit::INHIBIT_QUICK_STOP) &&
+                !controlword.bit_is_set(ControlWord::Bit::FAULT_RESET)) {
+                switch_on_disabled = false;
+                ready_to_switch_on = true;
+                quick_stop_active = false;
+                voltage_enabled = false;  // this is very, very strange
+            // }
+        }
+    }
 
     // set-time validation of various parameters; if the driver ever
     // sets these then we have a bug!
@@ -489,7 +520,7 @@ void Maxon_EPOS4::reset_input()
 
 void Maxon_EPOS4::init(const class Aircraft &aircraft)
 {
-    state_start_ms = AP_HAL::millis();
+    // state_start_ms = AP_HAL::millis();
     // ASSERT_STORAGE_SIZE(EPOS4Object, 4);
     // ASSERT_STORAGE_SIZE(HomePosition, 4);
     // ASSERT_STORAGE_SIZE(ControlWord, 4);
@@ -504,119 +535,139 @@ void Maxon_EPOS4::update(const class Aircraft &aircraft)
         initialised = true;
     }
 
-    update_state_machine();
-
-    if (state == State::START) {
-        // do nothing while the thing is booting
+    if (AP_HAL::millis() < 1000) {
         return;
     }
+    if (!startup_done) {
+        switch_on_disabled = 1;
+        quick_stop_active = 1;
+        startup_done = true;
+    }
+    update_state();
+
+    // if (state == State::START) {
+    //     // do nothing while the thing is booting
+    //     return;
+    // }
 
     update_input();
     update_output();
 }
 
-void Maxon_EPOS4::update_state_machine()
+void Maxon_EPOS4::update_state()
 {
-    switch (state) {
-    case State::START:
-        if (time_in_state_ms() > 1000) {  // 1s boot time
-            set_state(State::NOT_READY_TO_SWITCH_ON);  // transition 0
-        }
-        break;
-    case State::NOT_READY_TO_SWITCH_ON:
-        if (time_in_state_ms() > 1000) {  // 1s to move out of not-ready
-            set_state(State::SWITCH_ON_DISABLED);  // transition 1
-        }
-        break;
-    case State::READY_TO_SWITCH_ON:
-    case State::SWITCH_ON_DISABLED:
-    case State::SWITCHED_ON:
-    case State::OPERATION_ENABLED:
-    case State::QUICK_STOP_ACTIVE:
-        // no automatic transitions out of these states (except faulting)
-        break;
-    case State::FAULT_REACTION_ACTIVE:
-        if (time_in_state_ms() > 10) {  // 10ms to move to fault state
-            set_state(State::FAULT);  // transition 14
-        }
-        break;
-    case State::FAULT:
-        break;
-    }
+
+    // if (switch_on_disabled) {
+    // }
+
+//     switch (state) {
+//     case State::START:
+//         if (time_in_state_ms() > 1000) {  // 1s boot time
+//             set_state(State::NOT_READY_TO_SWITCH_ON);  // transition 0
+//         }
+//         break;
+//     case State::NOT_READY_TO_SWITCH_ON:
+//         if (time_in_state_ms() > 1000) {  // 1s to move out of not-ready
+//             set_state(State::SWITCH_ON_DISABLED);  // transition 1
+//         }
+//         break;
+//     case State::READY_TO_SWITCH_ON:
+//     case State::SWITCH_ON_DISABLED:
+//     case State::SWITCHED_ON:
+//     case State::OPERATION_ENABLED:
+//     case State::QUICK_STOP_ACTIVE:
+//         // no automatic transitions out of these states (except faulting)
+//         break;
+//     case State::FAULT_REACTION_ACTIVE:
+//         if (time_in_state_ms() > 10) {  // 10ms to move to fault state
+//             set_state(State::FAULT);  // transition 14
+//         }
+//         break;
+//     case State::FAULT:
+//         break;
+//     }
 }
 
 void Maxon_EPOS4::update_StatusWord()
 {
-    switch (state) {
-    case State::START:
-        statusword.set_data_uint16(0);
-        break;
-    case State::NOT_READY_TO_SWITCH_ON:
-        statusword.set_state_bits(0);
-        break;
-    case State::SWITCH_ON_DISABLED:
-        statusword.set_state_bits(uint16_t(StatusWord::Bit::SWITCH_ON_DISABLED));
-        break;
-    case State::READY_TO_SWITCH_ON:
-        statusword.set_state_bits(
-            StatusWord::Bit::QUICK_STOP |
-            StatusWord::Bit::READY_TO_SWITCH_ON
-        );
-        break;
-    case State::SWITCHED_ON:
-        statusword.set_state_bits(
-            StatusWord::Bit::QUICK_STOP |
-            StatusWord::Bit::READY_TO_SWITCH_ON |
-            StatusWord::Bit::SWITCHED_ON
-        );
-        break;
-    case State::OPERATION_ENABLED:
-        statusword.set_state_bits(
-            StatusWord::Bit::QUICK_STOP |
-            StatusWord::Bit::OPERATION_ENABLED |
-            StatusWord::Bit::READY_TO_SWITCH_ON |
-            StatusWord::Bit::SWITCHED_ON
-        );
-        break;
-    case State::QUICK_STOP_ACTIVE:
-        statusword.set_state_bits(
-            StatusWord::Bit::OPERATION_ENABLED |
-            StatusWord::Bit::READY_TO_SWITCH_ON |
-            StatusWord::Bit::SWITCHED_ON
-        );
-        break;
-    case State::FAULT_REACTION_ACTIVE:
-        statusword.set_state_bits(
-            StatusWord::Bit::FAULT |
-            StatusWord::Bit::OPERATION_ENABLED |
-            StatusWord::Bit::READY_TO_SWITCH_ON |
-            StatusWord::Bit::SWITCHED_ON
-        );
-        break;
-    case State::FAULT:
-        statusword.set_state_bits(StatusWord::Bit::FAULT);
-        break;
-    }
+    statusword.set_bit(StatusWord::Bit::SWITCH_ON_DISABLED, switch_on_disabled);
+    statusword.set_bit(StatusWord::Bit::QUICK_STOP_INACTIVE, !quick_stop_active);
+    statusword.set_bit(StatusWord::Bit::VOLTAGE_ENABLED, voltage_enabled);
+    statusword.set_bit(StatusWord::Bit::FAULT, fault);
+    statusword.set_bit(StatusWord::Bit::OPERATION_ENABLED, operation_enabled);
+    statusword.set_bit(StatusWord::Bit::SWITCHED_ON, switched_on);
+    statusword.set_bit(StatusWord::Bit::READY_TO_SWITCH_ON, ready_to_switch_on);
+
+    // switch (state) {
+    // case State::START:
+    //     statusword.set_data_uint16(0);
+    //     break;
+    // case State::NOT_READY_TO_SWITCH_ON:
+    //     statusword.set_state_bits(0);
+    //     break;
+    // case State::SWITCH_ON_DISABLED:
+    //     statusword.set_state_bits(uint16_t(StatusWord::Bit::SWITCH_ON_DISABLED));
+    //     break;
+    // case State::READY_TO_SWITCH_ON:
+    //     statusword.set_state_bits(
+    //         StatusWord::Bit::QUICK_STOP |
+    //         StatusWord::Bit::READY_TO_SWITCH_ON
+    //     );
+    //     break;
+    // case State::SWITCHED_ON:
+    //     statusword.set_state_bits(
+    //         StatusWord::Bit::QUICK_STOP |
+    //         StatusWord::Bit::READY_TO_SWITCH_ON |
+    //         StatusWord::Bit::SWITCHED_ON
+    //     );
+    //     break;
+    // case State::OPERATION_ENABLED:
+    //     statusword.set_state_bits(
+    //         StatusWord::Bit::QUICK_STOP |
+    //         StatusWord::Bit::OPERATION_ENABLED |
+    //         StatusWord::Bit::READY_TO_SWITCH_ON |
+    //         StatusWord::Bit::SWITCHED_ON
+    //     );
+    //     break;
+    // case State::QUICK_STOP_ACTIVE:
+    //     statusword.set_state_bits(
+    //         StatusWord::Bit::OPERATION_ENABLED |
+    //         StatusWord::Bit::READY_TO_SWITCH_ON |
+    //         StatusWord::Bit::SWITCHED_ON
+    //     );
+    //     break;
+    // case State::FAULT_REACTION_ACTIVE:
+    //     statusword.set_state_bits(
+    //         StatusWord::Bit::FAULT |
+    //         StatusWord::Bit::OPERATION_ENABLED |
+    //         StatusWord::Bit::READY_TO_SWITCH_ON |
+    //         StatusWord::Bit::SWITCHED_ON
+    //     );
+    //     break;
+    // case State::FAULT:
+    //     statusword.set_state_bits(StatusWord::Bit::FAULT);
+    //     break;
+    // }
 }
 
 void Maxon_EPOS4::update_ModesOfOperationDisplay()
 {
-    switch (state) {
-    case State::START:
-        break;
-    case State::NOT_READY_TO_SWITCH_ON:
-    case State::SWITCH_ON_DISABLED:
-    case State::READY_TO_SWITCH_ON:
-        // can only change mode of operation in these states
-        modes_of_operation_display.set_data_int8(modes_of_operation.get_data_int8());
-        break;
-    case State::SWITCHED_ON:
-    case State::OPERATION_ENABLED:
-    case State::QUICK_STOP_ACTIVE:
-    case State::FAULT_REACTION_ACTIVE:
-    case State::FAULT:
-        break;
-    }
+    modes_of_operation_display.set_data_int8(modes_of_operation.get_data_int8());
+    // switch (state) {
+    // case State::START:
+    //     break;
+    // case State::NOT_READY_TO_SWITCH_ON:
+    // case State::SWITCH_ON_DISABLED:
+    // case State::READY_TO_SWITCH_ON:
+    //     // can only change mode of operation in these states
+    //     break;
+    // case State::SWITCHED_ON:
+    // case State::OPERATION_ENABLED:
+    // case State::QUICK_STOP_ACTIVE:
+    // case State::FAULT_REACTION_ACTIVE:
+    // case State::FAULT:
+    //     break;
+    // }
 }
 
 void Maxon_EPOS4::update_output()
@@ -625,9 +676,29 @@ void Maxon_EPOS4::update_output()
     update_StatusWord();
     update_ModesOfOperationDisplay();
 
-    if (state == State::OPERATION_ENABLED) {
-        update_output_pwm();
+    if (switch_on_disabled) {
+        return;
     }
+    if (quick_stop_active) {
+        return;
+    }
+    if (!voltage_enabled) {
+        return;
+    }
+    if (fault) {
+        return;
+    }
+    if (!ready_to_switch_on) {
+        return;
+    }
+    if (!switched_on) {
+        return;
+    }
+    if (!operation_enabled) {
+        return;
+    }
+
+    update_output_pwm();
 }
 
 void Maxon_EPOS4::update_input()

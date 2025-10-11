@@ -149,6 +149,9 @@ void AP_Maxon_EPOS4::ServoInstance::set_write_ControlWord(ControlWord::Command c
     control_word |= state_bits;
 
     set_write_object_uint16(ObjectID::CONTROLWORD, control_word);
+
+    // force a re-fetch of the status word:
+    statusword.last_fetched_ms = 0;
 }
 
 void AP_Maxon_EPOS4::ServoInstance::set_write_object(ObjectID id, const uint8_t data[4])
@@ -200,11 +203,11 @@ bool AP_Maxon_EPOS4::ServoInstance::should_estop() const
 void AP_Maxon_EPOS4::ServoInstance::update_desired_device_state()
 {
     if (should_estop()) {
-        set_desired_device_state(DeviceState::SWITCH_ON_DISABLED);
+        set_desired_device_state(DeviceState::READY_TO_SWITCH_ON);
         return;
     }
     if (!have_all_parameters) {
-        set_desired_device_state(DeviceState::SWITCH_ON_DISABLED);
+        set_desired_device_state(DeviceState::READY_TO_SWITCH_ON);
         return;
     }
     set_desired_device_state(DeviceState::OPERATION_ENABLED);
@@ -466,7 +469,7 @@ void AP_Maxon_EPOS4::ServoInstance::process_fix_parameters()
     }
 }
 
-void AP_Maxon_EPOS4::ServoInstance::handle_device_state_SWITCH_ON_DISABLED()
+void AP_Maxon_EPOS4::ServoInstance::handle_device_state_READY_TO_SWITCH_ON()
 {
     if (!have_all_parameters) {
         process_fetch_parameters();
@@ -490,41 +493,28 @@ void AP_Maxon_EPOS4::ServoInstance::init()
     modes_of_operation_display.set_desired_data_int8(uint8_t(ModeOfOperation::PROFILE_POSITION_MODE));
 }
 
-void AP_Maxon_EPOS4::ServoInstance::update()
+void AP_Maxon_EPOS4::ServoInstance::update_state()
 {
-    if (port == nullptr) {
-        // should not happen
+    if (statusword.last_fetched_ms == 0) {
+        set_read_object(ObjectID::STATUSWORD, statusword);
         return;
-    }
-    if (srv_channel == nullptr) {
-        // should not happen
-        return;
-    }
-    if (!initialised) {
-        init();
-        initialised = true;
     }
 
-    update_input();
+    const DeviceState new_device_state = statusword.get_device_state();
+    set_device_state(new_device_state);
 
     // a detected device state can cause us to reset our own state
     // (think a reset of the device)
     switch (device_state) {
     case DeviceState::UNKNOWN_RESET:
         statusword.last_fetched_ms = 0;
-        break;
-    case DeviceState::UNKNOWN: {
-        set_read_object(ObjectID::STATUSWORD, statusword);
-        if (statusword.last_fetched_ms == 0) {
-            break;
-        }
-        const DeviceState new_device_state = statusword.get_device_state();
-        set_device_state(new_device_state);
-        break;
-    }
+        set_device_state(DeviceState::UNKNOWN);
+        FALLTHROUGH;
+    case DeviceState::UNKNOWN:
     case DeviceState::NOT_READY_TO_SWITCH_ON:
         // we just have to wait for this to clear
-        break;
+        set_read_object(ObjectID::STATUSWORD, statusword);
+        return;
     case DeviceState::SWITCH_ON_DISABLED:
         break;
     case DeviceState::READY_TO_SWITCH_ON:
@@ -545,35 +535,56 @@ void AP_Maxon_EPOS4::ServoInstance::update()
 
     if (desired_device_state != device_state) {
         effect_desired_device_state_change();
-    } else {
-        // work out what we want to do in the current device state, then!
-        switch (device_state) {
-        case DeviceState::UNKNOWN_RESET:
-        case DeviceState::UNKNOWN:
-        case DeviceState::NOT_READY_TO_SWITCH_ON:
-            // wait and hope for the best
-            break;
-        case DeviceState::SWITCH_ON_DISABLED:
-            handle_device_state_SWITCH_ON_DISABLED();
-            break;
-        case DeviceState::OPERATION_ENABLED:
-            // send position commands, poll statusword, current position etc etc
-            handle_device_state_OPERATION_ENABLED();
-            break;
-        case DeviceState::READY_TO_SWITCH_ON:
-        case DeviceState::SWITCHED_ON:
-        case DeviceState::QUICK_STOP_ACTIVE:
-        case DeviceState::FAULT_REACTION_ACTIVE:
-        case DeviceState::FAULT:
-            // we should never spend any considerable amount of time
-            // in these states.  If we do then there's a bug in
-            // effect_desired_device_state_change
-            if (time_in_device_state_ms() > 1000) {
-                INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
-            }
-            break;
-        }
+        return;
     }
+    // work out what we want to do in the current device state, then!
+    switch (device_state) {
+    case DeviceState::UNKNOWN_RESET:
+    case DeviceState::UNKNOWN:
+    case DeviceState::NOT_READY_TO_SWITCH_ON:
+        // wait and hope for the best
+        break;
+    case DeviceState::SWITCH_ON_DISABLED:
+        break;
+    case DeviceState::OPERATION_ENABLED:
+        // send position commands, poll statusword, current position etc etc
+        handle_device_state_OPERATION_ENABLED();
+        break;
+    case DeviceState::READY_TO_SWITCH_ON:
+        handle_device_state_READY_TO_SWITCH_ON();
+        break;
+    case DeviceState::SWITCHED_ON:
+    case DeviceState::QUICK_STOP_ACTIVE:
+    case DeviceState::FAULT_REACTION_ACTIVE:
+    case DeviceState::FAULT:
+        // we should never spend any considerable amount of time
+        // in these states.  If we do then there's a bug in
+        // effect_desired_device_state_change
+        if (time_in_device_state_ms() > 1000) {
+            INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        }
+        break;
+    }
+}
+
+void AP_Maxon_EPOS4::ServoInstance::update()
+{
+    if (port == nullptr) {
+        // should not happen
+        return;
+    }
+    if (srv_channel == nullptr) {
+        // should not happen
+        return;
+    }
+    if (!initialised) {
+        init();
+        initialised = true;
+    }
+
+    update_input();
+
+    update_state();
 
     update_output();
 }
@@ -588,6 +599,22 @@ void AP_Maxon_EPOS4::ServoInstance::set_device_state(DeviceState new_state)
 void AP_Maxon_EPOS4::ServoInstance::set_desired_device_state(DeviceState new_state)
 {
     // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Moving to state %u", (unsigned)new_state);
+    switch (new_state) {
+    case DeviceState::UNKNOWN:
+    case DeviceState::UNKNOWN_RESET:
+    case DeviceState::NOT_READY_TO_SWITCH_ON:
+    case DeviceState::SWITCH_ON_DISABLED:
+    case DeviceState::FAULT:
+    case DeviceState::FAULT_REACTION_ACTIVE:
+        // may not desire these states
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        return;
+    case DeviceState::SWITCHED_ON:
+    case DeviceState::OPERATION_ENABLED:
+    case DeviceState::QUICK_STOP_ACTIVE:
+    case DeviceState::READY_TO_SWITCH_ON:
+        break;
+    }
     desired_device_state = new_state;
     // state_start_ms = AP_HAL::millis();
 }
@@ -802,10 +829,32 @@ AP_Maxon_EPOS4::ServoInstance::DeviceState AP_Maxon_EPOS4::ServoInstance::Status
 {
     const uint16_t status_bit_mask{0b1101111};  // see 2.2.1
     const uint16_t value = get_data_uint16() & status_bit_mask;
+    if (value == StateBitMask::NOT_READY_TO_SWITCH_ON) {
+        return DeviceState::NOT_READY_TO_SWITCH_ON;
+    }
     if (value == StateBitMask::SWITCH_ON_DISABLED) {
         return DeviceState::SWITCH_ON_DISABLED;
     }
+    if (value == StateBitMask::READY_TO_SWITCH_ON) {
+        return DeviceState::READY_TO_SWITCH_ON;
+    }
+    if (value == StateBitMask::SWITCHED_ON) {
+        return DeviceState::SWITCHED_ON;
+    }
+    if (value == StateBitMask::OPERATION_ENABLED) {
+        return DeviceState::OPERATION_ENABLED;
+    }
+    if (value == StateBitMask::QUICK_STOP_ACTIVE) {
+        return DeviceState::QUICK_STOP_ACTIVE;
+    }
+    if (value == StateBitMask::FAULT_REACTION_ACTIVE) {
+        return DeviceState::FAULT_REACTION_ACTIVE;
+    }
+    if (value == StateBitMask::FAULT) {
+        return DeviceState::FAULT;
+    }
 
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Unknown device state (%b)", value);
     return DeviceState::UNKNOWN;
 }
 

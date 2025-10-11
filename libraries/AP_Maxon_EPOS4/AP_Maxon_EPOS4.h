@@ -233,11 +233,12 @@ private:
         bool handle_generic_write_response();
 
         void update_output();
+        void update_state();
         void update_desired_device_state();
         bool have_all_parameters;
         bool parameters_as_desired;
         void effect_desired_device_state_change();
-        void handle_device_state_SWITCH_ON_DISABLED();
+        void handle_device_state_READY_TO_SWITCH_ON();
         void handle_device_state_OPERATION_ENABLED();
         bool should_estop() const;
 
@@ -446,7 +447,7 @@ private:
                 static constexpr uint16_t RESERVED_8                  = 1U<< 8;
                 static constexpr uint16_t WARNING                     = 1U<< 7;
                 static constexpr uint16_t SWITCH_ON_DISABLED          = 1U<< 6;
-                static constexpr uint16_t QUICK_STOP                  = 1U<< 5;
+                static constexpr uint16_t QUICK_STOP_INACTIVE         = 1U<< 5;
                 static constexpr uint16_t VOLTAGE_ENABLED             = 1U<< 4;
                 static constexpr uint16_t FAULT                       = 1U<< 3;
                 static constexpr uint16_t OPERATION_ENABLED           = 1U<< 2;
@@ -456,9 +457,16 @@ private:
 
             class StateBitMask {
             public:
+                static constexpr uint16_t NOT_READY_TO_SWITCH_ON = 0;
                 static constexpr uint16_t SWITCH_ON_DISABLED = Bit::SWITCH_ON_DISABLED;
+                static constexpr uint16_t READY_TO_SWITCH_ON = Bit::QUICK_STOP_INACTIVE | Bit::READY_TO_SWITCH_ON;
+                static constexpr uint16_t SWITCHED_ON = Bit::QUICK_STOP_INACTIVE | Bit::SWITCHED_ON | Bit::READY_TO_SWITCH_ON;
+                static constexpr uint16_t OPERATION_ENABLED = Bit::QUICK_STOP_INACTIVE | Bit::OPERATION_ENABLED | Bit::SWITCHED_ON |  Bit::READY_TO_SWITCH_ON;
+                static constexpr uint16_t QUICK_STOP_ACTIVE = Bit::OPERATION_ENABLED | Bit::SWITCHED_ON |  Bit::READY_TO_SWITCH_ON;
+                static constexpr uint16_t FAULT_REACTION_ACTIVE = Bit::FAULT | Bit::OPERATION_ENABLED | Bit::SWITCHED_ON |  Bit::READY_TO_SWITCH_ON;
+                static constexpr uint16_t FAULT = Bit::FAULT;
             };
-            // these are the bits involved in setting the state:
+            // these are the bits involved in recognising the state:
             const uint16_t state_bitmask{0b1101111};
 
             bool bit_is_set(Bit bit) const {
