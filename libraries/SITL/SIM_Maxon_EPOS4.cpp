@@ -375,7 +375,10 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
         AP_HAL::panic("Write of read-only object");
     }
 
-    const bool process_sets = !switched_on  || id == ObjectID::CONTROLWORD;
+    // FIXME: work out what they mean by "drive parameters", because
+    // they don't mean these!
+    const bool process_sets = !switched_on  ||
+        (id == ObjectID::CONTROLWORD || id == ObjectID::TARGET_POSITION);
 
     // switch (state) {
     // case State::READY_TO_SWITCH_ON:
@@ -863,7 +866,7 @@ void Maxon_EPOS4::update_output_pwm()
     const int32_t scaled = target_position.get_data_int32();
     const float normalised = float(scaled) / (INT32_MAX / 2);  // -1 to 1
     const uint16_t _pwm = 1000 + 1000*((normalised + 1) * 0.5);
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SIM: %p scaled=%d normalised=%f pwm=%u", this, scaled, normalised, _pwm);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SIM: %p scaled=%d norm=%f pwm=%u", this, scaled, normalised, _pwm);
     output_pwm = _pwm;
 }
 

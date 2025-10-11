@@ -410,16 +410,19 @@ void AP_Maxon_EPOS4::ServoInstance::effect_desired_device_state_change()
 
 void AP_Maxon_EPOS4::ServoInstance::process_fetch_parameters()
 {
+    const uint32_t now_ms = AP_HAL::millis();
     for (auto &map : epos4_objects) {
-        if (map.object.last_fetched_ms) {
-            continue;
+        const uint32_t age_ms = now_ms - map.object.last_fetched_ms;
+        if (map.object.last_fetched_ms == 0 || age_ms >= map.fetch_interval_ms) {
+            // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Fetching parameter 0x%x", (unsigned)map.id);
+            set_read_object(map.id, map.object);
+            return;
         }
-        // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Fetching parameter 0x%x", (unsigned)map.id);
-        set_read_object(map.id, map.object);
-        return;
     }
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon: parameter fetch complete");
-    have_all_parameters = true;
+    if (!have_all_parameters) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Maxon: parameter fetch complete");
+        have_all_parameters = true;
+    }
 }
 
 void AP_Maxon_EPOS4::ServoInstance::process_fix_parameters()
@@ -483,7 +486,22 @@ void AP_Maxon_EPOS4::ServoInstance::handle_device_state_READY_TO_SWITCH_ON()
 
 void AP_Maxon_EPOS4::ServoInstance::handle_device_state_OPERATION_ENABLED()
 {
-    abort();
+    const uint32_t now_ms = AP_HAL::millis();
+
+    // see if it is time to send a packet of some sort...
+    if (now_ms - last_TARGET_POSITION_sent_ms > 20) {  // 50Hz
+        if (send_write_TARGET_POSITION()) {
+            last_TARGET_POSITION_sent_ms = now_ms;
+        }
+        return;
+    }
+
+    // see if it's time to poll a parameter:
+    process_fetch_parameters();
+    if (state != State::IDLE) {
+        // probably fetching a parameter
+        return;
+    }
 }
 
 void AP_Maxon_EPOS4::ServoInstance::init()
@@ -805,7 +823,7 @@ bool AP_Maxon_EPOS4::ServoInstance::handle_generic_read_response()
 
     set_object_data_from_wire_data4(*generic_read_object, frame.packed_generic_response.parameters.data);
 
-    generic_read_object->last_fetched_ms = MIN(AP_HAL::millis(), 1U);
+    generic_read_object->last_fetched_ms = MAX(AP_HAL::millis(), 1U);
 
     // switch (generic_read_object->data_type()) {
     // case EPOS4Object::DataType::INTEGER8:
@@ -1008,14 +1026,6 @@ void AP_Maxon_EPOS4::ServoInstance::update_output()
     if (state != State::IDLE) {
         if (now_ms - state_start_ms > 600) {
             set_device_state(DeviceState::UNKNOWN);
-        }
-    }
-
-    if (state == State::IDLE) {
-        // see if it is time to send a packet of some sort...
-        if (now_ms - last_TARGET_POSITION_sent_ms > 20) {  // 50Hz
-            // set_state(State::WANT_SEND_WRITE_TARGET_POSITION);
-            last_TARGET_POSITION_sent_ms = now_ms;
         }
     }
 
