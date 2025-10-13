@@ -32,3 +32,5 @@ define HAL_MSP_ENABLED 0
 #  directory, but are seen across the entire codebase:
 define MODE_FLOWHOLD_ENABLED 0
 define MODE_TURTLE_ENABLED 0
+
+define AP_GPS_UBLOX_CFGV2_ENABLED 0
