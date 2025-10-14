@@ -61,6 +61,7 @@
 #include "rotations.h"
 
 #include "ftype.h"
+#include "float.h"
 
 template <typename T>
 class Matrix3;
