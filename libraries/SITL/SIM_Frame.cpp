@@ -318,6 +318,7 @@ static Frame supported_frames[] =
     Frame("y6",        6, y6_motors),
     Frame("firefly",   6, firefly_motors),
     Frame("tilt",      4, tiltquad),
+    Frame("volanti",   4, quad_x_motors),  // but offset to be outputs 1-4
 };
 
 // get air density in kg/m^3

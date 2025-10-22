@@ -69,6 +69,9 @@ QuadPlane::QuadPlane(const char *frame_str) :
         frame_type = "tilt";
         // fwd motor gives zero thrust
         thrust_scale = 0;
+    } else if (strstr(frame_str, "volanti")) {
+        frame_type = "volanti";
+        motor_offset = 0;
     } else if (strstr(frame_str, "cl84")) {
         frame_type = "tilttri";
         // fwd motor gives zero thrust
@@ -138,9 +141,9 @@ void QuadPlane::update(const struct sitl_input &input)
 
     float throttle;
     if (reverse_thrust) {
-        throttle = filtered_servo_angle(input, 2);
+        throttle = filtered_servo_angle(input, throttle_channel());
     } else {
-        throttle = filtered_servo_range(input, 2);
+        throttle = filtered_servo_range(input, throttle_channel());
     }
     // assume 20A at full fwd throttle
     throttle = fabsf(throttle);

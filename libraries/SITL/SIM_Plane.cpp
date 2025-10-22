@@ -312,9 +312,9 @@ void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel
         rudder = fabsf(dspoiler1_right - dspoiler2_right)/2 - fabsf(dspoiler1_left - dspoiler2_left)/2;
     } else {
         // boring AETR plane
-        aileron  = filtered_servo_angle(input, 0);
-        elevator = filtered_servo_angle(input, 1);
-        rudder   = filtered_servo_angle(input, 2);
+        aileron  = filtered_servo_angle(input, aileron_channel());
+        elevator = filtered_servo_angle(input, elevator_channel());
+        rudder   = filtered_servo_angle(input, rudder_channel());
         if (reverse_elevator_rudder) {
             elevator = -elevator;
             rudder = -rudder;

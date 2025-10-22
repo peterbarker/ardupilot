@@ -44,6 +44,14 @@ protected:
     float angle_of_attack;
     float beta;
 
+    // these methods define where the inputs for an AETR Plane come
+    // from.  These are offsets into the sitl input array, so they
+    // start from zero.
+    virtual float aileron_channel() const { return 0; }
+    virtual float elevator_channel() const { return 1; }
+    virtual float throttle_channel() const { return 2; }
+    virtual float rudder_channel() const { return 3; }
+
     struct {
         // from last_letter skywalker_2013/aerodynamics.yaml
         // thanks to Georacer!
