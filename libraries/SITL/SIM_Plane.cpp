@@ -274,19 +274,17 @@ Vector3f Plane::getForce(float inputAileron, float inputElevator, float inputRud
 
 void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel)
 {
-    float aileron  = filtered_servo_angle(input, 0);
-    float elevator = filtered_servo_angle(input, 1);
-    float rudder   = filtered_servo_angle(input, 3);
     bool launch_triggered = input.servos[6] > 1700;
-    float throttle;
-    if (reverse_elevator_rudder) {
-        elevator = -elevator;
-        rudder = -rudder;
-    }
+
+    // each one of the "if"s below  *must* set all of these three.  We
+    // set to NaN to encourage compliance.
+    float aileron = NaNf;
+    float elevator = NaNf;
+    float rudder   = NaNf;
     if (elevons) {
         // fake an elevon plane
-        float ch1 = aileron;
-        float ch2 = elevator;
+        float ch1 = filtered_servo_angle(input, 0);
+        float ch2 = filtered_servo_angle(input, 1);
         aileron  = (ch2-ch1)/2.0f;
         // the minus does away with the need for RC2_REVERSED=-1
         elevator = -(ch2+ch1)/2.0f;
@@ -295,9 +293,10 @@ void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel
         rudder = 0;
     } else if (vtail) {
         // fake a vtail plane
-        float ch1 = elevator;
-        float ch2 = rudder;
+        float ch1 = filtered_servo_angle(input, 1);
+        float ch2 = filtered_servo_angle(input, 3);
         // this matches VTAIL_OUTPUT==2
+        aileron = filtered_servo_angle(input, 0);
         elevator = (ch2-ch1)/2.0f;
         rudder   = (ch2+ch1)/2.0f;
     } else if (dspoilers) {
@@ -311,13 +310,23 @@ void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel
         aileron  = (elevon_right-elevon_left)/2;
         elevator = (elevon_left+elevon_right)/2;
         rudder = fabsf(dspoiler1_right - dspoiler2_right)/2 - fabsf(dspoiler1_left - dspoiler2_left)/2;
+    } else {
+        // boring AETR plane
+        aileron  = filtered_servo_angle(input, 0);
+        elevator = filtered_servo_angle(input, 1);
+        rudder   = filtered_servo_angle(input, 2);
+        if (reverse_elevator_rudder) {
+            elevator = -elevator;
+            rudder = -rudder;
+        }
     }
     //printf("Aileron: %.1f elevator: %.1f rudder: %.1f\n", aileron, elevator, rudder);
 
+    float throttle;
     if (reverse_thrust) {
-        throttle = filtered_servo_angle(input, 2);
+        throttle = filtered_servo_angle(input, throttle_channel());
     } else {
-        throttle = filtered_servo_range(input, 2);
+        throttle = filtered_servo_range(input, throttle_channel());
     }
     
     float thrust     = throttle;
