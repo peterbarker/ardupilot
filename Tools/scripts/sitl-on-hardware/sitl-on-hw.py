@@ -12,7 +12,10 @@ import os
 import tempfile
 from argparse import ArgumentParser
 
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../Tools', 'autotest'))
+TOOLS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../Tools')
+AUTOTEST_DIR = os.path.join(TOOLS_DIR, 'autotest')
+
+sys.path.append(AUTOTEST_DIR)
 from pysim import vehicleinfo  # noqa: E402
 
 vinfo = vehicleinfo.VehicleInfo()
@@ -68,9 +71,10 @@ if args.frame and args.frame not in frame_options:
     print(f"ERROR: frame must be one of {frame_options_string}")
     sys.exit(1)
 
+vinfo_options = vinfo.options[vehicle_map[args.vehicle]]["frames"][args.frame]
 
-extra_hwdef = tempfile.NamedTemporaryFile(mode='w')
-extra_defaults = tempfile.NamedTemporaryFile(mode='w')
+extra_hwdef = tempfile.NamedTemporaryFile(mode='w', delete=False)
+extra_defaults = tempfile.NamedTemporaryFile(mode='w', delete=False)
 
 
 def hwdef_write(s):
@@ -101,8 +105,25 @@ hwdef_write(open(sohw_path(extra_hwdef_base), "r").read() + "\n")
 # add base defaults to extra_defaults
 defaults_write(open(sohw_path(defaults_base), "r").read() + "\n")
 
+dpm = vinfo_options.get("default_params_filename", None)
+if dpm is not None:
+    if not isinstance(dpm, list):
+        dpm = [dpm]
+    for defaults in dpm:
+        print(f"Adding defaults from ({defaults})")
+        p = os.path.join(AUTOTEST_DIR, defaults)
+        defaults_write(open(p, "r").read() + "\n")
+
 if args.defaults:
     defaults_write(open(args.defaults, "r").read() + "\n")
+
+# hacks
+hwdef_write("define AP_NETWORKING_ENABLED 1\n")
+hwdef_write("define AP_NETWORKING_BACKEND_PPP 1\n")
+hwdef_write("define HAL_MONITOR_THREAD_ENABLED 0\n")
+hwdef_write("define DISABLE_WATCHDOG 1\n")
+hwdef_write("define COMPASS_MAX_UNREG_DEV 10\n")
+
 
 if args.simclass:
     if args.simclass == 'Glider':

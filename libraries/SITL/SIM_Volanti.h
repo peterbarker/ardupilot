@@ -27,6 +27,11 @@ class Volanti : public QuadPlane {
 public:
     using QuadPlane::QuadPlane;
 
+    /* static object creator */
+    static Aircraft *create(const char *frame_str) {
+        return NEW_NOTHROW Volanti(frame_str);
+    }
+
 // SERVO5_FUNCTION  70          # Throttle
 // SERVO6_FUNCTION  19          # Elevator
 // SERVO7_FUNCTION  0           # Disabled

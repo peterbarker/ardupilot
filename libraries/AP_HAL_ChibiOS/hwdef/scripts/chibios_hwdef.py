@@ -2991,6 +2991,7 @@ Please run: Tools/scripts/build_bootloaders.py %s
 
     def process_line(self, line, depth):
         '''process one line of pin definition file'''
+        print(f"Line: {line}")
         self.all_lines.append(line)
         a = shlex.split(line, posix=False)
         # keep all config lines for later use
@@ -3299,6 +3300,7 @@ Please run: Tools/scripts/build_bootloaders.py %s
 
     def process_hwdefs(self):
         for fname in self.hwdef:
+            print(f"Processing {fname}")
             self.process_file(fname)
         self.processed_hwdefs = True
 
