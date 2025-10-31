@@ -1101,6 +1101,9 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
 #if AP_AHRS_ENABLED
         { MAVLINK_MSG_ID_LOCAL_POSITION_NED,    MSG_LOCAL_POSITION},
 #endif  // AP_AHRS_ENABLED
+#if AP_MAVLINK_MSG_LOCAL_POSITION_NED_COV_ENABLED
+        { MAVLINK_MSG_ID_LOCAL_POSITION_NED_COV,MSG_LOCAL_POSITION_NED_COV},
+#endif  // AP_MAVLINK_MSG_LOCAL_POSITION_NED_COV_ENABLED
         { MAVLINK_MSG_ID_VFR_HUD,               MSG_VFR_HUD},
 #endif
 #if AP_MAVLINK_MSG_HWSTATUS_ENABLED
@@ -3047,6 +3050,45 @@ void GCS_MAVLINK::send_local_position() const
         velocity.x,
         velocity.y,
         velocity.z);
+}
+#endif
+
+#if AP_MAVLINK_MSG_LOCAL_POSITION_NED_COV_ENABLED
+/*
+  send LOCAL_POSITION_NED_COV message
+ */
+void GCS_MAVLINK::send_local_position_ned_cov() const
+{
+    const AP_AHRS &ahrs = AP::ahrs();
+
+    Vector3f local_position;
+    Vector3f velocity;
+    const Vector3f acceleration_bf = ahrs.get_accel() - ahrs.get_accel_bias();
+    if (!ahrs.get_relative_position_NED_origin(local_position) ||
+        !ahrs.get_velocity_NED(velocity)) {
+        // we don't know the position and velocity
+        return;
+    }
+
+    const Vector3f acceleration = AP::ahrs().get_rotation_body_to_ned() * acceleration_bf;
+
+    const float covariance[45] { NAN };
+
+    mavlink_msg_local_position_ned_cov_send(
+        chan,
+        AP_HAL::micros(),
+        MAV_ESTIMATOR_TYPE_UNKNOWN,  // FIXME?
+        local_position.x,
+        local_position.y,
+        local_position.z,
+        velocity.x,
+        velocity.y,
+        velocity.z,
+        acceleration.x,
+        acceleration.y,
+        acceleration.z,
+        covariance
+        );
 }
 #endif
 
@@ -6514,6 +6556,12 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         CHECK_PAYLOAD_SIZE(LOCAL_POSITION_NED);
         send_local_position();
         break;
+#if AP_MAVLINK_MSG_LOCAL_POSITION_NED_COV_ENABLED
+    case MSG_LOCAL_POSITION_NED_COV:
+        CHECK_PAYLOAD_SIZE(LOCAL_POSITION_NED_COV);
+        send_local_position_ned_cov();
+        break;
+#endif
 #endif
 
 #if HAL_MOUNT_ENABLED

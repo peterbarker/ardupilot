@@ -363,6 +363,7 @@ public:
     void send_autopilot_version() const;
     void send_extended_sys_state() const;
     void send_local_position() const;
+    void send_local_position_ned_cov() const;
     void send_vfr_hud();
     void send_vibration() const;
     void send_gimbal_device_attitude_status() const;
