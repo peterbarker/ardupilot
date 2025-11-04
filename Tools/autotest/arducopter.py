@@ -1687,8 +1687,6 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Avoid should prevent reaching altitude")
         except AutoTestTimeoutException:
             pass
-        except Exception as e:
-            raise e
 
         # Check descent is not too fast, allow 10% above the configured backup speed
         max_descent_rate = -self.get_parameter("AVOID_BACKUP_SPD") * 1.1
@@ -1787,8 +1785,6 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Avoid should prevent reaching altitude")
         except AutoTestTimeoutException:
             pass
-        except Exception as e:
-            raise e
 
         # Check ascent is not too fast, allow 10% above the configured backup speed
         max_ascent_rate = self.get_parameter("AVOID_BACKUP_SPD") * 1.1
@@ -2822,86 +2818,73 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def OpticalFlowCalibration(self):
         '''test optical flow calibration'''
-        ex = None
-        self.context_push()
-        try:
+        self.set_parameter("SIM_FLOW_ENABLE", 1)
+        self.set_parameter("FLOW_TYPE", 10)
+        self.set_analog_rangefinder_parameters()
 
-            self.set_parameter("SIM_FLOW_ENABLE", 1)
-            self.set_parameter("FLOW_TYPE", 10)
-            self.set_analog_rangefinder_parameters()
+        # RC9 starts/stops calibration
+        self.set_parameter("RC9_OPTION", 158)
 
-            # RC9 starts/stops calibration
-            self.set_parameter("RC9_OPTION", 158)
+        # initialise flow scaling parameters to incorrect values
+        self.set_parameter("FLOW_FXSCALER", -200)
+        self.set_parameter("FLOW_FYSCALER", 200)
 
-            # initialise flow scaling parameters to incorrect values
-            self.set_parameter("FLOW_FXSCALER", -200)
-            self.set_parameter("FLOW_FYSCALER", 200)
-
-            self.reboot_sitl()
-
-            # ensure calibration is off
-            self.set_rc(9, 1000)
-
-            # takeoff to 10m in loiter
-            self.takeoff(10, mode="LOITER", require_absolute=True, timeout=720)
-
-            # start calibration
-            self.set_rc(9, 2000)
-
-            tstart = self.get_sim_time()
-            timeout = 90
-            veh_dir_tstart = self.get_sim_time()
-            veh_dir = 0
-            while self.get_sim_time_cached() - tstart < timeout:
-                # roll and pitch vehicle until samples collected
-                # change direction of movement every 2 seconds
-                if self.get_sim_time_cached() - veh_dir_tstart > 2:
-                    veh_dir_tstart = self.get_sim_time()
-                    veh_dir = veh_dir + 1
-                    if veh_dir > 3:
-                        veh_dir = 0
-                if veh_dir == 0:
-                    # move right
-                    self.set_rc(1, 1800)
-                    self.set_rc(2, 1500)
-                if veh_dir == 1:
-                    # move left
-                    self.set_rc(1, 1200)
-                    self.set_rc(2, 1500)
-                if veh_dir == 2:
-                    # move forward
-                    self.set_rc(1, 1500)
-                    self.set_rc(2, 1200)
-                if veh_dir == 3:
-                    # move back
-                    self.set_rc(1, 1500)
-                    self.set_rc(2, 1800)
-
-            # return sticks to center
-            self.set_rc(1, 1500)
-            self.set_rc(2, 1500)
-
-            # stop calibration (not actually necessary)
-            self.set_rc(9, 1000)
-
-            # check scaling parameters have been restored to values near zero
-            flow_scalar_x = self.get_parameter("FLOW_FXSCALER")
-            flow_scalar_y = self.get_parameter("FLOW_FYSCALER")
-            if ((flow_scalar_x > 30) or (flow_scalar_x < -30)):
-                raise NotAchievedException("FlowCal failed to set FLOW_FXSCALER correctly")
-            if ((flow_scalar_y > 30) or (flow_scalar_y < -30)):
-                raise NotAchievedException("FlowCal failed to set FLOW_FYSCALER correctly")
-
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-
-        self.disarm_vehicle(force=True)
-        self.context_pop()
         self.reboot_sitl()
 
-        if ex is not None:
-            raise ex
+        # ensure calibration is off
+        self.set_rc(9, 1000)
+
+        # takeoff to 10m in loiter
+        self.takeoff(10, mode="LOITER", require_absolute=True, timeout=720)
+
+        # start calibration
+        self.set_rc(9, 2000)
+
+        tstart = self.get_sim_time()
+        timeout = 90
+        veh_dir_tstart = self.get_sim_time()
+        veh_dir = 0
+        while self.get_sim_time_cached() - tstart < timeout:
+            # roll and pitch vehicle until samples collected
+            # change direction of movement every 2 seconds
+            if self.get_sim_time_cached() - veh_dir_tstart > 2:
+                veh_dir_tstart = self.get_sim_time()
+                veh_dir = veh_dir + 1
+                if veh_dir > 3:
+                    veh_dir = 0
+            if veh_dir == 0:
+                # move right
+                self.set_rc(1, 1800)
+                self.set_rc(2, 1500)
+            if veh_dir == 1:
+                # move left
+                self.set_rc(1, 1200)
+                self.set_rc(2, 1500)
+            if veh_dir == 2:
+                # move forward
+                self.set_rc(1, 1500)
+                self.set_rc(2, 1200)
+            if veh_dir == 3:
+                # move back
+                self.set_rc(1, 1500)
+                self.set_rc(2, 1800)
+
+        # return sticks to center
+        self.set_rc(1, 1500)
+        self.set_rc(2, 1500)
+
+        # stop calibration (not actually necessary)
+        self.set_rc(9, 1000)
+
+        # check scaling parameters have been restored to values near zero
+        flow_scalar_x = self.get_parameter("FLOW_FXSCALER")
+        flow_scalar_y = self.get_parameter("FLOW_FYSCALER")
+        if ((flow_scalar_x > 30) or (flow_scalar_x < -30)):
+            raise NotAchievedException("FlowCal failed to set FLOW_FXSCALER correctly")
+        if ((flow_scalar_y > 30) or (flow_scalar_y < -30)):
+            raise NotAchievedException("FlowCal failed to set FLOW_FYSCALER correctly")
+
+        self.disarm_vehicle(force=True)
 
     def AutoTune(self):
         """Test autotune mode"""
@@ -4503,63 +4486,49 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def SurfaceTracking(self):
         '''Test Surface Tracking'''
-        ex = None
-        self.context_push()
-
         self.install_terrain_handlers_context()
 
-        try:
-            self.set_analog_rangefinder_parameters()
-            self.set_parameter("RC9_OPTION", 10) # rangefinder
-            self.set_rc(9, 2000)
+        self.set_analog_rangefinder_parameters()
+        self.set_parameter("RC9_OPTION", 10) # rangefinder
+        self.set_rc(9, 2000)
 
-            self.reboot_sitl() # needed for both rangefinder and initial position
-            self.assert_vehicle_location_is_at_startup_location()
+        self.reboot_sitl() # needed for both rangefinder and initial position
+        self.assert_vehicle_location_is_at_startup_location()
 
-            self.takeoff(10, mode="LOITER")
-            lower_surface_pos = mavutil.location(-35.362421, 149.164534, 584, 270)
-            here = self.mav.location()
-            bearing = self.get_bearing(here, lower_surface_pos)
+        self.takeoff(10, mode="LOITER")
+        lower_surface_pos = mavutil.location(-35.362421, 149.164534, 584, 270)
+        here = self.mav.location()
+        bearing = self.get_bearing(here, lower_surface_pos)
 
-            self.change_mode("GUIDED")
-            self.guided_achieve_heading(bearing)
-            self.change_mode("LOITER")
-            self.delay_sim_time(2)
+        self.change_mode("GUIDED")
+        self.guided_achieve_heading(bearing)
+        self.change_mode("LOITER")
+        self.delay_sim_time(2)
+        m = self.assert_receive_message('GLOBAL_POSITION_INT')
+        orig_absolute_alt_mm = m.alt
+
+        self.progress("Original alt: absolute=%f" % orig_absolute_alt_mm)
+
+        self.progress("Flying somewhere which surface is known lower compared to takeoff point")
+        self.set_rc(2, 1450)
+        tstart = self.get_sim_time()
+        while True:
+            if self.get_sim_time() - tstart > 200:
+                raise NotAchievedException("Did not reach lower point")
             m = self.assert_receive_message('GLOBAL_POSITION_INT')
-            orig_absolute_alt_mm = m.alt
+            x = mavutil.location(m.lat/1e7, m.lon/1e7, m.alt/1e3, 0)
+            dist = self.get_distance(x, lower_surface_pos)
+            delta = (orig_absolute_alt_mm - m.alt)/1000.0
 
-            self.progress("Original alt: absolute=%f" % orig_absolute_alt_mm)
+            self.progress("Distance: %fm abs-alt-delta: %fm" %
+                          (dist, delta))
+            if dist < 15:
+                if delta < 0.8:
+                    raise NotAchievedException("Did not dip in altitude as expected")
+                break
 
-            self.progress("Flying somewhere which surface is known lower compared to takeoff point")
-            self.set_rc(2, 1450)
-            tstart = self.get_sim_time()
-            while True:
-                if self.get_sim_time() - tstart > 200:
-                    raise NotAchievedException("Did not reach lower point")
-                m = self.assert_receive_message('GLOBAL_POSITION_INT')
-                x = mavutil.location(m.lat/1e7, m.lon/1e7, m.alt/1e3, 0)
-                dist = self.get_distance(x, lower_surface_pos)
-                delta = (orig_absolute_alt_mm - m.alt)/1000.0
-
-                self.progress("Distance: %fm abs-alt-delta: %fm" %
-                              (dist, delta))
-                if dist < 15:
-                    if delta < 0.8:
-                        raise NotAchievedException("Did not dip in altitude as expected")
-                    break
-
-            self.set_rc(2, 1500)
-            self.do_RTL()
-
-        except Exception as e:
-            self.print_exception_caught(e)
-            self.disarm_vehicle(force=True)
-            ex = e
-
-        self.context_pop()
-        self.reboot_sitl()
-        if ex is not None:
-            raise ex
+        self.set_rc(2, 1500)
+        self.do_RTL()
 
     def test_rangefinder_switchover(self):
         """test that the EKF correctly handles the switchover between baro and rangefinder"""
@@ -8628,46 +8597,33 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def AC_Avoidance_Beacon(self):
         '''Test beacon avoidance slide behaviour'''
-        self.context_push()
-        ex = None
-        try:
-            self.set_parameters({
-                "BCN_TYPE": 10,
-                "BCN_LATITUDE": int(SITL_START_LOCATION.lat),
-                "BCN_LONGITUDE": int(SITL_START_LOCATION.lng),
-                "BCN_ORIENT_YAW": 45,
-                "AVOID_ENABLE": 4,
-            })
-            self.reboot_sitl()
-
-            self.takeoff(10, mode="LOITER")
-            self.set_rc(2, 1400)
-            here = self.mav.location()
-            west_loc = mavutil.location(-35.362919, 149.165055, here.alt, 0)
-            self.wait_location(west_loc, accuracy=1)
-            self.reach_heading_manual(0)
-            north_loc = mavutil.location(-35.362881, 149.165103, here.alt, 0)
-            self.wait_location(north_loc, accuracy=1)
-            self.set_rc(2, 1500)
-            self.set_rc(1, 1600)
-            east_loc = mavutil.location(-35.362986, 149.165227, here.alt, 0)
-            self.wait_location(east_loc, accuracy=1)
-            self.set_rc(1, 1500)
-            self.set_rc(2, 1600)
-            south_loc = mavutil.location(-35.363025, 149.165182, here.alt, 0)
-            self.wait_location(south_loc, accuracy=1)
-            self.set_rc(2, 1500)
-            self.do_RTL()
-
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-        self.context_pop()
-        self.clear_fence()
-        self.disarm_vehicle(force=True)
+        self.set_parameters({
+            "BCN_TYPE": 10,
+            "BCN_LATITUDE": int(SITL_START_LOCATION.lat),
+            "BCN_LONGITUDE": int(SITL_START_LOCATION.lng),
+            "BCN_ORIENT_YAW": 45,
+            "AVOID_ENABLE": 4,
+        })
         self.reboot_sitl()
-        if ex is not None:
-            raise ex
+
+        self.takeoff(10, mode="LOITER")
+        self.set_rc(2, 1400)
+        here = self.mav.location()
+        west_loc = mavutil.location(-35.362919, 149.165055, here.alt, 0)
+        self.wait_location(west_loc, accuracy=1)
+        self.reach_heading_manual(0)
+        north_loc = mavutil.location(-35.362881, 149.165103, here.alt, 0)
+        self.wait_location(north_loc, accuracy=1)
+        self.set_rc(2, 1500)
+        self.set_rc(1, 1600)
+        east_loc = mavutil.location(-35.362986, 149.165227, here.alt, 0)
+        self.wait_location(east_loc, accuracy=1)
+        self.set_rc(1, 1500)
+        self.set_rc(2, 1600)
+        south_loc = mavutil.location(-35.363025, 149.165182, here.alt, 0)
+        self.wait_location(south_loc, accuracy=1)
+        self.set_rc(2, 1500)
+        self.do_RTL()
 
     def BaroWindCorrection(self):
         '''Test wind estimation and baro position error compensation'''
@@ -9573,121 +9529,113 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             "LGR_RETRACT_ALT": 10, # metres
             "SERVO10_FUNCTION": 29
         })
-        ex = None
-        try:
-            self.set_parameter("SERIAL5_PROTOCOL", 1)
-            self.set_parameter("RNGFND1_TYPE", 10)
-            self.reboot_sitl()
-            self.set_parameter("RNGFND1_MAX", 327.67)
 
-            self.progress("Should be unhealthy while we don't send messages")
-            self.assert_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_LASER_POSITION, True, True, False)
-
-            self.progress("Should be healthy while we're sending good messages")
-            tstart = self.get_sim_time()
-            while True:
-                if self.get_sim_time() - tstart > 5:
-                    raise NotAchievedException("Sensor did not come good")
-                self.mav.mav.distance_sensor_send(
-                    0,  # time_boot_ms
-                    10, # min_distance
-                    50, # max_distance
-                    20, # current_distance
-                    mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
-                    21, # id
-                    mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
-                    255 # covariance
-                )
-                if self.sensor_has_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_LASER_POSITION, True, True, True):
-                    self.progress("Sensor has good state")
-                    break
-                self.delay_sim_time(0.1)
-
-            self.progress("Should be unhealthy again if we stop sending messages")
-            self.delay_sim_time(1)
-            self.assert_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_LASER_POSITION, True, True, False)
-
-            self.progress("Landing gear should deploy with current_distance below min_distance")
-            self.change_mode('STABILIZE')
-            timeout = 60
-            tstart = self.get_sim_time()
-            while not self.armed():
-                if self.get_sim_time() - tstart > timeout:
-                    raise NotAchievedException("Failed to become armable after %f seconds" % timeout)
-                self.mav.mav.distance_sensor_send(
-                    0,  # time_boot_ms
-                    100, # min_distance (cm)
-                    2500, # max_distance (cm)
-                    200, # current_distance (cm)
-                    mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
-                    21, # id
-                    mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
-                    255  # covariance
-                )
-                try:
-                    self.arm_vehicle()
-                except Exception:
-                    pass
-            self.delay_sim_time(1)  # servo function maps only periodically updated
-#            self.send_debug_trap()
-
-            self.run_cmd(
-                mavutil.mavlink.MAV_CMD_AIRFRAME_CONFIGURATION,
-                p2=0,  # deploy
-            )
-
-            self.context_collect("STATUSTEXT")
-            tstart = self.get_sim_time()
-            while True:
-                if self.get_sim_time_cached() - tstart > 5:
-                    raise NotAchievedException("Retraction did not happen")
-                self.mav.mav.distance_sensor_send(
-                    0,  # time_boot_ms
-                    100, # min_distance (cm)
-                    6000, # max_distance (cm)
-                    1500, # current_distance (cm)
-                    mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
-                    21, # id
-                    mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
-                    255  # covariance
-                )
-                self.delay_sim_time(0.1)
-                try:
-                    self.wait_text("LandingGear: RETRACT", check_context=True, timeout=0.1)
-                except Exception:
-                    continue
-                self.progress("Retracted")
-                break
-#            self.send_debug_trap()
-            while True:
-                if self.get_sim_time_cached() - tstart > 5:
-                    raise NotAchievedException("Deployment did not happen")
-                self.progress("Sending distance-sensor message")
-                self.mav.mav.distance_sensor_send(
-                    0, # time_boot_ms
-                    300, # min_distance
-                    500, # max_distance
-                    250, # current_distance
-                    mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
-                    21, # id
-                    mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
-                    255 # covariance
-                )
-                try:
-                    self.wait_text("LandingGear: DEPLOY", check_context=True, timeout=0.1)
-                except Exception:
-                    continue
-                self.progress("Deployed")
-                break
-            self.disarm_vehicle()
-
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-        self.context_pop()
+        self.set_parameter("SERIAL5_PROTOCOL", 1)
+        self.set_parameter("RNGFND1_TYPE", 10)
         self.reboot_sitl()
-        if ex is not None:
-            raise ex
+        self.set_parameter("RNGFND1_MAX", 327.67)
+
+        self.progress("Should be unhealthy while we don't send messages")
+        self.assert_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_LASER_POSITION, True, True, False)
+
+        self.progress("Should be healthy while we're sending good messages")
+        tstart = self.get_sim_time()
+        while True:
+            if self.get_sim_time() - tstart > 5:
+                raise NotAchievedException("Sensor did not come good")
+            self.mav.mav.distance_sensor_send(
+                0,  # time_boot_ms
+                10, # min_distance
+                50, # max_distance
+                20, # current_distance
+                mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
+                21, # id
+                mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
+                255 # covariance
+            )
+            if self.sensor_has_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_LASER_POSITION, True, True, True):
+                self.progress("Sensor has good state")
+                break
+            self.delay_sim_time(0.1)
+
+        self.progress("Should be unhealthy again if we stop sending messages")
+        self.delay_sim_time(1)
+        self.assert_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_LASER_POSITION, True, True, False)
+
+        self.progress("Landing gear should deploy with current_distance below min_distance")
+        self.change_mode('STABILIZE')
+        timeout = 60
+        tstart = self.get_sim_time()
+        while not self.armed():
+            if self.get_sim_time() - tstart > timeout:
+                raise NotAchievedException("Failed to become armable after %f seconds" % timeout)
+            self.mav.mav.distance_sensor_send(
+                0,  # time_boot_ms
+                100, # min_distance (cm)
+                2500, # max_distance (cm)
+                200, # current_distance (cm)
+                mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
+                21, # id
+                mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
+                255  # covariance
+            )
+            try:
+                self.arm_vehicle()
+            except Exception:
+                pass
+        self.delay_sim_time(1)  # servo function maps only periodically updated
+#            self.send_debug_trap()
+
+        self.run_cmd(
+            mavutil.mavlink.MAV_CMD_AIRFRAME_CONFIGURATION,
+            p2=0,  # deploy
+        )
+
+        self.context_collect("STATUSTEXT")
+        tstart = self.get_sim_time()
+        while True:
+            if self.get_sim_time_cached() - tstart > 5:
+                raise NotAchievedException("Retraction did not happen")
+            self.mav.mav.distance_sensor_send(
+                0,  # time_boot_ms
+                100, # min_distance (cm)
+                6000, # max_distance (cm)
+                1500, # current_distance (cm)
+                mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
+                21, # id
+                mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
+                255  # covariance
+            )
+            self.delay_sim_time(0.1)
+            try:
+                self.wait_text("LandingGear: RETRACT", check_context=True, timeout=0.1)
+            except Exception:
+                continue
+            self.progress("Retracted")
+            break
+#            self.send_debug_trap()
+        while True:
+            if self.get_sim_time_cached() - tstart > 5:
+                raise NotAchievedException("Deployment did not happen")
+            self.progress("Sending distance-sensor message")
+            self.mav.mav.distance_sensor_send(
+                0, # time_boot_ms
+                300, # min_distance
+                500, # max_distance
+                250, # current_distance
+                mavutil.mavlink.MAV_DISTANCE_SENSOR_LASER, # type
+                21, # id
+                mavutil.mavlink.MAV_SENSOR_ROTATION_PITCH_270, # orientation
+                255 # covariance
+            )
+            try:
+                self.wait_text("LandingGear: DEPLOY", check_context=True, timeout=0.1)
+            except Exception:
+                continue
+            self.progress("Deployed")
+            break
+        self.disarm_vehicle()
+        self.context_pop()
 
     def GSF(self):
         '''test the Gaussian Sum filter'''
@@ -9802,67 +9750,54 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def MaxBotixI2CXL(self):
         '''Test maxbotix rangefinder drivers'''
-        ex = None
-        try:
-            self.context_push()
+        self.start_subtest("No messages")
+        self.assert_not_receiving_message("DISTANCE_SENSOR", timeout=5)
 
-            self.start_subtest("No messages")
-            self.assert_not_receiving_message("DISTANCE_SENSOR", timeout=5)
-
-            self.start_subtest("Default address")
-            self.set_parameter("RNGFND1_TYPE", 2)  # maxbotix
-            self.reboot_sitl()
-            self.do_timesync_roundtrip()
-            self.assert_receive_message("DISTANCE_SENSOR", timeout=5, verbose=True)
-
-            self.start_subtest("Explicitly set to default address")
-            self.set_parameters({
-                "RNGFND1_TYPE": 2,  # maxbotix
-                "RNGFND1_ADDR": 0x70,
-            })
-            self.reboot_sitl()
-            self.do_timesync_roundtrip()
-            rf = self.assert_receive_message("DISTANCE_SENSOR", timeout=5, verbose=True)
-
-            self.start_subtest("Explicitly set to non-default address")
-            self.set_parameter("RNGFND1_ADDR", 0x71)
-            self.reboot_sitl()
-            self.do_timesync_roundtrip()
-            rf = self.assert_receive_message("DISTANCE_SENSOR", timeout=5, verbose=True)
-
-            self.start_subtest("Two MaxBotix RangeFinders")
-            self.set_parameters({
-                "RNGFND1_TYPE": 2,  # maxbotix
-                "RNGFND1_ADDR": 0x70,
-                "RNGFND1_MIN": 1.50,
-                "RNGFND2_TYPE": 2,  # maxbotix
-                "RNGFND2_ADDR": 0x71,
-                "RNGFND2_MIN": 2.50,
-            })
-            self.reboot_sitl()
-            self.do_timesync_roundtrip()
-            for i in [0, 1]:
-                rf = self.assert_receive_message(
-                    "DISTANCE_SENSOR",
-                    timeout=5,
-                    condition=f"DISTANCE_SENSOR.id=={i}",
-                    verbose=True,
-                )
-                expected_dist = 150
-                if i == 1:
-                    expected_dist = 250
-                if rf.min_distance != expected_dist:
-                    raise NotAchievedException("Unexpected min_cm (want=%u got=%u)" %
-                                               (expected_dist, rf.min_distance))
-
-            self.context_pop()
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-
+        self.start_subtest("Default address")
+        self.set_parameter("RNGFND1_TYPE", 2)  # maxbotix
         self.reboot_sitl()
-        if ex is not None:
-            raise ex
+        self.do_timesync_roundtrip()
+        self.assert_receive_message("DISTANCE_SENSOR", timeout=5, verbose=True)
+
+        self.start_subtest("Explicitly set to default address")
+        self.set_parameters({
+            "RNGFND1_TYPE": 2,  # maxbotix
+            "RNGFND1_ADDR": 0x70,
+        })
+        self.reboot_sitl()
+        self.do_timesync_roundtrip()
+        rf = self.assert_receive_message("DISTANCE_SENSOR", timeout=5, verbose=True)
+
+        self.start_subtest("Explicitly set to non-default address")
+        self.set_parameter("RNGFND1_ADDR", 0x71)
+        self.reboot_sitl()
+        self.do_timesync_roundtrip()
+        rf = self.assert_receive_message("DISTANCE_SENSOR", timeout=5, verbose=True)
+
+        self.start_subtest("Two MaxBotix RangeFinders")
+        self.set_parameters({
+            "RNGFND1_TYPE": 2,  # maxbotix
+            "RNGFND1_ADDR": 0x70,
+            "RNGFND1_MIN": 1.50,
+            "RNGFND2_TYPE": 2,  # maxbotix
+            "RNGFND2_ADDR": 0x71,
+            "RNGFND2_MIN": 2.50,
+        })
+        self.reboot_sitl()
+        self.do_timesync_roundtrip()
+        for i in [0, 1]:
+            rf = self.assert_receive_message(
+                "DISTANCE_SENSOR",
+                timeout=5,
+                condition=f"DISTANCE_SENSOR.id=={i}",
+                verbose=True,
+            )
+            expected_dist = 150
+            if i == 1:
+                expected_dist = 250
+            if rf.min_distance != expected_dist:
+                raise NotAchievedException("Unexpected min_cm (want=%u got=%u)" %
+                                           (expected_dist, rf.min_distance))
 
     def FlyRangeFinderSITL(self):
         '''fly the type=100 perfect rangefinder'''
@@ -11719,27 +11654,19 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def MAVLandedStateTakeoff(self):
         '''check EXTENDED_SYS_STATE message'''
-        ex = None
-        try:
-            self.set_message_rate_hz(id=mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, rate_hz=1)
-            self.wait_extended_sys_state(vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
-                                         landed_state=mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND, timeout=10)
-            self.load_mission(filename="copter_mission.txt")
-            self.set_parameter(name="AUTO_OPTIONS", value=3)
-            self.change_mode(mode="AUTO")
-            self.wait_ready_to_arm()
-            self.arm_vehicle()
-            self.wait_extended_sys_state(vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
-                                         landed_state=mavutil.mavlink.MAV_LANDED_STATE_TAKEOFF, timeout=30)
-            self.wait_extended_sys_state(vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
-                                         landed_state=mavutil.mavlink.MAV_LANDED_STATE_IN_AIR, timeout=60)
-            self.land_and_disarm()
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-        self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, -1)
-        if ex is not None:
-            raise ex
+        self.context_set_message_rate_hz(id=mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, rate_hz=1)
+        self.wait_extended_sys_state(vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
+                                     landed_state=mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND, timeout=10)
+        self.load_mission(filename="copter_mission.txt")
+        self.set_parameter(name="AUTO_OPTIONS", value=3)
+        self.change_mode(mode="AUTO")
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_extended_sys_state(vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
+                                     landed_state=mavutil.mavlink.MAV_LANDED_STATE_TAKEOFF, timeout=30)
+        self.wait_extended_sys_state(vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
+                                     landed_state=mavutil.mavlink.MAV_LANDED_STATE_IN_AIR, timeout=60)
+        self.do_RTL()
 
     def ATTITUDE_FAST(self):
         '''ensure that when ATTITUDE_FAST is set we get many messages'''
@@ -13195,8 +13122,6 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Should not change mode with no mission")
         except WaitModeTimeout:
             pass
-        except Exception as e:
-            raise e
 
         # pymavlink does not understand the new return path command yet, at some point it will
         cmd_return_path_start = 188 # mavutil.mavlink.MAV_CMD_DO_RETURN_PATH_START

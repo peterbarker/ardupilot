@@ -1403,18 +1403,13 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.start_subtest("Check we can disarm after a short period on the ground")
         self.takeoff(5, 'QHOVER')
         self.change_mode('QLAND')
-        try:
-            self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, 10)
-            self.wait_extended_sys_state(
-                landed_state=mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND,
-                vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
-                timeout=60
-            )
-        except Exception:
-            self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, 0)
-            raise
-
-        self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, -1)
+        self.context_set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, 10)
+        self.wait_extended_sys_state(
+            landed_state=mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND,
+            vtol_state=mavutil.mavlink.MAV_VTOL_STATE_MC,
+            timeout=60
+        )
+        self.context_set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_EXTENDED_SYS_STATE, -1)
         self.disarm_vehicle()
 
     def MAV_CMD_NAV_LOITER_TO_ALT(self, target_system=1, target_component=1):

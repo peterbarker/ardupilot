@@ -10365,99 +10365,88 @@ Also, ignores heartbeats not from our target system'''
     # this one, so we put it first:
     def FixedYawCalibration(self):
         '''Test Fixed Yaw Calibration'''
-        self.context_push()
-        ex = None
-        try:
-            MAG_OFS_X = 100
-            MAG_OFS_Y = 200
-            MAG_OFS_Z = 300
-            wanted = {
-                "COMPASS_OFS_X": (MAG_OFS_X, 3.0),
-                "COMPASS_OFS_Y": (MAG_OFS_Y, 3.0),
-                "COMPASS_OFS_Z": (MAG_OFS_Z, 3.0),
-                "COMPASS_DIA_X": 1,
-                "COMPASS_DIA_Y": 1,
-                "COMPASS_DIA_Z": 1,
-                "COMPASS_ODI_X": 0,
-                "COMPASS_ODI_Y": 0,
-                "COMPASS_ODI_Z": 0,
+        MAG_OFS_X = 100
+        MAG_OFS_Y = 200
+        MAG_OFS_Z = 300
+        wanted = {
+            "COMPASS_OFS_X": (MAG_OFS_X, 3.0),
+            "COMPASS_OFS_Y": (MAG_OFS_Y, 3.0),
+            "COMPASS_OFS_Z": (MAG_OFS_Z, 3.0),
+            "COMPASS_DIA_X": 1,
+            "COMPASS_DIA_Y": 1,
+            "COMPASS_DIA_Z": 1,
+            "COMPASS_ODI_X": 0,
+            "COMPASS_ODI_Y": 0,
+            "COMPASS_ODI_Z": 0,
 
-                "COMPASS_OFS2_X": (MAG_OFS_X, 3.0),
-                "COMPASS_OFS2_Y": (MAG_OFS_Y, 3.0),
-                "COMPASS_OFS2_Z": (MAG_OFS_Z, 3.0),
-                "COMPASS_DIA2_X": 1,
-                "COMPASS_DIA2_Y": 1,
-                "COMPASS_DIA2_Z": 1,
-                "COMPASS_ODI2_X": 0,
-                "COMPASS_ODI2_Y": 0,
-                "COMPASS_ODI2_Z": 0,
+            "COMPASS_OFS2_X": (MAG_OFS_X, 3.0),
+            "COMPASS_OFS2_Y": (MAG_OFS_Y, 3.0),
+            "COMPASS_OFS2_Z": (MAG_OFS_Z, 3.0),
+            "COMPASS_DIA2_X": 1,
+            "COMPASS_DIA2_Y": 1,
+            "COMPASS_DIA2_Z": 1,
+            "COMPASS_ODI2_X": 0,
+            "COMPASS_ODI2_Y": 0,
+            "COMPASS_ODI2_Z": 0,
 
-                "COMPASS_OFS3_X": (MAG_OFS_X, 3.0),
-                "COMPASS_OFS3_Y": (MAG_OFS_Y, 3.0),
-                "COMPASS_OFS3_Z": (MAG_OFS_Z, 3.0),
-                "COMPASS_DIA3_X": 1,
-                "COMPASS_DIA3_Y": 1,
-                "COMPASS_DIA3_Z": 1,
-                "COMPASS_ODI3_X": 0,
-                "COMPASS_ODI3_Y": 0,
-                "COMPASS_ODI3_Z": 0,
-            }
-            self.set_parameters({
-                "SIM_MAG1_OFS_X": MAG_OFS_X,
-                "SIM_MAG1_OFS_Y": MAG_OFS_Y,
-                "SIM_MAG1_OFS_Z": MAG_OFS_Z,
+            "COMPASS_OFS3_X": (MAG_OFS_X, 3.0),
+            "COMPASS_OFS3_Y": (MAG_OFS_Y, 3.0),
+            "COMPASS_OFS3_Z": (MAG_OFS_Z, 3.0),
+            "COMPASS_DIA3_X": 1,
+            "COMPASS_DIA3_Y": 1,
+            "COMPASS_DIA3_Z": 1,
+            "COMPASS_ODI3_X": 0,
+            "COMPASS_ODI3_Y": 0,
+            "COMPASS_ODI3_Z": 0,
+        }
+        self.set_parameters({
+            "SIM_MAG1_OFS_X": MAG_OFS_X,
+            "SIM_MAG1_OFS_Y": MAG_OFS_Y,
+            "SIM_MAG1_OFS_Z": MAG_OFS_Z,
 
-                "SIM_MAG2_OFS_X": MAG_OFS_X,
-                "SIM_MAG2_OFS_Y": MAG_OFS_Y,
-                "SIM_MAG2_OFS_Z": MAG_OFS_Z,
+            "SIM_MAG2_OFS_X": MAG_OFS_X,
+            "SIM_MAG2_OFS_Y": MAG_OFS_Y,
+            "SIM_MAG2_OFS_Z": MAG_OFS_Z,
 
-                "SIM_MAG3_OFS_X": MAG_OFS_X,
-                "SIM_MAG3_OFS_Y": MAG_OFS_Y,
-                "SIM_MAG3_OFS_Z": MAG_OFS_Z,
-            })
+            "SIM_MAG3_OFS_X": MAG_OFS_X,
+            "SIM_MAG3_OFS_Y": MAG_OFS_Y,
+            "SIM_MAG3_OFS_Z": MAG_OFS_Z,
+        })
 
-            # set to some sensible-ish initial values.  If your initial
-            # offsets are way, way off you can get some very odd effects.
-            for param in wanted:
-                value = 0.0
-                if "DIA" in param:
-                    value = 1.001
-                elif "ODI" in param:
-                    value = 0.001
-                self.set_parameter(param, value)
+        # set to some sensible-ish initial values.  If your initial
+        # offsets are way, way off you can get some very odd effects.
+        for param in wanted:
+            value = 0.0
+            if "DIA" in param:
+                value = 1.001
+            elif "ODI" in param:
+                value = 0.001
+            self.set_parameter(param, value)
 
-            self.zero_mag_offset_parameters()
+        self.zero_mag_offset_parameters()
 
-            # wait until we definitely know where we are:
-            self.poll_home_position(timeout=120)
+        # wait until we definitely know where we are:
+        self.poll_home_position(timeout=120)
 
-            ss = self.assert_receive_message('SIMSTATE', verbose=True)
+        ss = self.assert_receive_message('SIMSTATE', verbose=True)
 
-            self.run_cmd(
-                mavutil.mavlink.MAV_CMD_FIXED_MAG_CAL_YAW,
-                p1=math.degrees(ss.yaw),
-            )
-            self.verify_parameter_values(wanted)
+        self.run_cmd(
+            mavutil.mavlink.MAV_CMD_FIXED_MAG_CAL_YAW,
+            p1=math.degrees(ss.yaw),
+        )
+        self.verify_parameter_values(wanted)
 
-            # run same command but as command_int:
-            self.zero_mag_offset_parameters()
-            self.run_cmd_int(
-                mavutil.mavlink.MAV_CMD_FIXED_MAG_CAL_YAW,
-                p1=math.degrees(ss.yaw),
-            )
-            self.verify_parameter_values(wanted)
+        # run same command but as command_int:
+        self.zero_mag_offset_parameters()
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_FIXED_MAG_CAL_YAW,
+            p1=math.degrees(ss.yaw),
+        )
+        self.verify_parameter_values(wanted)
 
-            self.progress("Rebooting and making sure we could arm with these values")
-            self.reboot_sitl()
-            self.wait_ready_to_arm(timeout=60)
-
-        except Exception as e:
-            ex = e
-
-        self.context_pop()
-
-        if ex is not None:
-            raise ex
+        self.progress("Rebooting and making sure we could arm with these values")
+        self.reboot_sitl()
+        self.wait_ready_to_arm(timeout=60)
 
     def DataFlashOverMAVLink(self):
         '''Test DataFlash over MAVLink'''
@@ -11173,23 +11162,11 @@ Also, ignores heartbeats not from our target system'''
             'RAW_IMU',
             'ATTITUDE',
         ]
-        ex = None
-        try:
-            rate = 5
-            for message in messages:
-                self.set_message_rate_hz(message, rate)
-            for message in messages:
-                self.assert_message_rate_hz(message, rate)
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-
-        # reset message rates to default:
+        rate = 5
         for message in messages:
-            self.set_message_rate_hz(message, -1)
-
-        if ex is not None:
-            raise ex
+            self.context_set_message_rate_hz(message, rate)
+        for message in messages:
+            self.assert_message_rate_hz(message, rate)
 
     def assert_message_rate_hz(self, message, want_rate, sample_period=20, ndigits=0, mav=None):
         if mav is None:
@@ -14218,34 +14195,23 @@ switch value'''
 
     def CRSF(self):
         '''Test RC CRSF'''
-        self.context_push()
-        ex = None
-        try:
-            self.set_parameter("SERIAL5_PROTOCOL", 23) # serial5 is RCIN input
-            port = self.spare_network_port()
-            self.customise_SITL_commandline([
-                "--serial5=tcp:%u" % port # serial5 reads from to localhost port
-            ])
-            crsf = CRSF(("127.0.0.1", port))
-            crsf.connect()
+        self.set_parameter("SERIAL5_PROTOCOL", 23) # serial5 is RCIN input
+        port = self.spare_network_port()
+        self.customise_SITL_commandline([
+            "--serial5=tcp:%u" % port # serial5 reads from to localhost port
+        ])
+        crsf = CRSF(("127.0.0.1", port))
+        crsf.connect()
 
-            self.progress("Writing vtx_frame")
-            crsf.write_data_id(crsf.dataid_vtx_frame)
-            self.delay_sim_time(5)
-            self.progress("Writing vtx_telem")
-            crsf.write_data_id(crsf.dataid_vtx_telem)
-            self.delay_sim_time(5)
-            self.progress("Writing vtx_unknown")
-            crsf.write_data_id(crsf.dataid_vtx_unknown)
-            self.delay_sim_time(5)
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-        self.context_pop()
-        self.disarm_vehicle(force=True)
-        self.reboot_sitl()
-        if ex is not None:
-            raise ex
+        self.progress("Writing vtx_frame")
+        crsf.write_data_id(crsf.dataid_vtx_frame)
+        self.delay_sim_time(5)
+        self.progress("Writing vtx_telem")
+        crsf.write_data_id(crsf.dataid_vtx_telem)
+        self.delay_sim_time(5)
+        self.progress("Writing vtx_unknown")
+        crsf.write_data_id(crsf.dataid_vtx_unknown)
+        self.delay_sim_time(5)
 
     def CompassPrearms(self):
         '''test compass prearm checks'''

@@ -1798,16 +1798,6 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
 
     def GCSFailsafe(self, side=60, timeout=360):
         """Test GCS Failsafe"""
-        try:
-            self.test_gcs_failsafe(side=side, timeout=timeout)
-        except Exception as ex:
-            self.setGCSfailsafe(0)
-            self.set_parameter('FS_ACTION', 0)
-            self.disarm_vehicle(force=True)
-            self.reboot_sitl()
-            raise ex
-
-    def test_gcs_failsafe(self, side=60, timeout=360):
         self.set_parameter("MAV_GCS_SYSID", self.mav.source_system)
         self.set_parameter("FS_ACTION", 1)
         self.set_parameter("FS_THR_ENABLE", 0)  # disable radio FS as it inhibt GCS one's
@@ -4947,35 +4937,28 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         if self.mavproxy is not None:
             self.mavproxy.send("fence list\n")
         self.context_push()
-        ex = None
-        try:
-            self.set_parameters({
-                "AVOID_ENABLE": 3,
-                "OA_TYPE": 2,
-            })
-            self.reboot_sitl()
-            self.change_mode('GUIDED')
-            self.wait_ready_to_arm()
-            self.set_parameter("FENCE_ENABLE", 1)
-            if self.mavproxy is not None:
-                self.mavproxy.send("fence list\n")
-            self.arm_vehicle()
+        self.set_parameters({
+            "AVOID_ENABLE": 3,
+            "OA_TYPE": 2,
+        })
+        self.reboot_sitl()
+        self.change_mode('GUIDED')
+        self.wait_ready_to_arm()
+        self.set_parameter("FENCE_ENABLE", 1)
+        if self.mavproxy is not None:
+            self.mavproxy.send("fence list\n")
+        self.arm_vehicle()
 
-            self.change_mode("GUIDED")
-            target = mavutil.location(40.071382, -105.228340, 0, 0)
-            self.send_guided_mission_item(target,
-                                          target_system=target_system,
-                                          target_component=target_component)
-            self.wait_location(target, timeout=300)
-            self.do_RTL()
-            self.disarm_vehicle()
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
+        self.change_mode("GUIDED")
+        target = mavutil.location(40.071382, -105.228340, 0, 0)
+        self.send_guided_mission_item(target,
+                                      target_system=target_system,
+                                      target_component=target_component)
+        self.wait_location(target, timeout=300)
+        self.do_RTL()
+        self.disarm_vehicle()
         self.context_pop()
         self.reboot_sitl()
-        if ex is not None:
-            raise ex
 
     def test_poly_fence_avoidance_dont_breach_exclusion(self, target_system=1, target_component=1):
         self.start_subtest("Ensure we stop before breaching an exclusion fence")

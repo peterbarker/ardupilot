@@ -305,13 +305,9 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         while count > 0:
             self.progress("Starting roll")
             self.set_rc(1, 1000)
-            try:
-                self.wait_roll(-150, accuracy=90)
-                self.wait_roll(150, accuracy=90)
-                self.wait_roll(0, accuracy=90)
-            except Exception as e:
-                self.set_rc(1, 1500)
-                raise e
+            self.wait_roll(-150, accuracy=90)
+            self.wait_roll(150, accuracy=90)
+            self.wait_roll(0, accuracy=90)
             count -= 1
 
         # back to FBWA
@@ -520,11 +516,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             # hard left
             self.progress("Starting turn %u" % i)
             self.set_rc(1, 1800)
-            try:
-                self.wait_heading(0 + (90*i), accuracy=20, timeout=60)
-            except Exception as e:
-                self.set_rc(1, 1500)
-                raise e
+            self.wait_heading(0 + (90*i), accuracy=20, timeout=60)
             self.set_rc(1, 1500)
             self.progress("Starting leg %u" % i)
             self.wait_distance(100, accuracy=20)
@@ -536,11 +528,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             # hard left
             self.progress("Starting turn %u" % i)
             self.set_rc(4, 1900)
-            try:
-                self.wait_heading(360 - (90*i), accuracy=20, timeout=60)
-            except Exception as e:
-                self.set_rc(4, 1500)
-                raise e
+            self.wait_heading(360 - (90*i), accuracy=20, timeout=60)
             self.set_rc(4, 1500)
             self.progress("Starting leg %u" % i)
             self.wait_distance(100, accuracy=20)
@@ -4104,8 +4092,6 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Should not change mode in fence breach")
         except WaitModeTimeout:
             pass
-        except Exception as e:
-            raise e
 
         # enable mode change
         self.set_parameter("FENCE_OPTIONS", 0)
@@ -4410,46 +4396,36 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.progress("######## Skipping WatchdogHome test under GDB")
             return
 
-        ex = None
-        try:
-            self.progress("Enabling watchdog")
-            self.set_parameter("BRD_OPTIONS", 1 << 0)
-            self.reboot_sitl()
-            self.wait_ready_to_arm()
-            self.progress("Explicitly setting home to a known location")
-            orig_home = self.poll_home_position()
-            new_home = orig_home
-            new_home.latitude = new_home.latitude + 1000
-            new_home.longitude = new_home.longitude + 2000
-            new_home.altitude = new_home.altitude + 300000 # 300 metres
-            self.run_cmd_int(
-                mavutil.mavlink.MAV_CMD_DO_SET_HOME,
-                p5=new_home.latitude,
-                p6=new_home.longitude,
-                p7=new_home.altitude/1000.0, # mm => m
-            )
-            old_bootcount = self.get_parameter('STAT_BOOTCNT')
-            self.progress("Forcing watchdog reset")
-            os.kill(self.sitl.pid, signal.SIGALRM)
-            self.detect_and_handle_reboot(old_bootcount)
-            self.wait_statustext("WDG:")
-            self.wait_statustext("IMU1 is using GPS")  # won't be come armable
-            self.progress("Verifying home position")
-            post_reboot_home = self.poll_home_position()
-            delta = self.get_distance_int(new_home, post_reboot_home)
-            max_delta = 1
-            if delta > max_delta:
-                raise NotAchievedException(
-                    "New home not where it should be (dist=%f) (want=%s) (got=%s)" %
-                    (delta, str(new_home), str(post_reboot_home)))
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-
+        self.progress("Enabling watchdog")
+        self.set_parameter("BRD_OPTIONS", 1 << 0)
         self.reboot_sitl()
-
-        if ex is not None:
-            raise ex
+        self.wait_ready_to_arm()
+        self.progress("Explicitly setting home to a known location")
+        orig_home = self.poll_home_position()
+        new_home = orig_home
+        new_home.latitude = new_home.latitude + 1000
+        new_home.longitude = new_home.longitude + 2000
+        new_home.altitude = new_home.altitude + 300000 # 300 metres
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_DO_SET_HOME,
+            p5=new_home.latitude,
+            p6=new_home.longitude,
+            p7=new_home.altitude/1000.0, # mm => m
+        )
+        old_bootcount = self.get_parameter('STAT_BOOTCNT')
+        self.progress("Forcing watchdog reset")
+        os.kill(self.sitl.pid, signal.SIGALRM)
+        self.detect_and_handle_reboot(old_bootcount)
+        self.wait_statustext("WDG:")
+        self.wait_statustext("IMU1 is using GPS")  # won't be come armable
+        self.progress("Verifying home position")
+        post_reboot_home = self.poll_home_position()
+        delta = self.get_distance_int(new_home, post_reboot_home)
+        max_delta = 1
+        if delta > max_delta:
+            raise NotAchievedException(
+                "New home not where it should be (dist=%f) (want=%s) (got=%s)" %
+                (delta, str(new_home), str(post_reboot_home)))
 
     def AUTOTUNE(self):
         '''Test AutoTune mode'''
