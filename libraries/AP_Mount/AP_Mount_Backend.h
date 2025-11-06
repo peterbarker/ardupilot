@@ -83,7 +83,27 @@ public:
 
     // set yaw_lock used in RC_TARGETING mode.  If true, the gimbal's yaw target is maintained in earth-frame meaning it will lock onto an earth-frame heading (e.g. North)
     // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
-    void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+    enum class Axis {
+        YAW = 0,
+        PITCH = 1,
+        ROLL = 2,
+    };
+
+    void set_yaw_earth_frame(bool is_earth_frame) {
+        if (is_earth_frame) {
+            _earth_frame_axes |= uint8_t(Axis::YAW);
+        } else {
+            _earth_frame_axes = _earth_frame_axes & ~(uint8_t(Axis::YAW));
+        }
+    }
+
+    void set_rp_earth_frame(bool is_earth_frame) {
+        if (is_earth_frame) {
+            _earth_frame_axes |= (uint8_t(Axis::ROLL)|uint8_t(Axis::PITCH));
+        } else {
+            _earth_frame_axes = _earth_frame_axes & ~(uint8_t(Axis::ROLL)|uint8_t(Axis::PITCH));
+        }
+    }
 
     // set angle target in degrees
     // roll and pitch are in earth-frame
@@ -226,7 +246,7 @@ protected:
         float roll;
         float pitch;
         float yaw;
-        bool yaw_is_ef;
+        uint8_t ef_axes = (uint8_t(Axis::ROLL)|uint8_t(Axis::PITCH));  // bitmask of axes which should point in earth frame (e.g. roll stabilised to horizon).   rpy order
 
         // return body-frame yaw angle from a mount target (in radians)
         float get_bf_yaw() const;
@@ -236,6 +256,11 @@ protected:
 
         // set roll, pitch, yaw and yaw_is_ef from Vector3f
         void set(const Vector3f& rpy, bool yaw_is_ef_in);
+
+        // returns true if yaw should point in Earth frame (i.e. if
+        // the vehicle yaws the camera counter-yaw to point to the
+        // same compass heading:
+        bool yaw_is_ef() const { return ef_axes & uint8_t(Axis::YAW); }
     };
 
     // options parameter bitmask handling
@@ -322,7 +347,10 @@ private:
     void calculate_poi();
 #endif
 
-    bool _yaw_lock;                 // yaw_lock used in RC_TARGETING mode. True if the gimbal's yaw target is maintained in earth-frame, if false (aka "follow") it is maintained in body-frame
+    // a mask of axes which are stabilised to always point in the same
+    // direction in Earth frame (as opposed to being unmoving in
+    // relation to the vehicle body):
+    uint8_t _earth_frame_axes;
 
 #if AP_MOUNT_POI_TO_LATLONALT_ENABLED
     struct {

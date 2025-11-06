@@ -137,9 +137,15 @@ void AP_Mount_CADDX::send_target_angles(const MountTarget& angle_target_rad)
 
     // byte 2's lower 3 bits are mode
     // lower 5 bits are sensitivity but always left as zero
-    uint8_t mode = (uint8_t)LockMode::TILT_LOCK | (uint8_t)LockMode::ROLL_LOCK;
-    if (angle_target_rad.yaw_is_ef) {
+    uint8_t mode = 0;
+    if (angle_target_rad.ef_axes & Axis::YAW) {
         mode |= (uint8_t)LockMode::YAW_LOCK;
+    }
+    if (angle_target_rad.ef_axes & Axis::ROLL) {
+        mode |= (uint8_t)LockMode::ROLL_LOCK;
+    }
+    if (angle_target_rad.ef_axes & Axis::PITCH) {
+        mode |= (uint8_t)LockMode::PITCH_LOCK;
     }
     set_attitude_cmd_buf[2] = mode & 0x07;
 

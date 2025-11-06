@@ -132,14 +132,14 @@ void AP_Mount_Backend::set_angle_target(float roll_deg, float pitch_deg, float y
     mnt_target.angle_rad.roll = radians(roll_deg);
     mnt_target.angle_rad.pitch = radians(pitch_deg);
     mnt_target.angle_rad.yaw = radians(yaw_deg);
-    mnt_target.angle_rad.yaw_is_ef = yaw_is_earth_frame;
+    mnt_target.angle_rad.ef_axes = _earth_frame_axes;
 
     // set the mode to mavlink targeting
     set_mode(MAV_MOUNT_MODE_MAVLINK_TARGETING);
 
     // optionally set RC_TARGETING yaw lock state
     if (option_set(Options::RCTARGETING_LOCK_FROM_PREVMODE)) {
-        set_yaw_lock(yaw_is_earth_frame);
+        set_yaw_earth_frame(yaw_is_earth_frame);
     }
 }
 
