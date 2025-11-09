@@ -1,3 +1,5 @@
 include ../KakuteF7/hwdef.dat
 
 USE_BOOTLOADER_FROM_BOARD KakuteF7
+
+define AP_FATFS_MAX_IO_SIZE 32768
