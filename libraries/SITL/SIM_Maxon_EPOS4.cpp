@@ -323,12 +323,18 @@ const Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid
 
 Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::EPOS4Var::get_subindex(uint8_t subindex)
 {
-    AP_HAL::panic("No subindexes on a Var");
+    if (subindex != 0) {
+        AP_HAL::panic("No subindexes on a Var");
+    }
+    return this;
 }
 
 const Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::EPOS4Var::get_subindex(uint8_t subindex) const
 {
-    AP_HAL::panic("No subindexes on a Var");
+    if (subindex != 0) {
+        AP_HAL::panic("No subindexes on a Var");
+    }
+    return this;
 }
 
 Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::Identity::get_subindex(uint8_t subindex)
