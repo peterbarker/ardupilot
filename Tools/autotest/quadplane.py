@@ -2745,8 +2745,6 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.wait_servo_channel_value(12, 1100, minimum_duration=1, timeout=3)
         self.wait_servo_channel_value(13, 1100, minimum_duration=1, timeout=3)
 
-        return
-
         self.wait_ready_to_arm()
         self.arm_vehicle()
         self.takeoff(100, mode='FBWA')

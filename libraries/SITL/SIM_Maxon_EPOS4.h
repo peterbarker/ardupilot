@@ -31,6 +31,8 @@ reboot
 arm throttle
 rc 3 1600
 
+./Tools/autotest/autotest.py build.Plane test.Plane.MaxonEPOS4
+
 */
 
 #pragma once
