@@ -435,8 +435,8 @@ private:
         }
     };
 
-    HomePosition RS232BitRate{5};
-    HomePosition RS232FrameTimeout{500};
+    RS232BitRate rs232_bit_rate{5};
+    RS232FrameTimeout rs232_frame_timeout{500};
     HomePosition home_position{36865};  // initial value is actually 0 in datasheet
     ControlWord controlword{0};
     ModesOfOperation modes_of_operation{1};
@@ -481,7 +481,7 @@ private:
     struct {
         ObjectID id;
         EPOS4Object *object;
-    } epos4_objects[7] {
+    } epos4_objects[9] {
         { ObjectID::RS232_BIT_RATE, &rs232_bit_rate },
         { ObjectID::RS232_FRAME_TIMEOUT, &rs232_frame_timeout },
         { ObjectID::HOME_POSITION, &home_position },
