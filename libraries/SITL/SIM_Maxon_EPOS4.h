@@ -193,7 +193,7 @@ private:
         // INTEGER64      = 0x0015,
         // UNSIGNED8      = 0x0005,
         UNSIGNED16     = 0x0006,
-        // UNSIGNED32     = 0x0007,
+        UNSIGNED32     = 0x0007,
         // UNSIGNED64     = 0x001B,
         // VISIBLE_STRING = 0x0009,
         // OCTET_STRING   = 0x000A,
@@ -201,10 +201,21 @@ private:
         // IDENTITY       = 0x0023,
     };
 
+    class EPOS4Var;
+
     class PACKED EPOS4Object {
+    public:
+        virtual EPOS4Var *get_subindex(uint8_t subindex) = 0;
+        virtual const EPOS4Var *get_subindex(uint8_t subindex) const = 0;
+    };
+
+    class PACKED EPOS4Var : public EPOS4Object {
     public:
         virtual AccessType access_type() const = 0;
         virtual DataType data_type() const = 0;
+
+        EPOS4Var *get_subindex(uint8_t subindex) override;
+        const EPOS4Var *get_subindex(uint8_t subindex) const override;
 
         void set_data_int32(int32_t _data) {
             assert_data_type(DataType::INTEGER32);
@@ -213,6 +224,15 @@ private:
         int32_t get_data_int32() const {
             assert_data_type(DataType::INTEGER32);
             return data_int32;
+        }
+
+        void set_data_uint32(uint32_t _data) {
+            assert_data_type(DataType::UNSIGNED32);
+            data_uint32 = _data;
+        }
+        uint32_t get_data_uint32() const {
+            assert_data_type(DataType::UNSIGNED32);
+            return data_uint32;
         }
 
         void set_data_int16(int16_t _data) {
@@ -243,6 +263,7 @@ private:
         }
 
         union {
+            uint32_t data_uint32;
             int32_t data_int32;
             uint16_t data_uint16;
             int16_t data_int16;
@@ -257,7 +278,7 @@ private:
         }
     };
 
-    class PACKED RS232BitRate : public EPOS4Object {
+    class PACKED RS232BitRate : public EPOS4Var {
     public:
         RS232BitRate(int32_t value) {
             set_data_int8(value);
@@ -274,7 +295,7 @@ private:
         };
     };
 
-    class PACKED RS232FrameTimeout : public EPOS4Object {
+    class PACKED RS232FrameTimeout : public EPOS4Var {
     public:
         RS232FrameTimeout(int32_t value) {
             set_data_uint16(value);
@@ -283,7 +304,7 @@ private:
         DataType data_type() const override { return DataType::UNSIGNED16; }
     };
 
-    class PACKED HomePosition : public EPOS4Object {
+    class PACKED HomePosition : public EPOS4Var {
     public:
         HomePosition(int32_t value) {
             set_data_int32(value);
@@ -293,7 +314,7 @@ private:
     };
 
     // see 2.2.3 and 6.2.94
-    class PACKED ControlWord : public EPOS4Object {
+    class PACKED ControlWord : public EPOS4Var {
     public:
         ControlWord(uint16_t value) {
             set_data_uint16(value);
@@ -339,7 +360,7 @@ private:
         PROFILE_POSITION_MODE = 1,
     };
 
-    class ModesOfOperation : public EPOS4Object {
+    class ModesOfOperation : public EPOS4Var {
     public:
         ModesOfOperation(int8_t v) { set_data_int8(v); }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
@@ -348,7 +369,7 @@ private:
         ModeOfOperation get_mode() const { return ModeOfOperation(get_data_int8()); }
     };
 
-    class ModesOfOperationDisplay : public EPOS4Object {
+    class ModesOfOperationDisplay : public EPOS4Var {
     public:
         ModesOfOperationDisplay(int8_t v) { set_data_int8(v); }
         AccessType access_type() const override { return AccessType::READ_ONLY; }
@@ -357,7 +378,7 @@ private:
         ModeOfOperation get_mode() const { return ModeOfOperation(get_data_int8()); }
     };
 
-    class StatusWord : public EPOS4Object {
+    class StatusWord : public EPOS4Var {
     public:
         StatusWord(uint16_t v) { set_data_uint16(v); }
         AccessType access_type() const override { return AccessType::READ_ONLY; }
@@ -414,14 +435,14 @@ private:
         // }
     };
 
-    class TargetPosition : public EPOS4Object {
+    class TargetPosition : public EPOS4Var {
     public:
         TargetPosition(int32_t v) { set_data_int32(v); }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
         DataType data_type() const override { return DataType::INTEGER32; }
     };
 
-    class MotionProfileType : public EPOS4Object {
+    class MotionProfileType : public EPOS4Var {
     public:
         MotionProfileType(int16_t v) { set_data_int16(v); }
         AccessType access_type() const override { return AccessType::READ_WRITE; }
@@ -457,6 +478,7 @@ private:
     bool operation_enabled;
 
     enum class ObjectID : uint16_t {
+        IDENTITY                = 0x1018,
         RS232_BIT_RATE          = 0x2002,
         RS232_FRAME_TIMEOUT     = 0x2005,
         MAX_GEAR_INPUT_SPEED    = 0x3003,
@@ -477,6 +499,83 @@ private:
         MAX_ACCELERATION        = 0x60c5,
     };
 
+    class PACKED EPOS4Record : EPOS4Object {
+    public:
+    };
+
+    class PACKED Identity : EPOS4Record {
+    public:
+        class PACKED VendorID : public EPOS4Var {
+        public:
+            VendorID(uint32_t value) {
+                set_data_uint32(value);
+            }
+            AccessType access_type() const override { return AccessType::READ_ONLY; }
+            DataType data_type() const override { return DataType::UNSIGNED32; }
+        };
+        class PACKED ProductCode : public EPOS4Var {
+        public:
+            ProductCode(uint32_t value) {
+                set_data_uint32(value);
+            }
+            AccessType access_type() const override { return AccessType::READ_ONLY; }
+            DataType data_type() const override { return DataType::UNSIGNED32; }
+        };
+        class PACKED RevisionNumber : public EPOS4Var {
+        public:
+            RevisionNumber(uint32_t value) {
+                set_data_uint32(value);
+            }
+            AccessType access_type() const override { return AccessType::READ_ONLY; }
+            DataType data_type() const override { return DataType::UNSIGNED32; }
+        };
+        class PACKED SerialNumber : public EPOS4Var {
+        public:
+            SerialNumber(uint32_t value) {
+                set_data_uint32(value);
+            }
+            AccessType access_type() const override { return AccessType::READ_ONLY; }
+            DataType data_type() const override { return DataType::UNSIGNED32; }
+        };
+
+        Identity(const VendorID &_vendor_id,
+                 const ProductCode &_product_code,
+                 const RevisionNumber &_revision_number,
+                 const SerialNumber &_serial_number) :
+            vendor_id{_vendor_id},
+            product_code{_product_code},
+            revision_number{_revision_number},
+            serial_number{_serial_number}
+            { }
+
+        VendorID vendor_id;
+        ProductCode product_code;
+        RevisionNumber revision_number;
+        SerialNumber serial_number;
+
+        EPOS4Var *get_subindex(uint8_t subindex) override;
+        const EPOS4Var *get_subindex(uint8_t subindex) const override;
+    };
+
+    Identity identity{
+        Identity::VendorID{3},
+        Identity::ProductCode{4},
+        Identity::RevisionNumber{5},
+        Identity::SerialNumber{6}
+    };
+    // (
+    //     &v,
+    //     Identity::ProductCode{0x6150},
+    //     Identity::RevisionNumber{0xaabb},
+    //     Identity::SerialNumber{0x01020304}
+    //     );
+    //     //             &VendorID{0xFA},
+    //     //     &ProductID{0x6150},
+    //     //     &RevisionNumber{0xaabb},
+    //     //     &SerialNumber{0x01020304},
+    //     // };
+
+
     // map from ObjectID -> Object:
     struct {
         ObjectID id;
@@ -495,6 +594,9 @@ private:
 
     EPOS4Object *find_epos4_object(ObjectID objectid);
     const EPOS4Object *find_epos4_object(ObjectID objectid) const;
+
+    EPOS4Var *find_epos4_var(ObjectID objectid, uint8_t subindex);
+    const EPOS4Var *find_epos4_var(ObjectID objectid, uint8_t subindex) const;
 
     // we currently only simulate Profile Position Mode (see 3.3.2 in
     // "EPOS4 Firmware Specifications.pdf")
@@ -538,8 +640,8 @@ private:
     void send_read_object_response(uint32_t errors, const uint8_t data[4]);
     void send_write_object_response(uint32_t errors);
 
-    void wire_data4_from_object_data(uint8_t data[4], const EPOS4Object &obj);
-    void set_object_data_from_wire_data4(EPOS4Object &obj, const uint8_t data[4]);
+    void wire_data4_from_var_data(uint8_t data[4], const EPOS4Var &obj);
+    void set_var_data_from_wire_data4(EPOS4Var &obj, const uint8_t data[4]);
 
     static const uint8_t DLE = 0x90;  // Data Link Escape
     static const uint8_t STX = 0x02;  // Start of TeXt

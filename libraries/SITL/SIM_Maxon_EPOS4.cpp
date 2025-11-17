@@ -209,7 +209,7 @@ void Maxon_EPOS4::send(Maxon_EPOS4::ResponseOpCode opcode, uint8_t *data, uint16
     }
 }
 
-void Maxon_EPOS4::wire_data4_from_object_data(uint8_t data[4], const EPOS4Object &obj)
+void Maxon_EPOS4::wire_data4_from_var_data(uint8_t data[4], const EPOS4Var &obj)
 {
     switch (obj.data_type()) {
     case DataType::INTEGER8: {
@@ -240,14 +240,14 @@ void Maxon_EPOS4::wire_data4_from_object_data(uint8_t data[4], const EPOS4Object
         data[3] = v >> 0;
         break;
     }
-    // case DataType::UNSIGNED32: {
-    //     const uint32_t v = obj.get_data_uint32();
-    //     data[0] = v >> 24;
-    //     data[1] = v >> 16;
-    //     data[2] = v >> 8;
-    //     data[3] = v >> 0;
-    //     break;
-    // }
+    case DataType::UNSIGNED32: {
+        const uint32_t v = obj.get_data_uint32();
+        data[0] = v >> 24;
+        data[1] = v >> 16;
+        data[2] = v >> 8;
+        data[3] = v >> 0;
+        break;
+    }
     }
 }
 
@@ -261,10 +261,11 @@ void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
     }
 
     const ObjectID id = (ObjectID)req.index_of_object;
-    EPOS4Object *obj = find_epos4_object(id);
-    if (obj == nullptr) {
+    const uint8_t subindex = req.subindex_of_object;
+    auto *var = find_epos4_var(id, subindex);
+    if (var == nullptr) {
         if (strict_parsing) {
-            AP_HAL::panic("Invalid object (0x%x) requested", req.index_of_object);
+            AP_HAL::panic("Invalid object (0x%x.0x%x) requested", req.index_of_object, req.subindex_of_object);
         }
         send_read_object_response(36865);  // test value - FIXME, errors
         return;
@@ -272,7 +273,7 @@ void Maxon_EPOS4::handle_completed_frame(const ReadObjectRequest& req)
 
     uint32_t errors = 0;
     uint8_t wire_data[4];
-    wire_data4_from_object_data(wire_data, *obj);
+    wire_data4_from_var_data(wire_data, *var);
     send_read_object_response(errors, wire_data);
 }
 
@@ -320,7 +321,69 @@ const Maxon_EPOS4::EPOS4Object *Maxon_EPOS4::find_epos4_object(ObjectID objectid
     return nullptr;
 }
 
-void Maxon_EPOS4::set_object_data_from_wire_data4(EPOS4Object &obj, const uint8_t data[4])
+Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::EPOS4Var::get_subindex(uint8_t subindex)
+{
+    AP_HAL::panic("No subindexes on a Var");
+}
+
+const Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::EPOS4Var::get_subindex(uint8_t subindex) const
+{
+    AP_HAL::panic("No subindexes on a Var");
+}
+
+Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::Identity::get_subindex(uint8_t subindex)
+{
+    switch (subindex) {
+    case 1:
+        return &vendor_id;
+    case 2:
+        return &product_code;
+    case 3:
+        return &revision_number;
+    case 4:
+        return &serial_number;
+    default:
+        AP_HAL::panic("Invalid index");
+        return nullptr;
+    }
+}
+
+const Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::Identity::get_subindex(uint8_t subindex) const
+{
+    switch (subindex) {
+    case 1:
+        return &vendor_id;
+    case 2:
+        return &product_code;
+    case 3:
+        return &revision_number;
+    case 4:
+        return &serial_number;
+    default:
+        AP_HAL::panic("Invalid index");
+        return nullptr;
+    }
+}
+
+Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::find_epos4_var(ObjectID objectid, uint8_t subindex)
+{
+    auto *obj = find_epos4_object(objectid);
+    if (obj == nullptr) {
+        return nullptr;
+    }
+    return obj->get_subindex(subindex);
+}
+
+const Maxon_EPOS4::EPOS4Var *Maxon_EPOS4::find_epos4_var(ObjectID objectid, uint8_t subindex) const
+{
+    auto *obj = find_epos4_object(objectid);
+    if (obj == nullptr) {
+        return nullptr;
+    }
+    return obj->get_subindex(subindex);
+}
+
+void Maxon_EPOS4::set_var_data_from_wire_data4(EPOS4Var &obj, const uint8_t data[4])
 {
     switch (obj.data_type()) {
     case DataType::INTEGER8: {
@@ -351,6 +414,16 @@ void Maxon_EPOS4::set_object_data_from_wire_data4(EPOS4Object &obj, const uint8_
         obj.set_data_int32(v);
         break;
     }
+    case DataType::UNSIGNED32: {
+        const uint32_t v = (
+            data[0] << 24 |
+            data[1] << 16 |
+            data[2] <<  8 |
+            data[3] <<  0
+        );
+        obj.set_data_uint32(v);
+        break;
+    }
     }
 }
 
@@ -365,12 +438,13 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
     }
 
     const ObjectID id = (ObjectID)req.index_of_object;
-    EPOS4Object *obj = find_epos4_object(id);
-    if (obj == nullptr && strict_parsing) {
-        AP_HAL::panic("Invalid object (0x%x) requested", (unsigned)id);
+    const uint8_t subindex = req.subindex_of_object;
+    EPOS4Var *var = find_epos4_var(id, subindex);
+    if (var == nullptr && strict_parsing) {
+        AP_HAL::panic("Invalid object (0x%x.%u) requested", (unsigned)id, subindex);
     }
 
-    if (obj->access_type() == AccessType::READ_ONLY) {
+    if (var->access_type() == AccessType::READ_ONLY) {
         // this should probaby just send a write-object response with errors set
         AP_HAL::panic("Write of read-only object");
     }
@@ -399,7 +473,7 @@ void Maxon_EPOS4::handle_completed_frame(const WriteObjectRequest& req)
     // ignore attempts to set parameters in these modes - except
     // for the control word!
     if (process_sets) {
-        set_object_data_from_wire_data4(*obj, req.data);
+        set_var_data_from_wire_data4(*var, req.data);
     }
 
     // TODO: consider stop looking for commands and actually emulate
@@ -524,7 +598,7 @@ void Maxon_EPOS4::reset_input()
 void Maxon_EPOS4::init(const class Aircraft &aircraft)
 {
     // state_start_ms = AP_HAL::millis();
-    // ASSERT_STORAGE_SIZE(EPOS4Object, 4);
+    // ASSERT_STORAGE_SIZE(EPOS4Var, 4);
     // ASSERT_STORAGE_SIZE(HomePosition, 4);
     // ASSERT_STORAGE_SIZE(ControlWord, 4);
     // ASSERT_STORAGE_SIZE(StatusWord, 4);
