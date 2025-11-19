@@ -330,7 +330,7 @@ bool AP_ADSB::is_valid_callsign(uint16_t octal)
     return true;
 }
 
-#if AP_GPS_ENABLED && AP_AHRS_ENABLED && AP_BARO_ENABLED
+#if AP_GPS_ENABLED && AP_AHRS_ENABLED
 /*
  * periodic update to handle vehicle timeouts and trigger collision detection
  */
@@ -360,6 +360,7 @@ void AP_ADSB::update(void)
 
     loc.vertRateD_is_valid = AP::ahrs().get_vert_pos_rate_D(loc.vertRateD);
 
+#if AP_BARO_ENABLED
     const auto &baro = AP::baro();
     loc.baro_is_healthy = baro.healthy();
 
@@ -368,6 +369,7 @@ void AP_ADSB::update(void)
     if (loc.baro_is_healthy) {
         loc.baro_alt_press_diff_sea_level = baro.get_altitude_difference(SSL_AIR_PRESSURE, baro.get_pressure());
     }
+#endif  // AP_BARO_ENABLED
 
     update(loc);
 }

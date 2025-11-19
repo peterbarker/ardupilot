@@ -523,9 +523,11 @@ const AP_Param::Info Copter::var_info[] = {
     GOBJECT(sitl, "SIM_", SITL::SIM),
 #endif
 
+#if AP_BARO_ENABLED
     // @Group: BARO
     // @Path: ../libraries/AP_Baro/AP_Baro.cpp
     GOBJECT(barometer, "BARO", AP_Baro),
+#endif  // AP_BARO_ENABLED
 
     // GPS driver
     // @Group: GPS

@@ -905,8 +905,10 @@ void Copter::read_AHRS(void)
 // read baro and log control tuning
 void Copter::update_altitude()
 {
+#if AP_BARO_ENABLED
     // read in baro altitude
     read_barometer();
+#endif  // AP_BARO_ENABLED
 
 #if HAL_LOGGING_ENABLED
     if (should_log(MASK_LOG_CTUN)) {

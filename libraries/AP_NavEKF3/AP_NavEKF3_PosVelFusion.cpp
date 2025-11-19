@@ -1204,9 +1204,11 @@ void NavEKF3_core::selectHeightForFusion()
     }
 #endif  // AP_RANGEFINDER_ENABLED
 
+#if AP_BARO_ENABLED
     // read baro height data from the sensor and check for new data in the buffer
     readBaroData();
     baroDataToFuse = storedBaro.recall(baroDataDelayed, imuDataDelayed.time_ms);
+#endif  // AP_BARO_ENABLED
 
     bool rangeFinderDataIsFresh = (imuSampleTime_ms - rngValidMeaTime_ms < 500);
 #if EK3_FEATURE_EXTERNAL_NAV
@@ -1273,6 +1275,7 @@ void NavEKF3_core::selectHeightForFusion()
 #endif
     }
 
+#if AP_BARO_ENABLED
     // Use Baro alt as a fallback if we lose range finder, GPS, external nav or Beacon
     bool lostRngHgt = ((activeHgtSource == AP_NavEKF_Source::SourceZ::RANGEFINDER) && !rangeFinderDataIsFresh);
     bool lostGpsHgt = ((activeHgtSource == AP_NavEKF_Source::SourceZ::GPS) && ((imuSampleTime_ms - lastTimeGpsReceived_ms) > 2000 || !gpsAccuracyGoodForAltitude));
@@ -1309,6 +1312,7 @@ void NavEKF3_core::selectHeightForFusion()
             meaHgtAtTakeOff += (baroDataDelayed.hgt-meaHgtAtTakeOff)*alpha;
         }
     }
+#endif  // AP_BARO_ENABLED
 
     // If we are not using GPS as the primary height sensor, correct EKF origin height so that
     // combined local NED position height and origin height remains consistent with the GPS altitude
@@ -1365,6 +1369,7 @@ void NavEKF3_core::selectHeightForFusion()
         } else {
             posDownObsNoise = sq(constrain_ftype(1.5f * frontend->_gpsHorizPosNoise, 0.1f, 10.0f));
         }
+#if AP_BARO_ENABLED
     } else if (baroDataToFuse && (activeHgtSource == AP_NavEKF_Source::SourceZ::BARO)) {
         // using Baro data
         hgtMea = baroDataDelayed.hgt - baroHgtOffset;
@@ -1381,6 +1386,7 @@ void NavEKF3_core::selectHeightForFusion()
             posDownObsNoise *= frontend->gndEffectBaroScaler;
         }
         velPosObs[5] = -hgtMea;
+#endif  // AP_BARO_ENABLED
     } else if ((activeHgtSource == AP_NavEKF_Source::SourceZ::NONE && imuSampleTime_ms - lastHgtPassTime_ms > 70)) {
         // fuse a constant height of 0 at 14 Hz
         hgtMea = 0.0f;

@@ -32,7 +32,9 @@ void Copter::init_ardupilot()
     rssi.init();
 #endif
 
+#if AP_BARO_ENABLED
     barometer.init();
+#endif  // AP_BARO_ENABLED
 
     // setup telem slots with serial ports
     gcs().setup_uarts();
@@ -132,10 +134,12 @@ void Copter::init_ardupilot()
     USERHOOK_INIT
 #endif
 
+#if AP_BARO_ENABLED
     // read Baro pressure at ground
     //-----------------------------
     barometer.set_log_baro_bit(MASK_LOG_IMU);
     barometer.calibrate();
+#endif  // AP_BARO_ENABLED
 
 #if AP_RANGEFINDER_ENABLED
     // initialise rangefinder

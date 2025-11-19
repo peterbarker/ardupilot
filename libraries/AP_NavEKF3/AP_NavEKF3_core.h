@@ -1185,7 +1185,9 @@ private:
     imu_elements imuDataDownSampledNew; // IMU data at the current time horizon that has been downsampled to a 100Hz rate
     QuaternionF imuQuatDownSampleNew; // Quaternion obtained by rotating through the IMU delta angles since the start of the current down sampled frame
     baro_elements baroDataNew;      // Baro data at the current time horizon
+#if AP_BARO_ENABLED
     baro_elements baroDataDelayed;  // Baro data at the fusion time horizon
+#endif  // AP_BARO_ENABLED
     range_elements rangeDataNew;    // Range finder data at the current time horizon
     range_elements rangeDataDelayed;// Range finder data at the fusion time horizon
     tas_elements tasDataNew;        // TAS data at the current time horizon
@@ -1321,7 +1323,9 @@ private:
     ftype auxRngTestRatio;          // square of range finder innovations divided by fail threshold used by main filter where >1.0 is a fail
     Vector2F flowGyroBias;          // bias error of optical flow sensor gyro output
     bool rangeDataToFuse;           // true when valid range finder height data has arrived at the fusion time horizon.
+#if AP_BARO_ENABLED
     bool baroDataToFuse;            // true when valid baro height finder data has arrived at the fusion time horizon.
+#endif  // AP_BARO_ENABLED
     bool gpsDataToFuse;             // true when valid GPS data has arrived at the fusion time horizon.
     bool magDataToFuse;             // true when valid magnetometer data has arrived at the fusion time horizon
     enum AidingMode {

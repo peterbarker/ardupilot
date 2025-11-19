@@ -775,6 +775,7 @@ bool NavEKF3_core::readDeltaAngle(uint8_t ins_index, Vector3F &dAng, ftype &dAng
 *                  Height Measurements                  *
 ********************************************************/
 
+#if AP_BARO_ENABLED
 // check for new pressure altitude measurement data and update stored measurement if available
 void NavEKF3_core::readBaroData()
 {
@@ -810,6 +811,7 @@ void NavEKF3_core::calcFiltBaroOffset()
     // Apply a first order LPF with spike protection
     baroHgtOffset += 0.1f * constrain_ftype(baroDataDelayed.hgt + stateStruct.position.z - baroHgtOffset, -5.0f, 5.0f);
 }
+#endif  // AP_BARO_ENABLED
 
 // correct the height of the EKF origin to be consistent with GPS Data using a Bayes filter.
 void NavEKF3_core::correctEkfOriginHeight()
@@ -1216,6 +1218,7 @@ void NavEKF3_core::update_mag_selection(void)
     }
 }
 
+#if AP_BARO_ENABLED
 /*
   update the baro selection
  */
@@ -1234,6 +1237,7 @@ void NavEKF3_core::update_baro_selection(void)
         }
     }
 }
+#endif  // AP_BARO_ENABLED
 
 /*
   update the airspeed selection
@@ -1265,7 +1269,9 @@ void NavEKF3_core::update_sensor_selection(void)
 {
     update_gps_selection();
     update_mag_selection();
+#if AP_BARO_ENABLED
     update_baro_selection();
+#endif  // AP_BARO_ENABLED
     update_airspeed_selection();
 }
 

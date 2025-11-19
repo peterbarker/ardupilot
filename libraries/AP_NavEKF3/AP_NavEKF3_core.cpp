@@ -486,7 +486,9 @@ bool NavEKF3_core::InitialiseFilterBootstrap(void)
     readMagData();
     readGpsData();
     readGpsYawData();
+#if AP_BARO_ENABLED
     readBaroData();
+#endif  // AP_BARO_ENABLED
 
     if (statesInitialised) {
         // we are initialised, but we don't return true until the IMU

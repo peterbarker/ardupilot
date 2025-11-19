@@ -420,9 +420,13 @@ void NavEKF3_core::setAidingMode()
             // store the current position to be used to keep reporting the last known position
             lastKnownPositionNE.x = stateStruct.position.x;
             lastKnownPositionNE.y = stateStruct.position.y;
+#if AP_BARO_ENABLED
             // initialise filtered altitude used to provide a takeoff reference to current baro on disarm
             // this reduces the time required for the baro noise filter to settle before the filtered baro data can be used
             meaHgtAtTakeOff = baroDataDelayed.hgt;
+#else
+            meaHgtAtTakeOff = 0;
+#endif  // AP_BARO_ENABLED
             // reset the vertical position state to faster recover from baro errors experienced during touchdown
             stateStruct.position.z = -meaHgtAtTakeOff;
             // store the current height to be used to keep reporting

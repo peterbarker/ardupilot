@@ -38,7 +38,9 @@ protected:
     // NOTE! the following check functions *DO* call into AP_Arming:
     bool ins_checks(bool display_failure) override;
     bool gps_checks(bool display_failure) override;
+#if AP_BARO_ENABLED
     bool barometer_checks(bool display_failure) override;
+#endif  // AP_BARO_ENABLED
     bool board_voltage_checks(bool display_failure) override;
 
     // NOTE! the following check functions *DO NOT* call into AP_Arming!

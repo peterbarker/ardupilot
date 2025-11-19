@@ -398,6 +398,7 @@ AP_AdvancedFailsafe::check_altlimit(void)
         return false;
     }
 
+#if AP_BARO_ENABLED
     // see if the barometer is dead
     const AP_Baro &baro = AP::baro();
     if (AP_HAL::millis() - baro.get_last_update() > 5000) {
@@ -415,7 +416,8 @@ AP_AdvancedFailsafe::check_altlimit(void)
         // pressure altitude breach
         return true;
     }
-    
+#endif  // AP_BARO_ENABLED
+
     // all OK
     return false;
 }

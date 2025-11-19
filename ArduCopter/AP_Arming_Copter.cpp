@@ -124,6 +124,7 @@ bool AP_Arming_Copter::rc_throttle_failsafe_checks(bool display_failure) const
     return true;
 }
 
+#if AP_BARO_ENABLED
 bool AP_Arming_Copter::barometer_checks(bool display_failure)
 {
     if (!AP_Arming::barometer_checks(display_failure)) {
@@ -149,6 +150,7 @@ bool AP_Arming_Copter::barometer_checks(bool display_failure)
     }
     return ret;
 }
+#endif  // AP_BARO_ENABLED
 
 bool AP_Arming_Copter::ins_checks(bool display_failure)
 {
