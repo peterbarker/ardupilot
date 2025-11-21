@@ -29,7 +29,7 @@ public:
 
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev) {
         // _probe will have deleted this allocation if it returns nullptr:
         return probe_sensor(NEW_NOTHROW AP_Baro_AUAV(dev));
     }

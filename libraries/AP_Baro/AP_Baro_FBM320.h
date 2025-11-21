@@ -24,7 +24,7 @@ public:
     /* AP_Baro public interface: */
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev) {
         return probe_sensor(NEW_NOTHROW AP_Baro_FBM320(dev));
     }
 

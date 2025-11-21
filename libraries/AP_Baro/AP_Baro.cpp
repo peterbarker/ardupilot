@@ -526,26 +526,26 @@ bool AP_Baro::_have_i2c_driver(uint8_t bus, uint8_t address) const
 #define GET_I2C_DEVICE_PTR(bus, address) _have_i2c_driver(bus, address)?nullptr:hal.i2c_mgr->get_device_ptr(bus, address)
 
 // probe for an I2C barometer.
-void AP_Baro::probe_i2c_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), uint8_t bus, uint8_t addr)
+void AP_Baro::probe_i2c_dev(AP_Baro_Backend* (*probefn)(AP_HAL::Device&), uint8_t bus, uint8_t addr)
 {
     auto *dev = GET_I2C_DEVICE_PTR(bus, addr);  // dev may be freed by probe_dev
     probe_dev(probefn, dev);
 }
 
 // probe for an I2C barometer
-void AP_Baro::probe_spi_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), const char *name)
+void AP_Baro::probe_spi_dev(AP_Baro_Backend* (*probefn)(AP_HAL::Device&), const char *name)
 {
     auto *dev = hal.spi->get_device_ptr(name);  // dev may be freed by probe_dev
     probe_dev(probefn, dev);
 }
 
 // see if Device dev exists.  If it does not delete it.
-void AP_Baro::probe_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), AP_HAL::Device *dev)
+void AP_Baro::probe_dev(AP_Baro_Backend* (*probefn)(AP_HAL::Device&), AP_HAL::Device *dev)
 {
     if (dev == nullptr) {
         return;
     }
-    AP_Baro_Backend *backend = probefn(*this, *dev);
+    AP_Baro_Backend *backend = probefn(*dev);
     if (backend == nullptr) {
         delete dev;
         return;
@@ -561,7 +561,7 @@ void AP_Baro::probe_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), 
 void AP_Baro::probe_lps2xh_via_Invensense_IMU(uint8_t bus, uint8_t addr, uint8_t mpu_addr)
 {
     auto *i2c_dev = GET_I2C_DEVICE_PTR(bus, addr);
-    AP_Baro_Backend *backend = AP_Baro_LPS2XH::probe_InvensenseIMU(*this, *i2c_dev, mpu_addr);
+    AP_Baro_Backend *backend = AP_Baro_LPS2XH::probe_InvensenseIMU(*i2c_dev, mpu_addr);
     if (!_add_backend(backend)) {
         delete i2c_dev;
     }
@@ -788,7 +788,7 @@ void AP_Baro::_probe_i2c_barometers(void)
 
     static const struct BaroProbeSpec {
         uint32_t bit;
-        AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&);
+        AP_Baro_Backend* (*probefn)(AP_HAL::Device&);
         uint8_t addr;
     } baroprobespec[] {
 #if AP_BARO_BMP085_ENABLED

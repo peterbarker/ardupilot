@@ -332,9 +332,9 @@ private:
     bool _add_backend(AP_Baro_Backend *backend);
     void _probe_i2c_barometers(void);
 
-    void probe_i2c_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), uint8_t bus, uint8_t addr);
-    void probe_spi_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), const char *name);
-    void probe_dev(AP_Baro_Backend* (*probefn)(AP_Baro&, AP_HAL::Device&), AP_HAL::Device *dev);
+    void probe_i2c_dev(AP_Baro_Backend* (*probefn)(AP_HAL::Device&), uint8_t bus, uint8_t addr);
+    void probe_spi_dev(AP_Baro_Backend* (*probefn)(AP_HAL::Device&), const char *name);
+    void probe_dev(AP_Baro_Backend* (*probefn)(AP_HAL::Device&), AP_HAL::Device *dev);
 #if AP_BARO_ICM20789_ENABLED
     void probe_icm20789(uint8_t bus, uint8_t addr, const char *mpu_name);
     void probe_icm20789(uint8_t bus, uint8_t addr, uint8_t mpu_bus, uint8_t mpu_addr);

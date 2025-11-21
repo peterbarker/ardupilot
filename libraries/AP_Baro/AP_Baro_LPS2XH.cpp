@@ -59,8 +59,7 @@ extern const AP_HAL::HAL &hal;
 
 //putting 1 in the MSB of those two registers turns on Auto increment for faster reading.
 
-AP_Baro_Backend *AP_Baro_LPS2XH::probe_InvensenseIMU(AP_Baro &baro,
-                                                     AP_HAL::Device &dev,
+AP_Baro_Backend *AP_Baro_LPS2XH::probe_InvensenseIMU(AP_HAL::Device &dev,
                                                      uint8_t imu_address)
 {
     AP_Baro_LPS2XH *sensor = NEW_NOTHROW AP_Baro_LPS2XH(dev);

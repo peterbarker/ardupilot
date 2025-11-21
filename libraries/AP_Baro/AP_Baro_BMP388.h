@@ -26,7 +26,7 @@ public:
     /* AP_Baro public interface: */
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &_dev) {
+    static AP_Baro_Backend *probe(AP_HAL::Device &_dev) {
         // _probe will have deleted this allocation if it returns nullptr:
         return probe_sensor(NEW_NOTHROW AP_Baro_BMP388(_dev));
     }

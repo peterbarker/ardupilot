@@ -60,7 +60,7 @@ static const uint8_t ADDR_CMD_CONVERT_PRESSURE = ADDR_CMD_CONVERT_D1_OSR1024;
 static const uint8_t ADDR_CMD_CONVERT_TEMPERATURE = ADDR_CMD_CONVERT_D2_OSR1024;
 
 #if AP_BARO_MS5611_ENABLED
-AP_Baro_Backend *AP_Baro_MS5611::probe(AP_Baro &baro, AP_HAL::Device &dev)
+AP_Baro_Backend *AP_Baro_MS5611::probe(AP_HAL::Device &dev)
 {
 #if AP_BARO_MS5607_ENABLED
     /*

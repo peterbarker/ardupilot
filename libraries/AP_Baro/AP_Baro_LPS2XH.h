@@ -29,12 +29,12 @@ public:
     /* AP_Baro public interface: */
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev) {
         // _probe will have deleted this allocation if it returns nullptr:
         return probe_sensor(NEW_NOTHROW AP_Baro_LPS2XH(dev));
     }
 
-    static AP_Baro_Backend *probe_InvensenseIMU(AP_Baro &baro, AP_HAL::Device &dev, uint8_t imu_address);
+    static AP_Baro_Backend *probe_InvensenseIMU(AP_HAL::Device &dev, uint8_t imu_address);
 
 private:
     virtual ~AP_Baro_LPS2XH(void) {};

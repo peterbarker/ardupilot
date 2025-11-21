@@ -64,7 +64,7 @@ protected:
 
 private:
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev);
 
     /*
      * Update @accum and @count with the new sample in @val, taking into
@@ -99,7 +99,7 @@ private:
 class AP_Baro_MS5607 : public AP_Baro_MS56XX
 {
 public:
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev) {
         return probe_sensor(NEW_NOTHROW AP_Baro_MS5607(dev));
     }
 protected:
@@ -116,7 +116,7 @@ class AP_Baro_MS5611 : public AP_Baro_MS56XX
 {
 public:
     using AP_Baro_MS56XX::AP_Baro_MS56XX;
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev);
 protected:
     const char *name() const override { return "MS5611"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5611(prom); }
@@ -129,7 +129,7 @@ protected:
 class AP_Baro_MS5637 : public AP_Baro_MS56XX
 {
 public:
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev) {
             return probe_sensor(NEW_NOTHROW AP_Baro_MS5637(dev));
     }
 protected:
@@ -145,7 +145,7 @@ protected:
 class AP_Baro_MS5837 : public AP_Baro_MS56XX
 {
 public:
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+    static AP_Baro_Backend *probe(AP_HAL::Device &dev) {
         return probe_sensor(NEW_NOTHROW AP_Baro_MS5837(dev));
     }
 protected:

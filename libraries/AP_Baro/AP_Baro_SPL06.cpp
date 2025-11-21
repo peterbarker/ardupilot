@@ -81,7 +81,7 @@ extern const AP_HAL::HAL &hal;
 #define AP_BARO_SPL06_BACKGROUND_ENABLE 1
 #endif
 
-AP_Baro_Backend *AP_Baro_SPL06::probe(AP_Baro &baro, AP_HAL::Device &dev)
+AP_Baro_Backend *AP_Baro_SPL06::probe(AP_HAL::Device &dev)
 {
     if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
         dev.set_read_flag(0x80);
