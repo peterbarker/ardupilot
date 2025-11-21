@@ -12,11 +12,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "AP_Baro_MS5611.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_MS56XX_ENABLED
 
+#include "AP_Baro_MS5611.h"
+
 #include <stdio.h>
+
+#include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/Semaphores.h>
+#include <AP_HAL/Device.h>
 
 #include <AP_Math/AP_Math.h>
 #include <AP_Math/crc.h>
@@ -53,26 +59,6 @@ static const uint8_t CMD_MS56XX_PROM = 0xA0;
 static const uint8_t ADDR_CMD_CONVERT_PRESSURE = ADDR_CMD_CONVERT_D1_OSR1024;
 static const uint8_t ADDR_CMD_CONVERT_TEMPERATURE = ADDR_CMD_CONVERT_D2_OSR1024;
 
-/*
-  constructor
- */
-AP_Baro_MS56XX::AP_Baro_MS56XX(AP_Baro &baro, AP_HAL::Device &dev)
-    : AP_Baro_Backend(baro)
-    , _dev(&dev)
-{
-}
-
-// convenience methods for derivative classes to call.  Will free
-// sensor if it can't init it.
-AP_Baro_Backend *AP_Baro_MS56XX::_probe(AP_Baro &baro, AP_Baro_MS56XX *sensor)
-{
-    if (!sensor || !sensor->_init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
-
 #if AP_BARO_MS5611_ENABLED
 AP_Baro_Backend *AP_Baro_MS5611::probe(AP_Baro &baro, AP_HAL::Device &dev)
 {
@@ -81,37 +67,18 @@ AP_Baro_Backend *AP_Baro_MS5611::probe(AP_Baro &baro, AP_HAL::Device &dev)
       cope with vendors substituting a MS5607 for a MS5611 on Pixhawk1 'clone' boards
      */
     if (AP::baro().option_enabled(AP_Baro::Options::TreatMS5611AsMS5607)) {
-        return _probe(baro, NEW_NOTHROW AP_Baro_MS5607(baro, dev));
+        return probe_sensor(NEW_NOTHROW AP_Baro_MS5607(dev));
     }
 #endif  // AP_BARO_MS5607_ENABLED
 
-    return _probe(baro, NEW_NOTHROW AP_Baro_MS5611(baro, dev));
+    return probe_sensor(NEW_NOTHROW AP_Baro_MS5611(dev));
 }
 #endif  // AP_BARO_MS5611_ENABLED
 
-#if AP_BARO_MS5607_ENABLED
-AP_Baro_Backend *AP_Baro_MS5607::probe(AP_Baro &baro, AP_HAL::Device &dev)
-{
-    return _probe(baro, NEW_NOTHROW AP_Baro_MS5607(baro, dev));
-}
-#endif  // AP_BARO_MS5607_ENABLED
-
-#if AP_BARO_MS5637_ENABLED
-AP_Baro_Backend *AP_Baro_MS5637::probe(AP_Baro &baro, AP_HAL::Device &dev)
-{
-    return _probe(baro, NEW_NOTHROW AP_Baro_MS5637(baro, dev));
-}
-#endif  // AP_BARO_MS5637_ENABLED
-
 #if AP_BARO_MS5837_ENABLED
-AP_Baro_Backend *AP_Baro_MS5837::probe(AP_Baro &baro, AP_HAL::Device &dev)
+bool AP_Baro_MS5837::init()
 {
-    return _probe(baro, NEW_NOTHROW AP_Baro_MS5837(baro, dev));
-}
-
-bool AP_Baro_MS5837::_init()
-{
-    if (!AP_Baro_MS56XX::_init()) {
+    if (!AP_Baro_MS56XX::init()) {
         return false;
     }
     _frontend.set_type(_instance, AP_Baro::BARO_TYPE_WATER);
@@ -128,12 +95,8 @@ bool AP_Baro_MS5837::_init()
 }
 #endif // AP_BARO_MS5837_ENABLED
 
-bool AP_Baro_MS56XX::_init()
+bool AP_Baro_MS56XX::init()
 {
-    if (!_dev) {
-        return false;
-    }
-
     _dev->get_semaphore()->take_blocking();
 
     // high retries for init

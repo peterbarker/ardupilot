@@ -13,9 +13,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "AP_Baro_ICP101XX.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_ICP101XX_ENABLED
+
+#include "AP_Baro_ICP101XX.h"
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/Device.h>
@@ -44,31 +46,8 @@ extern const AP_HAL::HAL &hal;
 #define CMD_MEAS_ULN   0x7866
 #define CMD_SOFT_RESET 0x805d
 
-/*
-  constructor
- */
-AP_Baro_ICP101XX::AP_Baro_ICP101XX(AP_Baro &baro, AP_HAL::Device &_dev)
-    : AP_Baro_Backend(baro)
-    , dev(&_dev)
-{
-}
-
-AP_Baro_Backend *AP_Baro_ICP101XX::probe(AP_Baro &baro, AP_HAL::Device &dev)
-{
-    AP_Baro_ICP101XX *sensor = NEW_NOTHROW AP_Baro_ICP101XX(baro, dev);
-    if (!sensor || !sensor->init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
-
 bool AP_Baro_ICP101XX::init()
 {
-    if (!dev) {
-        return false;
-    }
-
     dev->get_semaphore()->take_blocking();
 
     uint16_t id = 0;

@@ -34,22 +34,6 @@ extern const AP_HAL::HAL &hal;
 
 #define FBM320_WHOAMI 0x42
 
-AP_Baro_FBM320::AP_Baro_FBM320(AP_Baro &baro, AP_HAL::Device &_dev)
-    : AP_Baro_Backend(baro)
-    , dev(&_dev)
-{
-}
-
-AP_Baro_Backend *AP_Baro_FBM320::probe(AP_Baro &baro, AP_HAL::Device &_dev)
-{
-    AP_Baro_FBM320 *sensor = NEW_NOTHROW AP_Baro_FBM320(baro, _dev);
-    if (!sensor || !sensor->init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
-
 /*
   read calibration data
  */
@@ -97,9 +81,6 @@ bool AP_Baro_FBM320::read_calibration(void)
 
 bool AP_Baro_FBM320::init()
 {
-    if (!dev) {
-        return false;
-    }
     dev->get_semaphore()->take_blocking();
 
     dev->set_speed(AP_HAL::Device::SPEED_HIGH);

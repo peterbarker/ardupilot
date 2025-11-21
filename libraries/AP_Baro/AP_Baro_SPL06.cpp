@@ -81,31 +81,17 @@ extern const AP_HAL::HAL &hal;
 #define AP_BARO_SPL06_BACKGROUND_ENABLE 1
 #endif
 
-AP_Baro_SPL06::AP_Baro_SPL06(AP_Baro &baro, AP_HAL::Device &dev)
-    : AP_Baro_Backend(baro)
-    , _dev(&dev)
-{
-}
-
 AP_Baro_Backend *AP_Baro_SPL06::probe(AP_Baro &baro, AP_HAL::Device &dev)
 {
     if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
         dev.set_read_flag(0x80);
     }
-
-    AP_Baro_SPL06 *sensor = NEW_NOTHROW AP_Baro_SPL06(baro, dev);
-    if (!sensor || !sensor->_init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
+    // _probe will have deleted this allocation if it returns nullptr:
+    return probe_sensor(NEW_NOTHROW AP_Baro_SPL06(dev));
 }
 
-bool AP_Baro_SPL06::_init()
+bool AP_Baro_SPL06::init()
 {
-    if (!_dev) {
-        return false;
-    }
     WITH_SEMAPHORE(_dev->get_semaphore());
 
     _dev->set_speed(AP_HAL::Device::SPEED_HIGH);

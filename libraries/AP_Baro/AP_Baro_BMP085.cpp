@@ -35,27 +35,8 @@ extern const AP_HAL::HAL &hal;
 #define OVERSAMPLING BMP085_OVERSAMPLING_HIGHRES
 #endif
 
-AP_Baro_BMP085::AP_Baro_BMP085(AP_Baro &baro, AP_HAL::Device &dev)
-    : AP_Baro_Backend(baro)
-    , _dev(&dev)
-{ }
-
-AP_Baro_Backend * AP_Baro_BMP085::probe(AP_Baro &baro, AP_HAL::Device &dev)
+bool AP_Baro_BMP085::init()
 {
-    AP_Baro_BMP085 *sensor = NEW_NOTHROW AP_Baro_BMP085(baro, dev);
-    if (!sensor || !sensor->_init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-
-}
-
-bool AP_Baro_BMP085::_init()
-{
-    if (!_dev) {
-        return false;
-    }
     union {
         uint8_t buff[22];
         uint16_t wb[11];

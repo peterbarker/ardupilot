@@ -18,28 +18,8 @@
 
 extern const AP_HAL::HAL &hal;
 
-AP_Baro_AUAV::AP_Baro_AUAV(AP_Baro &baro, AP_HAL::Device *_dev)
-    : AP_Baro_Backend(baro)
-    , dev(_dev)
-{
-}
-
-AP_Baro_Backend *AP_Baro_AUAV::probe(AP_Baro &baro, AP_HAL::Device &_dev)
-{
-    AP_Baro_AUAV *sensor = NEW_NOTHROW AP_Baro_AUAV(baro, &_dev);
-    if (!sensor || !sensor->init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
-
 bool AP_Baro_AUAV::init()
 {
-    if (!dev) {
-        return false;
-    }
-
     {
         // Take semaphore for i2c functions
         WITH_SEMAPHORE(dev->get_semaphore());

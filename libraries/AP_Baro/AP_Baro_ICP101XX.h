@@ -1,24 +1,29 @@
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_ICP101XX_ENABLED
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_HAL/Semaphores.h>
-#include <AP_HAL/Device.h>
+#include "AP_Baro_HALDev.h"
 
-class AP_Baro_ICP101XX : public AP_Baro_Backend
+namespace HAL {
+    class Device;
+};
+
+class AP_Baro_ICP101XX : public AP_Baro_HALDev
 {
 public:
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
-    
-private:
-    AP_Baro_ICP101XX(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        // _probe will have deleted this allocation if it returns nullptr:
+        return probe_sensor(NEW_NOTHROW AP_Baro_ICP101XX(dev));
+    }
 
-    bool init();
+private:
+    using AP_Baro_HALDev::AP_Baro_HALDev;
+
+    bool init() override;
     bool send_cmd16(uint16_t cmd);
     bool read_measure_results(uint8_t *buf, uint8_t len);
     bool read_response(uint16_t cmd, uint8_t *buf, uint8_t len);
@@ -37,8 +42,6 @@ private:
     int16_t sensor_constants[4];
 
     uint8_t instance;
-
-    AP_HAL::Device *dev;
 
     // time last read command was sent
     uint32_t last_measure_us;

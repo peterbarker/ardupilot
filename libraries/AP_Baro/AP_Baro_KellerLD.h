@@ -25,37 +25,40 @@
 
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_KELLERLD_ENABLED
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_HAL/Semaphores.h>
-#include <AP_HAL/Device.h>
+#include "AP_Baro_HALDev.h"
 
 #ifndef HAL_BARO_KELLERLD_I2C_ADDR
 #define HAL_BARO_KELLERLD_I2C_ADDR 0x40
 #endif
 
-class AP_Baro_KellerLD : public AP_Baro_Backend
+namespace AP_HAL {
+    class Device;
+};
+
+class AP_Baro_KellerLD : public AP_Baro_HALDev
 {
 public:
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        // _probe will have deleted this allocation if it returns nullptr:
+        return probe_sensor(NEW_NOTHROW AP_Baro_KellerLD(dev));
+    }
 
 private:
-    AP_Baro_KellerLD(AP_Baro &baro, AP_HAL::Device &dev);
+    using AP_Baro_HALDev::AP_Baro_HALDev;
 
-    bool _init();
+    bool init() override;
 
     void _timer();
 
     bool _read();
 
     void _update_and_wrap_accumulator(uint16_t pressure, uint16_t temperature, uint8_t max_count);
-
-    AP_HAL::Device *_dev;
 
     /* Shared values between thread sampling the HW and main thread */
     /* These are raw outputs, not calculated values */

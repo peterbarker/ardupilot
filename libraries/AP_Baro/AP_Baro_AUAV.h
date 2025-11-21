@@ -1,11 +1,10 @@
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_AUAV_ENABLED
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_HAL/Device.h>
+#include "AP_Baro_HALDev.h"
 
 // Baro uses the airspeed AUAV Pressure sensor class from airspeed, airspeed must be enabled
 #include <AP_Airspeed/AP_Airspeed_config.h>
@@ -20,20 +19,25 @@
  #define HAL_BARO_AUAV_I2C_ADDR 0x27
 #endif
 
-class AP_Baro_AUAV : public AP_Baro_Backend {
+namespace AP_HAL {
+    class Device;
+};
+
+class AP_Baro_AUAV : public AP_Baro_HALDev {
 public:
-    AP_Baro_AUAV(AP_Baro &baro, AP_HAL::Device *dev);
+    using AP_Baro_HALDev::AP_Baro_HALDev;
 
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        // _probe will have deleted this allocation if it returns nullptr:
+        return probe_sensor(NEW_NOTHROW AP_Baro_AUAV(dev));
+    }
 
 protected:
-    bool init();
+    bool init() override;
 
     void timer();
-
-    AP_HAL::Device *dev;
 
     AUAV_Pressure_sensor sensor { dev, AUAV_Pressure_sensor::Type::Absolute };
 

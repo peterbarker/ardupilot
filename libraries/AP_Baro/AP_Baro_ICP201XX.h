@@ -1,24 +1,29 @@
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_ICP201XX_ENABLED
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_HAL/Semaphores.h>
-#include <AP_HAL/Device.h>
+#include "AP_Baro_HALDev.h"
 
-class AP_Baro_ICP201XX : public AP_Baro_Backend
+namespace HAL {
+    class Device;
+};
+
+class AP_Baro_ICP201XX : public AP_Baro_HALDev
 {
 public:
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        // _probe will have deleted this allocation if it returns nullptr:
+        return probe_sensor(NEW_NOTHROW AP_Baro_ICP201XX(dev));
+    }
 
 private:
-    AP_Baro_ICP201XX(AP_Baro &baro, AP_HAL::Device &dev);
+    using AP_Baro_HALDev::AP_Baro_HALDev;
 
-    bool init();
+    bool init() override;
     void dummy_reg();
     bool read_reg(uint8_t reg, uint8_t *buf, uint8_t len);
     bool read_reg(uint8_t reg, uint8_t *val);
@@ -34,8 +39,6 @@ private:
     void timer();
 
     uint8_t instance;
-
-    AP_HAL::Device *dev;
 
     // accumulation structure, protected by _sem
     struct {

@@ -1,11 +1,10 @@
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_SPL06_ENABLED
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_HAL/Device.h>
+#include "AP_Baro_HALDev.h"
 
 #ifndef HAL_BARO_SPL06_I2C_ADDR
  #define HAL_BARO_SPL06_I2C_ADDR  (0x76)
@@ -14,7 +13,7 @@
  #define HAL_BARO_SPL06_I2C_ADDR2 (0x77)
 #endif
 
-class AP_Baro_SPL06 : public AP_Baro_Backend
+class AP_Baro_SPL06 : public AP_Baro_HALDev
 {
 public:
 	enum class Type {
@@ -22,23 +21,22 @@ public:
 		SPL06,
 		SPA06,
 	};
-    AP_Baro_SPL06(AP_Baro &baro, AP_HAL::Device &dev);
+
+    using AP_Baro_HALDev::AP_Baro_HALDev;
 
     /* AP_Baro public interface: */
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(class AP_Baro &unused, AP_HAL::Device &dev);
 
 private:
 
-    bool _init(void);
+    bool init(void) override;
     void _timer(void);
     void _update_temperature(int32_t);
     void _update_pressure(int32_t);
 
     int32_t raw_value_scale_factor(uint8_t);
-
-    AP_HAL::Device *_dev;
 
     int8_t _timer_counter;
     uint8_t _instance;

@@ -13,13 +13,17 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "AP_Baro_KellerLD.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_KELLERLD_ENABLED
+
+#include "AP_Baro_KellerLD.h"
 
 #include <stdio.h>
 
 #include <AP_Math/AP_Math.h>
+#include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/Device.h>
 
 #define KELLER_DEBUG 0
 
@@ -41,24 +45,6 @@ static const uint8_t CMD_PRANGE_MAX_LSB = 0x16;
 
 // write to this address to start pressure measurement
 static const uint8_t CMD_REQUEST_MEASUREMENT = 0xAC;
-
-AP_Baro_KellerLD::AP_Baro_KellerLD(AP_Baro &baro, AP_HAL::Device &dev)
-    : AP_Baro_Backend(baro)
-    , _dev(&dev)
-{
-}
-
-// Look for the device on the bus and see if it responds appropriately
-AP_Baro_Backend *AP_Baro_KellerLD::probe(AP_Baro &baro, AP_HAL::Device &dev)
-{
-    AP_Baro_KellerLD *sensor = NEW_NOTHROW AP_Baro_KellerLD(baro, dev);
-    if (!sensor || !sensor->_init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
-
 
 // convenience function to work around device transfer oddities
 bool AP_Baro_KellerLD::transfer_with_delays(uint8_t *send, uint8_t sendlen, uint8_t *recv, uint8_t recvlen)
@@ -171,12 +157,8 @@ bool AP_Baro_KellerLD::read_mode_type()
 }
 
 // We read out the measurement range to be used in raw value conversions
-bool AP_Baro_KellerLD::_init()
+bool AP_Baro_KellerLD::init()
 {
-    if (!_dev) {
-        return false;
-    }
-
     WITH_SEMAPHORE(_dev->get_semaphore());
 
     // high retries for init

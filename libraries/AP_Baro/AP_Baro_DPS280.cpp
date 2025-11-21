@@ -16,12 +16,16 @@
   DPS280 barometer driver
  */
 
-#include "AP_Baro_DPS280.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_DPS280_ENABLED
 
+#include "AP_Baro_DPS280.h"
+
 #include <stdio.h>
 #include <AP_Math/definitions.h>
+#include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/Device.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -41,33 +45,6 @@ extern const AP_HAL::HAL &hal;
 #define DPS280_WHOAMI 0x10
 
 #define TEMPERATURE_LIMIT_C 120
-
-AP_Baro_DPS280::AP_Baro_DPS280(AP_Baro &baro, AP_HAL::Device &_dev)
-    : AP_Baro_Backend(baro)
-    , dev(&_dev)
-{
-}
-
-AP_Baro_Backend *AP_Baro_DPS280::probe(AP_Baro &baro,
-                                       AP_HAL::Device &_dev)
-{
-    AP_Baro_DPS280 *sensor = NEW_NOTHROW AP_Baro_DPS280(baro, _dev);
-    if (!sensor || !sensor->init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
-
-AP_Baro_Backend *AP_Baro_DPS310::probe(AP_Baro &baro, AP_HAL::Device &_dev)
-{
-    auto *sensor = NEW_NOTHROW AP_Baro_DPS310(baro, _dev);
-    if (!sensor || !sensor->init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
 
 /*
   handle bit width for 16 bit config registers
@@ -153,9 +130,6 @@ void AP_Baro_DPS310::set_config_registers(void)
 
 bool AP_Baro_DPS280::init()
 {
-    if (!dev) {
-        return false;
-    }
     dev->get_semaphore()->take_blocking();
 
     // setup to allow reads on SPI

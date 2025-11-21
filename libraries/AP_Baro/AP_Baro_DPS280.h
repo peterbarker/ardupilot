@@ -1,11 +1,10 @@
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_DPS280_ENABLED
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_HAL/Device.h>
+#include "AP_Baro_HALDev.h"
 
 #ifndef HAL_BARO_DPS280_I2C_ADDR
  #define HAL_BARO_DPS280_I2C_ADDR  0x76
@@ -14,17 +13,25 @@
  #define HAL_BARO_DPS280_I2C_ADDR2 0x77
 #endif
 
-class AP_Baro_DPS280 : public AP_Baro_Backend {
+namespace AP_HAL {
+    class Device;
+};
+
+class AP_Baro_DPS280 : public AP_Baro_HALDev {
 public:
-    AP_Baro_DPS280(AP_Baro &baro, AP_HAL::Device &dev);
 
     /* AP_Baro public interface: */
     void update() override;
 
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        // _probe will have deleted this allocation if it returns nullptr:
+        return probe_sensor(NEW_NOTHROW AP_Baro_DPS280(dev));
+    }
 
 protected:
-    bool init();
+    using AP_Baro_HALDev::AP_Baro_HALDev;
+
+    bool init() override;
     bool read_calibration(void);
     void timer(void);
     void calculate_PT(int32_t UT, int32_t UP, float &pressure, float &temperature);
@@ -34,8 +41,6 @@ protected:
     virtual void set_config_registers(void);
     void check_health();
     virtual DevTypes get_device_type(void) { return DEVTYPE_BARO_DPS280; }
-
-    AP_HAL::Device *dev;
 
     uint8_t instance;
 
@@ -64,7 +69,10 @@ class AP_Baro_DPS310 : public AP_Baro_DPS280 {
     // like DPS280 but workaround for temperature bug
 public:
     using AP_Baro_DPS280::AP_Baro_DPS280;
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        // _probe will have deleted this allocation if it returns nullptr:
+        return probe_sensor(NEW_NOTHROW AP_Baro_DPS310(dev));
+    }
     DevTypes get_device_type(void) override { return DEVTYPE_BARO_DPS310; }
     void set_config_registers() override;
 };

@@ -1,12 +1,10 @@
 #pragma once
 
-#include "AP_Baro_Backend.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_MS56XX_ENABLED
 
-#include <AP_HAL/AP_HAL.h>
-#include <AP_HAL/Semaphores.h>
-#include <AP_HAL/Device.h>
+#include "AP_Baro_HALDev.h"
 
 #ifndef HAL_BARO_MS5611_I2C_ADDR
 #define HAL_BARO_MS5611_I2C_ADDR 0x77
@@ -33,20 +31,20 @@
 #define MS5837_30BA_02BA_SELECTION_THRESHOLD 37000
 #endif
 
-class AP_Baro_MS56XX : public AP_Baro_Backend
+namespace HAL {
+    class Device;
+}
+
+class AP_Baro_MS56XX : public AP_Baro_HALDev
 {
 public:
     void update() override;
 
-    AP_Baro_MS56XX(AP_Baro &baro, AP_HAL::Device &dev);
-
 protected:
 
-    // convenience methods for derivative classes to call.  Will free
-    // sensor if it can't init it.
-    static AP_Baro_Backend *_probe(AP_Baro &baro, AP_Baro_MS56XX *sensor);
+    using AP_Baro_HALDev::AP_Baro_HALDev;
 
-    virtual bool _init();
+    virtual bool init() override;
 
     bool _read_prom_5611(uint16_t prom[8]);
     bool _read_prom_5637(uint16_t prom[8]);
@@ -81,8 +79,6 @@ private:
 
     void _timer();
 
-    AP_HAL::Device *_dev;
-
     /* Shared values between thread sampling the HW and main thread */
     struct {
         uint32_t s_D1;
@@ -103,9 +99,11 @@ private:
 class AP_Baro_MS5607 : public AP_Baro_MS56XX
 {
 public:
-    using AP_Baro_MS56XX::AP_Baro_MS56XX;
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        return probe_sensor(NEW_NOTHROW AP_Baro_MS5607(dev));
+    }
 protected:
+    using AP_Baro_MS56XX::AP_Baro_MS56XX;
     const char *name() const override { return "MS5607"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5611(prom); }
     DevTypes devtype() const override { return DEVTYPE_BARO_MS5607; }
@@ -131,9 +129,11 @@ protected:
 class AP_Baro_MS5637 : public AP_Baro_MS56XX
 {
 public:
-    using AP_Baro_MS56XX::AP_Baro_MS56XX;
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+            return probe_sensor(NEW_NOTHROW AP_Baro_MS5637(dev));
+    }
 protected:
+    using AP_Baro_MS56XX::AP_Baro_MS56XX;
     const char *name() const override { return "MS5637"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5637(prom); }
     DevTypes devtype() const override { return DEVTYPE_BARO_MS5637; }
@@ -145,13 +145,16 @@ protected:
 class AP_Baro_MS5837 : public AP_Baro_MS56XX
 {
 public:
-    using AP_Baro_MS56XX::AP_Baro_MS56XX;
-    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev);
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::Device &dev) {
+        return probe_sensor(NEW_NOTHROW AP_Baro_MS5837(dev));
+    }
 protected:
+    using AP_Baro_MS56XX::AP_Baro_MS56XX;
+
     const char *name() const override { return "MS5837"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5637(prom); }
     DevTypes devtype() const override;
-    bool _init() override;
+    bool init() override;
     void _calculate() override;
     void _calculate_5837_02ba();
     void _calculate_5837_30ba();

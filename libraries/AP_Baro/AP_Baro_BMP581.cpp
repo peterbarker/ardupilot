@@ -12,10 +12,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "AP_Baro_BMP581.h"
+#include "AP_Baro_config.h"
 
 #if AP_BARO_BMP581_ENABLED
 
+#include "AP_Baro_BMP581.h"
+
+#include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/Device.h>
 #include <AP_Math/AP_Math.h>
 
 extern const AP_HAL::HAL &hal;
@@ -54,28 +58,8 @@ extern const AP_HAL::HAL &hal;
 #define BMP581_REG_OSR_EFF            0x38
 #define BMP581_REG_CMD                0x7E
 
-AP_Baro_BMP581::AP_Baro_BMP581(AP_Baro &baro, AP_HAL::Device &dev)
-    : AP_Baro_Backend(baro)
-    , _dev(&dev)
-{
-}
-
-AP_Baro_Backend *AP_Baro_BMP581::probe(AP_Baro &baro, AP_HAL::Device &dev)
-{
-    AP_Baro_BMP581 *sensor = NEW_NOTHROW AP_Baro_BMP581(baro, dev);
-    if (!sensor || !sensor->init()) {
-        delete sensor;
-        return nullptr;
-    }
-    return sensor;
-}
-
 bool AP_Baro_BMP581::init()
 {
-    if (!_dev) {
-        return false;
-    }
-
     WITH_SEMAPHORE(_dev->get_semaphore());
 
     _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
