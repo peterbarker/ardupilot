@@ -482,11 +482,7 @@ class HWDef:
             driver = baro.driver
             probe = baro.probe
 
-            args = ['*this']
-
             n = len(devlist)+1
-
-            args = []
 
             backend_probe_method = f"AP_Baro_{driver}::{probe}"
 
