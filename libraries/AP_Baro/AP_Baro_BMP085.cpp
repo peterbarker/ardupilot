@@ -115,11 +115,6 @@ bool AP_Baro_BMP085::init()
 
     _state = 0;
 
-    _instance = _frontend.register_sensor();
-
-    dev.set_device_type(DEVTYPE_BARO_BMP085);
-    set_bus_id(_instance, dev.get_bus_id());
-    
     dev.register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP085::_timer, void));
     return true;
 }
@@ -189,7 +184,7 @@ void AP_Baro_BMP085::update(void)
     float temperature = 0.1f * _temp;
     float pressure = _pressure_filter.getf();
 
-    _copy_to_frontend(_instance, pressure, temperature);
+    _copy_to_frontend(instance, pressure, temperature);
 }
 
 // Send command to Read Pressure

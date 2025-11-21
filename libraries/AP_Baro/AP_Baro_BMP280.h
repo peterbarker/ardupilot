@@ -26,6 +26,8 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_BMP280(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_BMP280; }
+
 private:
 
     bool init(void) override;
@@ -33,7 +35,6 @@ private:
     void _update_temperature(int32_t);
     void _update_pressure(int32_t);
 
-    uint8_t _instance;
     int32_t _t_fine;
     float _pressure_sum;
     uint32_t _pressure_count;

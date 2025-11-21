@@ -18,6 +18,11 @@ AP_Baro_HALDev *AP_Baro_HALDev::probe_sensor(AP_Baro_HALDev *sensor)
         delete sensor;
         return nullptr;
     }
+
+    sensor->instance = AP::baro().register_sensor();
+    sensor->dev.set_device_type(sensor->device_type());
+    sensor->set_bus_id(sensor->instance, sensor->dev.get_bus_id());
+
     return sensor;
 }
 

@@ -75,11 +75,6 @@ bool AP_Baro_ICP101XX::init()
 
     dev.set_retries(0);
 
-    instance = _frontend.register_sensor();
-
-    dev.set_device_type(DEVTYPE_BARO_ICP101XX);
-    set_bus_id(instance, dev.get_bus_id());
-
     dev.register_periodic_callback(measure_interval, FUNCTOR_BIND_MEMBER(&AP_Baro_ICP101XX::timer, void));
 
     return true;

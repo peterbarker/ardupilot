@@ -29,6 +29,13 @@ public:
 
     static AP_Baro_Backend *probe(AP_HAL::Device &dev);
 
+    DevTypes device_type() const override {
+        if (type == Type::SPA06) {
+            return DEVTYPE_BARO_SPA06;
+        }
+        return DEVTYPE_BARO_SPL06;
+    }
+
 private:
 
     bool init(void) override;
@@ -39,7 +46,6 @@ private:
     int32_t raw_value_scale_factor(uint8_t);
 
     int8_t _timer_counter;
-    uint8_t _instance;
     float _temp_raw;
     float _pressure_sum;
     uint32_t _pressure_count;

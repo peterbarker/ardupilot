@@ -93,11 +93,7 @@ bool AP_Baro_BMP280::init()
 
     dev.write_register((BMP280_REG_CONFIG & mask), BMP280_FILTER_COEFFICIENT << 2, true);
 
-    _instance = _frontend.register_sensor();
 
-    dev.set_device_type(DEVTYPE_BARO_BMP280);
-    set_bus_id(_instance, dev.get_bus_id());
-    
     // request 50Hz update
     dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
 
@@ -128,7 +124,7 @@ void AP_Baro_BMP280::update(void)
         return;
     }
 
-    _copy_to_frontend(_instance, _pressure_sum/_pressure_count, _temperature);
+    _copy_to_frontend(instance, _pressure_sum/_pressure_count, _temperature);
     _pressure_count = 0;
     _pressure_sum = 0;
 }

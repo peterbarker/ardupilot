@@ -144,11 +144,6 @@ bool AP_Baro_LPS2XH::init()
         CallTime = 1000000/75;
     }
 
-    _instance = _frontend.register_sensor();
-
-    dev.set_device_type(DEVTYPE_BARO_LPS2XH);
-    set_bus_id(_instance, dev.get_bus_id());
-
     dev.register_periodic_callback(CallTime, FUNCTOR_BIND_MEMBER(&AP_Baro_LPS2XH::_timer, void));
 
     return true;
@@ -201,7 +196,7 @@ void AP_Baro_LPS2XH::update(void)
     }
 
     WITH_SEMAPHORE(_sem);
-    _copy_to_frontend(_instance, _pressure_sum/_pressure_count, _temperature);
+    _copy_to_frontend(instance, _pressure_sum/_pressure_count, _temperature);
     _pressure_sum = 0;
     _pressure_count = 0;
 }

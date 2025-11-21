@@ -81,7 +81,7 @@ bool AP_Baro_MS5837::init()
     if (!AP_Baro_MS56XX::init()) {
         return false;
     }
-    _frontend.set_type(_instance, AP_Baro::BARO_TYPE_WATER);
+    _frontend.set_type(instance, AP_Baro::BARO_TYPE_WATER);
     // Use pressure sensitivity as a proxy for range determination
     // High sensitivity for the same number size implies the lower-range sensor variant
     // Threshold determined from datasheet example values and some sample sensors
@@ -126,11 +126,6 @@ bool AP_Baro_MS56XX::init()
     _state = 0;
 
     memset(&_accum, 0, sizeof(_accum));
-
-    _instance = _frontend.register_sensor();
-
-    dev.set_device_type(devtype());
-    set_bus_id(_instance, dev.get_bus_id());
 
     // lower retries for run
     dev.set_retries(3);
@@ -359,7 +354,7 @@ void AP_Baro_MS5611::_calculate()
 
     float pressure = (_D1*SENS/2097152 - OFF)/32768;
     float temperature = TEMP * 0.01f;
-    _copy_to_frontend(_instance, pressure, temperature);
+    _copy_to_frontend(instance, pressure, temperature);
 }
 #endif  // AP_BARO_MS5611_ENABLED
 
@@ -399,7 +394,7 @@ void AP_Baro_MS5607::_calculate()
 
     float pressure = (_D1*SENS/2097152 - OFF)/32768;
     float temperature = TEMP * 0.01f;
-    _copy_to_frontend(_instance, pressure, temperature);
+    _copy_to_frontend(instance, pressure, temperature);
 }
 #endif  // AP_BARO_MS5607_ENABLED
 
@@ -436,7 +431,7 @@ void AP_Baro_MS5637::_calculate()
 
     int32_t pressure = ((int64_t)raw_pressure * SENS / (int64_t)2097152 - OFF) / (int64_t)32768;
     float temperature = TEMP * 0.01f;
-    _copy_to_frontend(_instance, (float)pressure, temperature);
+    _copy_to_frontend(instance, (float)pressure, temperature);
 }
 #endif  // AP_BARO_MS5637_ENABLED
 
@@ -490,7 +485,7 @@ void AP_Baro_MS5837::_calculate_5837_30ba()
     pressure = pressure * 10; // MS5837 only reports to 0.1 mbar
     float temperature = TEMP * 0.01f;
 
-    _copy_to_frontend(_instance, (float)pressure, temperature);
+    _copy_to_frontend(instance, (float)pressure, temperature);
 }
 // Calculate Temperature and compensated Pressure in real units (Celsius degrees*100, mbar*100).
 void AP_Baro_MS5837::_calculate_5837_02ba() {
@@ -516,10 +511,10 @@ void AP_Baro_MS5837::_calculate_5837_02ba() {
     int64_t pressure = ((((int64_t)_D1 * SENS) >> 21) - OFF) >> 15;
 
     // Update frontend with calculated values
-    _copy_to_frontend(_instance, (float)pressure, (float)TEMP / 100);
+    _copy_to_frontend(instance, (float)pressure, (float)TEMP / 100);
 }
 
-AP_Baro_Backend::DevTypes AP_Baro_MS5837::devtype() const {
+AP_Baro_Backend::DevTypes AP_Baro_MS5837::device_type() const {
     return _subtype;
 }
 

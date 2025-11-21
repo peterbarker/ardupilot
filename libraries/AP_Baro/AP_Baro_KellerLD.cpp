@@ -181,12 +181,7 @@ bool AP_Baro_KellerLD::init()
 
     memset(&_accum, 0, sizeof(_accum));
 
-    _instance = _frontend.register_sensor();
-
-    dev.set_device_type(DEVTYPE_BARO_KELLERLD);
-    set_bus_id(_instance, dev.get_bus_id());
-    
-    _frontend.set_type(_instance, AP_Baro::BARO_TYPE_WATER);
+    _frontend.set_type(instance, AP_Baro::BARO_TYPE_WATER);
 
     // lower retries for run
     dev.set_retries(3);
@@ -297,7 +292,7 @@ void AP_Baro_KellerLD::update()
     pressure *= 100000; // bar -> Pascal
     float temperature = ((raw_temperature_avg >> 4) - 24) * 0.05f - 50;
 
-    _copy_to_frontend(_instance, pressure, temperature);
+    _copy_to_frontend(instance, pressure, temperature);
 }
 
 #endif  // AP_BARO_KELLERLD_ENABLED

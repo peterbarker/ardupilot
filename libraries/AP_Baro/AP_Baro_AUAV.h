@@ -33,6 +33,8 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_AUAV(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_AUAV; }
+
 protected:
     bool init() override;
 
@@ -46,8 +48,6 @@ protected:
 
     AP_HAL::Device *dummy;
     AUAV_Pressure_sensor sensor { dummy, AUAV_Pressure_sensor::Type::Absolute };
-
-    uint8_t instance;
 
     uint32_t count;
     float pressure_sum;

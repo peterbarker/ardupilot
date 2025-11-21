@@ -20,6 +20,8 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_ICP101XX(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_ICP101XX; }
+
 private:
     using AP_Baro_HALDev::AP_Baro_HALDev;
 
@@ -40,8 +42,6 @@ private:
     
     // calibration data
     int16_t sensor_constants[4];
-
-    uint8_t instance;
 
     // time last read command was sent
     uint32_t last_measure_us;

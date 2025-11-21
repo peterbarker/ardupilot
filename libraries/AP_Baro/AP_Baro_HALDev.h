@@ -29,9 +29,13 @@ public:
 
 protected:
 
+    virtual DevTypes device_type() const = 0;
+
     virtual bool init() = 0;
 
     AP_HAL::Device &dev;
+
+    uint8_t instance;
 };
 
 #endif  // AP_BARO_HALDEV_ENABLED

@@ -27,6 +27,7 @@ public:
         // _probe will have deleted this allocation if it returns nullptr:
         return probe_sensor(NEW_NOTHROW AP_Baro_DPS280(dev));
     }
+    virtual DevTypes device_type(void) const override { return DEVTYPE_BARO_DPS280; }
 
 protected:
     using AP_Baro_HALDev::AP_Baro_HALDev;
@@ -40,9 +41,6 @@ protected:
     void fix_config_bits32(int32_t &v, uint8_t bits) const;
     virtual void set_config_registers(void);
     void check_health();
-    virtual DevTypes get_device_type(void) { return DEVTYPE_BARO_DPS280; }
-
-    uint8_t instance;
 
     uint32_t count;
     uint8_t err_count;
@@ -73,7 +71,7 @@ public:
         // _probe will have deleted this allocation if it returns nullptr:
         return probe_sensor(NEW_NOTHROW AP_Baro_DPS310(dev));
     }
-    DevTypes get_device_type(void) override { return DEVTYPE_BARO_DPS310; }
+    DevTypes device_type(void) const override { return DEVTYPE_BARO_DPS310; }
     void set_config_registers() override;
 };
 

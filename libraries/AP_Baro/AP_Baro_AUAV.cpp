@@ -38,11 +38,6 @@ bool AP_Baro_AUAV::init()
         }
     }
 
-    // Register sensor and set dev-id
-    instance = _frontend.register_sensor();
-    dev.set_device_type(DEVTYPE_BARO_AUAV);
-    set_bus_id(instance, dev.get_bus_id());
-
     dev.register_periodic_callback(40000,
                                      FUNCTOR_BIND_MEMBER(&AP_Baro_AUAV::timer, void));
 

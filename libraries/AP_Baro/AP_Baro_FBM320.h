@@ -28,13 +28,13 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_FBM320(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_FBM320; }
+
 private:
     bool init(void) override;
     bool read_calibration(void);
     void timer(void);
     void calculate_PT(int32_t UT, int32_t UP, int32_t &pressure, int32_t &temperature);
-
-    uint8_t instance;
 
     uint32_t count;
     float pressure_sum;

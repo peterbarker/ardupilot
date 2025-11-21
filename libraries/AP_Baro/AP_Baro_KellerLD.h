@@ -49,6 +49,8 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_KellerLD(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_KELLERLD; }
+
 private:
     using AP_Baro_HALDev::AP_Baro_HALDev;
 
@@ -67,8 +69,6 @@ private:
         uint32_t sum_temperature;
         uint8_t num_samples;
     } _accum;
-
-    uint8_t _instance;
 
     enum class SensorMode {
         PR_MODE = 0,    // Vented gauge

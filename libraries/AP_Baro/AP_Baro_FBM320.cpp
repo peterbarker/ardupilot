@@ -99,11 +99,6 @@ bool AP_Baro_FBM320::init()
 
     dev.write_register(FBM320_REG_CMD, FBM320_CMD_READ_T);
 
-    instance = _frontend.register_sensor();
-
-    dev.set_device_type(DEVTYPE_BARO_FBM320);
-    set_bus_id(instance, dev.get_bus_id());
-
     // request 50Hz update
     dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_FBM320::timer, void));
 

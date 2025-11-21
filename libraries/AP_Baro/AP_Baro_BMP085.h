@@ -28,6 +28,8 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_BMP085(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_BMP085; }
+
 private:
 
     using AP_Baro_HALDev::AP_Baro_HALDev;
@@ -49,7 +51,6 @@ private:
 
     AP_HAL::DigitalSource *_eoc;
 
-    uint8_t _instance;
     bool _has_sample;
 
     // Boards with no EOC pin: use times instead

@@ -36,6 +36,8 @@ public:
 
     static AP_Baro_Backend *probe_InvensenseIMU(AP_HAL::Device &dev, uint8_t imu_address);
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_LPS2XH; }
+
 private:
     virtual ~AP_Baro_LPS2XH(void) {};
 
@@ -47,7 +49,6 @@ private:
 
     bool _check_whoami(void);
 
-    uint8_t _instance;
     float _pressure_sum;
     uint32_t _pressure_count;
     float _temperature;

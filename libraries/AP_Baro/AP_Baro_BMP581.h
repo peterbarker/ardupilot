@@ -30,12 +30,13 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_BMP581(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_BMP581; }
+
 private:
 
     bool init(void) override;
     void timer(void);
 
-    uint8_t instance;
     float pressure_sum;
     uint32_t pressure_count;
     float temperature;

@@ -50,9 +50,6 @@ protected:
     bool _read_prom_5637(uint16_t prom[8]);
 
     virtual const char *name() const = 0;
-    virtual DevTypes devtype() const = 0;
-
-    uint8_t _instance;
 
     /* Last compensated values from accumulated sample */
     float _D1, _D2;
@@ -106,7 +103,7 @@ protected:
     using AP_Baro_MS56XX::AP_Baro_MS56XX;
     const char *name() const override { return "MS5607"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5611(prom); }
-    DevTypes devtype() const override { return DEVTYPE_BARO_MS5607; }
+    DevTypes device_type() const override { return DEVTYPE_BARO_MS5607; }
     void _calculate() override;
 };
 #endif  // AP_BARO_MS5607_ENABLED
@@ -120,7 +117,7 @@ public:
 protected:
     const char *name() const override { return "MS5611"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5611(prom); }
-    DevTypes devtype() const override { return DEVTYPE_BARO_MS5611; }
+    DevTypes device_type() const override { return DEVTYPE_BARO_MS5611; }
     void _calculate() override;
 };
 #endif  // AP_BARO_MS5611_ENABLED
@@ -136,7 +133,7 @@ protected:
     using AP_Baro_MS56XX::AP_Baro_MS56XX;
     const char *name() const override { return "MS5637"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5637(prom); }
-    DevTypes devtype() const override { return DEVTYPE_BARO_MS5637; }
+    DevTypes device_type() const override { return DEVTYPE_BARO_MS5637; }
     void _calculate() override;
 };
 #endif  // AP_BARO_MS5637_ENABLED
@@ -153,7 +150,7 @@ protected:
 
     const char *name() const override { return "MS5837"; }
     bool _read_prom(uint16_t *prom) override { return _read_prom_5637(prom); }
-    DevTypes devtype() const override;
+    DevTypes device_type() const override;
     bool init() override;
     void _calculate() override;
     void _calculate_5837_02ba();

@@ -219,16 +219,6 @@ bool AP_Baro_SPL06::init()
     }
     dev.write_register(SPL06_REG_INT_AND_FIFO_CFG, int_and_fifo_reg_value, true);
 
-    _instance = _frontend.register_sensor();
-
-    if(type == Type::SPA06) {
-	    dev.set_device_type(DEVTYPE_BARO_SPA06);
-    } else {
-	    dev.set_device_type(DEVTYPE_BARO_SPL06);
-    }
-
-    set_bus_id(_instance, dev.get_bus_id());
-    
     // request 50Hz update
     _timer_counter = -1;
 #if AP_BARO_SPL06_BACKGROUND_ENABLE
@@ -301,7 +291,7 @@ void AP_Baro_SPL06::update(void)
         return;
     }
 
-    _copy_to_frontend(_instance, _pressure_sum/_pressure_count, _temperature);
+    _copy_to_frontend(instance, _pressure_sum/_pressure_count, _temperature);
 
     _pressure_sum = 0;
     _pressure_count = 0;

@@ -20,6 +20,8 @@ public:
         return probe_sensor(NEW_NOTHROW AP_Baro_ICP201XX(dev));
     }
 
+    DevTypes device_type() const override { return DEVTYPE_BARO_ICP201XX; }
+
 private:
     using AP_Baro_HALDev::AP_Baro_HALDev;
 
@@ -37,8 +39,6 @@ private:
     void wait_read();
     bool flush_fifo();
     void timer();
-
-    uint8_t instance;
 
     // accumulation structure, protected by _sem
     struct {

@@ -159,11 +159,6 @@ bool AP_Baro_DPS280::init()
 
     set_config_registers();
 
-    instance = _frontend.register_sensor();
-
-    dev.set_device_type(get_device_type());
-    set_bus_id(instance, dev.get_bus_id());
-
     // request 64Hz update. New data will be available at 32Hz
     dev.register_periodic_callback((1000 / 64) * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_DPS280::timer, void));
 

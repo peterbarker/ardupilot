@@ -81,7 +81,6 @@ bool AP_Baro_BMP581::init()
 
     switch (whoami) {
     case BMP581_ID:
-        dev.set_device_type(DEVTYPE_BARO_BMP581);
         break;
     default:
         return false;
@@ -115,10 +114,6 @@ bool AP_Baro_BMP581::init()
 
     // ORD 50Hz | Normal Mode
     dev.write_register(BMP581_REG_ODR_CONFIG, 0b0111101, true);
-
-    instance = _frontend.register_sensor();
-
-    set_bus_id(instance, dev.get_bus_id());
 
     // request 50Hz update
     dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP581::timer, void));
