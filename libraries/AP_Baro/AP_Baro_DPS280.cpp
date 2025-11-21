@@ -130,7 +130,7 @@ void AP_Baro_DPS310::set_config_registers(void)
 
 bool AP_Baro_DPS280::init()
 {
-    dev.get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     // setup to allow reads on SPI
     if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
@@ -148,12 +148,10 @@ bool AP_Baro_DPS280::init()
     uint8_t whoami=0;
     if (!dev.read_registers(DPS280_REG_PID, &whoami, 1) ||
         whoami != DPS280_WHOAMI) {
-        dev.get_semaphore()->give();
         return false;
     }
 
     if (!read_calibration()) {
-        dev.get_semaphore()->give();
         return false;
     }
 
@@ -165,8 +163,6 @@ bool AP_Baro_DPS280::init()
 
     dev.set_device_type(get_device_type());
     set_bus_id(instance, dev.get_bus_id());
-    
-    dev.get_semaphore()->give();
 
     // request 64Hz update. New data will be available at 32Hz
     dev.register_periodic_callback((1000 / 64) * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_DPS280::timer, void));

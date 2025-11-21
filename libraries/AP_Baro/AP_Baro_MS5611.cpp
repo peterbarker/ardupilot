@@ -97,7 +97,7 @@ bool AP_Baro_MS5837::init()
 
 bool AP_Baro_MS56XX::init()
 {
-    dev.get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     // high retries for init
     dev.set_retries(10);
@@ -108,7 +108,6 @@ bool AP_Baro_MS56XX::init()
     hal.scheduler->delay(4);
 
     if (!_read_prom(prom)) {
-        dev.get_semaphore()->give();
         return false;
     }
 
@@ -135,8 +134,6 @@ bool AP_Baro_MS56XX::init()
 
     // lower retries for run
     dev.set_retries(3);
-    
-    dev.get_semaphore()->give();
 
     /* Request 100Hz update */
     dev.register_periodic_callback(10 * AP_USEC_PER_MSEC,

@@ -81,7 +81,7 @@ bool AP_Baro_FBM320::read_calibration(void)
 
 bool AP_Baro_FBM320::init()
 {
-    dev.get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
@@ -89,13 +89,11 @@ bool AP_Baro_FBM320::init()
     if (!dev.read_registers(FBM320_REG_ID, &whoami, 1) ||
         whoami != FBM320_WHOAMI) {
         // not a FBM320
-        dev.get_semaphore()->give();
         return false;
     }
     printf("FBM320 ID 0x%x\n", whoami);
 
     if (!read_calibration()) {
-        dev.get_semaphore()->give();
         return false;
     }
 
@@ -105,8 +103,6 @@ bool AP_Baro_FBM320::init()
 
     dev.set_device_type(DEVTYPE_BARO_FBM320);
     set_bus_id(instance, dev.get_bus_id());
-    
-    dev.get_semaphore()->give();
 
     // request 50Hz update
     dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_FBM320::timer, void));

@@ -48,29 +48,29 @@ extern const AP_HAL::HAL &hal;
 
 bool AP_Baro_ICP101XX::init()
 {
-    dev.get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     uint16_t id = 0;
     read_response(CMD_READ_ID, (uint8_t *)&id, 2);
     uint8_t whoami = (id >> 8) & 0x3f; // Product ID Bits 5:0
     if (whoami != ICP101XX_ID) {
-        goto failed;
+        return false;
     }
 
     if (!send_command(CMD_SOFT_RESET)) {
-        goto failed;
+        return false;
     }
 
     // wait for sensor to settle
     hal.scheduler->delay(10);
 
     if (!read_calibration_data()) {
-        goto failed;
+        return false;
     }
 
     // start a reading
     if (!start_measure(CMD_MEAS_ULN)) {
-        goto failed;
+        return false;
     }
 
     dev.set_retries(0);
@@ -79,16 +79,10 @@ bool AP_Baro_ICP101XX::init()
 
     dev.set_device_type(DEVTYPE_BARO_ICP101XX);
     set_bus_id(instance, dev.get_bus_id());
-    
-    dev.get_semaphore()->give();
 
     dev.register_periodic_callback(measure_interval, FUNCTOR_BIND_MEMBER(&AP_Baro_ICP101XX::timer, void));
 
     return true;
-
- failed:
-    dev.get_semaphore()->give();
-    return false;
 }
 
 bool AP_Baro_ICP101XX::read_measure_results(uint8_t *buf, uint8_t len)

@@ -79,7 +79,7 @@ AP_Baro_Backend *AP_Baro_LPS2XH::probe_InvensenseIMU(AP_HAL::Device &dev,
 */
 bool AP_Baro_LPS2XH::_imu_i2c_init(uint8_t imu_address)
 {
-    dev.get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     // as the baro device is already locked we need to re-use it,
     // changing its address to match the IMU address
@@ -102,14 +102,12 @@ bool AP_Baro_LPS2XH::_imu_i2c_init(uint8_t imu_address)
 
     dev.set_address(old_address);
 
-    dev.get_semaphore()->give();
-
     return true;
 }
 
 bool AP_Baro_LPS2XH::init()
 {
-    dev.get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
@@ -119,7 +117,6 @@ bool AP_Baro_LPS2XH::init()
     }
 
     if (!_check_whoami()) {
-        dev.get_semaphore()->give();
         return false;
     }
 
@@ -151,8 +148,6 @@ bool AP_Baro_LPS2XH::init()
 
     dev.set_device_type(DEVTYPE_BARO_LPS2XH);
     set_bus_id(_instance, dev.get_bus_id());
-    
-    dev.get_semaphore()->give();
 
     dev.register_periodic_callback(CallTime, FUNCTOR_BIND_MEMBER(&AP_Baro_LPS2XH::_timer, void));
 

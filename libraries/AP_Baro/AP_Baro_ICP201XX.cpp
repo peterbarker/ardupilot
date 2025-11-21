@@ -74,7 +74,7 @@ extern const AP_HAL::HAL &hal;
 
 bool AP_Baro_ICP201XX::init()
 {
-    dev.get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     uint8_t id = 0xFF;
     uint8_t ver = 0xFF;
@@ -83,11 +83,11 @@ bool AP_Baro_ICP201XX::init()
     read_reg(REG_VERSION, &ver);
 
     if (id != ICP201XX_ID) {
-        goto failed;
+        return false;
     }
 
     if (ver != 0x00 && ver != 0xB2) {
-        goto failed;
+        return false;
     }
 
     hal.scheduler->delay(10);
@@ -95,11 +95,11 @@ bool AP_Baro_ICP201XX::init()
     soft_reset();
 
     if (!boot_sequence()) {
-        goto failed;
+        return false;
     }
 
     if (!configure()) {
-        goto failed;
+        return false;
     }
 
     wait_read();
@@ -111,14 +111,8 @@ bool AP_Baro_ICP201XX::init()
     dev.set_device_type(DEVTYPE_BARO_ICP201XX);
     set_bus_id(instance, dev.get_bus_id());
 
-    dev.get_semaphore()->give();
-
     dev.register_periodic_callback(CONVERSION_INTERVAL/2, FUNCTOR_BIND_MEMBER(&AP_Baro_ICP201XX::timer, void));
     return true;
-
- failed:
-    dev.get_semaphore()->give();
-    return false;
 }
 
 
