@@ -43,19 +43,19 @@ bool AP_Baro_FBM320::read_calibration(void)
     uint16_t R[10];
 
     for (uint8_t i=0; i<9; i++) {
-        if (!dev->read_registers(0xAA+(i*2),&tmp[0],1)) {
+        if (!dev.read_registers(0xAA+(i*2),&tmp[0],1)) {
             return false;
         }
-        if (!dev->read_registers(0xAB+(i*2),&tmp[1],1)) {
+        if (!dev.read_registers(0xAB+(i*2),&tmp[1],1)) {
             return false;
         }
         R[i] = ((uint8_t)tmp[0] << 8 | tmp[1]);
     }
 
-    if (!dev->read_registers(0xA4,&tmp[0],1)) {
+    if (!dev.read_registers(0xA4,&tmp[0],1)) {
         return false;
     }
-    if (!dev->read_registers(0xF1,&tmp[0],1)) {
+    if (!dev.read_registers(0xF1,&tmp[0],1)) {
         return false;
     }
     R[9] = ((uint8_t)tmp[0] << 8) | tmp[1];
@@ -81,35 +81,35 @@ bool AP_Baro_FBM320::read_calibration(void)
 
 bool AP_Baro_FBM320::init()
 {
-    dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
-    dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
     uint8_t whoami;
-    if (!dev->read_registers(FBM320_REG_ID, &whoami, 1) ||
+    if (!dev.read_registers(FBM320_REG_ID, &whoami, 1) ||
         whoami != FBM320_WHOAMI) {
         // not a FBM320
-        dev->get_semaphore()->give();
+        dev.get_semaphore()->give();
         return false;
     }
     printf("FBM320 ID 0x%x\n", whoami);
 
     if (!read_calibration()) {
-        dev->get_semaphore()->give();
+        dev.get_semaphore()->give();
         return false;
     }
 
-    dev->write_register(FBM320_REG_CMD, FBM320_CMD_READ_T);
+    dev.write_register(FBM320_REG_CMD, FBM320_CMD_READ_T);
 
     instance = _frontend.register_sensor();
 
-    dev->set_device_type(DEVTYPE_BARO_FBM320);
-    set_bus_id(instance, dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_FBM320);
+    set_bus_id(instance, dev.get_bus_id());
     
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
     // request 50Hz update
-    dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_FBM320::timer, void));
+    dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_FBM320::timer, void));
 
     return true;
 }
@@ -159,7 +159,7 @@ void AP_Baro_FBM320::timer(void)
 {
     uint8_t buf[3];
 
-    if (!dev->read_registers(0xF6, buf, sizeof(buf))) {
+    if (!dev.read_registers(0xF6, buf, sizeof(buf))) {
         return;
     }
     int32_t value = ((uint32_t)buf[0] << 16) | ((uint32_t)buf[1] << 8) | (uint32_t)buf[2];
@@ -179,10 +179,10 @@ void AP_Baro_FBM320::timer(void)
     }
 
     if (step++ >= 5) {
-        dev->write_register(FBM320_REG_CMD, FBM320_CMD_READ_T);
+        dev.write_register(FBM320_REG_CMD, FBM320_CMD_READ_T);
         step = 0;
     } else {
-        dev->write_register(FBM320_REG_CMD, FBM320_CMD_READ_P);
+        dev.write_register(FBM320_REG_CMD, FBM320_CMD_READ_P);
     }
 }
 

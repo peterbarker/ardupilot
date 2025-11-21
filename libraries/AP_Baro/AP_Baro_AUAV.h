@@ -25,7 +25,6 @@ namespace AP_HAL {
 
 class AP_Baro_AUAV : public AP_Baro_HALDev {
 public:
-    using AP_Baro_HALDev::AP_Baro_HALDev;
 
     void update() override;
 
@@ -39,7 +38,14 @@ protected:
 
     void timer();
 
-    AUAV_Pressure_sensor sensor { dev, AUAV_Pressure_sensor::Type::Absolute };
+    AP_Baro_AUAV(AP_HAL::Device &__dev) :
+        AP_Baro_HALDev(__dev)
+        {
+            sensor.dev = &__dev;
+        }
+
+    AP_HAL::Device *dummy;
+    AUAV_Pressure_sensor sensor { dummy, AUAV_Pressure_sensor::Type::Absolute };
 
     uint8_t instance;
 

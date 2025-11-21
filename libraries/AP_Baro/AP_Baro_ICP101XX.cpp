@@ -48,7 +48,7 @@ extern const AP_HAL::HAL &hal;
 
 bool AP_Baro_ICP101XX::init()
 {
-    dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
     uint16_t id = 0;
     read_response(CMD_READ_ID, (uint8_t *)&id, 2);
@@ -73,27 +73,27 @@ bool AP_Baro_ICP101XX::init()
         goto failed;
     }
 
-    dev->set_retries(0);
+    dev.set_retries(0);
 
     instance = _frontend.register_sensor();
 
-    dev->set_device_type(DEVTYPE_BARO_ICP101XX);
-    set_bus_id(instance, dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_ICP101XX);
+    set_bus_id(instance, dev.get_bus_id());
     
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
-    dev->register_periodic_callback(measure_interval, FUNCTOR_BIND_MEMBER(&AP_Baro_ICP101XX::timer, void));
+    dev.register_periodic_callback(measure_interval, FUNCTOR_BIND_MEMBER(&AP_Baro_ICP101XX::timer, void));
 
     return true;
 
  failed:
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
     return false;
 }
 
 bool AP_Baro_ICP101XX::read_measure_results(uint8_t *buf, uint8_t len)
 {
-	return dev->transfer(nullptr, 0, buf, len);
+	return dev.transfer(nullptr, 0, buf, len);
 }
 
 bool AP_Baro_ICP101XX::read_response(uint16_t cmd, uint8_t *buf, uint8_t len)
@@ -101,7 +101,7 @@ bool AP_Baro_ICP101XX::read_response(uint16_t cmd, uint8_t *buf, uint8_t len)
 	uint8_t buff[2];
 	buff[0] = (cmd >> 8) & 0xff;
 	buff[1] = cmd & 0xff;
-	return dev->transfer(&buff[0], 2, buf, len);
+	return dev.transfer(&buff[0], 2, buf, len);
 }
 
 bool AP_Baro_ICP101XX::send_command(uint16_t cmd)
@@ -109,7 +109,7 @@ bool AP_Baro_ICP101XX::send_command(uint16_t cmd)
 	uint8_t buf[2];
 	buf[0] = (cmd >> 8) & 0xff;
 	buf[1] = cmd & 0xff;
-	return dev->transfer(buf, sizeof(buf), nullptr, 0);
+	return dev.transfer(buf, sizeof(buf), nullptr, 0);
 }
 
 bool AP_Baro_ICP101XX::send_command(uint16_t cmd, uint8_t *data, uint8_t len)
@@ -118,7 +118,7 @@ bool AP_Baro_ICP101XX::send_command(uint16_t cmd, uint8_t *data, uint8_t len)
 	buf[0] = (cmd >> 8) & 0xff;
 	buf[1] = cmd & 0xff;
 	memcpy(&buf[2], data, len);
-	return dev->transfer(&buf[0], len + 2, nullptr, 0);
+	return dev.transfer(&buf[0], len + 2, nullptr, 0);
 }
 
 int8_t AP_Baro_ICP101XX::cal_crc(uint8_t seed, uint8_t data)

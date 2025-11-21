@@ -75,8 +75,8 @@ public:
     // Read 4 bytes compensation coefficient
     bool read_register(uint8_t cmd, uint16_t &result);
 
-private:
     AP_HAL::Device *&dev;
+private:
 
     Type type;
 

@@ -92,9 +92,9 @@ AP_Baro_Backend *AP_Baro_SPL06::probe(AP_HAL::Device &dev)
 
 bool AP_Baro_SPL06::init()
 {
-    WITH_SEMAPHORE(_dev->get_semaphore());
+    WITH_SEMAPHORE(dev.get_semaphore());
 
-    _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
     uint8_t whoami;
 
@@ -102,7 +102,7 @@ bool AP_Baro_SPL06::init()
 // protocol sensor(I2C and SPI), sometimes it takes one SPI operation to convert it to SPI mode after it starts up.
 
     for (uint8_t i=0; i<5; i++) {
-        if (_dev->read_registers(SPL06_REG_CHIP_ID, &whoami, 1)) {
+        if (dev.read_registers(SPL06_REG_CHIP_ID, &whoami, 1)) {
         	switch(whoami) {
 			case SPL06_CHIP_ID:
 				type = Type::SPL06;
@@ -140,7 +140,7 @@ bool AP_Baro_SPL06::init()
     bool ready = false;
     for (uint8_t i=0; i<5; i++) {
         uint8_t status = 0;
-        if (_dev->read_registers(SPL06_REG_MODE_AND_STATUS, &status, 1)) {
+        if (dev.read_registers(SPL06_REG_MODE_AND_STATUS, &status, 1)) {
             if ((status & 1<<7U) && (status & 1<<6U)) {
                 ready = true;
                 break;
@@ -159,7 +159,7 @@ bool AP_Baro_SPL06::init()
 
     for (uint8_t i = 0; i < ARRAY_SIZE(buf); ) {
         ssize_t chunk = MIN(READ_LENGTH, SPL06_CALIB_COEFFS_LEN - i);
-        if (!_dev->read_registers(SPL06_REG_CALIB_COEFFS_START + i, buf + i, chunk)) {
+        if (!dev.read_registers(SPL06_REG_CALIB_COEFFS_START + i, buf + i, chunk)) {
             return false;
         }
         i += chunk;
@@ -194,20 +194,20 @@ bool AP_Baro_SPL06::init()
     const uint8_t tmp_sensor = (type == Type::SPA06 ? 0 : SPL06_TEMP_USE_EXT_SENSOR);
 #if AP_BARO_SPL06_BACKGROUND_ENABLE
     // setup temperature and pressure measurements
-    _dev->setup_checked_registers(4, 20);
+    dev.setup_checked_registers(4, 20);
 
     //set rate and oversampling
-	_dev->write_register(SPL06_REG_TEMPERATURE_CFG, tmp_sensor | SPL06_TEMP_RATE_32HZ | SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_TEMPERATURE_OVERSAMPLING), true);
-	_dev->write_register(SPL06_REG_PRESSURE_CFG, SPL06_PRES_RATE_32HZ | SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_PRESSURE_OVERSAMPLING), true);
+	dev.write_register(SPL06_REG_TEMPERATURE_CFG, tmp_sensor | SPL06_TEMP_RATE_32HZ | SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_TEMPERATURE_OVERSAMPLING), true);
+	dev.write_register(SPL06_REG_PRESSURE_CFG, SPL06_PRES_RATE_32HZ | SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_PRESSURE_OVERSAMPLING), true);
 
 	//enable background mode
-	_dev->write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_CON_PRE_TEM, true);
+	dev.write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_CON_PRE_TEM, true);
 #else
     // setup temperature and pressure measurements
-    _dev->setup_checked_registers(3, 20);
+    dev.setup_checked_registers(3, 20);
 
-    _dev->write_register(SPL06_REG_TEMPERATURE_CFG, tmp_sensor | SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_TEMPERATURE_OVERSAMPLING), true);
-    _dev->write_register(SPL06_REG_PRESSURE_CFG, SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_PRESSURE_OVERSAMPLING), true);
+    dev.write_register(SPL06_REG_TEMPERATURE_CFG, tmp_sensor | SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_TEMPERATURE_OVERSAMPLING), true);
+    dev.write_register(SPL06_REG_PRESSURE_CFG, SPL06_OVERSAMPLING_TO_REG_VALUE(SPL06_PRESSURE_OVERSAMPLING), true);
 #endif //AP_BARO_SPL06_BACKGROUND_ENABLE
 
     uint8_t int_and_fifo_reg_value = 0;
@@ -217,24 +217,24 @@ bool AP_Baro_SPL06::init()
     if (SPL06_PRESSURE_OVERSAMPLING > 8) {
         int_and_fifo_reg_value |= SPL06_PRESSURE_RESULT_BIT_SHIFT;
     }
-    _dev->write_register(SPL06_REG_INT_AND_FIFO_CFG, int_and_fifo_reg_value, true);
+    dev.write_register(SPL06_REG_INT_AND_FIFO_CFG, int_and_fifo_reg_value, true);
 
     _instance = _frontend.register_sensor();
 
     if(type == Type::SPA06) {
-	    _dev->set_device_type(DEVTYPE_BARO_SPA06);
+	    dev.set_device_type(DEVTYPE_BARO_SPA06);
     } else {
-	    _dev->set_device_type(DEVTYPE_BARO_SPL06);
+	    dev.set_device_type(DEVTYPE_BARO_SPL06);
     }
 
-    set_bus_id(_instance, _dev->get_bus_id());
+    set_bus_id(_instance, dev.get_bus_id());
     
     // request 50Hz update
     _timer_counter = -1;
 #if AP_BARO_SPL06_BACKGROUND_ENABLE
-    _dev->register_periodic_callback(1000000/SPL06_BACKGROUND_SAMPLE_RATE, FUNCTOR_BIND_MEMBER(&AP_Baro_SPL06::_timer, void));
+    dev.register_periodic_callback(1000000/SPL06_BACKGROUND_SAMPLE_RATE, FUNCTOR_BIND_MEMBER(&AP_Baro_SPL06::_timer, void));
 #else
-    _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_SPL06::_timer, void));
+    dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_SPL06::_timer, void));
 #endif //AP_BARO_SPL06_BACKGROUND_ENABLE
 
     return true;
@@ -263,33 +263,33 @@ void AP_Baro_SPL06::_timer(void)
     uint8_t buf[3];
 
 #if AP_BARO_SPL06_BACKGROUND_ENABLE
-    _dev->read_registers(SPL06_REG_TEMPERATURE_START, buf, sizeof(buf));
+    dev.read_registers(SPL06_REG_TEMPERATURE_START, buf, sizeof(buf));
 	_update_temperature((int32_t)((buf[0] & 0x80 ? 0xFF000000 : 0) | ((uint32_t)buf[0] << 16) | ((uint32_t)buf[1] << 8) | buf[2]));
 
-	_dev->read_registers(SPL06_REG_PRESSURE_START, buf, sizeof(buf));
+	dev.read_registers(SPL06_REG_PRESSURE_START, buf, sizeof(buf));
 	_update_pressure((int32_t)((buf[0] & 0x80 ? 0xFF000000 : 0) | ((uint32_t)buf[0] << 16) | ((uint32_t)buf[1] << 8) | buf[2]));
 #else
     //command mode
 	if ((_timer_counter == -1) || (_timer_counter == 49)) {
         // First call and every second start a temperature measurement (50Hz call)
-        _dev->write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_TEMPERATURE, false);
+        dev.write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_TEMPERATURE, false);
         _timer_counter = 0; // Next cycle we are reading the temperature
     } else if (_timer_counter == 0) {
         // A temperature measurement had been started during the previous call
-        _dev->read_registers(SPL06_REG_TEMPERATURE_START, buf, sizeof(buf));
+        dev.read_registers(SPL06_REG_TEMPERATURE_START, buf, sizeof(buf));
         _update_temperature((int32_t)((buf[0] & 0x80 ? 0xFF000000 : 0) | ((uint32_t)buf[0] << 16) | ((uint32_t)buf[1] << 8) | buf[2]));
-        _dev->write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_PRESSURE, false);
+        dev.write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_PRESSURE, false);
         _timer_counter += 1;
     } else {
         // The rest of the time read the latest pressure and start a new measurement
-        _dev->read_registers(SPL06_REG_PRESSURE_START, buf, sizeof(buf));
+        dev.read_registers(SPL06_REG_PRESSURE_START, buf, sizeof(buf));
         _update_pressure((int32_t)((buf[0] & 0x80 ? 0xFF000000 : 0) | ((uint32_t)buf[0] << 16) | ((uint32_t)buf[1] << 8) | buf[2]));
-        _dev->write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_PRESSURE, false);
+        dev.write_register(SPL06_REG_MODE_AND_STATUS, SPL06_MEAS_PRESSURE, false);
         _timer_counter += 1;
     }
 #endif //AP_BARO_SPL06_BACKGROUND_ENABLE
 
-    _dev->check_next_register();
+    dev.check_next_register();
 }
 
 // transfer data to the frontend

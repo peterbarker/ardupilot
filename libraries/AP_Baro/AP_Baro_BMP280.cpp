@@ -50,12 +50,12 @@ extern const AP_HAL::HAL &hal;
 
 bool AP_Baro_BMP280::init()
 {
-    WITH_SEMAPHORE(_dev->get_semaphore());
+    WITH_SEMAPHORE(dev.get_semaphore());
 
-    _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
     uint8_t whoami;
-    if (!_dev->read_registers(BMP280_REG_ID, &whoami, 1)  ||
+    if (!dev.read_registers(BMP280_REG_ID, &whoami, 1)  ||
         (whoami != BME280_ID && whoami != BMP280_ID)) {
         // not a BMP280 or BME280
         return false;
@@ -63,7 +63,7 @@ bool AP_Baro_BMP280::init()
 
     // read the calibration data
     uint8_t buf[24];
-    if (!_dev->read_registers(BMP280_REG_CALIB, buf, sizeof(buf))) {
+    if (!dev.read_registers(BMP280_REG_CALIB, buf, sizeof(buf))) {
         return false;
     }
 
@@ -82,24 +82,24 @@ bool AP_Baro_BMP280::init()
 
     // SPI write needs bit mask
     uint8_t mask = 0xFF;
-    if (_dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+    if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
         mask = 0x7F;
     }
 
-    _dev->setup_checked_registers(2, 20);
+    dev.setup_checked_registers(2, 20);
     
-    _dev->write_register((BMP280_REG_CTRL_MEAS & mask), (BMP280_OVERSAMPLING_T << 5) |
+    dev.write_register((BMP280_REG_CTRL_MEAS & mask), (BMP280_OVERSAMPLING_T << 5) |
                          (BMP280_OVERSAMPLING_P << 2) | BMP280_MODE, true);
 
-    _dev->write_register((BMP280_REG_CONFIG & mask), BMP280_FILTER_COEFFICIENT << 2, true);
+    dev.write_register((BMP280_REG_CONFIG & mask), BMP280_FILTER_COEFFICIENT << 2, true);
 
     _instance = _frontend.register_sensor();
 
-    _dev->set_device_type(DEVTYPE_BARO_BMP280);
-    set_bus_id(_instance, _dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_BMP280);
+    set_bus_id(_instance, dev.get_bus_id());
     
     // request 50Hz update
-    _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
+    dev.register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
 
     return true;
 }
@@ -111,12 +111,12 @@ void AP_Baro_BMP280::_timer(void)
 {
     uint8_t buf[6];
 
-    if (_dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf))) {
+    if (dev.read_registers(BMP280_REG_DATA, buf, sizeof(buf))) {
         _update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4));
         _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
     }
 
-    _dev->check_next_register();
+    dev.check_next_register();
 }
 
 // transfer data to the frontend

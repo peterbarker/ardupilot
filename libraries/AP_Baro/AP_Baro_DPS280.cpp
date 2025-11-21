@@ -73,7 +73,7 @@ bool AP_Baro_DPS280::read_calibration(void)
 {
     uint8_t buf[18];
 
-    if (!dev->read_registers(DPS280_REG_COEF, buf, 18)) {
+    if (!dev.read_registers(DPS280_REG_COEF, buf, 18)) {
         return false;
     }
 
@@ -98,7 +98,7 @@ bool AP_Baro_DPS280::read_calibration(void)
     fix_config_bits16(calibration.C30, 16);
 
     /* get calibration source */
-    if (!dev->read_registers(DPS280_REG_CSRC, &calibration.temp_source, 1)) {
+    if (!dev.read_registers(DPS280_REG_CSRC, &calibration.temp_source, 1)) {
         return false;
     }
     calibration.temp_source &= 0x80;
@@ -108,10 +108,10 @@ bool AP_Baro_DPS280::read_calibration(void)
 
 void AP_Baro_DPS280::set_config_registers(void)
 {
-    dev->write_register(DPS280_REG_CREG, 0x0C, true); // shift for 16x oversampling
-    dev->write_register(DPS280_REG_PCONF, 0x54, true); // 32 Hz, 16x oversample
-    dev->write_register(DPS280_REG_TCONF, 0x54 | calibration.temp_source, true); // 32 Hz, 16x oversample
-    dev->write_register(DPS280_REG_MCONF, 0x07); // continuous temp and pressure.
+    dev.write_register(DPS280_REG_CREG, 0x0C, true); // shift for 16x oversampling
+    dev.write_register(DPS280_REG_PCONF, 0x54, true); // 32 Hz, 16x oversample
+    dev.write_register(DPS280_REG_TCONF, 0x54 | calibration.temp_source, true); // 32 Hz, 16x oversample
+    dev.write_register(DPS280_REG_MCONF, 0x07); // continuous temp and pressure.
 }
 
 void AP_Baro_DPS310::set_config_registers(void)
@@ -121,55 +121,55 @@ void AP_Baro_DPS310::set_config_registers(void)
         // work around broken temperature handling on some sensors
         // using undocumented register writes
         // see https://github.com/infineon/DPS310-Pressure-Sensor/blob/dps310/src/DpsClass.cpp#L442
-        dev->write_register(0x0E, 0xA5);
-        dev->write_register(0x0F, 0x96);
-        dev->write_register(0x62, 0x02);
-        dev->write_register(0x0E, 0x00);
-        dev->write_register(0x0F, 0x00);
+        dev.write_register(0x0E, 0xA5);
+        dev.write_register(0x0F, 0x96);
+        dev.write_register(0x62, 0x02);
+        dev.write_register(0x0E, 0x00);
+        dev.write_register(0x0F, 0x00);
 }
 
 bool AP_Baro_DPS280::init()
 {
-    dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
     // setup to allow reads on SPI
-    if (dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
-        dev->set_read_flag(0x80);
+    if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+        dev.set_read_flag(0x80);
     }
 
-    dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
     // the DPS310 can get into a state on boot where the whoami is not
     // read correctly at startup. Toggling the CS line gets its out of
     // this state
-    dev->set_chip_select(true);
-    dev->set_chip_select(false);
+    dev.set_chip_select(true);
+    dev.set_chip_select(false);
 
     uint8_t whoami=0;
-    if (!dev->read_registers(DPS280_REG_PID, &whoami, 1) ||
+    if (!dev.read_registers(DPS280_REG_PID, &whoami, 1) ||
         whoami != DPS280_WHOAMI) {
-        dev->get_semaphore()->give();
+        dev.get_semaphore()->give();
         return false;
     }
 
     if (!read_calibration()) {
-        dev->get_semaphore()->give();
+        dev.get_semaphore()->give();
         return false;
     }
 
-    dev->setup_checked_registers(4, 20);
+    dev.setup_checked_registers(4, 20);
 
     set_config_registers();
 
     instance = _frontend.register_sensor();
 
-    dev->set_device_type(get_device_type());
-    set_bus_id(instance, dev->get_bus_id());
+    dev.set_device_type(get_device_type());
+    set_bus_id(instance, dev.get_bus_id());
     
-    dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
     // request 64Hz update. New data will be available at 32Hz
-    dev->register_periodic_callback((1000 / 64) * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_DPS280::timer, void));
+    dev.register_periodic_callback((1000 / 64) * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_DPS280::timer, void));
 
     return true;
 }
@@ -202,14 +202,14 @@ void AP_Baro_DPS280::calculate_PT(int32_t UT, int32_t UP, float &pressure, float
  */
 void AP_Baro_DPS280::check_health(void)
 {
-    dev->check_next_register();
+    dev.check_next_register();
 
     if (fabsf(last_temperature) > TEMPERATURE_LIMIT_C) {
         err_count++;
     }
     if (err_count > 16) {
         err_count = 0;
-        dev->write_register(DPS280_REG_RESET, 0x09);
+        dev.write_register(DPS280_REG_RESET, 0x09);
         set_config_registers();
         pending_reset = true;
     }
@@ -228,10 +228,10 @@ void AP_Baro_DPS280::timer(void)
         return;
     }
 
-    if (!dev->read_registers(DPS280_REG_MCONF, &ready, 1) ||
+    if (!dev.read_registers(DPS280_REG_MCONF, &ready, 1) ||
         !(ready & (1U<<4)) ||
-        !dev->read_registers(DPS280_REG_PRESS, buf, 3) ||
-        !dev->read_registers(DPS280_REG_TEMP, &buf[3], 3)) {
+        !dev.read_registers(DPS280_REG_PRESS, buf, 3) ||
+        !dev.read_registers(DPS280_REG_TEMP, &buf[3], 3)) {
         // data not ready
         err_count++;
         check_health();

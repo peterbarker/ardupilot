@@ -97,22 +97,22 @@ bool AP_Baro_MS5837::init()
 
 bool AP_Baro_MS56XX::init()
 {
-    _dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
     // high retries for init
-    _dev->set_retries(10);
+    dev.set_retries(10);
     
     uint16_t prom[8];
 
-    _dev->transfer(&CMD_MS56XX_RESET, 1, nullptr, 0);
+    dev.transfer(&CMD_MS56XX_RESET, 1, nullptr, 0);
     hal.scheduler->delay(4);
 
     if (!_read_prom(prom)) {
-        _dev->get_semaphore()->give();
+        dev.get_semaphore()->give();
         return false;
     }
 
-    printf("%s found on bus %u address 0x%02x\n", name(), _dev->bus_num(), _dev->get_bus_address());
+    printf("%s found on bus %u address 0x%02x\n", name(), dev.bus_num(), dev.get_bus_address());
 
     // Save factory calibration coefficients
     _cal_reg.c1 = prom[1];
@@ -123,23 +123,23 @@ bool AP_Baro_MS56XX::init()
     _cal_reg.c6 = prom[6];
 
     // Send a command to read temperature first
-    _dev->transfer(&ADDR_CMD_CONVERT_TEMPERATURE, 1, nullptr, 0);
+    dev.transfer(&ADDR_CMD_CONVERT_TEMPERATURE, 1, nullptr, 0);
     _state = 0;
 
     memset(&_accum, 0, sizeof(_accum));
 
     _instance = _frontend.register_sensor();
 
-    _dev->set_device_type(devtype());
-    set_bus_id(_instance, _dev->get_bus_id());
+    dev.set_device_type(devtype());
+    set_bus_id(_instance, dev.get_bus_id());
 
     // lower retries for run
-    _dev->set_retries(3);
+    dev.set_retries(3);
     
-    _dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
     /* Request 100Hz update */
-    _dev->register_periodic_callback(10 * AP_USEC_PER_MSEC,
+    dev.register_periodic_callback(10 * AP_USEC_PER_MSEC,
                                      FUNCTOR_BIND_MEMBER(&AP_Baro_MS56XX::_timer, void));
     return true;
 }
@@ -148,7 +148,7 @@ uint16_t AP_Baro_MS56XX::_read_prom_word(uint8_t word)
 {
     const uint8_t reg = CMD_MS56XX_PROM + (word << 1);
     uint8_t val[2];
-    if (!_dev->transfer(&reg, 1, val, sizeof(val))) {
+    if (!dev.transfer(&reg, 1, val, sizeof(val))) {
         return 0;
     }
     return (val[0] << 8) | val[1];
@@ -157,7 +157,7 @@ uint16_t AP_Baro_MS56XX::_read_prom_word(uint8_t word)
 uint32_t AP_Baro_MS56XX::_read_adc()
 {
     uint8_t val[3];
-    if (!_dev->transfer(&CMD_MS56XX_READ_ADC, 1, val, sizeof(val))) {
+    if (!dev.transfer(&CMD_MS56XX_READ_ADC, 1, val, sizeof(val))) {
         return 0;
     }
     return (val[0] << 16) | (val[1] << 8) | val[2];
@@ -252,7 +252,7 @@ void AP_Baro_MS56XX::_timer(void)
 
     next_cmd = next_state == 0 ? ADDR_CMD_CONVERT_TEMPERATURE
                                : ADDR_CMD_CONVERT_PRESSURE;
-    if (!_dev->transfer(&next_cmd, 1, nullptr, 0)) {
+    if (!dev.transfer(&next_cmd, 1, nullptr, 0)) {
         return;
     }
 

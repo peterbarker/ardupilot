@@ -23,7 +23,7 @@
 class AP_Baro_HALDev : public AP_Baro_Backend {
 public:
 
-    AP_Baro_HALDev(AP_HAL::Device &__dev);
+    AP_Baro_HALDev(AP_HAL::Device &_dev);
 
     static AP_Baro_HALDev *probe_sensor(AP_Baro_HALDev *sensor);
 
@@ -31,9 +31,7 @@ protected:
 
     virtual bool init() = 0;
 
-    // these are aliases that will be replaced with a &dev
-    AP_HAL::Device *dev;
-    AP_HAL::Device *_dev;
+    AP_HAL::Device &dev;
 };
 
 #endif  // AP_BARO_HALDEV_ENABLED

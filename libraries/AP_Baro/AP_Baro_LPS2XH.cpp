@@ -79,68 +79,68 @@ AP_Baro_Backend *AP_Baro_LPS2XH::probe_InvensenseIMU(AP_HAL::Device &dev,
 */
 bool AP_Baro_LPS2XH::_imu_i2c_init(uint8_t imu_address)
 {
-    _dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
     // as the baro device is already locked we need to re-use it,
     // changing its address to match the IMU address
-    uint8_t old_address = _dev->get_bus_address();
-    _dev->set_address(imu_address);
+    uint8_t old_address = dev.get_bus_address();
+    dev.set_address(imu_address);
 
-    _dev->set_retries(4);
+    dev.set_retries(4);
 
     uint8_t whoami=0;
-    _dev->read_registers(MPUREG_WHOAMI, &whoami, 1);
+    dev.read_registers(MPUREG_WHOAMI, &whoami, 1);
     DEV_PRINTF("IMU: whoami 0x%02x old_address=%02x\n", whoami, old_address);
 
-    _dev->write_register(MPUREG_FIFO_EN, 0x00);
-    _dev->write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
+    dev.write_register(MPUREG_FIFO_EN, 0x00);
+    dev.write_register(MPUREG_PWR_MGMT_1, BIT_PWR_MGMT_1_CLK_XGYRO);
 
     // wait for sensor to settle
     hal.scheduler->delay(10);
 
-    _dev->write_register(MPUREG_INT_PIN_CFG, BIT_BYPASS_EN);
+    dev.write_register(MPUREG_INT_PIN_CFG, BIT_BYPASS_EN);
 
-    _dev->set_address(old_address);
+    dev.set_address(old_address);
 
-    _dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
     return true;
 }
 
 bool AP_Baro_LPS2XH::init()
 {
-    _dev->get_semaphore()->take_blocking();
+    dev.get_semaphore()->take_blocking();
 
-    _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    dev.set_speed(AP_HAL::Device::SPEED_HIGH);
 
     // top bit is for read on SPI
-    if (_dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
-        _dev->set_read_flag(0x80);
+    if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+        dev.set_read_flag(0x80);
     }
 
     if (!_check_whoami()) {
-        _dev->get_semaphore()->give();
+        dev.get_semaphore()->give();
         return false;
     }
 
     //init control registers.
     if (_lps2xh_type == BARO_LPS25H) {
-    	_dev->write_register(LPS25H_CTRL_REG1_ADDR,0x00); // turn off for config
-    	_dev->write_register(LPS25H_CTRL_REG2_ADDR,0x00); //FIFO Disabled
-    	_dev->write_register(LPS25H_FIFO_CTRL, 0x01);
-    	_dev->write_register(LPS25H_CTRL_REG1_ADDR,0xc0);
+        dev.write_register(LPS25H_CTRL_REG1_ADDR,0x00); // turn off for config
+        dev.write_register(LPS25H_CTRL_REG2_ADDR,0x00); //FIFO Disabled
+        dev.write_register(LPS25H_FIFO_CTRL, 0x01);
+        dev.write_register(LPS25H_CTRL_REG1_ADDR,0xc0);
 
     	// request 25Hz update (maximum refresh Rate according to datasheet)
     	CallTime = 40 * AP_USEC_PER_MSEC;
     }
 
     if (_lps2xh_type == BARO_LPS22H) {
-        _dev->write_register(LPS22H_CTRL_REG1, 0x00); // turn off for config
-        _dev->write_register(LPS22H_CTRL_REG1, LPS22H_CTRL_REG1_ODR_75HZ|LPS22H_CTRL_REG1_BDU|LPS22H_CTRL_REG1_EN_LPFP|LPS22H_CTRL_REG1_LPFP_CFG);
-        if (_dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
-            _dev->write_register(LPS22H_CTRL_REG2, 0x18);  // disable i2c
+        dev.write_register(LPS22H_CTRL_REG1, 0x00); // turn off for config
+        dev.write_register(LPS22H_CTRL_REG1, LPS22H_CTRL_REG1_ODR_75HZ|LPS22H_CTRL_REG1_BDU|LPS22H_CTRL_REG1_EN_LPFP|LPS22H_CTRL_REG1_LPFP_CFG);
+        if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+            dev.write_register(LPS22H_CTRL_REG2, 0x18);  // disable i2c
         } else {
-            _dev->write_register(LPS22H_CTRL_REG2, 0x10);
+            dev.write_register(LPS22H_CTRL_REG2, 0x10);
         }
 
         // request 75Hz update
@@ -149,12 +149,12 @@ bool AP_Baro_LPS2XH::init()
 
     _instance = _frontend.register_sensor();
 
-    _dev->set_device_type(DEVTYPE_BARO_LPS2XH);
-    set_bus_id(_instance, _dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_LPS2XH);
+    set_bus_id(_instance, dev.get_bus_id());
     
-    _dev->get_semaphore()->give();
+    dev.get_semaphore()->give();
 
-    _dev->register_periodic_callback(CallTime, FUNCTOR_BIND_MEMBER(&AP_Baro_LPS2XH::_timer, void));
+    dev.register_periodic_callback(CallTime, FUNCTOR_BIND_MEMBER(&AP_Baro_LPS2XH::_timer, void));
 
     return true;
 }
@@ -163,7 +163,7 @@ bool AP_Baro_LPS2XH::init()
 bool AP_Baro_LPS2XH::_check_whoami(void)
 {
     uint8_t whoami;
-    if (!_dev->read_registers(REG_ID, &whoami, 1)) {
+    if (!dev.read_registers(REG_ID, &whoami, 1)) {
 	   return false;
     }
     DEV_PRINTF("LPS2XH whoami 0x%02x\n", whoami);
@@ -185,7 +185,7 @@ void AP_Baro_LPS2XH::_timer(void)
 {
     uint8_t status;
     // use status to check if data is available
-    if (!_dev->read_registers(STATUS_ADDR, &status, 1)) {
+    if (!dev.read_registers(STATUS_ADDR, &status, 1)) {
         return;
     }
 
@@ -215,7 +215,7 @@ void AP_Baro_LPS2XH::update(void)
 void AP_Baro_LPS2XH::_update_temperature(void)
 {
     uint8_t pu8[2];
-    if (!_dev->read_registers(TEMP_OUT_ADDR, pu8, 2)) {
+    if (!dev.read_registers(TEMP_OUT_ADDR, pu8, 2)) {
         return;
     }
     int16_t Temp_Reg_s16 = (uint16_t)(pu8[1]<<8) | pu8[0];
@@ -235,7 +235,7 @@ void AP_Baro_LPS2XH::_update_temperature(void)
 void AP_Baro_LPS2XH::_update_pressure(void)
 {
     uint8_t pressure[3];
-    if (!_dev->read_registers(PRESS_OUT_XL_ADDR, pressure, 3)) {
+    if (!dev.read_registers(PRESS_OUT_XL_ADDR, pressure, 3)) {
         return;
     }
 

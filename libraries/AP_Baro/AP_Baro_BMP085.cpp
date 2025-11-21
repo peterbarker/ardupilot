@@ -43,7 +43,7 @@ bool AP_Baro_BMP085::init()
     } bb;
 
     // get pointer to i2c bus semaphore
-    AP_HAL::Semaphore *sem = _dev->get_semaphore();
+    AP_HAL::Semaphore *sem = dev.get_semaphore();
 
     // take i2c bus semaphore
     WITH_SEMAPHORE(sem);
@@ -56,7 +56,7 @@ bool AP_Baro_BMP085::init()
 
     uint8_t id;
 
-    if (!_dev->read_registers(0xD0, &id, 1)) {
+    if (!dev.read_registers(0xD0, &id, 1)) {
         return false;
     }
 
@@ -65,13 +65,13 @@ bool AP_Baro_BMP085::init()
     }
 
 
-    _dev->read_registers(0xD1, &_vers, 1);
+    dev.read_registers(0xD1, &_vers, 1);
 
     bool prom_ok=false;
     _type=0;
 
     // We read the calibration data registers
-    if (_dev->read_registers(0xAA, bb.buff, sizeof(bb.buff))) {
+    if (dev.read_registers(0xAA, bb.buff, sizeof(bb.buff))) {
         prom_ok=true;
 
     }
@@ -117,10 +117,10 @@ bool AP_Baro_BMP085::init()
 
     _instance = _frontend.register_sensor();
 
-    _dev->set_device_type(DEVTYPE_BARO_BMP085);
-    set_bus_id(_instance, _dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_BMP085);
+    set_bus_id(_instance, dev.get_bus_id());
     
-    _dev->register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP085::_timer, void));
+    dev.register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP085::_timer, void));
     return true;
 }
 
@@ -128,7 +128,7 @@ uint16_t AP_Baro_BMP085::_read_prom_word(uint8_t word)
 {
     const uint8_t reg = 0xAA + (word << 1);
     uint8_t val[2];
-    if (!_dev->transfer(&reg, 1, val, sizeof(val))) {
+    if (!dev.transfer(&reg, 1, val, sizeof(val))) {
         return 0;
     }
     return (val[0] << 8) | val[1];
@@ -195,7 +195,7 @@ void AP_Baro_BMP085::update(void)
 // Send command to Read Pressure
 void AP_Baro_BMP085::_cmd_read_pressure()
 {
-    _dev->write_register(0xF4, 0x34 + (OVERSAMPLING << 6));
+    dev.write_register(0xF4, 0x34 + (OVERSAMPLING << 6));
     _last_press_read_command_time = AP_HAL::millis();
 }
 
@@ -203,7 +203,7 @@ void AP_Baro_BMP085::_cmd_read_pressure()
 bool AP_Baro_BMP085::_read_pressure()
 {
     uint8_t buf[3];
-    if (_dev->read_registers(0xF6, buf, sizeof(buf))) {
+    if (dev.read_registers(0xF6, buf, sizeof(buf))) {
         _raw_pressure = (((uint32_t)buf[0] << 16)
                          | ((uint32_t)buf[1] << 8)
                          | ((uint32_t)buf[2])) >> (8 - OVERSAMPLING);
@@ -211,7 +211,7 @@ bool AP_Baro_BMP085::_read_pressure()
     }
 
     uint8_t xlsb;
-    if (_dev->read_registers(0xF6, buf, 2) && _dev->read_registers(0xF8, &xlsb, 1)) {
+    if (dev.read_registers(0xF6, buf, 2) && dev.read_registers(0xF8, &xlsb, 1)) {
         _raw_pressure = (((uint32_t)buf[0] << 16)
                          | ((uint32_t)buf[1] << 8)
                          | ((uint32_t)xlsb)) >> (8 - OVERSAMPLING);
@@ -219,14 +219,14 @@ bool AP_Baro_BMP085::_read_pressure()
     }
 
     _last_press_read_command_time = AP_HAL::millis() + 1000;
-    _dev->set_speed(AP_HAL::Device::SPEED_LOW);
+    dev.set_speed(AP_HAL::Device::SPEED_LOW);
     return false;
 }
 
 // Send Command to Read Temperature
 void AP_Baro_BMP085::_cmd_read_temp()
 {
-    _dev->write_register(0xF4, 0x2E);
+    dev.write_register(0xF4, 0x2E);
     _last_temp_read_command_time = AP_HAL::millis();
 }
 
@@ -236,8 +236,8 @@ void AP_Baro_BMP085::_read_temp()
     uint8_t buf[2];
     int32_t _temp_sensor;
 
-    if (!_dev->read_registers(0xF6, buf, sizeof(buf))) {
-        _dev->set_speed(AP_HAL::Device::SPEED_LOW);
+    if (!dev.read_registers(0xF6, buf, sizeof(buf))) {
+        dev.set_speed(AP_HAL::Device::SPEED_LOW);
         return;
     }
     _temp_sensor = buf[0];

@@ -49,12 +49,12 @@ static const uint8_t CMD_REQUEST_MEASUREMENT = 0xAC;
 // convenience function to work around device transfer oddities
 bool AP_Baro_KellerLD::transfer_with_delays(uint8_t *send, uint8_t sendlen, uint8_t *recv, uint8_t recvlen)
 {
-    if (!_dev->transfer(send, sendlen, nullptr, 0)) {
+    if (!dev.transfer(send, sendlen, nullptr, 0)) {
         return false;
     }
     hal.scheduler->delay(1);
 
-    if(!_dev->transfer(nullptr, 0, recv, recvlen)) {
+    if(!dev.transfer(nullptr, 0, recv, recvlen)) {
         return false;
     }
     hal.scheduler->delay(1);
@@ -159,10 +159,10 @@ bool AP_Baro_KellerLD::read_mode_type()
 // We read out the measurement range to be used in raw value conversions
 bool AP_Baro_KellerLD::init()
 {
-    WITH_SEMAPHORE(_dev->get_semaphore());
+    WITH_SEMAPHORE(dev.get_semaphore());
 
     // high retries for init
-    _dev->set_retries(10);
+    dev.set_retries(10);
 
     if (!read_cal()) {
         printf("Cal read bad!\n");
@@ -174,29 +174,29 @@ bool AP_Baro_KellerLD::init()
         return false;
     }
 
-    printf("Keller LD found on bus %u address 0x%02x\n", _dev->bus_num(), _dev->get_bus_address());
+    printf("Keller LD found on bus %u address 0x%02x\n", dev.bus_num(), dev.get_bus_address());
 
     // Send a command to take a measurement
-    _dev->transfer(&CMD_REQUEST_MEASUREMENT, 1, nullptr, 0);
+    dev.transfer(&CMD_REQUEST_MEASUREMENT, 1, nullptr, 0);
 
     memset(&_accum, 0, sizeof(_accum));
 
     _instance = _frontend.register_sensor();
 
-    _dev->set_device_type(DEVTYPE_BARO_KELLERLD);
-    set_bus_id(_instance, _dev->get_bus_id());
+    dev.set_device_type(DEVTYPE_BARO_KELLERLD);
+    set_bus_id(_instance, dev.get_bus_id());
     
     _frontend.set_type(_instance, AP_Baro::BARO_TYPE_WATER);
 
     // lower retries for run
-    _dev->set_retries(3);
+    dev.set_retries(3);
 
     // The sensor needs time to take a deep breath after reading out the calibration...
     hal.scheduler->delay(150);
 
     // Request 50Hz update
     // The sensor really struggles with any jitter in timing at 100Hz, and will sometimes start reading out all zeros
-    _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC,
+    dev.register_periodic_callback(20 * AP_USEC_PER_MSEC,
                                      FUNCTOR_BIND_MEMBER(&AP_Baro_KellerLD::_timer, void));
     return true;
 }
@@ -205,7 +205,7 @@ bool AP_Baro_KellerLD::init()
 bool AP_Baro_KellerLD::_read()
 {
     uint8_t data[5];
-    if (!_dev->transfer(nullptr, 0, data, sizeof(data))) {
+    if (!dev.transfer(nullptr, 0, data, sizeof(data))) {
         Debug("Keller LD read failed!");
         return false;
     }
@@ -247,7 +247,7 @@ bool AP_Baro_KellerLD::_read()
 void AP_Baro_KellerLD::_timer(void)
 {
     _read();
-    _dev->transfer(&CMD_REQUEST_MEASUREMENT, 1, nullptr, 0);
+    dev.transfer(&CMD_REQUEST_MEASUREMENT, 1, nullptr, 0);
 }
 
 // Accumulate a reading, shrink if necessary to prevent overflow
