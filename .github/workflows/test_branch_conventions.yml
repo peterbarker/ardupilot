@@ -35,6 +35,7 @@ jobs:
           Tools/scripts/test_new_boards.py --master "upstream/${{ github.event.pull_request.base.ref }}"
 
       - name: Check for merge commits in PR branch
+        shell: bash
         run: |
           # Find merge-base between base branch and (rebased) PR branch
           echo "Merge target is origin/${{ github.event.pull_request.base.ref }}"
