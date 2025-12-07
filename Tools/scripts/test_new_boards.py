@@ -14,6 +14,7 @@ import optparse
 import os
 import shutil
 
+from dataclasses import dataclass
 from typing import Set
 
 import board_list
@@ -90,6 +91,11 @@ class TestNewBoards(BuildScriptBase):
     def run(self) -> None:
         hwdef_filepaths = self.get_new_hwdef_paths()
 
+        @dataclass
+        class BoardToTest():
+            test_bootloader: bool = False
+            test_vehicles: bool = False
+
         # Extract unique board names and track if bootloader hwdef was added
         boards_to_test = {}  # board_name -> has_bootloader
         for hwdef_filepath in hwdef_filepaths:
@@ -102,13 +108,14 @@ class TestNewBoards(BuildScriptBase):
             if hwdef_idx + 1 >= len(parts):
                 raise ValueError(f"No board name after hwdef in path: {hwdef_filepath}")
             board_name = parts[hwdef_idx + 1]
-            is_bootloader = hwdef_filepath.endswith('hwdef-bl.dat')
             if board_name not in boards_to_test:
-                boards_to_test[board_name] = is_bootloader
+                boards_to_test[board_name] = BoardToTest()
+            if hwdef_filepath.endswith('hwdef-bl.dat'):
+                boards_to_test[board_name].test_bootloader = True
             else:
-                boards_to_test[board_name] = boards_to_test[board_name] or is_bootloader
+                boards_to_test[board_name].test_vehicles = True
 
-        # Build each unique board
+        # Build each unique board (find it in board list as an additional check)
         bl = board_list.BoardList()
         for board_name in sorted(boards_to_test.keys()):
             # Find the board object
@@ -127,10 +134,11 @@ class TestNewBoards(BuildScriptBase):
                 continue
 
             self.progress(f"Building board {board.name}")
-            self.build_board(board)
+            if boards_to_test[board_name].test_vehicles:
+                self.build_board(board)
 
             # Build bootloader if a bootloader hwdef file was added
-            if boards_to_test[board_name]:
+            if boards_to_test[board_name].test_bootloader:
                 self.progress(f"Building bootloader for {board.name}")
                 self.build_bootloader(board)
 
