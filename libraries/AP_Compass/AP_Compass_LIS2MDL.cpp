@@ -22,7 +22,6 @@
 #include "AP_Compass_LIS2MDL.h"
 
 #include <AP_HAL/AP_HAL.h>
-#include <utility>
 #include <AP_Math/AP_Math.h>
 #include <stdio.h>
 
@@ -37,14 +36,11 @@
 // WHO_AM_I device ID
 #define ID_WHO_AM_I         0x40
 
-AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::OwnPtr<AP_HAL::Device> dev,
+AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::Device &dev,
                                               bool force_external,
                                               enum Rotation rotation)
 {
-    if (!dev) {
-        return nullptr;
-    }
-    AP_Compass_LIS2MDL *sensor = NEW_NOTHROW AP_Compass_LIS2MDL(std::move(dev), force_external, rotation);
+    AP_Compass_LIS2MDL *sensor = NEW_NOTHROW AP_Compass_LIS2MDL(dev, force_external, rotation);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -53,10 +49,10 @@ AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::OwnPtr<AP_HAL::Device> dev
     return sensor;
 }
 
-AP_Compass_LIS2MDL::AP_Compass_LIS2MDL(AP_HAL::OwnPtr<AP_HAL::Device> _dev,
+AP_Compass_LIS2MDL::AP_Compass_LIS2MDL(AP_HAL::Device &_dev,
                                        bool _force_external,
                                        enum Rotation _rotation)
-    : dev(std::move(_dev))
+    : dev(&_dev)
     , force_external(_force_external)
     , rotation(_rotation)
 {

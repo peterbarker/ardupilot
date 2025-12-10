@@ -38,7 +38,7 @@
 class AP_Compass_IST8310 : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::OwnPtr<AP_HAL::Device> dev,
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
                                      bool force_external,
                                      enum Rotation rotation);
 
@@ -47,7 +47,7 @@ public:
     static constexpr const char *name = "IST8310";
 
 private:
-    AP_Compass_IST8310(AP_HAL::OwnPtr<AP_HAL::Device> dev,
+    AP_Compass_IST8310(AP_HAL::Device &dev,
                        bool force_external,
                        enum Rotation rotation);
 
@@ -55,7 +55,7 @@ private:
     bool init();
     void start_conversion();
 
-    AP_HAL::OwnPtr<AP_HAL::Device> _dev;
+    AP_HAL::Device *_dev;
     AP_HAL::Device::PeriodicHandle _periodic_handle;
 
     enum Rotation _rotation;

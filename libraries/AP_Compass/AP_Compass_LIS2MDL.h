@@ -32,7 +32,7 @@
 class AP_Compass_LIS2MDL : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::OwnPtr<AP_HAL::Device> dev,
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
                                      bool force_external,
                                      enum Rotation rotation);
 
@@ -41,11 +41,11 @@ public:
     static constexpr const char *name = "LIS2MDL";
 
 private:
-    AP_Compass_LIS2MDL(AP_HAL::OwnPtr<AP_HAL::Device> dev,
+    AP_Compass_LIS2MDL(AP_HAL::Device &dev,
                        bool force_external,
                        enum Rotation rotation);
 
-    AP_HAL::OwnPtr<AP_HAL::Device> dev;
+    AP_HAL::Device *dev;
 
     /**
      * @brief Initialize the sensor
