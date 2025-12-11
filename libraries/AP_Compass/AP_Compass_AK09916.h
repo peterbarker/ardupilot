@@ -48,25 +48,19 @@ class AP_Compass_AK09916 : public AP_Compass_Backend
 {
 public:
     /* Probe for AK09916 standalone on I2C bus */
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
 #if AP_COMPASS_ICM20948_ENABLED
     /* Probe for AK09916 on auxiliary bus of ICM20948, connected through I2C */
     static AP_Compass_Backend *probe_ICM20948(AP_HAL::Device &dev,
-                                             AP_HAL::Device &dev_icm,
-                                             bool force_external,
-                                             enum Rotation rotation);
+                                             AP_HAL::Device &dev_icm);
 
     /* Probe for AK09916 on auxiliary bus of ICM20948, connected through SPI by default */
-    static AP_Compass_Backend *probe_ICM20948(uint8_t mpu9250_instance, enum Rotation rotation);
-    static AP_Compass_Backend *probe_ICM20948_SPI(uint8_t mpu9250_instance,
-                                             enum Rotation rotation);
+    static AP_Compass_Backend *probe_ICM20948(uint8_t mpu9250_instance);
+    static AP_Compass_Backend *probe_ICM20948_SPI(uint8_t mpu9250_instance);
 
 	/* Probe for AK09916 on auxiliary bus of ICM20948, connected through I2C */
-    static AP_Compass_Backend *probe_ICM20948_I2C(uint8_t mpu9250_instance,
-                                             enum Rotation rotation);
+    static AP_Compass_Backend *probe_ICM20948_I2C(uint8_t mpu9250_instance);
 #endif
 
     static constexpr const char *name = "AK09916";
@@ -84,8 +78,7 @@ public:
     };
 
 private:
-    AP_Compass_AK09916(AP_AK09916_BusDriver &bus, bool force_external,
-                       enum Rotation rotation);
+    AP_Compass_AK09916(AP_AK09916_BusDriver &bus);
 
     bool init();
     void _make_factory_sensitivity_adjustment(Vector3f &field) const;
@@ -100,9 +93,7 @@ private:
 
     AP_AK09916_BusDriver *_bus;
 
-    bool _force_external;
     bool _initialized;
-    enum Rotation _rotation;
     enum AP_Compass_Backend::DevTypes _devtype;
     uint8_t no_data;
 };

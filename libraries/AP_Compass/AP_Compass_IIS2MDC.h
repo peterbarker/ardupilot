@@ -40,27 +40,20 @@
 class AP_Compass_IIS2MDC : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     void read() override;
 
     static constexpr const char *name = "IIS2MDC";
 
 private:
-    AP_Compass_IIS2MDC(AP_HAL::Device &dev,
-                        bool force_external,
-                        enum Rotation rotation);
+    AP_Compass_IIS2MDC(AP_HAL::Device &dev);
 
     bool check_whoami();
     void timer();
     bool init();
 
     AP_HAL::Device *_dev;
-
-    enum Rotation _rotation;
-    bool _force_external;
 };
 
 #endif  // AP_COMPASS_IIS2MDC_ENABLED

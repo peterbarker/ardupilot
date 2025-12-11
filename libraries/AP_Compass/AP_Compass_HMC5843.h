@@ -23,12 +23,10 @@ class AP_HMC5843_BusDriver;
 class AP_Compass_HMC5843 : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
 #if AP_INERTIALSENSOR_ENABLED
-    static AP_Compass_Backend *probe_mpu6000(enum Rotation rotation);
+    static AP_Compass_Backend *probe_mpu6000();
 #endif
 
     static constexpr const char *name = "HMC5843";
@@ -38,8 +36,7 @@ public:
     void read() override;
 
 private:
-    AP_Compass_HMC5843(AP_HMC5843_BusDriver &bus,
-                       bool force_external, enum Rotation rotation);
+    AP_Compass_HMC5843(AP_HMC5843_BusDriver &bus);
 
     bool init();
     bool _check_whoami();
@@ -63,10 +60,7 @@ private:
     int16_t _mag_y;
     int16_t _mag_z;
 
-    enum Rotation _rotation;
-    
-    bool _initialised:1;
-    bool _force_external:1;
+    bool _initialised;
 };
 
 class AP_HMC5843_BusDriver

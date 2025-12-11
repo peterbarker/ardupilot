@@ -91,11 +91,8 @@ extern const AP_HAL::HAL& hal;
 #define HMC5843_REG_ID_A 0x0A
 
 
-AP_Compass_HMC5843::AP_Compass_HMC5843(AP_HMC5843_BusDriver &bus,
-                                       bool force_external, enum Rotation rotation)
+AP_Compass_HMC5843::AP_Compass_HMC5843(AP_HMC5843_BusDriver &bus)
     : _bus(&bus)
-    , _rotation(rotation)
-    , _force_external(force_external)
 {
 }
 
@@ -104,16 +101,14 @@ AP_Compass_HMC5843::~AP_Compass_HMC5843()
     delete _bus;
 }
 
-AP_Compass_Backend *AP_Compass_HMC5843::probe(AP_HAL::Device &dev,
-                                              bool force_external,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_HMC5843::probe(AP_HAL::Device &dev)
 {
     AP_HMC5843_BusDriver *bus = NEW_NOTHROW AP_HMC5843_BusDriver_HALDevice(dev);
     if (!bus) {
         return nullptr;
     }
 
-    AP_Compass_HMC5843 *sensor = NEW_NOTHROW AP_Compass_HMC5843(*bus, force_external, rotation);
+    AP_Compass_HMC5843 *sensor = NEW_NOTHROW AP_Compass_HMC5843(*bus);
     if (!sensor || !sensor->init()) {
         // TODO: do we need to "delete bus;" here?
         delete sensor;
@@ -124,7 +119,7 @@ AP_Compass_Backend *AP_Compass_HMC5843::probe(AP_HAL::Device &dev,
 }
 
 #if AP_INERTIALSENSOR_ENABLED
-AP_Compass_Backend *AP_Compass_HMC5843::probe_mpu6000(enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_HMC5843::probe_mpu6000()
 {
     AP_InertialSensor &ins = *AP_InertialSensor::get_singleton();
 
@@ -135,7 +130,7 @@ AP_Compass_Backend *AP_Compass_HMC5843::probe_mpu6000(enum Rotation rotation)
         return nullptr;
     }
 
-    AP_Compass_HMC5843 *sensor = NEW_NOTHROW AP_Compass_HMC5843(*bus, false, rotation);
+    AP_Compass_HMC5843 *sensor = NEW_NOTHROW AP_Compass_HMC5843(*bus);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -195,12 +190,6 @@ bool AP_Compass_HMC5843::init()
     _bus->set_device_type(DEVTYPE_HMC5883);
     if (!register_compass(_bus->get_bus_id())) {
         return false;
-    }
-
-    set_rotation(_rotation);
-    
-    if (_force_external) {
-        set_external(true);
     }
 
     // read from sensor at 75Hz

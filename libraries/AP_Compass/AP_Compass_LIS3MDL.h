@@ -37,18 +37,14 @@
 class AP_Compass_LIS3MDL : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     void read() override;
 
     static constexpr const char *name = "LIS3MDL";
 
 private:
-    AP_Compass_LIS3MDL(AP_HAL::Device &dev,
-                       bool force_external,
-                       enum Rotation rotation);
+    AP_Compass_LIS3MDL(AP_HAL::Device &dev);
 
     AP_HAL::Device *dev;
 
@@ -57,9 +53,6 @@ private:
      */
     bool init();
     void timer();
-
-    bool force_external;
-    enum Rotation rotation;
 };
 
 #endif  // AP_COMPASS_LIS3MDL_ENABLED

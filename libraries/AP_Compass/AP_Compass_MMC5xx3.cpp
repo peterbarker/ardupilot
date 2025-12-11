@@ -42,11 +42,9 @@ extern const AP_HAL::HAL &hal;
 
 #define MMC5983_ID 0x30
 
-AP_Compass_Backend *AP_Compass_MMC5XX3::probe(AP_HAL::Device &dev,
-                                              bool force_external,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_MMC5XX3::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_MMC5XX3 *sensor = NEW_NOTHROW AP_Compass_MMC5XX3(dev, force_external, rotation);
+    AP_Compass_MMC5XX3 *sensor = NEW_NOTHROW AP_Compass_MMC5XX3(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -55,13 +53,8 @@ AP_Compass_Backend *AP_Compass_MMC5XX3::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_MMC5XX3::AP_Compass_MMC5XX3(AP_HAL::Device &_dev,
-                                       bool _force_external,
-                                       enum Rotation _rotation)
+AP_Compass_MMC5XX3::AP_Compass_MMC5XX3(AP_HAL::Device &_dev)
     : dev(&_dev)
-    , force_external(_force_external)
-    , have_initial_offset(false)
-    , rotation(_rotation)
 {
 }
 
@@ -111,12 +104,6 @@ bool AP_Compass_MMC5XX3::init()
     }
 
     printf("Found a MMC5983 on 0x%x as compass %u\n", unsigned(dev->get_bus_id()), instance);
-
-    set_rotation(rotation);
-
-    if (force_external) {
-        set_external(true);
-    }
 
     dev->set_retries(1);
 

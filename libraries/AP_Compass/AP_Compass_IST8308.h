@@ -33,26 +33,19 @@
 class AP_Compass_IST8308 : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     void read() override;
 
     static constexpr const char *name = "IST8308";
 
 private:
-    AP_Compass_IST8308(AP_HAL::Device &dev,
-                       bool force_external,
-                       enum Rotation rotation);
+    AP_Compass_IST8308(AP_HAL::Device &dev);
 
     void timer();
     bool init();
 
     AP_HAL::Device *_dev;
-
-    enum Rotation _rotation;
-    bool _force_external;
 };
 
 #endif  // AP_COMPASS_IST8308_ENABLED

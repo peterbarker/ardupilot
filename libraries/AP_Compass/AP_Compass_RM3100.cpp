@@ -66,11 +66,9 @@
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_Backend *AP_Compass_RM3100::probe(AP_HAL::Device &dev,
-                                              bool force_external,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_RM3100::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_RM3100 *sensor = NEW_NOTHROW AP_Compass_RM3100(dev, force_external, rotation);
+    AP_Compass_RM3100 *sensor = NEW_NOTHROW AP_Compass_RM3100(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -79,12 +77,8 @@ AP_Compass_Backend *AP_Compass_RM3100::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_RM3100::AP_Compass_RM3100(AP_HAL::Device &_dev,
-                                       bool _force_external,
-                                       enum Rotation _rotation)
+AP_Compass_RM3100::AP_Compass_RM3100(AP_HAL::Device &_dev)
     : dev(&_dev)
-    , force_external(_force_external)
-    , rotation(_rotation)
 {
 }
 
@@ -147,12 +141,6 @@ bool AP_Compass_RM3100::init()
 
     DEV_PRINTF("RM3100: Found at address 0x%x as compass %u\n", dev->get_bus_address(), instance);
 
-    set_rotation(rotation);
-
-    if (force_external) {
-        set_external(true);
-    }
-    
     // call timer() at 80Hz
     dev->register_periodic_callback(1000000U/80U,
                                     FUNCTOR_BIND_MEMBER(&AP_Compass_RM3100::timer, void));

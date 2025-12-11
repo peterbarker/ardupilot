@@ -36,11 +36,9 @@
 // WHO_AM_I device ID
 #define ID_WHO_AM_I         0x40
 
-AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::Device &dev,
-                                              bool force_external,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_LIS2MDL *sensor = NEW_NOTHROW AP_Compass_LIS2MDL(dev, force_external, rotation);
+    AP_Compass_LIS2MDL *sensor = NEW_NOTHROW AP_Compass_LIS2MDL(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -49,12 +47,8 @@ AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_LIS2MDL::AP_Compass_LIS2MDL(AP_HAL::Device &_dev,
-                                       bool _force_external,
-                                       enum Rotation _rotation)
+AP_Compass_LIS2MDL::AP_Compass_LIS2MDL(AP_HAL::Device &_dev)
     : dev(&_dev)
-    , force_external(_force_external)
-    , rotation(_rotation)
 {
 }
 
@@ -99,12 +93,6 @@ bool AP_Compass_LIS2MDL::init()
     }
 
     printf("Found a LIS2MDL on 0x%x as compass %u\n", unsigned(dev->get_bus_id()), instance);
-
-    set_rotation(rotation);
-
-    if (force_external) {
-        set_external(force_external);
-    }
 
     // call timer() at 100Hz
     dev->register_periodic_callback(1000000U/100U,

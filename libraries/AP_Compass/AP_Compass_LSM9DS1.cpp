@@ -49,17 +49,14 @@
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_LSM9DS1::AP_Compass_LSM9DS1(AP_HAL::Device &dev,
-                                       enum Rotation rotation)
+AP_Compass_LSM9DS1::AP_Compass_LSM9DS1(AP_HAL::Device &dev)
     : _dev(&dev)
-    , _rotation(rotation)
 {
 }
 
-AP_Compass_Backend *AP_Compass_LSM9DS1::probe(AP_HAL::Device &dev,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_LSM9DS1::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_LSM9DS1 *sensor = NEW_NOTHROW AP_Compass_LSM9DS1(dev, rotation);
+    AP_Compass_LSM9DS1 *sensor = NEW_NOTHROW AP_Compass_LSM9DS1(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -98,9 +95,6 @@ bool AP_Compass_LSM9DS1::init()
     if (!register_compass(_dev->get_bus_id())) {
         goto errout;
     }
-
-    set_rotation(_rotation);
-
 
     _dev->register_periodic_callback(10000, FUNCTOR_BIND_MEMBER(&AP_Compass_LSM9DS1::_update, void));
 

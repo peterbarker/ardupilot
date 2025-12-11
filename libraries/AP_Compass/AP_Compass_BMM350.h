@@ -34,18 +34,14 @@
 class AP_Compass_BMM350 : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     void read() override;
 
     static constexpr const char *name = "BMM350";
 
 private:
-    AP_Compass_BMM350(AP_HAL::Device &dev,
-                       bool force_external,
-                       enum Rotation rotation);
+    AP_Compass_BMM350(AP_HAL::Device &dev);
 
     AP_HAL::Device *_dev;
 
@@ -103,8 +99,6 @@ private:
     bool set_power_mode(const enum power_mode mode);
     bool read_bytes(const uint8_t reg, uint8_t *out, const uint16_t read_len);
 
-    bool _force_external;
-    enum Rotation _rotation;
     struct mag_compensate _mag_comp;  // Structure for mag compensate
 };
 

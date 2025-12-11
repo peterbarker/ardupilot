@@ -156,11 +156,10 @@ AP_Compass_LSM303D::AP_Compass_LSM303D(AP_HAL::Device &dev)
 {
 }
 
-AP_Compass_Backend *AP_Compass_LSM303D::probe(AP_HAL::Device &dev,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_LSM303D::probe(AP_HAL::Device &dev)
 {
     AP_Compass_LSM303D *sensor = NEW_NOTHROW AP_Compass_LSM303D(dev);
-    if (!sensor || !sensor->init(rotation)) {
+    if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
     }
@@ -248,7 +247,7 @@ bool AP_Compass_LSM303D::_read_sample()
     return true;
 }
 
-bool AP_Compass_LSM303D::init(enum Rotation rotation)
+bool AP_Compass_LSM303D::init()
 {
     if (LSM303D_DRDY_M_PIN >= 0) {
         _drdy_pin_m = hal.gpio->channel(LSM303D_DRDY_M_PIN);
@@ -268,8 +267,6 @@ bool AP_Compass_LSM303D::init(enum Rotation rotation)
     if (!register_compass(_dev->get_bus_id())) {
         return false;
     }
-
-    set_rotation(rotation);
 
     // read at 91Hz. We don't run at 100Hz as fetching data too fast can cause some very
     // odd periodic changes in the output data

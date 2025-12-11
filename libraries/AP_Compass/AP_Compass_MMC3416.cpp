@@ -42,11 +42,9 @@ extern const AP_HAL::HAL &hal;
 // datasheet says 50ms min for refill
 #define MIN_DELAY_SET_RESET 50
 
-AP_Compass_Backend *AP_Compass_MMC3416::probe(AP_HAL::Device &dev,
-                                              bool force_external,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_MMC3416::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_MMC3416 *sensor = NEW_NOTHROW AP_Compass_MMC3416(dev, force_external, rotation);
+    AP_Compass_MMC3416 *sensor = NEW_NOTHROW AP_Compass_MMC3416(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -55,12 +53,8 @@ AP_Compass_Backend *AP_Compass_MMC3416::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_MMC3416::AP_Compass_MMC3416(AP_HAL::Device &_dev,
-                                       bool _force_external,
-                                       enum Rotation _rotation)
+AP_Compass_MMC3416::AP_Compass_MMC3416(AP_HAL::Device &_dev)
     : dev(&_dev)
-    , force_external(_force_external)
-    , rotation(_rotation)
 {
 }
 
@@ -95,12 +89,6 @@ bool AP_Compass_MMC3416::init()
 
     printf("Found a MMC3416 on 0x%x as compass %u\n", unsigned(dev->get_bus_id()), instance);
 
-    set_rotation(rotation);
-
-    if (force_external) {
-        set_external(true);
-    }
-    
     dev->set_retries(1);
     
     // call timer() at 100Hz
