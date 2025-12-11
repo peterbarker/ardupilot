@@ -43,11 +43,9 @@
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_Backend *AP_Compass_IIS2MDC::probe(AP_HAL::Device &dev,
-        bool force_external,
-        enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_IIS2MDC::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_IIS2MDC *sensor = NEW_NOTHROW AP_Compass_IIS2MDC(dev,force_external,rotation);
+    AP_Compass_IIS2MDC *sensor = NEW_NOTHROW AP_Compass_IIS2MDC(dev);
 
     if (!sensor || !sensor->init()) {
         delete sensor;
@@ -57,12 +55,8 @@ AP_Compass_Backend *AP_Compass_IIS2MDC::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_IIS2MDC::AP_Compass_IIS2MDC(AP_HAL::Device &dev,
-        bool force_external,
-        enum Rotation rotation)
+AP_Compass_IIS2MDC::AP_Compass_IIS2MDC(AP_HAL::Device &dev)
     : _dev(&dev)
-    , _rotation(rotation)
-    , _force_external(force_external)
 {
 }
 
@@ -96,12 +90,6 @@ bool AP_Compass_IIS2MDC::init()
 
     if (!register_compass(_dev->get_bus_id())) {
         return false;
-    }
-
-    set_rotation(_rotation);
-
-    if (_force_external) {
-        set_external(true);
     }
 
     // Enable 100HZ

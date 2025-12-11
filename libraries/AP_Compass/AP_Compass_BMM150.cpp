@@ -63,9 +63,9 @@
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_Backend *AP_Compass_BMM150::probe(AP_HAL::Device &dev, bool force_external, enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_BMM150::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_BMM150 *sensor = NEW_NOTHROW AP_Compass_BMM150(dev, force_external, rotation);
+    AP_Compass_BMM150 *sensor = NEW_NOTHROW AP_Compass_BMM150(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -74,8 +74,8 @@ AP_Compass_Backend *AP_Compass_BMM150::probe(AP_HAL::Device &dev, bool force_ext
     return sensor;
 }
 
-AP_Compass_BMM150::AP_Compass_BMM150(AP_HAL::Device &dev, bool force_external, enum Rotation rotation)
-    : _dev(&dev), _rotation(rotation), _force_external(force_external)
+AP_Compass_BMM150::AP_Compass_BMM150(AP_HAL::Device &dev)
+    : _dev(&dev)
 {
 }
 
@@ -211,12 +211,6 @@ bool AP_Compass_BMM150::init()
     _dev->set_device_type(DEVTYPE_BMM150);
     if (!register_compass(_dev->get_bus_id())) {
         return false;
-    }
-
-    set_rotation(_rotation);
-
-    if (_force_external) {
-        set_external(true);
     }
 
     // 2 retries for run

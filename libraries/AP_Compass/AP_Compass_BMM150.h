@@ -34,14 +34,14 @@
 class AP_Compass_BMM150 : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev, bool force_external, enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     void read() override;
 
     static constexpr const char *name = "BMM150";
 
 private:
-    AP_Compass_BMM150(AP_HAL::Device &dev, bool force_external, enum Rotation rotation);
+    AP_Compass_BMM150(AP_HAL::Device &dev);
 
     /**
      * Device periodic callback to read data from the sensor.
@@ -69,8 +69,6 @@ private:
     } _dig;
 
     uint32_t _last_read_ms;
-    enum Rotation _rotation;
-    bool _force_external;
 };
 
 #endif  // AP_COMPASS_BMM150_ENABLED

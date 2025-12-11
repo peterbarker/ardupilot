@@ -77,11 +77,9 @@ static const int16_t IST8310_MIN_VAL_Z  = -IST8310_MAX_VAL_Z;
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_Backend *AP_Compass_IST8310::probe(AP_HAL::Device &dev,
-                                              bool force_external,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_IST8310::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_IST8310 *sensor = NEW_NOTHROW AP_Compass_IST8310(dev, force_external, rotation);
+    AP_Compass_IST8310 *sensor = NEW_NOTHROW AP_Compass_IST8310(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -90,12 +88,8 @@ AP_Compass_Backend *AP_Compass_IST8310::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_IST8310::AP_Compass_IST8310(AP_HAL::Device &dev,
-                                       bool force_external,
-                                       enum Rotation rotation)
+AP_Compass_IST8310::AP_Compass_IST8310(AP_HAL::Device &dev)
     : _dev(&dev)
-    , _rotation(rotation)
-    , _force_external(force_external)
 {
 }
 
@@ -174,12 +168,6 @@ bool AP_Compass_IST8310::init()
     printf("%s found on bus %u id %u address 0x%02x\n", name,
            _dev->bus_num(), unsigned(_dev->get_bus_id()), _dev->get_bus_address());
 
-    set_rotation(_rotation);
-
-    if (_force_external) {
-        set_external(true);
-    }
-    
     _periodic_handle = _dev->register_periodic_callback(SAMPLING_PERIOD_USEC,
         FUNCTOR_BIND_MEMBER(&AP_Compass_IST8310::timer, void));
 

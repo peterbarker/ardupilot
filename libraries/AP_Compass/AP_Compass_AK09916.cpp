@@ -57,12 +57,8 @@ extern const AP_HAL::HAL &hal;
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_AK09916::AP_Compass_AK09916(AP_AK09916_BusDriver &bus,
-                                        bool force_external,
-                                        enum Rotation rotation)
+AP_Compass_AK09916::AP_Compass_AK09916(AP_AK09916_BusDriver &bus)
     : _bus(&bus)
-    , _force_external(force_external)
-    , _rotation(rotation)
 {
 }
 
@@ -71,16 +67,14 @@ AP_Compass_AK09916::~AP_Compass_AK09916()
     delete _bus;
 }
 
-AP_Compass_Backend *AP_Compass_AK09916::probe(AP_HAL::Device &dev,
-                                             bool force_external,
-                                             enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK09916::probe(AP_HAL::Device &dev)
 {
     AP_AK09916_BusDriver *bus = NEW_NOTHROW AP_AK09916_BusDriver_HALDevice(dev);
     if (!bus) {
         return nullptr;
     }
 
-    AP_Compass_AK09916 *sensor = NEW_NOTHROW AP_Compass_AK09916(*bus, force_external, rotation);
+    AP_Compass_AK09916 *sensor = NEW_NOTHROW AP_Compass_AK09916(*bus);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -91,9 +85,7 @@ AP_Compass_Backend *AP_Compass_AK09916::probe(AP_HAL::Device &dev,
 
 #if AP_COMPASS_ICM20948_ENABLED
 AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948(AP_HAL::Device &_dev,
-                                                       AP_HAL::Device &_dev_icm,
-                                                       bool force_external,
-                                                       enum Rotation rotation)
+                                                       AP_HAL::Device &_dev_icm)
 {
     auto *dev = &_dev;
     auto *dev_icm = &_dev_icm;
@@ -154,21 +146,19 @@ AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948(AP_HAL::Device &_dev,
     dev_icm->write_register(REG_ICM_INT_PIN_CFG, 0x02);
     hal.scheduler->delay(1);
     dev->get_semaphore()->give();
-    return probe(_dev, force_external, rotation);
+    return probe(_dev);
 fail:
     dev->get_semaphore()->give();
     return nullptr;
 }
 
 // un-named, assume SPI for compat
-AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948(uint8_t inv2_instance,
-                                                     enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948(uint8_t inv2_instance)
 {  
-    return probe_ICM20948_SPI(inv2_instance,rotation);
+    return probe_ICM20948_SPI(inv2_instance);
 }
 
-AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_SPI(uint8_t inv2_instance,
-                                                     enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_SPI(uint8_t inv2_instance)
 {
     AP_InertialSensor &ins = AP::ins();
 
@@ -178,7 +168,7 @@ AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_SPI(uint8_t inv2_instance
         return nullptr;
     }
 
-    AP_Compass_AK09916 *sensor = NEW_NOTHROW AP_Compass_AK09916(*bus, false, rotation);
+    AP_Compass_AK09916 *sensor = NEW_NOTHROW AP_Compass_AK09916(*bus);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -187,8 +177,7 @@ AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_SPI(uint8_t inv2_instance
     return sensor;
 }
 
-AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_I2C(uint8_t inv2_instance,
-                                                     enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_I2C(uint8_t inv2_instance)
 {
     AP_InertialSensor &ins = AP::ins();
 
@@ -198,7 +187,7 @@ AP_Compass_Backend *AP_Compass_AK09916::probe_ICM20948_I2C(uint8_t inv2_instance
         return nullptr;
     }
 
-    AP_Compass_AK09916 *sensor = NEW_NOTHROW AP_Compass_AK09916(*bus, false, rotation);
+    AP_Compass_AK09916 *sensor = NEW_NOTHROW AP_Compass_AK09916(*bus);
     if (!sensor || !sensor->init()) {
         // TODO: do we need to "delete bus;" here?
         delete sensor;
@@ -252,12 +241,6 @@ bool AP_Compass_AK09916::init()
         goto fail;
     }
 
-    if (_force_external) {
-        set_external(true);
-    }
-
-    set_rotation(_rotation);
-    
     bus_sem->give();
 
     _bus->register_periodic_callback(10000, FUNCTOR_BIND_MEMBER(&AP_Compass_AK09916::_update, void));
