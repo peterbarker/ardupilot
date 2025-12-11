@@ -15,8 +15,7 @@
 class AP_Compass_LSM303D : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     static constexpr const char *name = "LSM303D";
 
@@ -27,7 +26,7 @@ public:
 private:
     AP_Compass_LSM303D(AP_HAL::Device &dev);
 
-    bool init(enum Rotation rotation);
+    bool init();
     uint8_t _register_read(uint8_t reg);
     void _register_write(uint8_t reg, uint8_t val);
     void _register_modify(uint8_t reg, uint8_t clearbits, uint8_t setbits);

@@ -90,7 +90,13 @@ public:
 #if AP_COMPASS_EXTERNALAHRS_ENABLED
     virtual void handle_external(const AP_ExternalAHRS::mag_data_message_t &pkt) {}
 #endif
-    
+
+    // set external state for an instance
+    void set_external(bool external);
+
+    // set rotation of an instance
+    void set_rotation(enum Rotation rotation);
+
 protected:
 
     // this backend's instance number
@@ -128,14 +134,8 @@ protected:
     // save dev_id, used by SITL
     void save_dev_id();
 
-    // set external state for an instance
-    void set_external(bool external);
-
     // tell if instance is an external compass
     bool is_external();
-
-    // set rotation of an instance
-    void set_rotation(enum Rotation rotation);
 
     // get board orientation (for SITL)
     enum Rotation get_board_orientation(void) const;
@@ -145,6 +145,9 @@ protected:
 
     // semaphore for access to shared frontend data
     HAL_Semaphore _sem;
+
+    // throw away samples accumulated but not yet published
+    void discard_accumulated_samples();
 
     // Check that the compass field is valid by using a mean filter on the vector length
     bool field_ok(const Vector3f &field);

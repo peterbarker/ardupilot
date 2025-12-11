@@ -36,16 +36,12 @@
 class AP_Compass_RM3100 : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     static constexpr const char *name = "RM3100";
 
 private:
-    AP_Compass_RM3100(AP_HAL::Device &dev,
-                       bool force_external,
-                       enum Rotation rotation);
+    AP_Compass_RM3100(AP_HAL::Device &dev);
 
     AP_HAL::Device *dev;
 
@@ -55,8 +51,6 @@ private:
     bool init();
     void timer();
 
-    bool force_external;
-    enum Rotation rotation;
     float _scaler = 1.0;
 };
 

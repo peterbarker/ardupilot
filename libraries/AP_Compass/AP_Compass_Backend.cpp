@@ -239,6 +239,7 @@ void AP_Compass_Backend::set_external(bool external)
     if (_compass._state[Compass::StateIndex(instance)].external != 2) {
         _compass._state[Compass::StateIndex(instance)].external.set_and_notify(external);
     }
+    discard_accumulated_samples();
 }
 
 bool AP_Compass_Backend::is_external()
@@ -250,6 +251,20 @@ bool AP_Compass_Backend::is_external()
 void AP_Compass_Backend::set_rotation(enum Rotation rotation)
 {
     _compass._state[Compass::StateIndex(instance)].rotation = rotation;
+    discard_accumulated_samples();
+}
+
+/*
+  rotation and external state are applied by the frontend after the
+  driver has been probed, and a driver may already have accumulated
+  samples by then; those were rotated using the old settings
+ */
+void AP_Compass_Backend::discard_accumulated_samples()
+{
+    WITH_SEMAPHORE(_sem);
+    Compass::mag_state &state = _compass._state[Compass::StateIndex(instance)];
+    state.accum.zero();
+    state.accum_count = 0;
 }
 
 static constexpr float FILTER_KOEF = 0.1f;

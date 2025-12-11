@@ -85,11 +85,10 @@ AP_Compass_MAG3110::AP_Compass_MAG3110(AP_HAL::Device &dev)
 {
 }
 
-AP_Compass_Backend *AP_Compass_MAG3110::probe(AP_HAL::Device &dev,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_MAG3110::probe(AP_HAL::Device &dev)
 {
     AP_Compass_MAG3110 *sensor = NEW_NOTHROW AP_Compass_MAG3110(dev);
-    if (!sensor || !sensor->init(rotation)) {
+    if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
     }
@@ -98,7 +97,7 @@ AP_Compass_Backend *AP_Compass_MAG3110::probe(AP_HAL::Device &dev,
 }
 
 
-bool AP_Compass_MAG3110::init(enum Rotation rotation)
+bool AP_Compass_MAG3110::init()
 {
 
     bool success = _hardware_init();
@@ -118,8 +117,7 @@ bool AP_Compass_MAG3110::init(enum Rotation rotation)
         return false;
     }
 
-    set_rotation(rotation);
-
+    // the MAG3110 is always external
     set_external(true);
 
     // read at 75Hz

@@ -45,16 +45,12 @@
 class AP_Compass_QMC5883P : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     static constexpr const char *name = "QMC5883P";
 
 private:
-    AP_Compass_QMC5883P(AP_HAL::Device &dev,
-                        bool force_external,
-                        enum Rotation rotation);
+    AP_Compass_QMC5883P(AP_HAL::Device &dev);
 
     void _dump_registers();
     bool _check_whoami();
@@ -62,9 +58,6 @@ private:
     bool init();
 
     AP_HAL::Device *_dev;
-
-    enum Rotation _rotation;
-    bool _force_external;
 };
 
 #endif  // AP_COMPASS_QMC5883P_ENABLED

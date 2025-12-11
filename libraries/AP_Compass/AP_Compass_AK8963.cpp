@@ -50,10 +50,8 @@
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_AK8963::AP_Compass_AK8963(AP_AK8963_BusDriver &bus,
-                                     enum Rotation rotation)
+AP_Compass_AK8963::AP_Compass_AK8963(AP_AK8963_BusDriver &bus)
     : _bus(&bus)
-    , _rotation(rotation)
 {
 }
 
@@ -62,15 +60,14 @@ AP_Compass_AK8963::~AP_Compass_AK8963()
     delete _bus;
 }
 
-AP_Compass_Backend *AP_Compass_AK8963::probe(AP_HAL::Device &dev,
-                                             enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK8963::probe(AP_HAL::Device &dev)
 {
     AP_AK8963_BusDriver *bus = NEW_NOTHROW AP_AK8963_BusDriver_HALDevice(dev);
     if (!bus) {
         return nullptr;
     }
 
-    AP_Compass_AK8963 *sensor = NEW_NOTHROW AP_Compass_AK8963(*bus, rotation);
+    AP_Compass_AK8963 *sensor = NEW_NOTHROW AP_Compass_AK8963(*bus);
     if (sensor == nullptr) {
         delete bus;
         return nullptr;
@@ -83,8 +80,7 @@ AP_Compass_Backend *AP_Compass_AK8963::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(AP_HAL::Device &dev,
-                                                     enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(AP_HAL::Device &dev)
 {
 #if AP_INERTIALSENSOR_ENABLED
     AP_InertialSensor &ins = *AP_InertialSensor::get_singleton();
@@ -93,11 +89,10 @@ AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(AP_HAL::Device &dev,
     ins.detect_backends();
 #endif
 
-    return probe(dev, rotation);
+    return probe(dev);
 }
 
-AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(uint8_t mpu9250_instance,
-                                                     enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(uint8_t mpu9250_instance)
 {
 #if AP_INERTIALSENSOR_ENABLED
     AP_InertialSensor &ins = *AP_InertialSensor::get_singleton();
@@ -108,7 +103,7 @@ AP_Compass_Backend *AP_Compass_AK8963::probe_mpu9250(uint8_t mpu9250_instance,
         return nullptr;
     }
 
-    AP_Compass_AK8963 *sensor = NEW_NOTHROW AP_Compass_AK8963(*bus, rotation);
+    AP_Compass_AK8963 *sensor = NEW_NOTHROW AP_Compass_AK8963(*bus);
     if (sensor == nullptr) {
         delete bus;
         return nullptr;
@@ -167,7 +162,6 @@ bool AP_Compass_AK8963::init()
         goto fail;
     }
 
-    set_rotation(_rotation);
     bus_sem->give();
 
     _bus->register_periodic_callback(10000, FUNCTOR_BIND_MEMBER(&AP_Compass_AK8963::_update, void));

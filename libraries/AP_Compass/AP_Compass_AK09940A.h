@@ -34,18 +34,14 @@
 class AP_Compass_AK09940A : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     static constexpr const char *name = "AK09940A";
 
     void read() override;
 
 private:
-    AP_Compass_AK09940A(AP_HAL::Device &dev,
-                      bool force_external,
-                      enum Rotation rotation);
+    AP_Compass_AK09940A(AP_HAL::Device &dev);
 
     bool init();
     bool _configure();
@@ -60,8 +56,6 @@ private:
 
     AP_HAL::Device *_dev;
 
-    bool _force_external;
-    enum Rotation _rotation;
     uint8_t _no_data_count;
 };
 

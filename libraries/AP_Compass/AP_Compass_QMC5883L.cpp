@@ -56,11 +56,9 @@
 #define QMC5883L_REG_ID 0x0D
 #define QMC5883_ID_VAL 0xFF
 
-AP_Compass_Backend *AP_Compass_QMC5883L::probe(AP_HAL::Device &dev,
-                                               bool force_external,
-                                               enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_QMC5883L::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_QMC5883L *sensor = NEW_NOTHROW AP_Compass_QMC5883L(dev, force_external, rotation);
+    AP_Compass_QMC5883L *sensor = NEW_NOTHROW AP_Compass_QMC5883L(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -69,12 +67,8 @@ AP_Compass_Backend *AP_Compass_QMC5883L::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_QMC5883L::AP_Compass_QMC5883L(AP_HAL::Device &dev,
-                                         bool force_external,
-                                         enum Rotation rotation)
+AP_Compass_QMC5883L::AP_Compass_QMC5883L(AP_HAL::Device &dev)
     : _dev(&dev)
-    , _rotation(rotation)
-	, _force_external(force_external)
 {
 }
 
@@ -116,12 +110,6 @@ bool AP_Compass_QMC5883L::init()
 
     printf("%s found on bus %u id %u address 0x%02x\n", name,
            _dev->bus_num(), unsigned(_dev->get_bus_id()), _dev->get_bus_address());
-
-    set_rotation(_rotation);
-
-    if (_force_external) {
-        set_external(true);
-    }
 
     //Enable 100HZ
     _dev->register_periodic_callback(10000,

@@ -60,20 +60,14 @@ extern const AP_HAL::HAL& hal;
 #define AK09940A_LSB_TO_MILLIGAUSS_SCALE                0.1f
 #define AK09940A_OVERFLOW_VALUE                         0x1FFFF // AKM overflow sentinel: max positive 18-bit value
 
-AP_Compass_AK09940A::AP_Compass_AK09940A(AP_HAL::Device &dev,
-                                          bool force_external,
-                                          enum Rotation rotation)
+AP_Compass_AK09940A::AP_Compass_AK09940A(AP_HAL::Device &dev)
     : _dev(&dev)
-    , _force_external(force_external)
-    , _rotation(rotation)
 {
 }
 
-AP_Compass_Backend *AP_Compass_AK09940A::probe(AP_HAL::Device &dev,
-                                             bool force_external,
-                                             enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AK09940A::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_AK09940A *sensor = NEW_NOTHROW AP_Compass_AK09940A(dev, force_external, rotation);
+    AP_Compass_AK09940A *sensor = NEW_NOTHROW AP_Compass_AK09940A(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -103,12 +97,6 @@ bool AP_Compass_AK09940A::init()
         if (!register_compass(_dev->get_bus_id())) {
             return false;
         }
-
-        if (_force_external) {
-            set_external(true);
-        }
-
-        set_rotation(_rotation);
 
         _dev->set_retries(3);
     }

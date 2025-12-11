@@ -105,11 +105,9 @@
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_Backend *AP_Compass_BMM350::probe(AP_HAL::Device &dev,
-                                              bool force_external,
-                                              enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_BMM350::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_BMM350 *sensor = NEW_NOTHROW AP_Compass_BMM350(dev, force_external, rotation);
+    AP_Compass_BMM350 *sensor = NEW_NOTHROW AP_Compass_BMM350(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -118,12 +116,8 @@ AP_Compass_Backend *AP_Compass_BMM350::probe(AP_HAL::Device &dev,
     return sensor;
 }
 
-AP_Compass_BMM350::AP_Compass_BMM350(AP_HAL::Device &dev,
-                                       bool force_external,
-                                       enum Rotation rotation)
+AP_Compass_BMM350::AP_Compass_BMM350(AP_HAL::Device &dev)
     : _dev(&dev)
-    , _force_external(force_external)
-    , _rotation(rotation)
 {
 }
 
@@ -407,12 +401,6 @@ bool AP_Compass_BMM350::init()
 
     // printf("BMM350: Found at address 0x%x as compass %u\n", _dev->get_bus_address(), _compass_instance);
 
-    set_rotation(_rotation);
-
-    if (_force_external) {
-        set_external(true);
-    }
-    
     // Call timer() at 100Hz
     _dev->register_periodic_callback(1000000U/100U, FUNCTOR_BIND_MEMBER(&AP_Compass_BMM350::timer, void));
 

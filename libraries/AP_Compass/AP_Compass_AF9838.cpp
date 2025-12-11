@@ -29,21 +29,15 @@ static constexpr float AF9838_MILLIGAUSS_PER_LSB = 1.0f;
 
 extern const AP_HAL::HAL &hal;
 
-AP_Compass_AF9838::AP_Compass_AF9838(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation)
+AP_Compass_AF9838::AP_Compass_AF9838(AP_HAL::Device &dev)
     : AP_Compass_Backend()
     , _dev(&dev)
-    , _force_external(force_external)
-    , _rotation(rotation)
 {
 }
 
-AP_Compass_Backend *AP_Compass_AF9838::probe(AP_HAL::Device &dev,
-        bool force_external,
-        enum Rotation rotation)
+AP_Compass_Backend *AP_Compass_AF9838::probe(AP_HAL::Device &dev)
 {
-    AP_Compass_AF9838 *sensor = NEW_NOTHROW AP_Compass_AF9838(dev, force_external, rotation);
+    AP_Compass_AF9838 *sensor = NEW_NOTHROW AP_Compass_AF9838(dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -92,12 +86,6 @@ bool AP_Compass_AF9838::init()
         DEV_PRINTF("AF9838: compass registration failed\n");
         return false;
     }
-
-    if (_force_external) {
-        set_external(true);
-    }
-
-    set_rotation(_rotation);
 
     _dev->set_retries(3);
 

@@ -33,16 +33,12 @@
 class AP_Compass_MMC5XX3 : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev,
-                                     bool force_external,
-                                     enum Rotation rotation);
+    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
 
     static constexpr const char *name = "MMC5983";
 
 private:
-    AP_Compass_MMC5XX3(AP_HAL::Device &dev,
-                       bool force_external,
-                       enum Rotation rotation);
+    AP_Compass_MMC5XX3(AP_HAL::Device &dev);
 
     AP_HAL::Device *dev;
 
@@ -62,7 +58,6 @@ private:
     void timer();
     void accumulate_field(Vector3f &field);
 
-    bool force_external;
     Vector3f offset;
     uint16_t measure_count;
     bool have_initial_offset;
@@ -70,8 +65,6 @@ private:
     uint32_t last_sample_ms;
     
     uint8_t data0[6];
-    
-    enum Rotation rotation;
 };
 
 #endif  // AP_COMPASS_MMC5XX3_ENABLED
