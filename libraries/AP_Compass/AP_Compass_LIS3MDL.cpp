@@ -59,58 +59,52 @@ AP_Compass_Backend *AP_Compass_LIS3MDL::probe(AP_HAL::Device &dev)
 }
 
 AP_Compass_LIS3MDL::AP_Compass_LIS3MDL(AP_HAL::Device &_dev)
-    : dev(&_dev)
+    : dev(_dev)
 {
 }
 
 bool AP_Compass_LIS3MDL::init()
 {
-    dev->get_semaphore()->take_blocking();
+    WITH_SEMAPHORE(dev.get_semaphore());
 
-    if (dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
-        dev->set_read_flag(0xC0);
+    if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+        dev.set_read_flag(0xC0);
     }
 
     // high retries for init
-    dev->set_retries(10);
+    dev.set_retries(10);
     
     uint8_t whoami;
-    if (!dev->read_registers(ADDR_WHO_AM_I, &whoami, 1) ||
+    if (!dev.read_registers(ADDR_WHO_AM_I, &whoami, 1) ||
         whoami != ID_WHO_AM_I) {
         // not a 3MDL
-        goto fail;
-    }
-
-    dev->setup_checked_registers(5);
-
-    dev->write_register(ADDR_CTRL_REG1, 0xFC, true); // 80Hz, UHP
-    dev->write_register(ADDR_CTRL_REG2, 0, true); // 4Ga range
-    dev->write_register(ADDR_CTRL_REG3, 0, true); // continuous
-    dev->write_register(ADDR_CTRL_REG4, 0x0C, true); // z-axis ultra high perf
-    dev->write_register(ADDR_CTRL_REG5, 0x40, true); // block-data-update
-
-    // lower retries for run
-    dev->set_retries(3);
-    
-    dev->get_semaphore()->give();
-
-    /* register the compass instance in the frontend */
-    dev->set_device_type(DEVTYPE_LIS3MDL);
-    if (!register_compass(dev->get_bus_id())) {
         return false;
     }
 
-    printf("Found a LIS3MDL on 0x%x as compass %u\n", unsigned(dev->get_bus_id()), instance);
+    dev.setup_checked_registers(5);
+
+    dev.write_register(ADDR_CTRL_REG1, 0xFC, true); // 80Hz, UHP
+    dev.write_register(ADDR_CTRL_REG2, 0, true); // 4Ga range
+    dev.write_register(ADDR_CTRL_REG3, 0, true); // continuous
+    dev.write_register(ADDR_CTRL_REG4, 0x0C, true); // z-axis ultra high perf
+    dev.write_register(ADDR_CTRL_REG5, 0x40, true); // block-data-update
+
+    // lower retries for run
+    dev.set_retries(3);
+
+    /* register the compass instance in the frontend */
+    dev.set_device_type(DEVTYPE_LIS3MDL);
+    if (!register_compass(dev.get_bus_id())) {
+        return false;
+    }
+
+    printf("Found a LIS3MDL on 0x%x as compass %u\n", unsigned(dev.get_bus_id()), instance);
 
     // call timer() at 80Hz
-    dev->register_periodic_callback(1000000U/80U,
+    dev.register_periodic_callback(1000000U/80U,
                                     FUNCTOR_BIND_MEMBER(&AP_Compass_LIS3MDL::timer, void));
 
     return true;
-
-fail:
-    dev->get_semaphore()->give();
-    return false;
 }
 
 void AP_Compass_LIS3MDL::timer()
@@ -124,7 +118,7 @@ void AP_Compass_LIS3MDL::timer()
 
     // check data ready
     uint8_t status;
-    if (!dev->read_registers(ADDR_STATUS_REG, (uint8_t *)&status, 1)) {
+    if (!dev.read_registers(ADDR_STATUS_REG, (uint8_t *)&status, 1)) {
         goto check_registers;
     }
     if (!(status & 0x08)) {
@@ -132,7 +126,7 @@ void AP_Compass_LIS3MDL::timer()
         goto check_registers;
     }
 
-    if (!dev->read_registers(ADDR_OUT_X_L, (uint8_t *)&data, sizeof(data))) {
+    if (!dev.read_registers(ADDR_OUT_X_L, (uint8_t *)&data, sizeof(data))) {
         goto check_registers;
     }
 
@@ -147,7 +141,7 @@ void AP_Compass_LIS3MDL::timer()
     }
 
 check_registers:
-    dev->check_next_register();
+    dev.check_next_register();
 }
 
 void AP_Compass_LIS3MDL::read()

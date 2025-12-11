@@ -32,16 +32,16 @@
 class AP_Compass_LIS2MDL : public AP_Compass_Backend
 {
 public:
-    static AP_Compass_Backend *probe(AP_HAL::Device &dev);
+    static AP_Compass_Backend *probe(AP_HAL::Device &_dev);
 
     void read() override;
 
     static constexpr const char *name = "LIS2MDL";
 
 private:
-    AP_Compass_LIS2MDL(AP_HAL::Device &dev);
+    AP_Compass_LIS2MDL(AP_HAL::Device &_dev);
 
-    AP_HAL::Device *dev;
+    AP_HAL::Device &dev;
 
     /**
      * @brief Initialize the sensor

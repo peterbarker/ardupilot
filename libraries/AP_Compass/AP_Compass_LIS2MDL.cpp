@@ -36,9 +36,9 @@
 // WHO_AM_I device ID
 #define ID_WHO_AM_I         0x40
 
-AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::Device &dev)
+AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::Device &_dev)
 {
-    AP_Compass_LIS2MDL *sensor = NEW_NOTHROW AP_Compass_LIS2MDL(dev);
+    AP_Compass_LIS2MDL *sensor = NEW_NOTHROW AP_Compass_LIS2MDL(_dev);
     if (!sensor || !sensor->init()) {
         delete sensor;
         return nullptr;
@@ -48,54 +48,54 @@ AP_Compass_Backend *AP_Compass_LIS2MDL::probe(AP_HAL::Device &dev)
 }
 
 AP_Compass_LIS2MDL::AP_Compass_LIS2MDL(AP_HAL::Device &_dev)
-    : dev(&_dev)
+    : dev(_dev)
 {
 }
 
 // @brief Initialize the sensor
 bool AP_Compass_LIS2MDL::init()
 {
-    WITH_SEMAPHORE(dev->get_semaphore());
+    WITH_SEMAPHORE(dev.get_semaphore());
 
-    if (dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
+    if (dev.bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
         // LIS2MDL SPI reads are MSb=1, autoincrement.
-        dev->set_read_flag(0xC0);
+        dev.set_read_flag(0xC0);
     }
 
     // high retries for init
-    dev->set_retries(10);
+    dev.set_retries(10);
 
     uint8_t whoami;
-    if (!dev->read_registers(ADDR_WHO_AM_I, &whoami, 1) ||
+    if (!dev.read_registers(ADDR_WHO_AM_I, &whoami, 1) ||
         whoami != ID_WHO_AM_I) {
         // not a LIS2MDL
         return false;
     }
 
-    dev->setup_checked_registers(3);
+    dev.setup_checked_registers(3);
 
     // Configure for 100Hz continuous mode, with temperature compensation.
-    dev->write_register(ADDR_CFG_REG_A, 0b10001100, true); // ODR=100Hz, continuous mode, temp comp on
+    dev.write_register(ADDR_CFG_REG_A, 0b10001100, true); // ODR=100Hz, continuous mode, temp comp on
 
     // Default settings for CFG_REG_B are fine.
-    dev->write_register(ADDR_CFG_REG_B, 0x00, true);
+    dev.write_register(ADDR_CFG_REG_B, 0x00, true);
 
     // Enable Block Data Update (BDU)
-    dev->write_register(ADDR_CFG_REG_C, 0b00010000, true); 
+    dev.write_register(ADDR_CFG_REG_C, 0b00010000, true); 
 
     // lower retries for run
-    dev->set_retries(3);
+    dev.set_retries(3);
 
     /* register the compass instance in the frontend */
-    dev->set_device_type(DEVTYPE_LIS2MDL);
-    if (!register_compass(dev->get_bus_id())) {
+    dev.set_device_type(DEVTYPE_LIS2MDL);
+    if (!register_compass(dev.get_bus_id())) {
         return false;
     }
 
-    printf("Found a LIS2MDL on 0x%x as compass %u\n", unsigned(dev->get_bus_id()), instance);
+    printf("Found a LIS2MDL on 0x%x as compass %u\n", unsigned(dev.get_bus_id()), instance);
 
     // call timer() at 100Hz
-    dev->register_periodic_callback(1000000U/100U,
+    dev.register_periodic_callback(1000000U/100U,
                                     FUNCTOR_BIND_MEMBER(&AP_Compass_LIS2MDL::timer, void));
 
     return true;
@@ -115,7 +115,7 @@ void AP_Compass_LIS2MDL::timer()
 
     // check data ready
     uint8_t status;
-    if (!dev->read_registers(ADDR_STATUS_REG, &status, 1)) {
+    if (!dev.read_registers(ADDR_STATUS_REG, &status, 1)) {
         goto check_registers;
     }
     if (!(status & 0x08)) { // ZYXDA bit
@@ -123,7 +123,7 @@ void AP_Compass_LIS2MDL::timer()
         goto check_registers;
     }
 
-    if (!dev->read_registers(ADDR_OUT_X_L, (uint8_t *)&data, sizeof(data))) {
+    if (!dev.read_registers(ADDR_OUT_X_L, (uint8_t *)&data, sizeof(data))) {
         goto check_registers;
     }
 
@@ -138,7 +138,7 @@ void AP_Compass_LIS2MDL::timer()
     }
 
 check_registers:
-    dev->check_next_register();
+    dev.check_next_register();
 }
 
 // @brief Publish accumulated data to the frontend
