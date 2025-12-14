@@ -114,6 +114,5 @@ jobs:
             --board f103-GPS \
             --all-vehicles \
             --features \
-            --parallel-copies 4 \
-            -j 2 \
+            -j 8 \
             --master-branch upstream/${{ github.event.pull_request.base.ref }}
