@@ -86,6 +86,11 @@ jobs:
         run: |
           . .github/workflows/ccache.env
 
+      - name: Install rsync
+        run: |
+          apt-get update
+          apt-get install -y rsync
+
       - name: Setup git references for size comparison
         shell: bash
         run: |
@@ -114,5 +119,6 @@ jobs:
             --board f103-GPS \
             --all-vehicles \
             --features \
-            -j 8 \
+            --parallel-copies 4 \
+            -j 2 \
             --master-branch upstream/${{ github.event.pull_request.base.ref }}
