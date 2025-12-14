@@ -104,7 +104,7 @@ jobs:
           python3 Tools/scripts/size_compare_branches.py \
             --board Durandal \
             --board MatekF405 \
-            --board KakuteF405 \
+            --board KakuteF7 \
             --board MatekH743-bdshot \
             --board MambaH743v4 \
             --board Pixhawk1-1M \
