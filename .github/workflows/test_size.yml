@@ -86,17 +86,25 @@ jobs:
         run: |
           . .github/workflows/ccache.env
 
-      - name: Build and compare sizes using size_compare_branches.py
+      - name: Setup git references for size comparison
         shell: bash
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          # Add the base repository as a remote and fetch the base branch
+          git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
+          git fetch --no-tags --prune --progress upstream ${{ github.event.pull_request.base.ref }}
+
+      - name: Build and compare sizes using size_compare_branches.py
+        shell: bash
+        run: |
           PATH="/github/home/.local/bin:$PATH"
 
           # Run size_compare_branches.py with parallelization
+          # Use upstream/ref instead of just ref since that's where we fetched it
           python3 Tools/scripts/size_compare_branches.py \
             --board Durandal \
             --board MatekF405 \
-            --board KakuteF7 \
+            --board KakuteF405 \
             --board MatekH743-bdshot \
             --board MambaH743v4 \
             --board Pixhawk1-1M \
@@ -108,4 +116,4 @@ jobs:
             --features \
             --parallel-copies 4 \
             -j 2 \
-            --master-branch ${{ github.event.pull_request.base.ref }}
+            --master-branch upstream/${{ github.event.pull_request.base.ref }}
