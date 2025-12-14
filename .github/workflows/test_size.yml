@@ -61,6 +61,9 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     container: ardupilot/ardupilot-dev-chibios:v0.1.3
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -120,4 +123,106 @@ jobs:
             --all-vehicles \
             --features \
             -j 8 \
-            --master-branch upstream/${{ github.event.pull_request.base.ref }}
+            --master-branch upstream/${{ github.event.pull_request.base.ref }} \
+            | tee /tmp/size_compare_output.txt
+
+      - name: Format and post size comparison results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const pr_number = context.issue.number;
+
+            // Read the output from size_compare_branches.py
+            let output = '';
+            try {
+              output = fs.readFileSync('/tmp/size_compare_output.txt', 'utf8');
+            } catch (error) {
+              output = 'Error: Could not read size comparison output';
+            }
+
+            // Parse and format the output
+            const lines = output.split('\n');
+            let sizeSection = '';
+            let featureSection = '';
+            let inFeatures = false;
+
+            for (const line of lines) {
+              // Detect feature changes section
+              if (line.includes('Feature changes') || line.includes('features added') || line.includes('features removed')) {
+                inFeatures = true;
+              }
+
+              // Format size changes - match CSV header and data rows
+              // Header: "Board,AP_Periph,..."
+              // Data rows: "MatekF405,1234,*,-500" etc
+              if (line.match(/^Board,/) || line.match(/^[A-Za-z0-9_-]+,/)) {
+                sizeSection += line + '\n';
+              }
+
+              // Format feature changes
+              if (inFeatures && line.trim()) {
+                // Make feature lists more readable
+                if (line.includes('added:') || line.includes('removed:')) {
+                  featureSection += '\n**' + line.trim() + '**\n';
+                } else if (line.trim().startsWith('-') || line.trim().startsWith('+')) {
+                  // Format added/removed features with better symbols
+                  const formatted = line.replace(/^\s*\+/, '  ✅ ').replace(/^\s*-/, '  ❌ ');
+                  featureSection += formatted + '\n';
+                } else {
+                  featureSection += line + '\n';
+                }
+              }
+            }
+
+            // Build the comment body
+            let commentBody = `## 📊 Size Comparison Report\n\n`;
+            commentBody += `Build completed for commit ${context.sha.substring(0, 7)}\n\n`;
+
+            if (sizeSection.trim()) {
+              commentBody += `### 📦 Size Changes\n\n`;
+              commentBody += '```\n' + sizeSection.trim() + '\n```\n\n';
+            }
+
+            if (featureSection.trim()) {
+              commentBody += `### 🔧 Feature Changes\n\n`;
+              commentBody += featureSection.trim() + '\n\n';
+            }
+
+            if (!sizeSection.trim() && !featureSection.trim()) {
+              commentBody += `No size or feature changes detected.\n\n`;
+            }
+
+            commentBody += `---\n`;
+            commentBody += `*Updated automatically by the size test workflow*`;
+
+            // Find and update or create comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr_number,
+            });
+
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Size Comparison Report')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+              console.log('Updated existing comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr_number,
+                body: commentBody
+              });
+              console.log('Created new comment');
+            }
