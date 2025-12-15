@@ -1,0 +1,9 @@
+# Test board - normal flight controller with README
+# This is a minimal test board for CI validation
+
+include ../fmuv5/hwdef.dat
+
+# Override board name
+MCU STM32F7xx STM32F765xx
+
+AUTOBUILD_TARGETS Copter
