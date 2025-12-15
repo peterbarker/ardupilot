@@ -1,0 +1,8 @@
+# Test board - AP_Periph WITHOUT README
+# This board should PASS even without README (periph boards exempt)
+
+# Include full MatekL431-Periph configuration
+include ../MatekL431-Periph/hwdef.dat
+
+# Disable bootloader flashing for test board
+define AP_BOOTLOADER_FLASHING_ENABLED 0
