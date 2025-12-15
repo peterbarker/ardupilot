@@ -1,0 +1,10 @@
+# Test board - normal flight controller with README
+# This is a minimal test board for CI validation
+
+include ../fmuv5/hwdef.dat
+
+# This is just a variant of fmuv5 for testing
+AUTOBUILD_TARGETS Copter
+
+# Disable bootloader flashing for test board
+define AP_BOOTLOADER_FLASHING_ENABLED 0
