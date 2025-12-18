@@ -25,6 +25,7 @@ Written with reference to the PX4 driver written by Roman Dvorak <dvorakroman@th
 #include <AP_Math/AP_Math.h>
 
 #include <GCS_MAVLink/GCS.h>
+#include <AP_Logger/AP_Logger.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -99,8 +100,28 @@ void AP_TemperatureSensor_SHT3x::_timer(void)
     uint16_t encoded_temp;
     uint16_t encoded_humidity;
     if (read_measurements(encoded_temp, encoded_humidity)) {
+        // see page 14 on the datasheet
         const float temp = -45 + 175 * (encoded_temp/65535.0);
         set_temperature(temp);
+#if 1
+        const float humidity = 100 * encoded_humidity / 65535.0;
+        static uint32_t last_send_ms;
+        const uint32_t now_ms = AP_HAL::millis();
+        if (now_ms - last_send_ms > 10000) {
+            last_send_ms = now_ms;
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "humidity: %f%%", humidity);
+#if HAL_LOGGING_ENABLED
+            AP::logger().WriteStreaming(
+                "HUMI",
+                "TimeUS,Humidity",
+                "s%",
+                "F0",
+                "Qf",
+                AP_HAL::micros64(),
+                humidity
+    );        }
+#endif  // HAL_LOGGING_ENABLED
+#endif
     }
 
     start_next_sample();
