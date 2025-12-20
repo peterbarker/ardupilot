@@ -66,6 +66,7 @@ void AP_Mount_Backend::update()
     case MAV_MOUNT_MODE_GPS_POINT:
     case MAV_MOUNT_MODE_SYSID_TARGET:
     case MAV_MOUNT_MODE_HOME_LOCATION:
+    case MAV_MOUNT_MODE_WPNEXT_OFFSET:
          if (!AP::ahrs().get_location(current_loc)) {
              send_warning_to_GCS("not targeting, no location");
          }
@@ -1011,12 +1012,12 @@ void AP_Mount_Backend::update_mnt_target()
         }
         return;
 #if AP_MOUNT_ROI_WPNEXT_OFFSET_ENABLED
-    case MAV_MOUNT_MODE_WPNEXT_OFFSET: {
+    case MAV_MOUNT_MODE_WPNEXT_OFFSET:
         if (get_angle_target_to_wpnext_offset(mnt_target.angle_rad)) {
             mnt_target.target_type = MountTargetType::ANGLE;
+            mnt_target.fresh = true;
         }
-        break;
-    }
+        return;
 #endif  // AP_MOUNT_ROI_WPNEXT_OFFSET_ENABLED
     case MAV_MOUNT_MODE_ENUM_END:
         break;
@@ -1072,6 +1073,7 @@ bool AP_Mount_Backend::get_location_target(Location &_target_loc)
             _target_loc = _target_sysid_location;
             return _target_sysid_location.initialised();
 
+        case MAV_MOUNT_MODE_WPNEXT_OFFSET:
         case MAV_MOUNT_MODE_RETRACT:
         case MAV_MOUNT_MODE_NEUTRAL:
         case MAV_MOUNT_MODE_MAVLINK_TARGETING:
