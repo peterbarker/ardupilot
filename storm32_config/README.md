@@ -5,16 +5,29 @@ Modern Python-based configuration tool for SToRM32 gimbal controllers, ported fr
 ## Features
 
 - ✅ **Phase 1 Complete** - Foundation
-  - Serial protocol implementation with CRC validation
-  - Basic communication with SToRM32 controllers
-  - CRC calculation and data conversion utilities
-  - Version information retrieval
+  - Serial protocol implementation (ASCII + RC binary)
+  - CRC validation and data conversion utilities
+  - Hardware communication with SToRM32 controllers
+  - Metadata extraction and diagnostics
 
-- 🚧 **In Progress** - GUI and Parameter System
-  - PyQt6-based user interface
-  - Parameter management
-  - Real-time dashboard
-  - Configuration tabs
+- ✅ **Phase 2 Complete** - Parameter System
+  - 157 parameter definitions extracted from Perl source
+  - Parameter manager with read/write/validate
+  - INI file import/export (compatible with original tool)
+  - Parameter dump utility (text, markdown, CSV, JSON)
+
+- ✅ **Phase 3 Complete** - Dashboard GUI
+  - PyQt6-based graphical interface
+  - Real-time gimbal monitoring (10 Hz default)
+  - Color-coded status indicators
+  - Connection management dialog
+  - Extensible tab architecture
+
+- 🚧 **Future Phases** - Advanced Configuration
+  - PID tuning interface
+  - Gimbal configuration wizard
+  - Parameter editor
+  - Firmware flashing
 
 ## Installation
 
@@ -48,9 +61,69 @@ Modern Python-based configuration tool for SToRM32 gimbal controllers, ported fr
 
 ## Usage
 
-### Testing Serial Communication
+### GUI Application
 
-Test basic serial communication with your SToRM32 gimbal:
+Launch the graphical configuration tool:
+
+```bash
+cd storm32_config
+./storm32_gui.py
+```
+
+Or with verbose logging:
+
+```bash
+./storm32_gui.py -v
+```
+
+**Steps:**
+1. Launch the GUI
+2. Click File → Connect (or press Ctrl+O)
+3. Configure serial port (default: /dev/ttyUSB0)
+4. Set update rate (default: 10 Hz)
+5. Click OK to connect
+
+The Dashboard tab will show real-time gimbal telemetry including:
+- Gimbal state and status flags
+- Battery voltage with warnings
+- IMU sensor data (gyro, accelerometer, angles)
+- PID controller outputs
+- External input commands
+
+### Command-Line Tools
+
+**Parameter Dump** - Extract and display all parameters:
+
+```bash
+# Display to console
+./dump_parameters.py /dev/ttyUSB0
+
+# Save as Markdown documentation
+./dump_parameters.py /dev/ttyUSB0 -f markdown -o parameters.md
+
+# Export as CSV for analysis
+./dump_parameters.py /dev/ttyUSB0 -f csv -o parameters.csv
+
+# Generate JSON
+./dump_parameters.py /dev/ttyUSB0 -f json -o parameters.json
+
+# Use defaults (no hardware required)
+./dump_parameters.py --defaults -o reference.txt
+```
+
+**Metadata Extraction** - Diagnostic tool:
+
+```bash
+./extract_metadata.py /dev/ttyUSB0
+```
+
+**Parameter Testing**:
+
+```bash
+./test_parameters.py /dev/ttyUSB0
+```
+
+**Serial Protocol Testing**:
 
 ```bash
 # List available serial ports
@@ -60,62 +133,92 @@ python -m core.serial_protocol
 python -m core.serial_protocol /dev/ttyUSB0
 ```
 
-### GUI Application (Coming Soon)
-
-```bash
-python main.py
-```
-
 ## Development Status
 
-### Completed
+### Phase 1: Foundation ✅ Complete
 - [x] Project structure
 - [x] CRC calculation utilities
 - [x] Data conversion utilities
 - [x] Parameter validation utilities
 - [x] Serial protocol implementation
   - [x] Port management
-  - [x] Basic command execution
-  - [x] RC command framing
+  - [x] ASCII command execution ('g', 'd', 's', 'v', 't')
+  - [x] RC binary command framing (STX + CRC)
   - [x] Version information retrieval
-  - [x] Parameter reading (155 parameters)
+  - [x] Parameter reading (155 parameters via 'g' command)
+- [x] Metadata extraction utility
+- [x] Diagnostic tools
 
-### In Progress
-- [ ] Parameter definitions (from Perl OptionList)
-- [ ] Main window GUI
-- [ ] Connection dialog
+### Phase 2: Parameter System ✅ Complete
+- [x] Parameter definitions (157 parameters from Perl OptionList)
+- [x] Parameter parser (Perl → Python conversion)
+- [x] Parameter manager class
+  - [x] Read from gimbal
+  - [x] Validate and set parameters
+  - [x] Modification tracking
+- [x] INI file import/export (Perl-compatible format)
+- [x] Parameter dump utility (text, markdown, CSV, JSON)
+- [x] Integration testing
 
-### Planned
-- [ ] Dashboard tab (real-time monitoring)
+### Phase 3: Dashboard GUI ✅ Complete
+- [x] PyQt6 application framework
+- [x] Main window with menu bar and tabs
+- [x] Connection dialog
+- [x] StatusMonitor (background polling thread)
+- [x] Dashboard tab (real-time monitoring)
+  - [x] Gimbal state display
+  - [x] Status flags with descriptions
+  - [x] Battery voltage monitoring
+  - [x] IMU sensor data (gyro, accel, angles)
+  - [x] PID outputs
+  - [x] Input commands
+  - [x] Color-coded warnings
+
+### Future Phases
 - [ ] PID tab (tuning parameters)
 - [ ] Setup tab (general configuration)
-- [ ] Gimbal Configuration tab
-- [ ] RC Inputs tab
-- [ ] Functions tab
-- [ ] Scripts tab
-- [ ] Calibration tab
-- [ ] Firmware flash tab
+- [ ] Gimbal Configuration tab (IMU orientation)
+- [ ] RC Inputs tab (channel mapping)
+- [ ] Functions tab (function assignments)
+- [ ] Scripts tab (script editor)
+- [ ] Calibration tab (accelerometer calibration)
+- [ ] Firmware flash tab (firmware update)
 
 ## Project Structure
 
 ```
 storm32_config/
-├── main.py                    # Application entry point (TODO)
+├── storm32_gui.py             # ✅ GUI application launcher
+├── dump_parameters.py         # ✅ Parameter dump utility
+├── extract_metadata.py        # ✅ Metadata extraction tool
+├── test_parameters.py         # ✅ Parameter system test
+├── parse_perl_params.py       # ✅ Perl→Python parameter parser
 ├── ui/                        # PyQt6 user interface
-│   ├── main_window.py         # Main window (TODO)
-│   ├── dashboard_tab.py       # Dashboard tab (TODO)
-│   └── ...
+│   ├── main_window.py         # ✅ Main application window
+│   └── dashboard_widget.py    # ✅ Real-time dashboard
 ├── core/                      # Core functionality
 │   ├── serial_protocol.py     # ✅ Serial communication
-│   ├── parameters.py          # TODO: Parameter management
-│   └── ...
-├── models/                    # Data models (TODO)
+│   ├── parameters.py          # ✅ Parameter management
+│   └── status_monitor.py      # ✅ Background status polling
+├── models/                    # Data models
+│   └── parameter_definitions.py  # ✅ 157 parameter definitions
 ├── utils/                     # Utilities
 │   ├── crc.py                 # ✅ CRC calculations
 │   ├── conversions.py         # ✅ Data type conversions
 │   └── validation.py          # ✅ Parameter validation
 └── resources/                 # Resources (icons, firmware, etc.)
 ```
+
+**Key Files:**
+- `storm32_gui.py` - Launch the graphical interface
+- `dump_parameters.py` - Command-line parameter documentation tool
+- `extract_metadata.py` - Diagnostic tool for gimbal troubleshooting
+- `core/serial_protocol.py` - Serial protocol implementation (531 lines)
+- `core/parameters.py` - Parameter manager (452 lines)
+- `core/status_monitor.py` - Background telemetry monitor (366 lines)
+- `models/parameter_definitions.py` - Auto-generated parameter database (3031 lines)
+- `ui/main_window.py` - Main GUI window (345 lines)
+- `ui/dashboard_widget.py` - Real-time dashboard (424 lines)
 
 ## Serial Protocol Reference
 
