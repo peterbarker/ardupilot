@@ -19,6 +19,7 @@ try:
     from ..core.status_monitor import StatusMonitor
     from ..core.parameters import ParameterManager
     from .dashboard_widget import DashboardWidget
+    from .pid_widget import PIDWidget
 except ImportError:
     import sys
     from pathlib import Path
@@ -27,6 +28,7 @@ except ImportError:
     from core.status_monitor import StatusMonitor  # noqa: E402
     from core.parameters import ParameterManager  # noqa: E402
     from ui.dashboard_widget import DashboardWidget  # noqa: E402
+    from ui.pid_widget import PIDWidget  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -129,8 +131,11 @@ class MainWindow(QMainWindow):
         self.dashboard_widget = DashboardWidget()
         self.tabs.addTab(self.dashboard_widget, "Dashboard")
 
+        # Create PID tab
+        self.pid_widget = PIDWidget()
+        self.tabs.addTab(self.pid_widget, "PID Tuning")
+
         # Placeholder tabs (to be implemented in future phases)
-        self.tabs.addTab(QLabel("PID configuration coming soon..."), "PID")
         self.tabs.addTab(QLabel("Setup configuration coming soon..."), "Setup")
         self.tabs.addTab(QLabel("Parameters coming soon..."), "Parameters")
 
@@ -202,6 +207,9 @@ class MainWindow(QMainWindow):
 
                 # Create parameter manager
                 self.parameter_manager = ParameterManager(self.protocol)
+
+                # Pass parameter manager to PID widget
+                self.pid_widget.set_parameter_manager(self.parameter_manager)
 
                 # Create and start status monitor
                 self.status_monitor = StatusMonitor(self.protocol, update_rate)
