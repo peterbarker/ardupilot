@@ -1,0 +1,249 @@
+2025-12-20 23:31:23,285 - __main__ - INFO - SToRM32 Configuration Tool Starting...
+2025-12-20 23:31:23,285 - __main__ - INFO - Phase 1 (Foundation) - Serial Protocol Testing Mode
+2025-12-20 23:31:23,285 - __main__ - INFO - GUI interface coming in Phase 2
+
+2025-12-20 23:31:23,285 - __main__ - INFO - Available serial ports:
+2025-12-20 23:31:23,288 - __main__ - INFO -   [0] /dev/ttyS31: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [1] /dev/ttyS30: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [2] /dev/ttyS29: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [3] /dev/ttyS28: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [4] /dev/ttyS27: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [5] /dev/ttyS26: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [6] /dev/ttyS25: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [7] /dev/ttyS24: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [8] /dev/ttyS23: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [9] /dev/ttyS22: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [10] /dev/ttyS21: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [11] /dev/ttyS20: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [12] /dev/ttyS19: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [13] /dev/ttyS18: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [14] /dev/ttyS17: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [15] /dev/ttyS16: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [16] /dev/ttyS15: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [17] /dev/ttyS14: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [18] /dev/ttyS13: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [19] /dev/ttyS12: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [20] /dev/ttyS11: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [21] /dev/ttyS10: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [22] /dev/ttyS9: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [23] /dev/ttyS8: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [24] /dev/ttyS7: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [25] /dev/ttyS6: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [26] /dev/ttyS5: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [27] /dev/ttyS4: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [28] /dev/ttyS3: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [29] /dev/ttyS2: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [30] /dev/ttyS1: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [31] /dev/ttyS0: n/a
+2025-12-20 23:31:23,288 - __main__ - INFO -   [32] /dev/ttyUSB0: FT232R USB UART - FT232R USB UART
+2025-12-20 23:31:29,159 - __main__ - INFO - SToRM32 Configuration Tool Starting...
+2025-12-20 23:31:29,159 - __main__ - INFO - Phase 1 (Foundation) - Serial Protocol Testing Mode
+2025-12-20 23:31:29,159 - __main__ - INFO - GUI interface coming in Phase 2
+
+2025-12-20 23:31:29,159 - __main__ - INFO - Available serial ports:
+2025-12-20 23:31:29,163 - __main__ - INFO -   [0] /dev/ttyS31: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [1] /dev/ttyS30: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [2] /dev/ttyS29: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [3] /dev/ttyS28: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [4] /dev/ttyS27: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [5] /dev/ttyS26: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [6] /dev/ttyS25: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [7] /dev/ttyS24: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [8] /dev/ttyS23: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [9] /dev/ttyS22: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [10] /dev/ttyS21: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [11] /dev/ttyS20: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [12] /dev/ttyS19: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [13] /dev/ttyS18: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [14] /dev/ttyS17: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [15] /dev/ttyS16: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [16] /dev/ttyS15: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [17] /dev/ttyS14: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [18] /dev/ttyS13: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [19] /dev/ttyS12: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [20] /dev/ttyS11: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [21] /dev/ttyS10: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [22] /dev/ttyS9: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [23] /dev/ttyS8: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [24] /dev/ttyS7: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [25] /dev/ttyS6: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [26] /dev/ttyS5: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [27] /dev/ttyS4: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [28] /dev/ttyS3: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [29] /dev/ttyS2: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [30] /dev/ttyS1: n/a
+2025-12-20 23:31:29,163 - __main__ - INFO -   [31] /dev/ttyS0: n/a
+2025-12-20 23:31:29,164 - __main__ - INFO -   [32] /dev/ttyUSB0: FT232R USB UART - FT232R USB UART
+2025-12-20 23:31:29,164 - __main__ - INFO - 
+Connecting to /dev/ttyUSB0...
+2025-12-20 23:31:29,178 - storm32_config.core.serial_protocol - INFO - Connected to /dev/ttyUSB0 at 115200 baud
+2025-12-20 23:31:29,178 - __main__ - INFO - Retrieving version information...
+2025-12-20 23:31:31,186 - storm32_config.core.serial_protocol - INFO - Disconnected from /dev/ttyUSB0
+2025-12-20 23:31:31,187 - __main__ - ERROR - Connection test failed: Timeout reading 53 bytes
+Traceback (most recent call last):
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/main.py", line 62, in test_connection
+    version_str, name_str, board_str = protocol.get_version_str()
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/core/serial_protocol.py", line 398, in get_version_str
+    response = self.execute_rc_cmd(RCCommand.GET_VERSION_STR)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/core/serial_protocol.py", line 327, in execute_rc_cmd
+    response = self.read_bytes(response_len)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/core/serial_protocol.py", line 216, in read_bytes
+    raise TimeoutError(f"Timeout reading {length} bytes")
+storm32_config.core.serial_protocol.TimeoutError: Timeout reading 53 bytes
+2025-12-20 23:43:14,722 - __main__ - INFO - SToRM32 Configuration Tool Starting...
+2025-12-20 23:43:14,722 - __main__ - INFO - Phase 1 (Foundation) - Serial Protocol Testing Mode
+2025-12-20 23:43:14,722 - __main__ - INFO - GUI interface coming in Phase 2
+
+2025-12-20 23:43:14,722 - __main__ - INFO - Available serial ports:
+2025-12-20 23:43:14,726 - __main__ - INFO -   [0] /dev/ttyS31: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [1] /dev/ttyS30: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [2] /dev/ttyS29: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [3] /dev/ttyS28: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [4] /dev/ttyS27: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [5] /dev/ttyS26: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [6] /dev/ttyS25: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [7] /dev/ttyS24: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [8] /dev/ttyS23: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [9] /dev/ttyS22: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [10] /dev/ttyS21: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [11] /dev/ttyS20: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [12] /dev/ttyS19: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [13] /dev/ttyS18: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [14] /dev/ttyS17: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [15] /dev/ttyS16: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [16] /dev/ttyS15: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [17] /dev/ttyS14: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [18] /dev/ttyS13: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [19] /dev/ttyS12: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [20] /dev/ttyS11: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [21] /dev/ttyS10: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [22] /dev/ttyS9: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [23] /dev/ttyS8: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [24] /dev/ttyS7: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [25] /dev/ttyS6: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [26] /dev/ttyS5: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [27] /dev/ttyS4: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [28] /dev/ttyS3: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [29] /dev/ttyS2: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [30] /dev/ttyS1: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [31] /dev/ttyS0: n/a
+2025-12-20 23:43:14,726 - __main__ - INFO -   [32] /dev/ttyUSB0: FT232R USB UART - FT232R USB UART
+2025-12-20 23:43:14,726 - __main__ - INFO - 
+Connecting to /dev/ttyUSB0...
+2025-12-20 23:43:14,741 - storm32_config.core.serial_protocol - INFO - Connected to /dev/ttyUSB0 at 115200 baud
+2025-12-20 23:43:14,741 - __main__ - INFO - Retrieving version information...
+2025-12-20 23:43:16,741 - storm32_config.core.serial_protocol - WARNING - Partial read: got 1/53 bytes
+2025-12-20 23:43:16,743 - storm32_config.core.serial_protocol - INFO - Disconnected from /dev/ttyUSB0
+2025-12-20 23:43:16,743 - __main__ - ERROR - Connection test failed: Response too short: 1 bytes
+Traceback (most recent call last):
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/main.py", line 62, in test_connection
+    version_str, name_str, board_str = protocol.get_version_str()
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/core/serial_protocol.py", line 406, in get_version_str
+    response = self.execute_rc_cmd(RCCommand.GET_VERSION_STR)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/core/serial_protocol.py", line 345, in execute_rc_cmd
+    raise ProtocolError(f"Response too short: {len(response)} bytes")
+storm32_config.core.serial_protocol.ProtocolError: Response too short: 1 bytes
+2025-12-20 23:43:21,645 - __main__ - INFO - SToRM32 Configuration Tool Starting...
+2025-12-20 23:43:21,645 - __main__ - INFO - Phase 1 (Foundation) - Serial Protocol Testing Mode
+2025-12-20 23:43:21,645 - __main__ - INFO - GUI interface coming in Phase 2
+
+2025-12-20 23:43:21,645 - __main__ - INFO - Available serial ports:
+2025-12-20 23:43:21,649 - __main__ - INFO -   [0] /dev/ttyS31: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [1] /dev/ttyS30: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [2] /dev/ttyS29: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [3] /dev/ttyS28: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [4] /dev/ttyS27: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [5] /dev/ttyS26: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [6] /dev/ttyS25: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [7] /dev/ttyS24: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [8] /dev/ttyS23: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [9] /dev/ttyS22: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [10] /dev/ttyS21: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [11] /dev/ttyS20: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [12] /dev/ttyS19: n/a
+2025-12-20 23:43:21,649 - __main__ - INFO -   [13] /dev/ttyS18: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [14] /dev/ttyS17: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [15] /dev/ttyS16: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [16] /dev/ttyS15: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [17] /dev/ttyS14: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [18] /dev/ttyS13: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [19] /dev/ttyS12: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [20] /dev/ttyS11: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [21] /dev/ttyS10: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [22] /dev/ttyS9: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [23] /dev/ttyS8: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [24] /dev/ttyS7: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [25] /dev/ttyS6: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [26] /dev/ttyS5: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [27] /dev/ttyS4: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [28] /dev/ttyS3: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [29] /dev/ttyS2: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [30] /dev/ttyS1: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [31] /dev/ttyS0: n/a
+2025-12-20 23:43:21,650 - __main__ - INFO -   [32] /dev/ttyUSB0: FT232R USB UART - FT232R USB UART
+2025-12-20 23:43:21,650 - __main__ - INFO - 
+Connecting to /dev/ttyUSB0...
+2025-12-20 23:43:21,665 - storm32_config.core.serial_protocol - INFO - Connected to /dev/ttyUSB0 at 115200 baud
+2025-12-20 23:43:21,665 - __main__ - INFO - Retrieving version information...
+2025-12-20 23:43:23,667 - storm32_config.core.serial_protocol - WARNING - Partial read: got 1/53 bytes
+2025-12-20 23:43:23,669 - storm32_config.core.serial_protocol - INFO - Disconnected from /dev/ttyUSB0
+2025-12-20 23:43:23,669 - __main__ - ERROR - Connection test failed: Response too short: 1 bytes
+Traceback (most recent call last):
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/main.py", line 62, in test_connection
+    version_str, name_str, board_str = protocol.get_version_str()
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/core/serial_protocol.py", line 406, in get_version_str
+    response = self.execute_rc_cmd(RCCommand.GET_VERSION_STR)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pbarker/rc/ardupilot-claude/storm32_config/core/serial_protocol.py", line 345, in execute_rc_cmd
+    raise ProtocolError(f"Response too short: {len(response)} bytes")
+storm32_config.core.serial_protocol.ProtocolError: Response too short: 1 bytes
+2025-12-20 23:43:48,308 - __main__ - INFO - SToRM32 Configuration Tool Starting...
+2025-12-20 23:43:48,308 - __main__ - INFO - Phase 1 (Foundation) - Serial Protocol Testing Mode
+2025-12-20 23:43:48,308 - __main__ - INFO - GUI interface coming in Phase 2
+
+2025-12-20 23:43:48,308 - __main__ - INFO - Available serial ports:
+2025-12-20 23:43:48,311 - __main__ - INFO -   [0] /dev/ttyS31: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [1] /dev/ttyS30: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [2] /dev/ttyS29: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [3] /dev/ttyS28: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [4] /dev/ttyS27: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [5] /dev/ttyS26: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [6] /dev/ttyS25: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [7] /dev/ttyS24: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [8] /dev/ttyS23: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [9] /dev/ttyS22: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [10] /dev/ttyS21: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [11] /dev/ttyS20: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [12] /dev/ttyS19: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [13] /dev/ttyS18: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [14] /dev/ttyS17: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [15] /dev/ttyS16: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [16] /dev/ttyS15: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [17] /dev/ttyS14: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [18] /dev/ttyS13: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [19] /dev/ttyS12: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [20] /dev/ttyS11: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [21] /dev/ttyS10: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [22] /dev/ttyS9: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [23] /dev/ttyS8: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [24] /dev/ttyS7: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [25] /dev/ttyS6: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [26] /dev/ttyS5: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [27] /dev/ttyS4: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [28] /dev/ttyS3: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [29] /dev/ttyS2: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [30] /dev/ttyS1: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [31] /dev/ttyS0: n/a
+2025-12-20 23:43:48,311 - __main__ - INFO -   [32] /dev/ttyUSB0: FT232R USB UART - FT232R USB UART
+2025-12-20 23:43:48,311 - __main__ - INFO - 
+Connecting to /dev/ttyUSB0...
+2025-12-20 23:43:48,326 - storm32_config.core.serial_protocol - INFO - Connected to /dev/ttyUSB0 at 115200 baud
+2025-12-20 23:43:48,326 - __main__ - INFO - Getting gimbal status using 'd' command...
+2025-12-20 23:43:49,826 - __main__ - INFO - Connection test successful!
+2025-12-20 23:43:49,828 - storm32_config.core.serial_protocol - INFO - Disconnected from /dev/ttyUSB0

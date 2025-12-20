@@ -1,0 +1,13 @@
+# SToRM32 Configuration Tool - Python Requirements
+
+# Core GUI Framework
+PyQt6>=6.6.0
+PyQt6-Qt6>=6.6.0
+
+# Serial Communication
+pyserial>=3.5
+
+# Additional utilities
+# For future features:
+# python-can>=4.0.0  # For CAN bus support if needed
+# pyyaml>=6.0  # For YAML configuration files

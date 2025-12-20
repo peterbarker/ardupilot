@@ -7,6 +7,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <GCS_MAVLink/include/mavlink/v2.0/checksum.h>
+#include <AP_Logger/AP_Logger.h>
 
 // update mount position - should be called periodically
 void AP_Mount_SToRM32_serial::update()
@@ -184,6 +185,104 @@ void AP_Mount_SToRM32_serial::parse_reply() {
             _current_angle.x = _buffer.data.imu1_roll;
             _current_angle.y = -_buffer.data.imu1_pitch;
             _current_angle.z = -_buffer.data.imu1_yaw;
+
+            // Log SToRM32 telemetry data - split into 3 messages due to field/length limits
+
+            // @LoggerMessage: STM2
+            // @Description: SToRM32 gimbal status, power, timing and IMU1 sensor data
+            // @Field: TimeUS: Time since system startup
+            // @Field: St: System state flags
+            // @Field: Sta: Status flags (indicates enabled state, errors, etc)
+            // @Field: St2: Status2 flags (additional status information)
+            // @Field: I2E: I2C error count from IMU1 and IMU2
+            // @Field: Vol: Battery voltage from ADC
+            // @Field: Cyc: Control loop cycle time
+            // @Field: GX: IMU1 gyroscope X-axis
+            // @Field: GY: IMU1 gyroscope Y-axis
+            // @Field: GZ: IMU1 gyroscope Z-axis
+            // @Field: AX: IMU1 accelerometer X-axis (scaled by 10000)
+            // @Field: AY: IMU1 accelerometer Y-axis (scaled by 10000)
+            // @Field: AZ: IMU1 accelerometer Z-axis (scaled by 10000)
+            AP::logger().WriteStreaming(
+                "STM2",
+                "TimeUS," "St," "Sta," "St2," "I2E," "Vol," "Cyc," "GX," "GY," "GZ," "AX," "AY," "AZ",
+                "s"       "-"   "-"    "-"    "-"    "v"    "s"    "k"   "k"   "k"   "o"   "o"   "o",
+                "F"       "-"   "-"    "-"    "-"    "C"    "F"    "B"   "B"   "B"   "C"   "C"   "C",
+                "Q"       "H"   "H"    "H"    "H"    "H"    "H"    "h"   "h"   "h"   "h"   "h"   "h",
+                AP_HAL::micros64(),
+                _buffer.data.state,
+                _buffer.data.status,
+                _buffer.data.status2,
+                _buffer.data.i2c_errors,
+                _buffer.data.lipo_voltage,
+                _buffer.data.cycle_time,
+                _buffer.data.imu1_gx,
+                _buffer.data.imu1_gy,
+                _buffer.data.imu1_gz,
+                _buffer.data.imu1_ax,
+                _buffer.data.imu1_ay,
+                _buffer.data.imu1_az
+            );
+
+            // @LoggerMessage: SM2A
+            // @Description: SToRM32 gimbal IMU1 attitude and AHRS data
+            // @Field: TimeUS: Time since system startup
+            // @Field: Pit: IMU1 pitch angle in 0.01 degree units
+            // @Field: Rol: IMU1 roll angle in 0.01 degree units
+            // @Field: Yaw: IMU1 yaw angle in 0.01 degree units
+            // @Field: AhX: AHRS rotation matrix X component (scaled by 10000)
+            // @Field: AhY: AHRS rotation matrix Y component (scaled by 10000)
+            // @Field: AhZ: AHRS rotation matrix Z component (scaled by 10000)
+            AP::logger().WriteStreaming(
+                "SM2A",
+                "TimeUS," "Pit," "Rol," "Yaw," "AhX," "AhY," "AhZ",
+                "s"       "d"    "d"    "d"    "d"    "d"    "d",
+                "F"       "B"    "B"    "B"    "B"    "B"    "B",
+                "Q"       "h"    "h"    "h"    "h"    "h"    "h",
+                AP_HAL::micros64(),
+                _buffer.data.imu1_pitch,
+                _buffer.data.imu1_roll,
+                _buffer.data.imu1_yaw,
+                _buffer.data.ahrs_x,
+                _buffer.data.ahrs_y,
+                _buffer.data.ahrs_z
+            );
+
+            // @LoggerMessage: SM2C
+            // @Description: SToRM32 gimbal control outputs, IMU2 and magnetometer data
+            // @Field: TimeUS: Time since system startup
+            // @Field: CPi: PID controller pitch output in 0.01 units
+            // @Field: CRo: PID controller roll output in 0.01 units
+            // @Field: CYa: PID controller yaw output in 0.01 units
+            // @Field: IPi: Input pitch command in 0.01 degree units
+            // @Field: IRo: Input roll command in 0.01 degree units
+            // @Field: IYa: Input yaw command in 0.01 degree units
+            // @Field: P2: IMU2 pitch angle in 0.01 degree units
+            // @Field: R2: IMU2 roll angle in 0.01 degree units
+            // @Field: Y2: IMU2 yaw angle in 0.01 degree units
+            // @Field: MYa: Magnetometer yaw angle in 0.01 degree units
+            // @Field: MPi: Magnetometer pitch angle in 0.01 degree units
+            // @Field: Cnf: AHRS/IMU accelerometer confidence (scaled by 10000)
+            AP::logger().WriteStreaming(
+                "SM2C",
+                "TimeUS," "CPi," "CRo," "CYa," "IPi," "IRo," "IYa," "P2," "R2," "Y2," "MYa," "MPi," "Cnf",
+                "s"       "-"    "-"    "-"    "d"    "d"    "d"    "d"   "d"   "d"   "d"    "d"    "%",
+                "F"       "0"    "0"    "0"    "B"    "B"    "B"    "B"   "B"   "B"   "B"    "B"    "B",
+                "Q"       "h"    "h"    "h"    "H"    "H"    "H"    "h"   "h"   "h"   "h"    "h"    "h",
+                AP_HAL::micros64(),
+                _buffer.data.cpid_pitch,
+                _buffer.data.cpid_roll,
+                _buffer.data.cpid_yaw,
+                _buffer.data.input_pitch,
+                _buffer.data.input_roll,
+                _buffer.data.input_yaw,
+                _buffer.data.imu2_pitch,
+                _buffer.data.imu2_roll,
+                _buffer.data.imu2_yaw,
+                _buffer.data.mag2_yaw,
+                _buffer.data.mag2_pitch,
+                _buffer.data.ahrs_imu_confidence
+            );
             break;
         default:
             break;
