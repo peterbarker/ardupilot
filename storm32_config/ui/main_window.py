@@ -27,6 +27,7 @@ try:
     from .functions_widget import FunctionsWidget
     from .scripts_widget import ScriptsWidget
     from .calibration_widget import CalibrationWidget
+    from .flash_widget import FlashWidget
 except ImportError:
     import sys
     from pathlib import Path
@@ -43,6 +44,7 @@ except ImportError:
     from ui.functions_widget import FunctionsWidget  # noqa: E402
     from ui.scripts_widget import ScriptsWidget  # noqa: E402
     from ui.calibration_widget import CalibrationWidget  # noqa: E402
+    from ui.flash_widget import FlashWidget  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -177,6 +179,10 @@ class MainWindow(QMainWindow):
         self.calibration_widget = CalibrationWidget()
         self.tabs.addTab(self.calibration_widget, "Calibration")
 
+        # Create Flash tab
+        self.flash_widget = FlashWidget()
+        self.tabs.addTab(self.flash_widget, "Flash Firmware")
+
         # Placeholder tabs (to be implemented in future phases)
         self.tabs.addTab(QLabel("Parameters coming soon..."), "Parameters")
 
@@ -258,6 +264,9 @@ class MainWindow(QMainWindow):
                 self.functions_widget.set_parameter_manager(self.parameter_manager)
                 self.scripts_widget.set_parameter_manager(self.parameter_manager)
                 self.calibration_widget.set_parameter_manager(self.parameter_manager)
+
+                # Pass protocol to flash widget (for board detection)
+                self.flash_widget.set_protocol(self.protocol)
 
                 # Create and start status monitor
                 self.status_monitor = StatusMonitor(self.protocol, update_rate)
