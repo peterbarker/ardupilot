@@ -22,6 +22,7 @@ try:
     from .pid_widget import PIDWidget
     from .gimbal_config_widget import GimbalConfigWidget
     from .setup_widget import SetupWidget
+    from .rc_inputs_widget import RCInputsWidget
 except ImportError:
     import sys
     from pathlib import Path
@@ -33,6 +34,7 @@ except ImportError:
     from ui.pid_widget import PIDWidget  # noqa: E402
     from ui.gimbal_config_widget import GimbalConfigWidget  # noqa: E402
     from ui.setup_widget import SetupWidget  # noqa: E402
+    from ui.rc_inputs_widget import RCInputsWidget  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -147,6 +149,10 @@ class MainWindow(QMainWindow):
         self.setup_widget = SetupWidget()
         self.tabs.addTab(self.setup_widget, "Setup")
 
+        # Create RC Inputs tab
+        self.rc_inputs_widget = RCInputsWidget()
+        self.tabs.addTab(self.rc_inputs_widget, "RC Inputs")
+
         # Placeholder tabs (to be implemented in future phases)
         self.tabs.addTab(QLabel("Parameters coming soon..."), "Parameters")
 
@@ -223,6 +229,7 @@ class MainWindow(QMainWindow):
                 self.pid_widget.set_parameter_manager(self.parameter_manager)
                 self.gimbal_config_widget.set_parameter_manager(self.parameter_manager)
                 self.setup_widget.set_parameter_manager(self.parameter_manager)
+                self.rc_inputs_widget.set_parameter_manager(self.parameter_manager)
 
                 # Create and start status monitor
                 self.status_monitor = StatusMonitor(self.protocol, update_rate)
