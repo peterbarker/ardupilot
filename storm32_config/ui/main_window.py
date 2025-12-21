@@ -9,7 +9,7 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QTabWidget,
     QStatusBar, QMessageBox, QDialog,
-    QDialogButtonBox, QFormLayout, QLineEdit, QSpinBox, QLabel
+    QDialogButtonBox, QFormLayout, QLineEdit, QSpinBox
 )
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtGui import QAction
@@ -28,6 +28,7 @@ try:
     from .scripts_widget import ScriptsWidget
     from .calibration_widget import CalibrationWidget
     from .flash_widget import FlashWidget
+    from .parameters_widget import ParametersWidget
 except ImportError:
     import sys
     from pathlib import Path
@@ -45,6 +46,7 @@ except ImportError:
     from ui.scripts_widget import ScriptsWidget  # noqa: E402
     from ui.calibration_widget import CalibrationWidget  # noqa: E402
     from ui.flash_widget import FlashWidget  # noqa: E402
+    from ui.parameters_widget import ParametersWidget  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -183,8 +185,9 @@ class MainWindow(QMainWindow):
         self.flash_widget = FlashWidget()
         self.tabs.addTab(self.flash_widget, "Flash Firmware")
 
-        # Placeholder tabs (to be implemented in future phases)
-        self.tabs.addTab(QLabel("Parameters coming soon..."), "Parameters")
+        # Create Parameters tab
+        self.parameters_widget = ParametersWidget()
+        self.tabs.addTab(self.parameters_widget, "Parameters")
 
         layout.addWidget(self.tabs)
 
@@ -264,6 +267,7 @@ class MainWindow(QMainWindow):
                 self.functions_widget.set_parameter_manager(self.parameter_manager)
                 self.scripts_widget.set_parameter_manager(self.parameter_manager)
                 self.calibration_widget.set_parameter_manager(self.parameter_manager)
+                self.parameters_widget.set_parameter_manager(self.parameter_manager)
 
                 # Pass protocol to flash widget (for board detection)
                 self.flash_widget.set_protocol(self.protocol)
