@@ -24,6 +24,7 @@ try:
     from .setup_widget import SetupWidget
     from .rc_inputs_widget import RCInputsWidget
     from .pan_widget import PanWidget
+    from .functions_widget import FunctionsWidget
 except ImportError:
     import sys
     from pathlib import Path
@@ -37,6 +38,7 @@ except ImportError:
     from ui.setup_widget import SetupWidget  # noqa: E402
     from ui.rc_inputs_widget import RCInputsWidget  # noqa: E402
     from ui.pan_widget import PanWidget  # noqa: E402
+    from ui.functions_widget import FunctionsWidget  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -159,6 +161,10 @@ class MainWindow(QMainWindow):
         self.pan_widget = PanWidget()
         self.tabs.addTab(self.pan_widget, "Pan Mode")
 
+        # Create Functions tab
+        self.functions_widget = FunctionsWidget()
+        self.tabs.addTab(self.functions_widget, "Functions")
+
         # Placeholder tabs (to be implemented in future phases)
         self.tabs.addTab(QLabel("Parameters coming soon..."), "Parameters")
 
@@ -237,6 +243,7 @@ class MainWindow(QMainWindow):
                 self.setup_widget.set_parameter_manager(self.parameter_manager)
                 self.rc_inputs_widget.set_parameter_manager(self.parameter_manager)
                 self.pan_widget.set_parameter_manager(self.parameter_manager)
+                self.functions_widget.set_parameter_manager(self.parameter_manager)
 
                 # Create and start status monitor
                 self.status_monitor = StatusMonitor(self.protocol, update_rate)
