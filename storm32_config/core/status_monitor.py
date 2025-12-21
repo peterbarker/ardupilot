@@ -135,7 +135,7 @@ class StatusData:
         # Position 4: Performance (not used in our display)
         # Position 5: Error count
         data.i2c_errors = raw_values[5]
-        data.lipo_voltage = raw_values[6]  # Voltage in 0.1V units
+        data.lipo_voltage = raw_values[6]  # Voltage in 0.01V units (divide by 100 for volts)
 
         # Positions 7-8: unsigned timing fields
         # Position 7: Millis (system uptime in milliseconds)

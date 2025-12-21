@@ -291,9 +291,8 @@ class DashboardWidget(QWidget):
             self.cycle_time_label.setText("-")
 
         # Update battery voltage
-        # Raw ADC value - convert to approximate voltage
-        # (This conversion may need calibration based on actual hardware)
-        voltage_v = status_data.lipo_voltage * 0.015  # Approximate conversion
+        # Raw value is in 0.01V units (centivolts)
+        voltage_v = status_data.lipo_voltage / 100.0  # Convert to volts
         self.battery_label.setText(f"{voltage_v:.2f}V")
 
         # Color code voltage
