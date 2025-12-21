@@ -181,15 +181,15 @@ class DashboardWidget(QWidget):
         self.imu1_gyro_label = QLabel("-")
         layout.addWidget(self.imu1_gyro_label, 0, 1)
 
-        # Accelerometer
-        layout.addWidget(QLabel("Accel:"), 1, 0)
-        self.imu1_accel_label = QLabel("-")
-        layout.addWidget(self.imu1_accel_label, 1, 1)
-
         # Angles
-        layout.addWidget(QLabel("Angles:"), 2, 0)
+        layout.addWidget(QLabel("Angles:"), 1, 0)
         self.imu1_angles_label = QLabel("-")
-        layout.addWidget(self.imu1_angles_label, 2, 1)
+        layout.addWidget(self.imu1_angles_label, 1, 1)
+
+        # Note about accelerometer data
+        note = QLabel("(Accel data not in status stream)")
+        note.setStyleSheet("color: gray; font-size: 8pt; font-style: italic;")
+        layout.addWidget(note, 2, 0, 1, 2)
 
         layout.setColumnStretch(1, 1)
         group.setLayout(layout)
@@ -204,11 +204,6 @@ class DashboardWidget(QWidget):
         layout.addWidget(QLabel("Angles:"), 0, 0)
         self.imu2_angles_label = QLabel("-")
         layout.addWidget(self.imu2_angles_label, 0, 1)
-
-        # AHRS
-        layout.addWidget(QLabel("AHRS:"), 1, 0)
-        self.ahrs_label = QLabel("-")
-        layout.addWidget(self.ahrs_label, 1, 1)
 
         layout.setColumnStretch(1, 1)
         group.setLayout(layout)
@@ -317,9 +312,6 @@ class DashboardWidget(QWidget):
         self.imu1_gyro_label.setText(
             f"X:{status_data.imu1_gx:6d} Y:{status_data.imu1_gy:6d} Z:{status_data.imu1_gz:6d}"
         )
-        self.imu1_accel_label.setText(
-            f"X:{status_data.imu1_ax:6d} Y:{status_data.imu1_ay:6d} Z:{status_data.imu1_az:6d}"
-        )
 
         # Check for invalid angles (0xFFFF = -1)
         if status_data.imu1_angle_pitch == -1:
@@ -332,11 +324,6 @@ class DashboardWidget(QWidget):
         # Update IMU2 data
         self.imu2_angles_label.setText(
             f"P:{status_data.imu2_angle_pitch:6d} R:{status_data.imu2_angle_roll:6d} Y:{status_data.imu2_angle_yaw:6d}"
-        )
-
-        # Update AHRS
-        self.ahrs_label.setText(
-            f"X:{status_data.ahrs_rx:6d} Y:{status_data.ahrs_ry:6d} Z:{status_data.ahrs_rz:6d}"
         )
 
         # Update PID outputs

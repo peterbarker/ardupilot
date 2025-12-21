@@ -110,6 +110,9 @@ class StatusData:
         """
         Parse raw 'd' command response into StatusData.
 
+        Format string from Perl tool: 'uuuuuuu' 'uu' 'sss' 'sss' 'sss' 'sss' 'sss' 'sss' 'ss' 's' 's' 'u'
+        Total: 32 values (7u + 2u + 6*3s + 2s + 2s + 1u = 32)
+
         Args:
             raw_values: List of 32 uint16 values from 'd' command
 
@@ -122,49 +125,68 @@ class StatusData:
             logger.warning(f"Incomplete status data: {len(raw_values)}/32 values")
             return data
 
-        # Parse fields (order from 'd' command documentation)
+        # Parse fields (exact mapping from o323BGCTool_v240.pl lines 6207-6243)
+        # Positions 0-6: unsigned status fields
         data.state = raw_values[0]
         data.state_name = STATE_NAMES.get(data.state, f"UNKNOWN({data.state})")
         data.status = raw_values[1]
         data.status2 = raw_values[2]
-        data.i2c_errors = raw_values[3]
-        data.lipo_voltage = raw_values[4]
-        data.cycle_time = raw_values[5]
+        # Position 3: Status3 (not used in our display)
+        # Position 4: Performance (not used in our display)
+        # Position 5: Error count
+        data.i2c_errors = raw_values[5]
+        data.lipo_voltage = raw_values[6]  # Voltage in 0.1V units
 
-        # IMU1 gyro (values 6-8)
-        data.imu1_gx = StatusData._to_signed16(raw_values[6])
-        data.imu1_gy = StatusData._to_signed16(raw_values[7])
-        data.imu1_gz = StatusData._to_signed16(raw_values[8])
+        # Positions 7-8: unsigned timing fields
+        # Position 7: Millis (system uptime in milliseconds)
+        data.cycle_time = raw_values[8]  # Cycle time in microseconds
 
-        # IMU1 accelerometer (values 9-11)
-        data.imu1_ax = StatusData._to_signed16(raw_values[9])
-        data.imu1_ay = StatusData._to_signed16(raw_values[10])
-        data.imu1_az = StatusData._to_signed16(raw_values[11])
+        # Positions 9-11: Gyro data (Rx, Ry, Rz) - signed
+        data.imu1_gx = StatusData._to_signed16(raw_values[9])
+        data.imu1_gy = StatusData._to_signed16(raw_values[10])
+        data.imu1_gz = StatusData._to_signed16(raw_values[11])
 
-        # IMU1 angles (values 12-14)
+        # Positions 12-14: IMU1 angles (Pitch, Roll, Yaw) - signed
         data.imu1_angle_pitch = StatusData._to_signed16(raw_values[12])
         data.imu1_angle_roll = StatusData._to_signed16(raw_values[13])
         data.imu1_angle_yaw = StatusData._to_signed16(raw_values[14])
 
-        # IMU2 angles (values 15-17)
-        data.imu2_angle_pitch = StatusData._to_signed16(raw_values[15])
-        data.imu2_angle_roll = StatusData._to_signed16(raw_values[16])
-        data.imu2_angle_yaw = StatusData._to_signed16(raw_values[17])
+        # Positions 15-17: PID control outputs (PitchCntrl, RollCntrl, YawCntrl) - signed
+        data.pid_pitch = StatusData._to_signed16(raw_values[15])
+        data.pid_roll = StatusData._to_signed16(raw_values[16])
+        data.pid_yaw = StatusData._to_signed16(raw_values[17])
 
-        # AHRS rotation matrix (values 18-20)
-        data.ahrs_rx = StatusData._to_signed16(raw_values[18])
-        data.ahrs_ry = StatusData._to_signed16(raw_values[19])
-        data.ahrs_rz = StatusData._to_signed16(raw_values[20])
+        # Positions 18-20: RC inputs (PitchRcIn, RollRcIn, YawRcIn) - signed
+        data.input_pitch = StatusData._to_signed16(raw_values[18])
+        data.input_roll = StatusData._to_signed16(raw_values[19])
+        data.input_yaw = StatusData._to_signed16(raw_values[20])
 
-        # PID outputs (values 24-26)
-        data.pid_pitch = StatusData._to_signed16(raw_values[24])
-        data.pid_roll = StatusData._to_signed16(raw_values[25])
-        data.pid_yaw = StatusData._to_signed16(raw_values[26])
+        # Positions 21-23: IMU2 angles (Pitch2, Roll2, Yaw2) - signed
+        data.imu2_angle_pitch = StatusData._to_signed16(raw_values[21])
+        data.imu2_angle_roll = StatusData._to_signed16(raw_values[22])
+        data.imu2_angle_yaw = StatusData._to_signed16(raw_values[23])
 
-        # Input commands (values 27-29)
-        data.input_pitch = raw_values[27]
-        data.input_roll = raw_values[28]
-        data.input_yaw = raw_values[29]
+        # Positions 24-26: Encoder values (PitchEncoder, RollEncoder, YawEncoder) - signed
+        # Not currently displayed, but available if needed
+
+        # Positions 27-28: Link data (Link1, Link2) - signed
+        # These were old magnetometer data, not currently used
+
+        # Position 29-30: Unknown
+
+        # Position 31: FunctionsIn - unsigned
+        # Not currently displayed
+
+        # Note: There is NO accelerometer data in the 'd' command
+        # Set accelerometer fields to 0 (not available)
+        data.imu1_ax = 0
+        data.imu1_ay = 0
+        data.imu1_az = 0
+
+        # AHRS data not available in 'd' command
+        data.ahrs_rx = 0
+        data.ahrs_ry = 0
+        data.ahrs_rz = 0
 
         # Parse status flags
         data.status_flags = StatusData._parse_status_flags(data.status)
