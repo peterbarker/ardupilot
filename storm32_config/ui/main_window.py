@@ -21,6 +21,7 @@ try:
     from .dashboard_widget import DashboardWidget
     from .pid_widget import PIDWidget
     from .gimbal_config_widget import GimbalConfigWidget
+    from .setup_widget import SetupWidget
 except ImportError:
     import sys
     from pathlib import Path
@@ -31,6 +32,7 @@ except ImportError:
     from ui.dashboard_widget import DashboardWidget  # noqa: E402
     from ui.pid_widget import PIDWidget  # noqa: E402
     from ui.gimbal_config_widget import GimbalConfigWidget  # noqa: E402
+    from ui.setup_widget import SetupWidget  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -141,8 +143,11 @@ class MainWindow(QMainWindow):
         self.gimbal_config_widget = GimbalConfigWidget()
         self.tabs.addTab(self.gimbal_config_widget, "Gimbal Config")
 
+        # Create Setup tab
+        self.setup_widget = SetupWidget()
+        self.tabs.addTab(self.setup_widget, "Setup")
+
         # Placeholder tabs (to be implemented in future phases)
-        self.tabs.addTab(QLabel("Setup configuration coming soon..."), "Setup")
         self.tabs.addTab(QLabel("Parameters coming soon..."), "Parameters")
 
         layout.addWidget(self.tabs)
@@ -217,6 +222,7 @@ class MainWindow(QMainWindow):
                 # Pass parameter manager to widgets
                 self.pid_widget.set_parameter_manager(self.parameter_manager)
                 self.gimbal_config_widget.set_parameter_manager(self.parameter_manager)
+                self.setup_widget.set_parameter_manager(self.parameter_manager)
 
                 # Create and start status monitor
                 self.status_monitor = StatusMonitor(self.protocol, update_rate)
