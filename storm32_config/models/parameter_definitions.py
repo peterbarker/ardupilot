@@ -2368,3 +2368,13 @@ def get_parameters_by_page(page: str) -> List[Dict[str, Any]]:
 def get_all_parameters() -> List[Dict[str, Any]]:
     """Get all parameter definitions."""
     return PARAMETERS.copy()
+
+
+def get_parameter_pages() -> List[str]:
+    """Get all unique page names from parameters."""
+    pages = set()
+    for param in PARAMETERS:
+        page = param.get('page', '')
+        if page:
+            pages.add(page)
+    return sorted(list(pages))
