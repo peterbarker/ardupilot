@@ -104,7 +104,7 @@ void AP_Mount_Siyi::update()
 
     // update based on mount mode
     update_mnt_target();
-
+    
     // send target angles or rates depending on the target type
     send_target_to_gimbal();
 }

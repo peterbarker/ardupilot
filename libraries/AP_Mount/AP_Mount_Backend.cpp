@@ -153,6 +153,29 @@ void AP_Mount_Backend::update_mnt_target_from_rc_target()
     }
 }
 
+// called for stabilized mounts which use roll and pitch angle targets that are earth frame
+// to remove vehicle lean angle if pitch or roll is not locked, ie convert to actual body frame
+void AP_Mount_Backend::adjust_mnt_target_if_RP_locked()
+{
+     // retrieve lean angles from ahrs
+    const AP_AHRS &ahrs = AP::ahrs(); 
+    Vector2f ahrs_angle_rad = {ahrs.get_roll_rad(), ahrs.get_pitch_rad()};
+
+    // rotate ahrs roll and pitch angles to gimbal yaw
+    if (has_pan_control()) {
+        const float yaw_bf_rad = constrain_float(mnt_target.angle_rad.get_bf_yaw(), radians(_params.yaw_angle_min), radians(_params.yaw_angle_max));
+        ahrs_angle_rad.rotate(yaw_bf_rad);
+    }
+    
+    // remove roll and pitch lean angle to correct to body frame
+    if (!mnt_target.angle_rad.roll_is_ef){
+        mnt_target.angle_rad.roll += ahrs_angle_rad.x;
+    }
+    if (!mnt_target.angle_rad.pitch_is_ef){
+        mnt_target.angle_rad.pitch += ahrs_angle_rad.y;
+    } 
+}
+
 // set angle target in degrees
 // roll and pitch are in earth-frame
 // yaw_is_earth_frame (aka yaw_lock) should be true if yaw angle is earth-frame, false if body-frame

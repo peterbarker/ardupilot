@@ -302,6 +302,9 @@ protected:
 
     // called when mount mode is RC-targetting, updates the mnt_target object from RC inputs:
     void update_mnt_target_from_rc_target();
+    
+    //called to remove lean angle in roll/pitch mount angle to convert to bodyframe
+    void adjust_mnt_target_if_RP_locked();
 
     // method for the mount backends to call to update mnt_target based on
     // the mount mode.  Methods in here may be overridden by the derived
