@@ -23,8 +23,6 @@ void AP_Mount_SToRM32::update()
     }
 
     AP_Mount_Backend::update_mnt_target();
-    
-    AP_Mount_Backend::adjust_mnt_target_if_RP_locked();
 
     // send target angles (which may be derived from other target types)
     AP_Mount_Backend::send_target_to_gimbal();

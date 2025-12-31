@@ -40,6 +40,9 @@ private:
         return NATIVE_ANGLES_ONLY;
     };
 
+    bool apply_bf_roll_pitch_adjustments_in_rc_targetting() const override {
+        return true;
+    }
     // send_do_mount_control with latest angle targets
     void send_target_angles(const MountAngleTarget& angle_target_rad) override;
 

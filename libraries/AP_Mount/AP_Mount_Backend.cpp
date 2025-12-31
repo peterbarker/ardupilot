@@ -942,6 +942,14 @@ bool AP_Mount_Backend::get_angle_target_to_sysid(MountAngleTarget& angle_rad) co
 // class to customise behaviour
 void AP_Mount_Backend::update_mnt_target()
 {
+    _update_mnt_target();
+    if (apply_bf_roll_pitch_adjustments_in_rc_targetting()) {
+        adjust_mnt_target_if_RP_locked();
+    }
+}
+
+void AP_Mount_Backend::_update_mnt_target()
+{
     // change to RC_TARGETING mode if RC input has changed
     set_rctargeting_on_rcinput_change();
 

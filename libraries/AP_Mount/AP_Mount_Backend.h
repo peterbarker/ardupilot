@@ -311,6 +311,17 @@ protected:
     // class to customise behaviour
     void update_mnt_target();
 
+    // if this function returns true, then when roll and pitch have
+    // been locked to body frame (e.g. the user is using a switch to
+    // lock the gimbal to body frame) we add in the vehicle's roll and
+    // pitch to the target angles to position the gimbal in body
+    // frame.  This is used on cameras which do not have the option to
+    // move in body frame themselves (e.g. SToRM32 in its normal
+    // configuration)
+    bool apply_bf_roll_pitch_adjustments_in_rc_targetting() const {
+        return false;
+    }
+
     // returns true if user has configured a valid roll angle range
     // allows user to disable roll even on 3-axis gimbal
     bool roll_range_valid() const { return (_params.roll_angle_min < _params.roll_angle_max); }
