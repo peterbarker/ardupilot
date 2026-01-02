@@ -1073,7 +1073,7 @@ void AP_AHRS::get_relative_position_D_home(float &posD) const
         const auto &gps = AP::gps();
         if (_gps_use == GPSUse::EnableWithHeight &&
             gps.status() >= AP_GPS_FixType::FIX_3D) {
-            posD = (_home.alt - gps.location().alt) * 0.01;
+            posD = (_home.alt *0.01 - gps.location().get_alt_m());
             return;
         }
 #endif
@@ -1745,19 +1745,21 @@ bool AP_AHRS::_get_origin(Location &ret) const
 
 bool AP_AHRS::set_home(const Location &loc, bool lock)
 {
+    AbsAltLocation absloc;
+    if (!absloc.from(loc)) {
+        return false;
+    }
+    return set_home(absloc, lock);
+}
+
+bool AP_AHRS::set_home(const AbsAltLocation &loc, bool lock)
+{
     WITH_SEMAPHORE(_rsem);
     // check location is valid
     if (!loc.initialised()) {
         return false;
     }
     if (!loc.check_latlng()) {
-        return false;
-    }
-    // home must always be global frame at the moment as .alt is
-    // accessed directly by the vehicles and they may not be rigorous
-    // in checking the frame type.
-    Location tmp = loc;
-    if (!tmp.change_alt_frame(Location::AltFrame::ABSOLUTE)) {
         return false;
     }
 
@@ -1768,7 +1770,9 @@ bool AP_AHRS::set_home(const Location &loc, bool lock)
     }
 #endif
 
-    _home = tmp;
+    _home.lat = loc.lat;
+    _home.lng = loc.lng;
+    _home.alt = loc.get_alt_cm();
     _home_is_set = true;
 
     // lock home position
@@ -1787,7 +1791,7 @@ bool AP_AHRS::set_home(const Location &loc, bool lock)
     AP_HAL::Util::PersistentData &pd = hal.util->persistent_data;
     pd.home_lat = loc.lat;
     pd.home_lon = loc.lng;
-    pd.home_alt_cm = loc.alt;
+    pd.home_alt_cm = loc.get_alt_cm();
 
 #if AP_MISSION_ENABLED
     // Save home to mission

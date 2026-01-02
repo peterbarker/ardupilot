@@ -1241,7 +1241,7 @@ bool AP_AHRS_DCM::get_location(Location &loc) const
     int32_t alt_cm;
     if (_gps_use == GPSUse::EnableWithHeight &&
         gps.status() >= AP_GPS_FixType::FIX_3D) {
-        alt_cm = gps.location().alt;
+        alt_cm = gps.location().get_alt_cm();
     } else {
         alt_cm = baro.get_altitude() * 100 + AP::ahrs().get_home().alt;
     }
