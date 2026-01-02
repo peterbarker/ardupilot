@@ -137,7 +137,7 @@ singleton AP_GPS enum NO_GPS NO_FIX GPS_OK_FIX_2D GPS_OK_FIX_3D GPS_OK_FIX_3D_DG
 singleton AP_GPS method num_sensors uint8_t
 singleton AP_GPS method primary_sensor uint8_t
 singleton AP_GPS method status uint8_t uint8_t 0 ud->num_sensors()
-singleton AP_GPS method location Location uint8_t 0 ud->num_sensors()
+singleton AP_GPS method location AbsAltLocation uint8_t 0 ud->num_sensors()
 singleton AP_GPS method speed_accuracy boolean uint8_t 0 ud->num_sensors() float'Null
 singleton AP_GPS method horizontal_accuracy boolean uint8_t 0 ud->num_sensors() float'Null
 singleton AP_GPS method vertical_accuracy boolean uint8_t 0 ud->num_sensors() float'Null
@@ -157,6 +157,28 @@ singleton AP_GPS method first_unconfigured_gps boolean uint8_t'Null
 singleton AP_GPS method gps_yaw_deg boolean uint8_t 0 ud->num_sensors() float'Null float'Null uint32_t'Null
 singleton AP_GPS method time_epoch_usec uint64_t uint8_t 0 ud->num_sensors()
 singleton AP_GPS manual inject_data lua_gps_inject_data 1 0
+
+userdata AbsAltLocation field lat int32_t read write -900000000 900000000
+userdata AbsAltLocation field lng int32_t read write -1800000000 1800000000
+
+userdata AbsAltLocation method get_distance float AbsAltLocation
+userdata AbsAltLocation method offset void float'skip_check float'skip_check
+userdata AbsAltLocation method offset_bearing void float'skip_check float'skip_check
+userdata AbsAltLocation method offset_bearing_and_pitch void float'skip_check float'skip_check float'skip_check
+userdata AbsAltLocation method get_vector_from_origin_NEU_m boolean Vector3f'Null
+userdata AbsAltLocation method get_vector_from_origin_NEU_m depends AP_AHRS_ENABLED
+userdata AbsAltLocation method get_vector_from_origin_NEU_cm boolean Vector3f'Null
+userdata AbsAltLocation method get_vector_from_origin_NEU_cm depends AP_AHRS_ENABLED
+userdata AbsAltLocation method get_vector_from_origin_NEU boolean Vector3f'Null
+userdata AbsAltLocation method get_vector_from_origin_NEU depends AP_AHRS_ENABLED
+userdata AbsAltLocation method get_vector_from_origin_NEU deprecate Use get_vector_from_origin_NEU_cm or get_vector_from_origin_NEU_m
+-- location in absolute frame, never nil:
+userdata AbsAltLocation method get_alt_m float
+-- location in specific frame, may return nil:
+userdata AbsAltLocation method get_bearing float AbsAltLocation
+userdata AbsAltLocation method get_distance_NED Vector3f AbsAltLocation
+userdata AbsAltLocation method get_distance_NE Vector2f AbsAltLocation
+userdata AbsAltLocation method copy AbsAltLocation
 
 include AP_Math/AP_Math.h
 
