@@ -747,7 +747,7 @@ bool AP_Arming::gps_checks(bool report)
 
         // check AHRS and GPS are within 10m of each other
         if (gps.num_sensors() > 0) {
-            const Location gps_loc = gps.location();
+            const AbsAltLocation gps_loc = gps.location();
             Location ahrs_loc;
             if (AP::ahrs().get_location(ahrs_loc)) {
                 const float distance = gps_loc.get_distance(ahrs_loc);
