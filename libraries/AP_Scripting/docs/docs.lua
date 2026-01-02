@@ -1220,6 +1220,98 @@ function Location_ud:offset(ofs_north, ofs_east) end
 ---@return number -- horizontal distance in meters
 function Location_ud:get_distance(loc) end
 
+-- AbsAltLocation is a userdata object that holds a location whose altitude is always absolute (above mean sea level).
+-- Use to_location() to get a Location_ud for methods which take a Location_ud.
+---@class (exact) AbsAltLocation_ud
+local AbsAltLocation_ud = {}
+
+-- Create AbsAltLocation object
+---@return AbsAltLocation_ud
+function AbsAltLocation() end
+
+-- Copy this location returning a new userdata object
+---@return AbsAltLocation_ud -- a copy of this location
+function AbsAltLocation_ud:copy() end
+
+-- Return a Location_ud with this location and its altitude in the absolute frame
+---@return Location_ud
+function AbsAltLocation_ud:to_location() end
+
+-- get absolute altitude in cm
+---@return integer -- altitude above mean sea level in cm
+function AbsAltLocation_ud:alt() end
+
+-- get absolute altitude in metres
+---@return number -- altitude above mean sea level in metres
+function AbsAltLocation_ud:get_alt_m() end
+
+-- get longitude in degrees * 1e7
+---@return integer -- longitude in degrees * 1e7
+function AbsAltLocation_ud:lng() end
+
+-- set longitude in degrees * 1e7
+---@param value integer -- longitude in degrees * 1e7
+function AbsAltLocation_ud:lng(value) end
+
+-- get latitude in degrees * 1e7
+---@return integer -- latitude in degrees * 1e7
+function AbsAltLocation_ud:lat() end
+
+-- set latitude in degrees * 1e7
+---@param value integer -- latitude in degrees * 1e7
+function AbsAltLocation_ud:lat(value) end
+
+-- Given an AbsAltLocation this calculates the north and east distance between the two locations in meters.
+---@param loc AbsAltLocation_ud -- location to compare with
+---@return Vector2f_ud -- North east distance vector in meters
+function AbsAltLocation_ud:get_distance_NE(loc) end
+
+-- Given an AbsAltLocation this calculates the north, east and down distance between the two locations in meters.
+---@param loc AbsAltLocation_ud -- location to compare with
+---@return Vector3f_ud -- North east down distance vector in meters
+function AbsAltLocation_ud:get_distance_NED(loc) end
+
+-- Given an AbsAltLocation this calculates the relative bearing to the location in radians
+---@param loc AbsAltLocation_ud -- location to compare with
+---@return number -- bearing in radians
+function AbsAltLocation_ud:get_bearing(loc) end
+
+-- Returns the offset from the EKF origin to this location (in cm)
+-- Returns nil if the EKF origin wasn’t available at the time this was called.
+---@return Vector3f_ud|nil -- Vector between origin and location north east up in cm
+function AbsAltLocation_ud:get_vector_from_origin_NEU_cm() end
+
+-- Returns the offset from the EKF origin to this location (in metres).
+-- Returns nil if the EKF origin wasn’t available at the time this was called.
+---@return Vector3f_ud|nil -- Vector between origin and location north east up in meters
+function AbsAltLocation_ud:get_vector_from_origin_NEU_m() end
+
+--- Deprecated method returning offset from EKF origin
+---@return Vector3f_ud|nil -- Vector between origin and location north east up in centimetres
+---@deprecated -- Use get_vector_from_origin_NEU_cm or get_vector_from_origin_NEU_m
+function AbsAltLocation_ud:get_vector_from_origin_NEU() end
+
+-- Translates this AbsAltLocation by the specified  distance given a bearing.
+---@param bearing_deg number -- bearing in degrees
+---@param distance number -- distance in meters
+function AbsAltLocation_ud:offset_bearing(bearing_deg, distance) end
+
+-- Translates this AbsAltLocation by the specified distance given a bearing and pitch.
+---@param bearing_deg number -- bearing in degrees
+---@param pitch_deg number -- pitch in degrees
+---@param distance number -- distance in meters
+function AbsAltLocation_ud:offset_bearing_and_pitch(bearing_deg, pitch_deg, distance) end
+
+-- Translates this AbsAltLocation by the specified north and east distance in meters.
+---@param ofs_north number -- north offset in meters
+---@param ofs_east number -- east offset in meters
+function AbsAltLocation_ud:offset(ofs_north, ofs_east) end
+
+-- Given an AbsAltLocation this calculates the horizontal distance between the two locations in meters.
+---@param loc AbsAltLocation_ud -- location to compare with
+---@return number -- horizontal distance in meters
+function AbsAltLocation_ud:get_distance(loc) end
+
 -- desc
 ---@class (exact) AP_EFI_Backend_ud
 local AP_EFI_Backend_ud = {}
@@ -3568,9 +3660,9 @@ function gps:horizontal_accuracy(instance) end
 ---@return number|nil -- 3D velocity RMS accuracy estimate in m/s if available
 function gps:speed_accuracy(instance) end
 
--- eturns a Location userdata for the last GPS position. You must check the status to know if the location is still current, if it is NO_GPS, or NO_FIX then it will be returning old data.
+-- Returns an AbsAltLocation userdata for the last GPS position. You must check the status to know if the location is still current, if it is NO_GPS, or NO_FIX then it will be returning old data.
 ---@param instance integer -- instance number
----@return Location_ud --gps location
+---@return AbsAltLocation_ud --gps location
 function gps:location(instance) end
 
 -- Returns the GPS fix status. Compare this to one of the GPS fix types.
