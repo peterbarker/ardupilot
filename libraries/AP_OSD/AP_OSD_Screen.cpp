@@ -2194,7 +2194,7 @@ void AP_OSD_Screen::draw_rc_lq(uint8_t x, uint8_t y)
 void AP_OSD_Screen::draw_gps_latitude(uint8_t x, uint8_t y)
 {
     AP_GPS & gps = AP::gps();
-    const Location &loc = gps.location();   // loc.lat and loc.lng
+    const AbsAltLocation &loc = gps.location();   // loc.lat and loc.lng
     int32_t dec_portion, frac_portion;
     int32_t abs_lat = labs(loc.lat);
 
@@ -2207,7 +2207,7 @@ void AP_OSD_Screen::draw_gps_latitude(uint8_t x, uint8_t y)
 void AP_OSD_Screen::draw_gps_longitude(uint8_t x, uint8_t y)
 {
     AP_GPS & gps = AP::gps();
-    const Location &loc = gps.location();   // loc.lat and loc.lng
+    const AbsAltLocation &loc = gps.location();   // loc.lat and loc.lng
     int32_t dec_portion, frac_portion;
     int32_t abs_lon = labs(loc.lng);
 
@@ -2445,7 +2445,7 @@ void AP_OSD_Screen::draw_clk(uint8_t x, uint8_t y)
 void AP_OSD_Screen::draw_pluscode(uint8_t x, uint8_t y)
 {
     AP_GPS & gps = AP::gps();
-    const Location &loc = gps.location();
+    const AbsAltLocation &loc = gps.location();
     char buff[16];
     if (gps.status() == AP_GPS::NO_GPS || gps.status() == AP_GPS::NO_FIX){
         backend->write(x, y, false, "--------+--");
