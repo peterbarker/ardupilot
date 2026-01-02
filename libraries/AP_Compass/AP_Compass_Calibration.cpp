@@ -509,14 +509,17 @@ bool Compass::mag_cal_fixed_yaw(float yaw_deg, uint8_t compass_mask,
 {
     _reset_compass_id();
     if (is_zero(lat_deg) && is_zero(lon_deg)) {
-        Location loc;
+        AbsAltLocation loc;
+        Location ahrs_loc;
         // get AHRS position. If unavailable then try GPS location
-        if (!AP::ahrs().get_location(loc)) {
+        if (!AP::ahrs().get_location(ahrs_loc)) {
             if (AP::gps().status() < AP_GPS::GPS_OK_FIX_3D) {
                 GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "Mag: no position available");
                 return false;
             }
             loc = AP::gps().location();
+        } else {
+            loc.from(ahrs_loc);
         }
         lat_deg = loc.lat * 1.0e-7;
         lon_deg = loc.lng * 1.0e-7;
