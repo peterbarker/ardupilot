@@ -140,8 +140,7 @@ bool Plane::update_home()
             // altitude or we can end up perpetuating a bias in
             // altitude, as AHRS alt depends on home alt, which means
             // we would have a circular dependency
-            loc.set_alt_cm(gps.location().alt,
-                           Location::AltFrame::ABSOLUTE);
+            loc.set_alt_cm(gps.location().get_alt_cm(), Location::AltFrame::ABSOLUTE);
             ret = AP::ahrs().set_home(loc);
         }
     }
@@ -156,7 +155,7 @@ bool Plane::update_home()
     return ret;
 }
 
-bool Plane::set_home_persistently(const Location &loc)
+bool Plane::set_home_persistently(const AbsAltLocation &loc)
 {
     if (hal.util->was_watchdog_armed()) {
         return false;
