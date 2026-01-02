@@ -12594,15 +12594,29 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                 customisations=[
                     '--serial0=mcast:',
                     "-I1",  # instance 1
+                    '--serial1', 'tcp:2',
                     "--serial5=tcp:%u" % crsf_port,  # listen for CRSF connection
                 ],
                 param_defaults={
                     "SYSID_THISMAV": 2,
+                    "SERIAL1_PROTOCOL": 2,
                     "SERIAL5_PROTOCOL": 23,
+                    "RC_PROTOCOL": 512,
                     "SIM_SPEEDUP": self.speedup,
                 },
             )
             self.expect_list_add(tx_sitl)
+            self.progress("Connect to the serial port on the server, which should be talking mavlink")
+            self.drain_mav()
+            mav2 = mavutil.mavlink_connection(
+                "tcp:localhost:5772",
+                robust_parsing=True,
+                source_system=9,
+                source_component=9,
+            )
+            self.assert_receive_message("HEARTBEAT", mav=mav2, very_verbose=True, timeout=5)
+            self.drain_mav()
+
             self.progress("TX vehicle started and listening on port %u" % crsf_port)
 
             # Now configure the main vehicle (RX) to connect to TX
@@ -12627,7 +12641,29 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
             # On the RX side, verify we're receiving RC channels
             self.progress("Checking RX vehicle receives RC channels")
-            m = rx_sitl.assert_receive_message('RC_CHANNELS', timeout=10)
+
+            while True:
+                m = mav2.recv_match(type='SYSTEM_TIME', blocking=True, timeout=0.1)
+                if m is None:
+                    continue
+                tstart = m.time_boot_ms * 1.0e-3
+                break
+
+            timeout = 60
+
+            while True:
+                m = mav2.recv_match(type='SYSTEM_TIME', blocking=True, timeout=0.1)
+                now = m.time_boot_ms * 1.0e-3
+                if now - tstart > timeout:
+                    raise NotAchievedException("Did not get all messages")
+                m = mav2.recv_match(type="STATUSTEXT",
+                                        blocking=True,
+                                        timeout=1)
+                if m is None:
+                    continue
+                self.progress("Got (%s)" % str(m))
+
+            m = self.assert_receive_message('RC_CHANNELS', mav=mav2, timeout=10)
             self.progress("Received RC_CHANNELS: chan1=%u chan2=%u chan3=%u" %
                           (m.chan1_raw, m.chan2_raw, m.chan3_raw))
 
