@@ -104,10 +104,10 @@ bool Tracker::get_home_eeprom(Location &loc) const
     return true;
 }
 
-bool Tracker::set_home_eeprom(const Location &temp)
+bool Tracker::set_home_eeprom(const AbsAltLocation &temp)
 {
     wp_storage.write_byte(0, 0);
-    wp_storage.write_uint32(1, temp.alt);
+    wp_storage.write_uint32(1, temp.get_alt_cm());
     wp_storage.write_uint32(5, temp.lat);
     wp_storage.write_uint32(9, temp.lng);
 
@@ -123,6 +123,15 @@ bool Tracker::set_home_to_current_location(bool lock)
 
 bool Tracker::set_home(const Location &temp, bool lock)
 {
+    AbsAltLocation absloc;
+    if (!absloc.from(temp)) {
+        return false;
+    }
+    return set_home(absloc, lock);
+}
+
+bool Tracker::set_home(const AbsAltLocation &temp, bool lock)
+{
     // check EKF origin has been set
     Location ekf_origin;
     if (ahrs.get_origin(ekf_origin)) {
@@ -135,7 +144,9 @@ bool Tracker::set_home(const Location &temp, bool lock)
         return false;
     }
 
-    current_loc = temp;
+    current_loc.lat = temp.lat;
+    current_loc.lng = temp.lng;
+    current_loc.alt = temp.get_alt_cm();
 
     return true;
 }

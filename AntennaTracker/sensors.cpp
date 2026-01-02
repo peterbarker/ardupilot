@@ -41,7 +41,10 @@ void Tracker::update_GPS(void)
             } else {
                 // Now have an initial GPS position
                 // use it as the HOME position in future startups
-                current_loc = gps.location();
+                const auto &tmp = gps.location();
+                current_loc.lat = tmp.lat;
+                current_loc.lng = tmp.lng;
+                current_loc.alt = tmp.get_alt_cm();
                 IGNORE_RETURN(set_home(current_loc, false));
                 ground_start_count = 0;
             }
