@@ -567,6 +567,7 @@ public:
     // when the vehicle is at this position. It is assumed that the
     // current barometer and GPS altitudes correspond to this altitude
     bool set_home(const Location &loc) WARN_IF_UNUSED;
+    bool set_home(const AbsAltLocation &loc) WARN_IF_UNUSED;
 
     /*
      * Attitude-related public methods and attributes:
