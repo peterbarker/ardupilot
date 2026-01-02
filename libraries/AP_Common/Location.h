@@ -7,6 +7,7 @@
 class Location
 {
 public:
+    friend class AbsAltLocation;
 
     uint8_t relative_alt : 1;           // 1 if altitude is relative to home
     uint8_t loiter_ccw   : 1;           // 0 if clockwise, 1 if counter clockwise
@@ -217,4 +218,70 @@ private:
     static constexpr float LOCATION_SCALING_FACTOR = LATLON_TO_M;
     // inverse of LOCATION_SCALING_FACTOR
     static constexpr float LOCATION_SCALING_FACTOR_INV = LATLON_TO_M_INV;
+};
+
+// a Location object, but the stored altitude is always in AltFrame::ABSOLUTE:
+class AbsAltLocation : private Location {
+public:
+    // make various fields and methods from Location available:
+    using Location::lat;
+    using Location::lng;
+
+    using Location::initialised;
+    using Location::check_latlng;
+
+    using Location::get_alt_cm;
+    using Location::get_alt_m;
+
+    using Location::offset;
+    using Location::offset_bearing;
+    using Location::offset_bearing_and_pitch;
+    using Location::offset_up_cm;
+
+    using Location::get_vector_from_origin_NEU;
+    using Location::get_vector_from_origin_NEU_cm;
+    using Location::get_vector_from_origin_NEU_m;
+
+    // pass through various methods to Location.  These must all be
+    // safe - the parent class knows how to handle locations with a
+    // frame of AltFrame::ABSOLUTE, which is all that loc2 here is:
+    ftype get_distance(const Location &loc2) const {
+        return Location::get_distance(loc2);
+    }
+    ftype get_distance(const AbsAltLocation &loc2) const {
+        return Location::get_distance(Location(loc2));
+    }
+    Vector2f get_distance_NE(const AbsAltLocation &loc2) const {
+        return Location::get_distance_NE(Location(loc2));
+    }
+    Vector3f get_distance_NED(const AbsAltLocation &loc2) const {
+        return Location::get_distance_NED(Location(loc2));
+    }
+    ftype get_bearing(const AbsAltLocation &loc2) const {
+        return Location::get_bearing(Location(loc2));
+    }
+    // only allow copying from other AbsAltLocation objects:
+    void copy_alt_from(AbsAltLocation otherlocation) {
+        Location::copy_alt_from(otherlocation);
+    };
+
+    // constructors that don't take frame:
+    AbsAltLocation() { }  // all fields zero by default (assumes ABSOLUTE is zero)
+    AbsAltLocation(int32_t latitude, int32_t longitude, int32_t alt_in_cm) :
+        Location(latitude, longitude, alt_in_cm, Location::AltFrame::ABSOLUTE)
+        { }
+    // method to create an AbsAltLocation from a Location:
+    bool from(const Location &loc);
+
+    // accessor methods that don't need to be checked for success:
+    int32_t get_alt_mm() const { return alt * 10; }
+    int32_t get_alt_cm() const { return alt; }
+    float get_alt_m() const { return alt * 0.01; }
+
+    // setter methods that don't need a frame:
+    void set_alt_cm(int32_t alt_cm) { alt = alt_cm; }
+    void set_alt_m(float alt_m) { alt = alt_m * 100; }
+    void set_alt_mm(float alt_mm) { alt = alt_mm * 10; }
+
+
 };
