@@ -1150,7 +1150,7 @@ bool AP_Baro::arming_checks(size_t buflen, char *buffer) const
      */
     const auto &gps = AP::gps();
     if (_alt_error_max > 0 && gps.status() >= AP_GPS_FixType::FIX_3D) {
-        const float alt_amsl = gps.location().alt*0.01;
+        const float alt_amsl = gps.location().get_alt_m();
         // note the addition of _field_elevation_active as this is subtracted in get_altitude_difference()
         const float alt_pressure = get_altitude_difference(SSL_AIR_PRESSURE, get_pressure());
         const float error = fabsf(alt_amsl - alt_pressure);
