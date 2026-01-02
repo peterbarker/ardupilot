@@ -522,8 +522,8 @@ uint32_t AP_Frsky_SPort_Passthrough::calc_gps_status(void)
         gps_status |= (((uint8_t)gps.status() > GPS_STATUS_LIMIT) ? (uint8_t)gps.status()-GPS_STATUS_LIMIT : 0)<<GPS_ADVSTATUS_OFFSET;
     }
     // Altitude MSL in dm
-    const Location &loc = gps.location();
-    gps_status |= prep_number(roundf(loc.alt * 0.1f),2,2)<<GPS_ALTMSL_OFFSET;
+    const AbsAltLocation &loc = gps.location();
+    gps_status |= prep_number(roundf(loc.get_alt_cm() * 0.1f),2,2)<<GPS_ALTMSL_OFFSET;
     return gps_status;
 }
 
