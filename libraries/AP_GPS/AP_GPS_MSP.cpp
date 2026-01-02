@@ -46,8 +46,7 @@ void AP_GPS_MSP::handle_msp(const MSP::msp_gps_data_message_t &pkt)
     state.location = {
         pkt.latitude,
         pkt.longitude,
-        pkt.msl_altitude,
-        Location::AltFrame::ABSOLUTE
+        pkt.msl_altitude
     };
     state.hdop = pkt.hdop;
     state.vdop = GPS_UNKNOWN_DOP;
