@@ -237,7 +237,7 @@ void AP_Hott_Telem::send_GPS(void)
     } msg {};
 
     AP_GPS &gps = AP::gps();
-    Location loc;
+    AbsAltLocation loc;
 
     {
         WITH_SEMAPHORE(gps.get_semaphore());
