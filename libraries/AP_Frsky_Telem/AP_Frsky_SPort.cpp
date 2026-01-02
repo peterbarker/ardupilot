@@ -175,7 +175,7 @@ void AP_Frsky_SPort::send(void)
  */
 uint32_t AP_Frsky_SPort::calc_gps_latlng(bool &send_latitude)
 {
-    const Location &loc = AP::gps().location(0); // use the first gps instance (same as in send_mavlink_gps_raw)
+    const AbsAltLocation &loc = AP::gps().location(0); // use the first gps instance (same as in send_mavlink_gps_raw)
 
     // alternate between latitude and longitude
     if (send_latitude == true) {
