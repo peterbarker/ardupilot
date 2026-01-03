@@ -12569,6 +12569,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
     def CRSFOutTwoVehicle(self):
         '''Test CRSF output between two vehicles'''
         self.context_push()
+        self.speedup = 1
         ex = None
         tx_sitl = None
         try:
@@ -12590,6 +12591,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                 home=self.sitl_home(),
                 speedup=self.speedup,
                 defaults_filepath=self.defaults_filepath(),
+                gdb=self.gdb,
                 wipe=True,
                 customisations=[
                     '--serial0=mcast:',
@@ -12601,7 +12603,6 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                     "SYSID_THISMAV": 2,
                     "SERIAL1_PROTOCOL": 2,
                     "SERIAL5_PROTOCOL": 23,
-                    "RC_PROTOCOL": 512,
                     "SIM_SPEEDUP": self.speedup,
                 },
             )
@@ -12645,6 +12646,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             while True:
                 m = mav2.recv_match(type='SYSTEM_TIME', blocking=True, timeout=0.1)
                 if m is None:
+                    self.drain_mav()
                     continue
                 tstart = m.time_boot_ms * 1.0e-3
                 break
@@ -12660,6 +12662,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                                         blocking=True,
                                         timeout=1)
                 if m is None:
+                    self.drain_mav()
                     continue
                 self.progress("Got (%s)" % str(m))
 
