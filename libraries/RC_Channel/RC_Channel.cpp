@@ -793,7 +793,10 @@ void RC_Channel::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos 
     case AUX_FUNC::RETRACT_MOUNT2:
     case AUX_FUNC::MOUNT_YAW_LOCK:
     case AUX_FUNC::MOUNT_RP_LOCK:
-#endif
+# if AP_MOUNT_POI_LOCK_ENABLED
+    case AUX_FUNC::MOUNT_POI_LOCK:
+#endif //AP_MOUNT_POI_LOCK_ENABLED
+#endif //HAL_MOUNT_ENABLED
 #if HAL_LOGGING_ENABLED
     case AUX_FUNC::LOG_PAUSE:
 #endif
@@ -915,7 +918,10 @@ const RC_Channel::LookupTable RC_Channel::lookuptable[] = {
 #if HAL_MOUNT_ENABLED
     { AUX_FUNC::MOUNT_YAW_LOCK, "Mount Yaw Lock"},
     { AUX_FUNC::MOUNT_RP_LOCK, "Mount Roll/Pitch Lock"},
-#endif
+#if AP_MOUNT_POI_LOCK_ENABLED
+    { AUX_FUNC::MOUNT_POI_LOCK, "Mount ROI Lock"},
+#endif //AP_MOUNT_ROI_LOCK_ENABLED
+#endif //HAL_MOUNT_ENABLED
 #if HAL_LOGGING_ENABLED
     { AUX_FUNC::LOG_PAUSE, "Pause Stream Logging"},
 #endif
@@ -1803,6 +1809,18 @@ bool RC_Channel::do_aux_function(const AuxFuncTrigger &trigger)
         mount->set_roll_lock(ch_flag == AuxSwitchPos::HIGH);
         break;
     }
+#if AP_MOUNT_POI_LOCK_ENABLED    
+   case AUX_FUNC::MOUNT_POI_LOCK: {
+        AP_Mount *mount = AP::mount();
+        if (mount == nullptr) {
+            break;
+        }
+        // high changes to GPS Targeting mode with entry GPS point; and other sw position change returns
+        // default targeting mode and clears the POI point
+        mount->set_poi_lock(ch_flag == AuxSwitchPos::HIGH);
+        break;
+    }
+#endif
 
     case AUX_FUNC::MOUNT_LRF_ENABLE: {
         AP_Mount *mount = AP::mount();

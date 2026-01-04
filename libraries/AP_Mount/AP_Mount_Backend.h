@@ -92,6 +92,10 @@ public:
     // set roll_lock used in RC_TARGETING mode.  If true, the gimbal's roll target is maintained in earth-frame meaning it will lock onto an earth-frame
     // If false (aka "follow") the gimbal's tilt is maintained in body-frame meaning it will roll with the vehicle
     void set_roll_lock(bool roll_lock) { _roll_lock = roll_lock; }
+    
+    // set poi_lock to switch to GPSTargeting mode using current GPS point in gimbal's view
+    void set_poi_lock(bool poi_lock);
+    bool poi_locked;
 
     // set angle target in degrees
     // roll and pitch are in earth-frame
@@ -382,7 +386,7 @@ private:
     // calculate the Location that the gimbal is pointing at
     void calculate_poi();
 #endif
-
+  
     bool _yaw_lock;                 // yaw_lock used in RC_TARGETING mode. True if the gimbal's yaw target is maintained in earth-frame, if false (aka "follow") it is maintained in body-frame
     
     float _yaw_lock_heading_rad;            // mount earth frame direction captured upon calling set_yaw_lock

@@ -222,6 +222,23 @@ void AP_Mount_Backend::set_roi_target(const Location &target_loc)
     }
 }
 
+#if AP_MOUNT_POI_LOCK_ENABLED
+// set poi_lock - switch to GPS Targeting mode using current gimbal view's GPS point as target
+// or clear target and return to default targeting mode
+void AP_Mount_Backend::set_poi_lock(bool poi_lock)
+{
+    if (poi_lock && !poi_locked) {
+        const Location target_location = poi_calculation.poi_loc;
+        set_roi_target(target_location);
+        poi_locked = true;
+    } else if (!poi_lock) {
+        poi_locked = false;
+        clear_roi_target();
+    }
+    
+}
+#endif
+
 // set yaw lock - sets the _yaw_lock variable and captures current earth frame heading of mount for targeting in RC Targeting mode
 void AP_Mount_Backend::set_yaw_lock(bool yaw_lock)
 {
