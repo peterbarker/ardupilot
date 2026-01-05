@@ -44,11 +44,19 @@ Examples:
 
   # Launch with verbose logging
   %(prog)s -v
+
+  # Auto-connect to gimbal
+  %(prog)s --port /dev/ttyUSB0
+  %(prog)s --port /dev/ttyUSB0 --baud 115200
         """
     )
 
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Enable verbose logging')
+    parser.add_argument('--port', type=str,
+                        help='Serial port to auto-connect on startup (e.g., /dev/ttyUSB0, COM3)')
+    parser.add_argument('--baud', type=int, default=115200,
+                        help='Baud rate for serial connection (default: 115200)')
 
     args = parser.parse_args()
 
@@ -63,8 +71,8 @@ Examples:
     app.setApplicationName("SToRM32 Configuration Tool")
     app.setOrganizationName("ArduPilot")
 
-    # Create and show main window
-    window = MainWindow()
+    # Create and show main window with auto-connect parameters
+    window = MainWindow(auto_connect_port=args.port, auto_connect_baud=args.baud)
     window.show()
 
     logger.info("GUI initialized")

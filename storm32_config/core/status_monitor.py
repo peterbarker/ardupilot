@@ -135,7 +135,7 @@ class StatusData:
         # Position 4: Performance (not used in our display)
         # Position 5: Error count
         data.i2c_errors = raw_values[5]
-        data.lipo_voltage = raw_values[6]  # Voltage in 0.01V units (divide by 100 for volts)
+        data.lipo_voltage = raw_values[6]  # Voltage in 0.001V units (millivolts, divide by 1000 for volts)
 
         # Positions 7-8: unsigned timing fields
         # Position 7: Millis (system uptime in milliseconds)
@@ -304,6 +304,12 @@ class StatusMonitor(QThread):
                 if protocol._serial and protocol._serial.in_waiting > 0:
                     response = protocol._serial.read(protocol._serial.in_waiting)
 
+                    # DEBUG: Log first response to see structure
+                    if consecutive_errors == 0 and hasattr(self, '_first_response_logged') is False:
+                        logger.info(f"DEBUG: First response length: {len(response)} bytes")
+                        logger.info(f"DEBUG: First 20 bytes (hex): {' '.join(f'{b:02x}' for b in response[:20])}")
+                        self._first_response_logged = True
+
                     # Parse response (should be 64 bytes + 2 byte CRC = 66 bytes)
                     if len(response) >= 64:
                         # Extract 32 uint16 values
@@ -313,6 +319,18 @@ class StatusMonitor(QThread):
                             if offset + 1 < len(response):
                                 value = int.from_bytes(response[offset:offset+2], 'little')
                                 values.append(value)
+
+                        # DEBUG: Log first few parsed values
+                        if len(values) >= 12 and hasattr(self, '_first_values_logged') is False:
+                            logger.info(f"DEBUG: First 12 parsed values: {values[:12]}")
+                            logger.info(f"DEBUG:   [0] State: {values[0]}")
+                            logger.info(f"DEBUG:   [6] Voltage: {values[6]} = {values[6]/100.0:.2f}V")
+                            logger.info(f"DEBUG:   [7] Millis: {values[7]}")
+                            logger.info(f"DEBUG:   [8] CycleTime: {values[8]}")
+                            logger.info(f"DEBUG:   [9] Gyro X: {values[9]}")
+                            logger.info(f"DEBUG:  [10] Gyro Y: {values[10]}")
+                            logger.info(f"DEBUG:  [11] Gyro Z: {values[11]}")
+                            self._first_values_logged = True
 
                         if len(values) == 32:
                             # Parse into StatusData

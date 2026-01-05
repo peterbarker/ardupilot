@@ -96,18 +96,18 @@ class DashboardWidget(QWidget):
 
         main_layout.addLayout(top_row)
 
-        # Middle row: IMU Data
-        imu_row = QHBoxLayout()
+        # Middle row: Sensor Data
+        sensor_row = QHBoxLayout()
 
-        # IMU1 group
+        # IMU1 group (rates and angles)
         imu1_group = self._create_imu1_group()
-        imu_row.addWidget(imu1_group)
+        sensor_row.addWidget(imu1_group)
 
-        # IMU2 group
+        # IMU2 group (angles only)
         imu2_group = self._create_imu2_group()
-        imu_row.addWidget(imu2_group)
+        sensor_row.addWidget(imu2_group)
 
-        main_layout.addLayout(imu_row)
+        main_layout.addLayout(sensor_row)
 
         # Bottom row: Control Data
         control_row = QHBoxLayout()
@@ -140,6 +140,7 @@ class DashboardWidget(QWidget):
         layout.addWidget(QLabel("Flags:"), 1, 0, Qt.AlignmentFlag.AlignTop)
         self.flags_label = QLabel("-")
         self.flags_label.setWordWrap(True)
+        self.flags_label.setTextFormat(Qt.TextFormat.RichText)  # Enable HTML rendering
         layout.addWidget(self.flags_label, 1, 1)
 
         # I2C Errors
@@ -157,53 +158,109 @@ class DashboardWidget(QWidget):
         return group
 
     def _create_power_group(self) -> QGroupBox:
-        """Create power/battery display group."""
-        group = QGroupBox("Power")
+        """Create system info and power display group."""
+        group = QGroupBox("System Info")
         layout = QGridLayout()
 
+        # Firmware Version
+        layout.addWidget(QLabel("Version:"), 0, 0)
+        self.version_label = QLabel("-")
+        layout.addWidget(self.version_label, 0, 1)
+
+        # Board Name
+        layout.addWidget(QLabel("Board:"), 1, 0)
+        self.board_label = QLabel("-")
+        layout.addWidget(self.board_label, 1, 1)
+
+        # Firmware Name
+        layout.addWidget(QLabel("Name:"), 2, 0)
+        self.name_label = QLabel("-")
+        layout.addWidget(self.name_label, 2, 1)
+
         # Battery Voltage
-        layout.addWidget(QLabel("Battery:"), 0, 0)
+        layout.addWidget(QLabel("Battery:"), 3, 0)
         self.battery_label = StatusLabel("-")
         self.battery_label.setStyleSheet("font-weight: bold; font-size: 14pt;")
-        layout.addWidget(self.battery_label, 0, 1)
+        layout.addWidget(self.battery_label, 3, 1)
 
         layout.setColumnStretch(1, 1)
         group.setLayout(layout)
         return group
 
     def _create_imu1_group(self) -> QGroupBox:
-        """Create IMU1 sensor data group."""
+        """Create IMU1 data group with rates and angles."""
         group = QGroupBox("IMU1 (Primary)")
         layout = QGridLayout()
 
-        # Gyroscope
-        layout.addWidget(QLabel("Gyro:"), 0, 0)
-        self.imu1_gyro_label = QLabel("-")
-        layout.addWidget(self.imu1_gyro_label, 0, 1)
+        # Header row
+        layout.addWidget(QLabel("<b>Axis</b>"), 0, 0)
+        layout.addWidget(QLabel("<b>Rate (°/s)</b>"), 0, 1, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(QLabel("<b>Angle (°)</b>"), 0, 2, Qt.AlignmentFlag.AlignCenter)
 
-        # Angles
-        layout.addWidget(QLabel("Angles:"), 1, 0)
-        self.imu1_angles_label = QLabel("-")
-        layout.addWidget(self.imu1_angles_label, 1, 1)
+        # Pitch row
+        layout.addWidget(QLabel("Pitch:"), 1, 0)
+        self.gyro_pitch_label = StatusLabel("-")
+        layout.addWidget(self.gyro_pitch_label, 1, 1)
+        self.imu1_pitch_label = StatusLabel("-")
+        layout.addWidget(self.imu1_pitch_label, 1, 2)
 
-        # Note about accelerometer data
-        note = QLabel("(Accel data not in status stream)")
-        note.setStyleSheet("color: gray; font-size: 8pt; font-style: italic;")
-        layout.addWidget(note, 2, 0, 1, 2)
+        # Roll row
+        layout.addWidget(QLabel("Roll:"), 2, 0)
+        self.gyro_roll_label = StatusLabel("-")
+        layout.addWidget(self.gyro_roll_label, 2, 1)
+        self.imu1_roll_label = StatusLabel("-")
+        layout.addWidget(self.imu1_roll_label, 2, 2)
+
+        # Yaw row
+        layout.addWidget(QLabel("Yaw:"), 3, 0)
+        self.gyro_yaw_label = StatusLabel("-")
+        layout.addWidget(self.gyro_yaw_label, 3, 1)
+        self.imu1_yaw_label = StatusLabel("-")
+        layout.addWidget(self.imu1_yaw_label, 3, 2)
+
+        # Status indicator
+        self.imu1_status_label = QLabel("Not calibrated")
+        self.imu1_status_label.setStyleSheet("color: orange; font-size: 8pt; font-style: italic;")
+        layout.addWidget(self.imu1_status_label, 4, 0, 1, 3, Qt.AlignmentFlag.AlignCenter)
 
         layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(2, 1)
         group.setLayout(layout)
         return group
 
     def _create_imu2_group(self) -> QGroupBox:
-        """Create IMU2 sensor data group."""
+        """Create IMU2 angle data group."""
         group = QGroupBox("IMU2 (Secondary)")
         layout = QGridLayout()
 
-        # Angles
-        layout.addWidget(QLabel("Angles:"), 0, 0)
-        self.imu2_angles_label = QLabel("-")
-        layout.addWidget(self.imu2_angles_label, 0, 1)
+        # Header row
+        layout.addWidget(QLabel("<b>Axis</b>"), 0, 0)
+        layout.addWidget(QLabel("<b>Angle (°)</b>"), 0, 1, Qt.AlignmentFlag.AlignCenter)
+
+        # Note about rates
+        note = QLabel("(Rates not available)")
+        note.setStyleSheet("color: gray; font-size: 7pt; font-style: italic;")
+        layout.addWidget(note, 0, 2)
+
+        # Pitch angle
+        layout.addWidget(QLabel("Pitch:"), 1, 0)
+        self.imu2_pitch_label = StatusLabel("-")
+        layout.addWidget(self.imu2_pitch_label, 1, 1, 1, 2)
+
+        # Roll angle
+        layout.addWidget(QLabel("Roll:"), 2, 0)
+        self.imu2_roll_label = StatusLabel("-")
+        layout.addWidget(self.imu2_roll_label, 2, 1, 1, 2)
+
+        # Yaw angle
+        layout.addWidget(QLabel("Yaw:"), 3, 0)
+        self.imu2_yaw_label = StatusLabel("-")
+        layout.addWidget(self.imu2_yaw_label, 3, 1, 1, 2)
+
+        # Status indicator
+        self.imu2_status_label = QLabel("Not calibrated")
+        self.imu2_status_label.setStyleSheet("color: orange; font-size: 8pt; font-style: italic;")
+        layout.addWidget(self.imu2_status_label, 4, 0, 1, 3, Qt.AlignmentFlag.AlignCenter)
 
         layout.setColumnStretch(1, 1)
         group.setLayout(layout)
@@ -251,6 +308,42 @@ class DashboardWidget(QWidget):
         group.setLayout(layout)
         return group
 
+    def set_version_info(self, version_high: int, version_low: int, board_type: int,
+                         board_name: str, version_str: str, name_str: str, board_str: str):
+        """
+        Set firmware version information.
+
+        Args:
+            version_high: High byte of version number (0 if using version_str directly)
+            version_low: Low byte of version number (0 if using version_str directly)
+            board_type: Board type code (0 if not available)
+            board_name: Short board name (empty if not available)
+            version_str: Full version string
+            name_str: Firmware name string
+            board_str: Full board description string
+        """
+        # Display version - use version_str directly if version_high is 0
+        if version_high == 0 and version_low == 0:
+            self.version_label.setText(version_str if version_str and version_str.strip() else "-")
+        else:
+            self.version_label.setText(f"v{version_high}.{version_low} ({version_str})")
+
+        # Display board info
+        if board_str and board_str.strip():
+            if board_type > 0:
+                self.board_label.setText(f"{board_str} (Type {board_type})")
+            else:
+                self.board_label.setText(board_str)
+        elif board_name and board_name.strip():
+            self.board_label.setText(f"{board_name} (Type {board_type})")
+        else:
+            self.board_label.setText("-")
+
+        # Display firmware name
+        self.name_label.setText(name_str if name_str and name_str.strip() else "-")
+
+        logger.info(f"Dashboard version info updated: {version_str}, Board: {board_str}, Name: {name_str}")
+
     @pyqtSlot(object)
     def update_status(self, status_data: StatusData):
         """
@@ -270,12 +363,29 @@ class DashboardWidget(QWidget):
         else:
             self.state_label.set_status("normal")
 
-        # Update status flags
-        if status_data.status_flags:
-            flags_text = '\n'.join([f"• {desc}" for _, desc in status_data.status_flags])
-            self.flags_label.setText(flags_text)
+        # Update status flags - show ALL flags with their state
+        from core.status_monitor import STATUS_FLAGS
+
+        # Build HTML formatted flag list
+        flags_html = []
+        for bit in sorted(STATUS_FLAGS.keys()):
+            flag_name, description = STATUS_FLAGS[bit]
+            is_set = (status_data.status & (1 << bit)) != 0
+
+            if is_set:
+                # Flag is set - show in green/blue with checkmark
+                color = "green" if "OK" in flag_name or "PRESENT" in flag_name else "blue"
+                if "LOW" in flag_name or "FAILED" in flag_name:
+                    color = "red"
+                flags_html.append(f'<span style="color: {color};">✓ {description}</span>')
+            else:
+                # Flag is not set - show in gray
+                flags_html.append(f'<span style="color: gray;">○ {description}</span>')
+
+        if flags_html:
+            self.flags_label.setText('<br>'.join(flags_html))
         else:
-            self.flags_label.setText("None")
+            self.flags_label.setText("No status flags defined")
 
         # Update I2C errors
         self.i2c_errors_label.setText(str(status_data.i2c_errors))
@@ -291,8 +401,8 @@ class DashboardWidget(QWidget):
             self.cycle_time_label.setText("-")
 
         # Update battery voltage
-        # Raw value is in 0.01V units (centivolts)
-        voltage_v = status_data.lipo_voltage / 100.0  # Convert to volts
+        # Raw value is in 0.001V units (millivolts)
+        voltage_v = status_data.lipo_voltage / 1000.0  # Convert to volts
         self.battery_label.setText(f"{voltage_v:.2f}V")
 
         # Color code voltage
@@ -307,23 +417,77 @@ class DashboardWidget(QWidget):
         else:
             self.battery_label.set_status("normal")
 
-        # Update IMU1 data
-        self.imu1_gyro_label.setText(
-            f"X:{status_data.imu1_gx:6d} Y:{status_data.imu1_gy:6d} Z:{status_data.imu1_gz:6d}"
-        )
+        # Update Gyro rates (angular velocities)
+        self.gyro_pitch_label.setText(f"{status_data.imu1_gx:6d}")
+        self.gyro_roll_label.setText(f"{status_data.imu1_gy:6d}")
+        self.gyro_yaw_label.setText(f"{status_data.imu1_gz:6d}")
 
-        # Check for invalid angles (0xFFFF = -1)
-        if status_data.imu1_angle_pitch == -1:
-            self.imu1_angles_label.setText("Not calibrated")
+        # Color code gyro values (warn if very high)
+        for label, value in [(self.gyro_pitch_label, status_data.imu1_gx),
+                              (self.gyro_roll_label, status_data.imu1_gy),
+                              (self.gyro_yaw_label, status_data.imu1_gz)]:
+            if abs(value) > 20000:
+                label.set_status("error")
+            elif abs(value) > 10000:
+                label.set_status("warning")
+            else:
+                label.set_status("normal")
+
+        # Update IMU1 angles with validation
+        # Check for invalid angles (0xFFFF = -1 indicates not calibrated)
+        imu1_valid = (status_data.imu1_angle_pitch != -1 and
+                      status_data.imu1_angle_roll != -1)
+
+        if imu1_valid:
+            self.imu1_pitch_label.setText(f"{status_data.imu1_angle_pitch:6d}")
+            self.imu1_roll_label.setText(f"{status_data.imu1_angle_roll:6d}")
+            self.imu1_yaw_label.setText(f"{status_data.imu1_angle_yaw:6d}")
+
+            # Set status to good
+            for label in [self.imu1_pitch_label, self.imu1_roll_label, self.imu1_yaw_label]:
+                label.set_status("good")
+
+            self.imu1_status_label.setText("✓ Calibrated")
+            self.imu1_status_label.setStyleSheet("color: green; font-size: 8pt; font-style: italic;")
         else:
-            self.imu1_angles_label.setText(
-                f"P:{status_data.imu1_angle_pitch:6d} R:{status_data.imu1_angle_roll:6d} Y:{status_data.imu1_angle_yaw:6d}"
-            )
+            self.imu1_pitch_label.setText("---")
+            self.imu1_roll_label.setText("---")
+            self.imu1_yaw_label.setText("---")
 
-        # Update IMU2 data
-        self.imu2_angles_label.setText(
-            f"P:{status_data.imu2_angle_pitch:6d} R:{status_data.imu2_angle_roll:6d} Y:{status_data.imu2_angle_yaw:6d}"
-        )
+            # Set status to warning
+            for label in [self.imu1_pitch_label, self.imu1_roll_label, self.imu1_yaw_label]:
+                label.set_status("warning")
+
+            self.imu1_status_label.setText("⚠ Not calibrated")
+            self.imu1_status_label.setStyleSheet("color: orange; font-size: 8pt; font-style: italic;")
+
+        # Update IMU2 angles with validation
+        # Check for invalid angles (0xFFFF = -1 indicates not calibrated)
+        imu2_valid = (status_data.imu2_angle_pitch != -1 and
+                      status_data.imu2_angle_roll != -1)
+
+        if imu2_valid:
+            self.imu2_pitch_label.setText(f"{status_data.imu2_angle_pitch:6d}")
+            self.imu2_roll_label.setText(f"{status_data.imu2_angle_roll:6d}")
+            self.imu2_yaw_label.setText(f"{status_data.imu2_angle_yaw:6d}")
+
+            # Set status to good
+            for label in [self.imu2_pitch_label, self.imu2_roll_label, self.imu2_yaw_label]:
+                label.set_status("good")
+
+            self.imu2_status_label.setText("✓ Calibrated")
+            self.imu2_status_label.setStyleSheet("color: green; font-size: 8pt; font-style: italic;")
+        else:
+            self.imu2_pitch_label.setText("---")
+            self.imu2_roll_label.setText("---")
+            self.imu2_yaw_label.setText("---")
+
+            # Set status to warning
+            for label in [self.imu2_pitch_label, self.imu2_roll_label, self.imu2_yaw_label]:
+                label.set_status("warning")
+
+            self.imu2_status_label.setText("⚠ Not calibrated")
+            self.imu2_status_label.setStyleSheet("color: orange; font-size: 8pt; font-style: italic;")
 
         # Update PID outputs
         self.pid_pitch_label.setText(str(status_data.pid_pitch))

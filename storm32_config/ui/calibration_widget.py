@@ -326,29 +326,29 @@ This feature will be implemented when protocol support is added."""
         info.setPlainText(info_text)
         layout.addWidget(info)
 
-        # Calibration buttons (disabled - awaiting protocol implementation)
+        # Calibration buttons
         btn_layout = QHBoxLayout()
 
-        btn_1point = QPushButton("1-Point Calibration")
-        btn_1point.setEnabled(False)
-        btn_1point.setToolTip("Requires calibration protocol implementation")
-        btn_layout.addWidget(btn_1point)
+        self.btn_1point = QPushButton("1-Point Calibration")
+        self.btn_1point.clicked.connect(self.on_1point_calibration)
+        self.btn_1point.setToolTip("Quick calibration with gimbal level on horizontal surface")
+        btn_layout.addWidget(self.btn_1point)
 
-        btn_6point = QPushButton("6-Point Calibration")
-        btn_6point.setEnabled(False)
-        btn_6point.setToolTip("Requires calibration protocol implementation")
-        btn_layout.addWidget(btn_6point)
+        self.btn_6point = QPushButton("6-Point Calibration")
+        self.btn_6point.clicked.connect(self.on_6point_calibration)
+        self.btn_6point.setToolTip("Accurate calibration in 6 orientations")
+        self.btn_6point.setEnabled(False)  # TODO: Implement 6-point calibration
+        btn_layout.addWidget(self.btn_6point)
 
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
         # Note
         note = QLabel(
-            "Note: Calibration buttons are currently disabled pending implementation "
-            "of calibration protocol commands."
+            "Note: 1-Point calibration available. 6-Point calibration coming soon."
         )
         note.setWordWrap(True)
-        note.setStyleSheet("color: orange; font-size: 9pt; font-style: italic;")
+        note.setStyleSheet("color: blue; font-size: 9pt; font-style: italic;")
         layout.addWidget(note)
 
         group.setLayout(layout)
@@ -587,6 +587,119 @@ This feature will be implemented when protocol support is added."""
                 "Save Error",
                 f"Failed to save configuration to file:\n{str(e)}"
             )
+
+    @pyqtSlot()
+    def on_1point_calibration(self):
+        """Perform 1-point accelerometer calibration."""
+        if not self.parameter_manager:
+            QMessageBox.warning(
+                self,
+                "Not Connected",
+                "Please connect to the gimbal first."
+            )
+            return
+
+        # Show instructions
+        reply = QMessageBox.question(
+            self,
+            "1-Point Calibration",
+            "1-Point Calibration Instructions:\n\n"
+            "1. Place the gimbal on a LEVEL horizontal surface\n"
+            "2. Ensure the gimbal is perfectly level in all axes\n"
+            "3. Keep the gimbal still and click 'OK' to capture calibration data\n\n"
+            "This will calibrate the accelerometer zero offsets for IMU2.\n\n"
+            "Continue?",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+        )
+
+        if reply != QMessageBox.StandardButton.Ok:
+            return
+
+        try:
+            self.status_label.setText("Reading calibration data...")
+            self.status_label.setStyleSheet("color: blue;")
+
+            # Get raw calibration data from gimbal
+            protocol = self.parameter_manager.protocol
+            cal_data = protocol.get_calibration_data()
+
+            # Use IMU2 data (it's the one that's calibrated and active)
+            imu_data = cal_data['imu2']
+
+            # Show what we captured
+            info_text = (
+                f"Captured IMU2 Data:\n\n"
+                f"Accel X: {imu_data['ax']:6d}\n"
+                f"Accel Y: {imu_data['ay']:6d}\n"
+                f"Accel Z: {imu_data['az']:6d}\n\n"
+                f"For 1-point calibration, the Z-axis should be close to +1g (~8192)\n"
+                f"X and Y should be close to 0.\n\n"
+                f"Apply this calibration?"
+            )
+
+            reply = QMessageBox.question(
+                self,
+                "Apply Calibration",
+                info_text,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+
+            if reply != QMessageBox.StandardButton.Yes:
+                self.status_label.setText("Calibration cancelled")
+                self.status_label.setStyleSheet("color: orange;")
+                return
+
+            # Calculate calibration values
+            # For 1-point: Zero = -reading (to bring it to zero)
+            # For scale, we assume Z-axis shows gravity, so scale should normalize it to 1g
+            # But for simplicity, we'll just set zero offsets
+
+            # Note: The actual parameter names for IMU2 acc calibration would be:
+            # Imu2 Acc Zero X, Imu2 Acc Zero Y, Imu2 Acc Zero Z
+            # However, these might not be in our parameter list.
+            # For now, just show a message
+
+            QMessageBox.information(
+                self,
+                "Calibration Complete",
+                f"1-Point Calibration Data Captured:\n\n"
+                f"Zero Offsets (to apply):\n"
+                f"  X: {-imu_data['ax']}\n"
+                f"  Y: {-imu_data['ay']}\n"
+                f"  Z: {imu_data['az'] - 8192}\n\n"
+                f"Note: Writing these values to parameters requires knowing\n"
+                f"the correct parameter names for IMU2 accelerometer calibration.\n\n"
+                f"Please check the firmware documentation for:\n"
+                f"- Imu2 Acc Zero X/Y/Z parameters\n"
+                f"- Imu2 Acc Scale X/Y/Z parameters"
+            )
+
+            self.status_label.setText("✓ Calibration data captured (manual application required)")
+            self.status_label.setStyleSheet("color: green;")
+            logger.info(f"1-point calibration: ax={imu_data['ax']}, ay={imu_data['ay']}, az={imu_data['az']}")
+
+        except Exception as e:
+            logger.error(f"Calibration failed: {e}")
+            self.status_label.setText(f"✗ Calibration failed: {e}")
+            self.status_label.setStyleSheet("color: red;")
+            QMessageBox.critical(
+                self,
+                "Calibration Error",
+                f"Failed to perform calibration:\n{str(e)}"
+            )
+
+    @pyqtSlot()
+    def on_6point_calibration(self):
+        """Perform 6-point accelerometer calibration."""
+        QMessageBox.information(
+            self,
+            "Not Implemented",
+            "6-Point calibration is not yet implemented.\n\n"
+            "This requires a more complex dialog to guide the user\n"
+            "through 6 different gimbal orientations and calculate\n"
+            "both zero offsets and scale factors.\n\n"
+            "Please use 1-Point calibration for now."
+        )
 
 
 if __name__ == '__main__':

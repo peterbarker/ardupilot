@@ -9,7 +9,7 @@ import serial
 import serial.tools.list_ports
 import time
 import logging
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 from enum import IntEnum
 
 try:
@@ -362,6 +362,49 @@ class SerialProtocol:
             # Default to ACK length
             return self.RCCMD_ACK_LEN
 
+    def get_version_simple(self) -> Tuple[str, str, str, int, int, int]:
+        """
+        Get firmware version information using 'v' command.
+
+        Response format (reads until 'o' terminator):
+        - 16 bytes: Version string
+        - 16 bytes: Name string
+        - 16 bytes: Board string
+        - 2 bytes: Version number (uint16)
+        - 2 bytes: Layout version (uint16)
+        - 2 bytes: Capabilities (uint16)
+        - ... additional data may be present
+        - 1 byte: 'o' terminator
+
+        Returns:
+            Tuple of (version_str, name_str, board_str, version_num, layout, capabilities)
+
+        Raises:
+            ProtocolError: If communication fails
+        """
+        command = b'v'
+        min_len = (16 * 3) + 2 + 2 + 2  # Minimum 54 bytes
+
+        # Read until 'o' terminator (response_len=0)
+        response = self.execute_cmd(command, response_len=0)
+
+        if len(response) < min_len:
+            raise ProtocolError(f"Invalid version response length: {len(response)}/{min_len}")
+
+        # Parse strings (remove trailing spaces/nulls)
+        version_str = response[0:16].decode('ascii', errors='ignore').rstrip(' \x00\r\n\t')
+        name_str = response[16:32].decode('ascii', errors='ignore').rstrip(' \x00\r\n\t')
+        board_str = response[32:48].decode('ascii', errors='ignore').rstrip(' \x00\r\n\t')
+
+        # Parse numeric values (little-endian uint16)
+        import struct
+        version_num, layout, capabilities = struct.unpack('<HHH', response[48:54])
+
+        logger.info(f"Version: {version_str}, Name: {name_str}, Board: {board_str}, "
+                   f"Ver#: {version_num}, Layout: {layout}, Cap: 0x{capabilities:04x}")
+
+        return (version_str, name_str, board_str, version_num, layout, capabilities)
+
     def get_version(self) -> Tuple[int, int, int, str]:
         """
         Get firmware version from gimbal.
@@ -422,10 +465,13 @@ class SerialProtocol:
 
     def get_all_parameters(self) -> List[int]:
         """
-        Get all 155 parameters using 'g' command.
+        Get all parameters using 'g' command.
+
+        The gimbal returns parameters as binary uint16 values (little-endian),
+        not as ASCII hex strings.
 
         Returns:
-            List of 155 parameter values (16-bit unsigned integers)
+            List of parameter values (16-bit unsigned integers)
 
         Raises:
             ProtocolError: If communication fails
@@ -434,26 +480,77 @@ class SerialProtocol:
         command = b'g'
         response = self.execute_cmd(command)
 
-        # Response format: 155 parameters as 4-character hex strings (620 bytes total)
-        expected_len = self.CMD_G_PARAMETER_COUNT * 4
+        # Response format: Parameters as binary uint16 values (little-endian)
+        # Each parameter is 2 bytes
+        if len(response) < 2:
+            raise ProtocolError(f"Invalid parameter response length: {len(response)} bytes")
+
+        # Calculate number of parameters (may vary by firmware version)
+        param_count = len(response) // 2
+
+        # Parse parameters as uint16 little-endian
+        import struct
+        parameters = []
+        for i in range(param_count):
+            start = i * 2
+            if start + 1 < len(response):
+                param_bytes = response[start:start+2]
+                param_value = struct.unpack('<H', param_bytes)[0]
+                parameters.append(param_value)
+            else:
+                # Odd number of bytes, skip last byte
+                break
+
+        logger.info(f"Read {len(parameters)} parameters ({len(response)} bytes)")
+        return parameters
+
+    def get_calibration_data(self) -> Dict[str, int]:
+        """
+        Get raw IMU calibration data using 'Cd' command.
+
+        Returns 14 signed int16 values:
+        - IMU1: ax, ay, az (accel), gx, gy, gz (gyro), temp
+        - IMU2: ax2, ay2, az2 (accel), gx2, gy2, gz2 (gyro), temp2
+
+        Returns:
+            Dict with IMU1 and IMU2 raw sensor data
+
+        Raises:
+            ProtocolError: If communication fails
+        """
+        command = b'Cd'
+        response = self.execute_cmd(command)
+
+        # Response format: 14 signed int16 values (28 bytes)
+        expected_len = 14 * 2
 
         if len(response) < expected_len:
-            raise ProtocolError(f"Invalid parameter response length: {len(response)}/{expected_len}")
+            raise ProtocolError(f"Invalid calibration data length: {len(response)}/{expected_len}")
 
-        # Parse parameters
-        parameters = []
-        for i in range(self.CMD_G_PARAMETER_COUNT):
-            start = i * 4
-            param_hex = response[start:start+4].decode('ascii', errors='replace')
-            try:
-                param_value = int(param_hex, 16)
-                parameters.append(param_value)
-            except ValueError:
-                logger.warning(f"Invalid parameter {i}: {param_hex}")
-                parameters.append(0)
+        # Parse as signed int16 little-endian
+        import struct
+        values = struct.unpack('<14h', response[:expected_len])  # 'h' = signed int16
 
-        logger.info(f"Read {len(parameters)} parameters")
-        return parameters
+        return {
+            'imu1': {
+                'ax': values[0],
+                'ay': values[1],
+                'az': values[2],
+                'gx': values[3],
+                'gy': values[4],
+                'gz': values[5],
+                'temp': values[6],
+            },
+            'imu2': {
+                'ax': values[7],
+                'ay': values[8],
+                'az': values[9],
+                'gx': values[10],
+                'gy': values[11],
+                'gz': values[12],
+                'temp': values[13],
+            }
+        }
 
     def set_extended_timeout(self, enabled: bool):
         """Enable or disable extended timeout for slow operations."""

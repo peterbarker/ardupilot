@@ -118,8 +118,14 @@ class MainWindow(QMainWindow):
     - Connection management
     """
 
-    def __init__(self):
-        """Initialize main window."""
+    def __init__(self, auto_connect_port: Optional[str] = None, auto_connect_baud: int = 115200):
+        """
+        Initialize main window.
+
+        Args:
+            auto_connect_port: If provided, auto-connect to this serial port on startup
+            auto_connect_baud: Baud rate to use for auto-connect (default: 115200)
+        """
         super().__init__()
 
         # Application state
@@ -128,7 +134,17 @@ class MainWindow(QMainWindow):
         self.parameter_manager: Optional[ParameterManager] = None
         self._connected = False
 
+        # Auto-connect parameters
+        self._auto_connect_port = auto_connect_port
+        self._auto_connect_baud = auto_connect_baud
+
         self._setup_ui()
+
+        # Trigger auto-connect if port was specified
+        if self._auto_connect_port:
+            # Use QTimer to auto-connect after window is shown
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(500, self._auto_connect)
 
     def _setup_ui(self):
         """Set up the user interface."""
@@ -272,6 +288,20 @@ class MainWindow(QMainWindow):
                 # Pass protocol to flash widget (for board detection)
                 self.flash_widget.set_protocol(self.protocol)
 
+                # Fetch version information using 'v' command
+                try:
+                    version_str, name_str, board_str, version_num, layout, capabilities = \
+                        self.protocol.get_version_simple()
+
+                    # Update dashboard with version info
+                    self.dashboard_widget.set_version_info(
+                        0, 0, 0, "",  # version_high, version_low, board_type, board_name (unused)
+                        version_str, name_str, board_str
+                    )
+                    logger.info(f"Version info retrieved: {version_str}, Board: {board_str}, Name: {name_str}")
+                except Exception as e:
+                    logger.warning(f"Failed to get version info: {e}")
+
                 # Create and start status monitor
                 self.status_monitor = StatusMonitor(self.protocol, update_rate)
                 self.status_monitor.statusUpdated.connect(self.dashboard_widget.update_status)
@@ -302,6 +332,85 @@ class MainWindow(QMainWindow):
                 if self.protocol:
                     self.protocol.disconnect()
                     self.protocol = None
+
+    def _auto_connect(self):
+        """Auto-connect to serial port using command-line parameters."""
+        if not self._auto_connect_port or self._connected:
+            return
+
+        port = self._auto_connect_port
+        baud = self._auto_connect_baud
+        update_rate = 10  # Default update rate
+
+        logger.info(f"Auto-connecting to {port} at {baud} baud...")
+
+        try:
+            # Create protocol
+            self.protocol = SerialProtocol(port, baud)
+            self.protocol.connect()
+
+            # Create parameter manager
+            self.parameter_manager = ParameterManager(self.protocol)
+
+            # Pass parameter manager to widgets
+            self.pid_widget.set_parameter_manager(self.parameter_manager)
+            self.gimbal_config_widget.set_parameter_manager(self.parameter_manager)
+            self.setup_widget.set_parameter_manager(self.parameter_manager)
+            self.rc_inputs_widget.set_parameter_manager(self.parameter_manager)
+            self.pan_widget.set_parameter_manager(self.parameter_manager)
+            self.functions_widget.set_parameter_manager(self.parameter_manager)
+            self.scripts_widget.set_parameter_manager(self.parameter_manager)
+            self.calibration_widget.set_parameter_manager(self.parameter_manager)
+            self.parameters_widget.set_parameter_manager(self.parameter_manager)
+
+            # Pass protocol to flash widget (for board detection)
+            self.flash_widget.set_protocol(self.protocol)
+
+            # Fetch version information using 'v' command
+            try:
+                version_str, name_str, board_str, version_num, layout, capabilities = \
+                    self.protocol.get_version_simple()
+
+                # Update dashboard with version info
+                self.dashboard_widget.set_version_info(
+                    0, 0, 0, "",  # version_high, version_low, board_type, board_name (unused)
+                    version_str, name_str, board_str
+                )
+                logger.info(f"Version info retrieved: {version_str}, Board: {board_str}, Name: {name_str}")
+            except Exception as e:
+                logger.warning(f"Failed to get version info: {e}")
+
+            # Create and start status monitor
+            self.status_monitor = StatusMonitor(self.protocol, update_rate)
+            self.status_monitor.statusUpdated.connect(self.dashboard_widget.update_status)
+            self.status_monitor.errorOccurred.connect(self.on_monitor_error)
+            self.status_monitor.start()
+
+            # Update UI state
+            self._connected = True
+            self.connect_action.setEnabled(False)
+            self.disconnect_action.setEnabled(True)
+            self.status_bar.showMessage(f"Auto-connected to {port} at {baud} baud")
+
+            logger.info(f"Auto-connected to {port}")
+
+        except Exception as e:
+            logger.error(f"Auto-connection failed: {e}")
+            QMessageBox.critical(
+                self,
+                "Auto-Connection Error",
+                f"Failed to auto-connect to {port}:\n{str(e)}\n\n"
+                f"You can manually connect using File -> Connect."
+            )
+
+            # Cleanup on failure
+            if self.status_monitor:
+                self.status_monitor.stop()
+                self.status_monitor = None
+
+            if self.protocol:
+                self.protocol.disconnect()
+                self.protocol = None
 
     @pyqtSlot()
     def on_disconnect(self):
