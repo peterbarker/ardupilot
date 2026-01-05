@@ -6640,6 +6640,39 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.reboot_sitl() # to handle MNT_TYPE changing
         self.mount_test_body()
 
+    def MountPOIFromAuxFunction(self):
+        '''test we can lock onto a lat/lng/alt with the flick of a switch'''
+        self.setup_servo_mount()
+        self.set_parameters({
+            "RC10_OPTION": 186,
+            "MNT1_RC_RATE": 10,
+        })
+        self.reboot_sitl() # to handle MNT1_TYPE changing
+        self.change_mode('LOITER')
+        self.wait_ready_to_arm()
+        loc = self.mav.location()
+        pos = (10, 0)
+        roi = self.offset_location_ne(loc, pos[0], pos[1])
+
+        self.takeoff(10, mode='LOITER')
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_DO_SET_ROI_LOCATION,
+            p5=int(roi.lat * 1e7),
+            p6=int(roi.lng * 1e7),
+            p7=roi.alt,
+            frame=mavutil.mavlink.MAV_FRAME_GLOBAL,
+        )
+        self.delay_sim_time(10)
+
+        self.set_mount_mode(mavutil.mavlink.MAV_MOUNT_MODE_RC_TARGETING)
+        self.delay_sim_time(10)
+        self.progress("Lock onto current position")
+        self.set_rc(10, 2000)
+        self.set_parameter("SIM_SPEEDUP", 1)
+        self.delay_sim_time(10000000)
+        self.set_rc(1, 1500)
+        self.do_RTL()
+
     def MountSolo(self):
         '''test type=2, a "Solo" mount'''
         self.set_parameters({
@@ -12879,6 +12912,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
              self.MAV_CMD_DO_MOUNT_CONTROL,
              self.MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE,
              self.AutoYawDO_MOUNT_CONTROL,
+             self.MountPOIFromAuxFunction,
              self.Button,
              self.ShipTakeoff,
              self.RangeFinder,

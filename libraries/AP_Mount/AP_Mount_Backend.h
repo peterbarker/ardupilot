@@ -366,6 +366,7 @@ protected:
         MountAngleTarget angle_rad; // angle target in radians
         MountRateTarget rate_rads;  // rate target in rad/s
         uint32_t last_rate_request_ms;
+        uint32_t poi_start_ms;  // time we started trying to find the gimbal POI for an AuxFunc::MOUNT_POI_LOCK
     } mnt_target;
     
     // RP earth frame locks accessible by backend

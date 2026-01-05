@@ -1817,7 +1817,14 @@ bool RC_Channel::do_aux_function(const AuxFuncTrigger &trigger)
         }
         // high changes to GPS Targeting mode with entry GPS point; and other sw position change returns
         // default targeting mode and clears the POI point
-        mount->set_poi_lock(ch_flag == AuxSwitchPos::HIGH);
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            mount->set_poi_lock(true);
+        case AuxSwitchPos::MIDDLE:
+            break;
+        case AuxSwitchPos::LOW:
+            mount->set_poi_lock(false);
+        }
         break;
     }
 #endif

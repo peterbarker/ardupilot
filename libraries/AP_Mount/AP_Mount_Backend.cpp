@@ -53,6 +53,25 @@ void AP_Mount_Backend::update()
         mnt_target.rate_rads.pitch = 0;
         mnt_target.rate_rads.yaw = 0;
     }
+
+    if (mnt_target.poi_start_ms != 0) {
+        // try to resolve a AuxFunc POI command to a lat/lng/alt
+        uint8_t instance_needs_fixing = 0;
+        Quaternion quat;
+        Location vehicle_location;
+        Location target_location;
+        if (get_poi(instance_needs_fixing, quat, vehicle_location, target_location)) {
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Found POI %d/%d/%d", target_location.lat, target_location.lng, target_location.alt);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Vehicle at %d/%d/%d", vehicle_location.lat, vehicle_location.lng, vehicle_location.alt);
+            set_roi_target(target_location);
+            mnt_target.poi_start_ms = 0;
+        } else if (AP_HAL::millis() - mnt_target.poi_start_ms > 5000) {
+            // timeout
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Failed to find POI");
+            mnt_target.poi_start_ms = 0;
+        }
+    }
+
     // location exists for mode
     Location current_loc;
     switch (_mode) {
@@ -227,15 +246,13 @@ void AP_Mount_Backend::set_roi_target(const Location &target_loc)
 // or clear target and return to default targeting mode
 void AP_Mount_Backend::set_poi_lock(bool poi_lock)
 {
-    if (poi_lock && !poi_locked) {
-        const Location target_location = poi_calculation.poi_loc;
-        set_roi_target(target_location);
-        poi_locked = true;
-    } else if (!poi_lock) {
-        poi_locked = false;
+    if (poi_lock) {
+        mnt_target.poi_start_ms = AP_HAL::millis();
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Setting POI; r=%f p=%f y=%f", degrees(mnt_target.angle_rad.roll), degrees(mnt_target.angle_rad.pitch), degrees(mnt_target.angle_rad.yaw));
+    } else {
+        mnt_target.poi_start_ms = 0;
         clear_roi_target();
     }
-    
 }
 #endif
 
@@ -542,6 +559,7 @@ void AP_Mount_Backend::write_log(uint64_t timestamp_us)
         LOG_PACKET_HEADER_INIT(static_cast<uint8_t>(LOG_MOUNT_MSG)),
         time_us       : (timestamp_us > 0) ? timestamp_us : AP_HAL::micros64(),
         instance      : _instance,
+        mavlinkmode   : get_mode(),
         desired_roll  : target_roll,
         actual_roll   : roll,
         desired_pitch : target_pitch,
