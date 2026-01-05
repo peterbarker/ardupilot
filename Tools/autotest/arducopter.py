@@ -6669,6 +6669,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.progress("Lock onto current position")
         self.set_rc(10, 2000)
         self.set_parameter("SIM_SPEEDUP", 1)
+        self.change_mode('CIRCLE')
         self.delay_sim_time(10000000)
         self.set_rc(1, 1500)
         self.do_RTL()
