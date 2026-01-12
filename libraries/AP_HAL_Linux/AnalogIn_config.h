@@ -2,10 +2,7 @@
 
 #include <AP_HAL/AP_HAL_Boards.h>
 
-#ifndef AP_HAL_LINUX_ANALOGIN_CLASS
-#define AP_HAL_LINUX_ANALOGIN_CLASS Empty::AnalogIn
-#endif  // AP_HAL_LINUX_ANALOGIN_CLASS
-
+// Feature flags - set by hwdef.dat
 #ifndef AP_HAL_LINUX_ANALOGIN_ADS1115_ENABLED
 #define AP_HAL_LINUX_ANALOGIN_ADS1115_ENABLED 0
 #endif

@@ -100,6 +100,31 @@ static UARTDriver* serialDrivers[] = {
     &serial9Driver,
 };
 
+
+// Compile-time safety check: only one backend can be selected
+#if (AP_HAL_LINUX_ANALOGIN_ADS1115_ENABLED + \
+     AP_HAL_LINUX_ANALOGIN_IIO_ENABLED + \
+     AP_HAL_LINUX_ANALOGIN_NAVIO2_ENABLED) > 1
+  #error "Only one AnalogIn backend can be selected per board"
+#endif
+
+// set the class based off which backend is enabled.
+#if AP_HAL_LINUX_ANALOGIN_ADS1115_ENABLED
+#define AP_HAL_LINUX_ANALOGIN_CLASS AnalogIn_ADS1115
+#endif
+
+#if AP_HAL_LINUX_ANALOGIN_IIO_ENABLED
+#define AP_HAL_LINUX_ANALOGIN_CLASS AnalogIn_IIO
+#endif
+
+#if AP_HAL_LINUX_ANALOGIN_NAVIO2_ENABLED
+#define AP_HAL_LINUX_ANALOGIN_CLASS AnalogIn_Navio2
+#endif
+
+#ifndef AP_HAL_LINUX_ANALOGIN_CLASS
+#define AP_HAL_LINUX_ANALOGIN_CLASS Empty::AnalogIn
+#endif
+
 static AP_HAL_LINUX_ANALOGIN_CLASS analogIn;
 
 static Storage storageDriver;
