@@ -650,6 +650,12 @@ AP_GPS_UBLOX::read(void)
 #if GPS_MOVING_BASELINE
         if (rtcm3_parser) {
             if (rtcm3_parser->read(data)) {
+                static uint32_t found_one_time_ms;
+                const uint32_t now_ms = AP_HAL::millis();
+                if (now_ms - found_one_time_ms > 5000) {
+                    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Found RTCM packet");
+                    found_one_time_ms = now_ms;
+                }
                 // we've found a RTCMv3 packet. We stop parsing at
                 // this point and reset u-blox parse state. We need to
                 // stop parsing to give the higher level driver a
