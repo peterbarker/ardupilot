@@ -946,6 +946,12 @@ void AP_GPS::update_instance(uint8_t instance)
         if (drivers[instance]->get_RTCMV3(rtcm_data, rtcm_len)) {
             for (uint8_t i=0; i< GPS_MAX_RECEIVERS; i++) {
                 if (i != instance && params[i].type == GPS_TYPE_UBLOX_RTK_ROVER) {
+                    static uint32_t sent_one_time_ms;
+                    const uint32_t now_ms = AP_HAL::millis();
+                    if (now_ms - sent_one_time_ms > 5000) {
+                        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Sending RTCM packet");
+                        sent_one_time_ms = now_ms;
+                    }
                     // pass the data to the rover
                     inject_data(i, rtcm_data, rtcm_len);
                     drivers[instance]->clear_RTCMV3();
