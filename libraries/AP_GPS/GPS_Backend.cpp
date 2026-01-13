@@ -25,7 +25,7 @@
 #include <AP_InternalError/AP_InternalError.h>
 #include <AP_AHRS/AP_AHRS.h>
 
-#define GPS_BACKEND_DEBUGGING 0
+#define GPS_BACKEND_DEBUGGING 1
 
 #if GPS_BACKEND_DEBUGGING
  # define Debug(fmt, args ...)  do {hal.console->printf("%s:%d: " fmt "\n", __FUNCTION__, __LINE__, ## args); hal.scheduler->delay(1); } while(0)
