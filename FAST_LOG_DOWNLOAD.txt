@@ -1,3 +1,56 @@
 Vehicle: Plane
 target: CubeRedPrimary
 
+mavproxy.py --source-system=67 --master udpout:172.16.3.68:16550
+
+# create a a large log:
+param set LOG_DISARMED 1
+param set INS_RAW_LOG_OPT 15
+
+# initial download speed via USB
+Downloading log1.bin - 5358150/0 bytes 0.0% 855.9 kbyte/s (0 retries 0 missing)
+
+# initial download speed via ethernet (UDP client)
+Log transfer:
+Downloading log1.bin - 1539000/26738688 bytes 5.8% 35.9 kbyte/s (0 retries 0 missing)
+# ftp significantly faster:
+MANUAL> Transfer at offset 11360000 with 0 gaps 0 retries 315.8 kByte/sec
+
+Pushing loop rate up to 400:
+Log transfer:
+Downloading log1.bin - 1142100/0 bytes 0.0% 255.1 kbyte/s (0 retries 0 missing)
+MANUAL> Transfer at offset 2006560 with 0 gaps 0 retries 233.8 kByte/sec
+
+
+
+# download speed via ethernet (UDP server)
+# loop rate 400
+
+# FTP:
+MANUAL> Transfer at offset 953200 with 0 gaps 0 retries 87.2 kByte/sec
+
+# log transfer:
+MANUAL> Downloading log1.bin - 7358850/0 bytes 0.0% 256.4 kbyte/s (0 retries 0 missing)
+
+
+
+
+##########
+# download via ethernet
+# TCP Server:
+# log transfer:
+MANUAL> Downloading log1.bin - 10355850/38366640 bytes 27.0% 752.0 kbyte/s (0 retries 0 missing)
+# FTP
+MANUAL> Transfer at offset 1282560 with 0 gaps 0 retries 200.3 kByte/sec
+
+# TCP client
+# log transfer
+MANUAL> Downloading log1.bin - 5216400/0 bytes 0.0% 759.5 kbyte/s (0 retries 0 missing)
+
+# ftp transfer
+MANUAL> Transfer at offset 775680 with 0 gaps 0 retries 176.4 kByte/sec
+
+# TCP transfers:
+# SCHED_LOOP_RATE to  200 747kB/s
+# SCHED_LOOP_RATE to  400 752kB/s
+# SCHED_LOOP_RATE to 1200 566kB/s
