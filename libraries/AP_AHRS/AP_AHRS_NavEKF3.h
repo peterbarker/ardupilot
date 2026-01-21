@@ -83,12 +83,6 @@ public:
         return EKF3.getWind(wind);
     }
 
-    Vector2f groundspeed_vector(void) override {
-        Vector3f vec;
-        EKF3.getVelNED(vec);
-        return vec.xy();
-    }
-
     bool            use_compass() override {
         return EKF3.use_compass();
     }

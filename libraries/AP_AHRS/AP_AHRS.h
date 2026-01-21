@@ -908,9 +908,6 @@ private:
     // return secondary attitude solution if available, as quaternion
     bool _get_secondary_quaternion(Quaternion &quat) const;
 
-    // get ground speed 2D
-    Vector2f _groundspeed_vector(void);
-
     // get active EKF type
     EKFType _active_EKF_type(void) const;
 
@@ -934,9 +931,6 @@ private:
 
     // return secondary position solution if available
     bool _get_secondary_position(Location &loc) const;
-
-    // return ground speed estimate in meters/second. Used by ground vehicles.
-    float _groundspeed(void);
 
     // Retrieves the corrected NED delta velocity in use by the inertial navigation
     void _getCorrectedDeltaVelocityNED(Vector3f& ret, float& dt) const;

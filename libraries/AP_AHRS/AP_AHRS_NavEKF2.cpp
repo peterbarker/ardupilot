@@ -29,6 +29,9 @@ void AP_AHRS_NavEKF2::get_results(AP_AHRS_Backend::Estimates &results)
     results.vert_pos_rate_D = EKF2.getPosDownDerivative();
     results.vert_pos_rate_D_valid = true;
 
+    // ground velocity estimate in meters/second, in North/East order
+    results.velocity_NE = results.velocity_NED.xy();
+
     // Use the primary EKF to select the primary gyro
     const AP_InertialSensor &_ins = AP::ins();
     const int8_t primary_imu = EKF2.getPrimaryCoreIMUIndex();
