@@ -18,6 +18,7 @@ Examples:
 import argparse
 import sys
 import os
+from datetime import datetime
 
 try:
     from pymavlink import mavutil
@@ -27,6 +28,7 @@ except ImportError:
 
 try:
     import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
     import numpy as np
 except ImportError:
     print("Error: matplotlib/numpy not installed. Install with: pip install matplotlib numpy")
@@ -129,10 +131,11 @@ def process_log(logfile, window_size, by_msgtype=False, source_system=None, sour
         source_component: if specified, only include messages from this source component
 
     Returns:
-        times: list of timestamps (seconds)
+        times: list of relative timestamps (seconds from start)
         bytes_data: list of byte counts per window, or dict of {msgtype: [bytes]} if by_msgtype
         total_bytes: total bytes in log
         total_messages: total message count
+        start_timestamp: Unix timestamp of first message (for time-of-day display)
     """
     print(f"Opening {logfile}...")
     mlog = mavutil.mavlink_connection(logfile, robust_parsing=True)
@@ -218,12 +221,18 @@ def process_log(logfile, window_size, by_msgtype=False, source_system=None, sour
     # Sort by timestamp
     message_data.sort(key=lambda x: x[0])
 
+    # Store original start timestamp for time-of-day display
+    start_timestamp = message_data[0][0]
+
     # Normalize timestamps to start at 0
-    start_time = message_data[0][0]
-    message_data = [(t - start_time, mt, sz) for t, mt, sz in message_data]
+    message_data = [(t - start_timestamp, mt, sz) for t, mt, sz in message_data]
     end_time = message_data[-1][0]
 
+    # Print time info
     print(f"Log duration: {end_time:.1f} seconds")
+    if start_timestamp > 1e9:  # Looks like Unix timestamp
+        start_dt = datetime.fromtimestamp(start_timestamp)
+        print(f"Start time: {start_dt.strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Bin the data into windows
     num_windows = max(1, int(end_time / window_size) + 1)
@@ -237,14 +246,14 @@ def process_log(logfile, window_size, by_msgtype=False, source_system=None, sour
             if msg_type not in msgtype_bytes:
                 msgtype_bytes[msg_type] = [0] * num_windows
             msgtype_bytes[msg_type][window_idx] += msg_size
-        return times, msgtype_bytes, total_bytes, total_messages
+        return times, msgtype_bytes, total_bytes, total_messages, start_timestamp
     else:
         # Track total bytes per window
         bytes_per_window = [0] * num_windows
         for timestamp, msg_type, msg_size in message_data:
             window_idx = min(int(timestamp / window_size), num_windows - 1)
             bytes_per_window[window_idx] += msg_size
-        return times, bytes_per_window, total_bytes, total_messages
+        return times, bytes_per_window, total_bytes, total_messages, start_timestamp
 
 
 def make_filter_subtitle(source_system, source_component):
@@ -257,6 +266,57 @@ def make_filter_subtitle(source_system, source_component):
     if source_component is not None:
         parts.append(f"compid={source_component}")
     return f" [filter: {', '.join(parts)}]"
+
+
+def setup_time_axis(ax, times, start_timestamp):
+    """
+    Configure x-axis to show time of day instead of relative seconds.
+
+    Args:
+        ax: matplotlib axis
+        times: list of relative timestamps (seconds from start)
+        start_timestamp: Unix timestamp of start time
+    """
+    # Check if start_timestamp looks like a valid Unix timestamp
+    if start_timestamp < 1e9:
+        # Not a Unix timestamp, use relative time
+        ax.set_xlabel("Time (seconds)")
+        return
+
+    # Convert relative times to datetime objects
+    datetimes = [datetime.fromtimestamp(start_timestamp + t) for t in times]
+
+    # Determine appropriate format based on duration
+    duration = times[-1] - times[0] if len(times) > 1 else 0
+
+    if duration < 60:
+        # Less than 1 minute: show seconds
+        date_format = '%H:%M:%S'
+        locator = mdates.SecondLocator(interval=10)
+    elif duration < 3600:
+        # Less than 1 hour: show minutes:seconds
+        date_format = '%H:%M:%S'
+        locator = mdates.MinuteLocator(interval=1)
+    elif duration < 86400:
+        # Less than 1 day: show hours:minutes
+        date_format = '%H:%M'
+        locator = mdates.MinuteLocator(interval=10)
+    else:
+        # More than 1 day: show date and time
+        date_format = '%m-%d %H:%M'
+        locator = mdates.HourLocator(interval=1)
+
+    ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
+    ax.xaxis.set_major_locator(locator)
+
+    # Rotate labels for better readability
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+
+    # Add date to xlabel if log spans multiple days
+    start_dt = datetime.fromtimestamp(start_timestamp)
+    ax.set_xlabel(f"Time of Day ({start_dt.strftime('%Y-%m-%d')})")
+
+    return datetimes
 
 
 def generate_distinct_colors(n):
@@ -319,15 +379,24 @@ def generate_distinct_colors(n):
     return colors[:n]
 
 
-def plot_cumulative(times, bytes_per_window, total_bytes, output=None, source_system=None, source_component=None):
+def plot_cumulative(times, bytes_per_window, total_bytes, start_timestamp,
+                    output=None, source_system=None, source_component=None):
     """Plot cumulative bytes over time."""
     cumulative = np.cumsum(bytes_per_window)
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(times, cumulative, "b-", linewidth=1.5)
-    ax.fill_between(times, cumulative, alpha=0.3)
 
-    ax.set_xlabel("Time (seconds)")
+    # Convert to datetime for x-axis if we have valid timestamps
+    if start_timestamp > 1e9:
+        x_values = [datetime.fromtimestamp(start_timestamp + t) for t in times]
+        setup_time_axis(ax, times, start_timestamp)
+    else:
+        x_values = times
+        ax.set_xlabel("Time (seconds)")
+
+    ax.plot(x_values, cumulative, "b-", linewidth=1.5)
+    ax.fill_between(x_values, cumulative, alpha=0.3)
+
     ax.set_ylabel("Cumulative Bytes")
     filter_str = make_filter_subtitle(source_system, source_component)
     ax.set_title(f"Cumulative Bytes Received Over Time{filter_str}")
@@ -354,16 +423,24 @@ def plot_cumulative(times, bytes_per_window, total_bytes, output=None, source_sy
 
 
 def plot_rate(times, bytes_per_window, window_size, total_bytes, total_messages,
-              output=None, source_system=None, source_component=None):
+              start_timestamp, output=None, source_system=None, source_component=None):
     """Plot byte rate over time."""
     # Convert to rate (bytes per second)
     rate = [b / window_size for b in bytes_per_window]
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(times, rate, "b-", linewidth=1)
-    ax.fill_between(times, rate, alpha=0.3)
 
-    ax.set_xlabel("Time (seconds)")
+    # Convert to datetime for x-axis if we have valid timestamps
+    if start_timestamp > 1e9:
+        x_values = [datetime.fromtimestamp(start_timestamp + t) for t in times]
+        setup_time_axis(ax, times, start_timestamp)
+    else:
+        x_values = times
+        ax.set_xlabel("Time (seconds)")
+
+    ax.plot(x_values, rate, "b-", linewidth=1)
+    ax.fill_between(x_values, rate, alpha=0.3)
+
     ax.set_ylabel("Bytes per second")
     filter_str = make_filter_subtitle(source_system, source_component)
     ax.set_title(f"Data Rate Over Time (window={window_size}s){filter_str}")
@@ -401,7 +478,8 @@ def plot_rate(times, bytes_per_window, window_size, total_bytes, total_messages,
         plt.show()
 
 
-def plot_by_msgtype(times, msgtype_bytes, window_size, top_n, output=None, source_system=None, source_component=None):
+def plot_by_msgtype(times, msgtype_bytes, window_size, top_n, start_timestamp,
+                    output=None, source_system=None, source_component=None):
     """Plot byte rate over time broken down by message type."""
     # Calculate total bytes per message type
     totals = {mt: sum(bytes_list) for mt, bytes_list in msgtype_bytes.items()}
@@ -419,22 +497,30 @@ def plot_by_msgtype(times, msgtype_bytes, window_size, top_n, output=None, sourc
 
     fig, ax = plt.subplots(figsize=(14, 7))
 
+    # Convert to datetime for x-axis if we have valid timestamps
+    if start_timestamp > 1e9:
+        x_values = [datetime.fromtimestamp(start_timestamp + t) for t in times]
+        setup_time_axis(ax, times, start_timestamp)
+    else:
+        x_values = times
+        ax.set_xlabel("Time (seconds)")
+
     # Convert to rates and stack
     bottom = np.zeros(len(times))
     colors = generate_distinct_colors(top_n)
 
     for i, msg_type in enumerate(top_types):
         rate = np.array(msgtype_bytes[msg_type]) / window_size
-        ax.fill_between(times, bottom, bottom + rate, label=msg_type,
+        ax.fill_between(x_values, bottom, bottom + rate, label=msg_type,
                         color=colors[i], alpha=0.8)
         bottom += rate
 
     # Add "other" category
     if sum(other_bytes) > 0:
         other_rate = np.array(other_bytes) / window_size
-        ax.fill_between(times, bottom, bottom + other_rate, label="Other", color="gray", alpha=0.5)
+        ax.fill_between(x_values, bottom, bottom + other_rate,
+                        label="Other", color="gray", alpha=0.5)
 
-    ax.set_xlabel("Time (seconds)")
     ax.set_ylabel("Bytes per second")
     filter_str = make_filter_subtitle(source_system, source_component)
     ax.set_title(f"Data Rate by Message Type (window={window_size}s){filter_str}")
@@ -457,7 +543,7 @@ def main():
         print(f"Error: File not found: {args.logfile}")
         sys.exit(1)
 
-    times, bytes_data, total_bytes, total_messages = process_log(
+    times, bytes_data, total_bytes, total_messages, start_timestamp = process_log(
         args.logfile,
         args.window,
         args.by_msgtype,
@@ -466,14 +552,14 @@ def main():
     )
 
     if args.by_msgtype:
-        plot_by_msgtype(times, bytes_data, args.window, args.top_n, args.output,
-                        args.source_system, args.source_component)
+        plot_by_msgtype(times, bytes_data, args.window, args.top_n, start_timestamp,
+                        args.output, args.source_system, args.source_component)
     elif args.cumulative:
-        plot_cumulative(times, bytes_data, total_bytes, args.output,
-                        args.source_system, args.source_component)
+        plot_cumulative(times, bytes_data, total_bytes, start_timestamp,
+                        args.output, args.source_system, args.source_component)
     else:
-        plot_rate(times, bytes_data, args.window, total_bytes, total_messages, args.output,
-                  args.source_system, args.source_component)
+        plot_rate(times, bytes_data, args.window, total_bytes, total_messages,
+                  start_timestamp, args.output, args.source_system, args.source_component)
 
 
 if __name__ == "__main__":
