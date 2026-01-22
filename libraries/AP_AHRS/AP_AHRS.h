@@ -1052,6 +1052,14 @@ private:
     struct AP_AHRS_Backend::Estimates external_estimates;
 #endif
 
+    // instantiate a reference for the active backend.  Doing this
+    // here ensures the pointer is valid be
+    AP_AHRS_Backend *active_backend;
+    AP_AHRS_Backend::Estimates *active_estimates;
+    AP_AHRS_Backend *backend_for_type(EKFType type);
+    AP_AHRS_Backend::Estimates *estimates_for_type(EKFType type);
+    void set_active_backend(EKFType type);
+
     enum class Options : uint16_t {
         DISABLE_DCM_FALLBACK_FW=(1U<<0),
         DISABLE_DCM_FALLBACK_VTOL=(1U<<1),

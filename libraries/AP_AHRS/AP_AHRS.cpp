@@ -223,6 +223,22 @@ AP_AHRS::AP_AHRS(uint8_t flags) :
     // load default values from var_info table
     AP_Param::setup_object_defaults(this, var_info);
 
+#if AP_AHRS_DCM_ENABLED
+    state.active_EKF = EKFType::DCM;
+#elif AP_AHRS_SIM_ENABLED
+    state.active_EKF = EKFType::SIM;
+#elif AP_AHRS_NAVEKF3_ENABLED
+    state.active_EKF = EKFType::EKF3;
+#elif AP_AHRS_NAVEKF2_ENABLED
+    state.active_EKF = EKFType::EKF2;
+#elif AP_AHRS_EXTERNAL_ENABLED
+    state.active_EKF = EKFType::EXTERNAL;
+#else
+#error No AHRS backends available
+#endif
+    // populate the active_backend pointer:
+    set_active_backend(state.active_EKF);
+
 #if APM_BUILD_COPTER_OR_HELI || APM_BUILD_TYPE(APM_BUILD_ArduSub)
     // Copter and Sub force the use of EKF
     _ekf_flags |= AP_AHRS::FLAG_ALWAYS_USE_EKF;
@@ -486,37 +502,12 @@ void AP_AHRS::update(bool skip_ins_update)
     update_AOA_SSA();
 
     state.active_EKF = _active_EKF_type();
+    set_active_backend(state.active_EKF);
+
 #if HAL_GCS_ENABLED
     if (state.active_EKF != last_active_ekf_type) {
         last_active_ekf_type = state.active_EKF;
-        const char *shortname = "???";
-        switch ((EKFType)state.active_EKF) {
-#if AP_AHRS_DCM_ENABLED
-        case EKFType::DCM:
-            shortname = "DCM";
-            break;
-#endif
-#if AP_AHRS_SIM_ENABLED
-        case EKFType::SIM:
-            shortname = "SIM";
-            break;
-#endif
-#if AP_AHRS_EXTERNAL_ENABLED
-        case EKFType::EXTERNAL:
-            shortname = "External";
-            break;
-#endif
-#if HAL_NAVEKF3_AVAILABLE
-        case EKFType::THREE:
-            shortname = "EKF3";
-            break;
-#endif
-#if HAL_NAVEKF2_AVAILABLE
-        case EKFType::TWO:
-            shortname = "EKF2";
-            break;
-#endif
-        }
+        const char *shortname = active_backend->name();
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "AHRS: %s active", shortname);
     }
 #endif // HAL_GCS_ENABLED
@@ -815,6 +806,65 @@ float AP_AHRS::get_error_yaw(void) const
     return dcm.get_error_yaw();
 #endif
     return 0;
+}
+
+AP_AHRS_Backend *AP_AHRS::backend_for_type(EKFType type)
+{
+    switch (type) {
+#if AP_AHRS_DCM_ENABLED
+    case EKFType::DCM:
+        return &dcm;
+#endif
+#if HAL_NAVEKF2_AVAILABLE
+    case EKFType::TWO:
+        return &ekf2;
+#endif
+#if HAL_NAVEKF3_AVAILABLE
+    case EKFType::THREE:
+        return &ekf3;
+#endif
+#if AP_AHRS_SIM_ENABLED
+    case EKFType::SIM:
+        return &sim;
+#endif
+#if AP_AHRS_EXTERNAL_ENABLED
+    case EKFType::EXTERNAL:
+        return &external;
+#endif
+    }
+    return nullptr;
+}
+AP_AHRS_Backend::Estimates *AP_AHRS::estimates_for_type(EKFType type)
+{
+    switch (type) {
+#if AP_AHRS_DCM_ENABLED
+    case EKFType::DCM:
+        return &dcm_estimates;
+#endif
+#if HAL_NAVEKF2_AVAILABLE
+    case EKFType::TWO:
+        return &ekf2_estimates;
+#endif
+#if HAL_NAVEKF3_AVAILABLE
+    case EKFType::THREE:
+        return &ekf3_estimates;
+#endif
+#if AP_AHRS_SIM_ENABLED
+    case EKFType::SIM:
+        return &sim_estimates;
+#endif
+#if AP_AHRS_EXTERNAL_ENABLED
+    case EKFType::EXTERNAL:
+        return &external_estimates;
+#endif
+    }
+    return nullptr;
+}
+
+void AP_AHRS::set_active_backend(EKFType type)
+{
+    active_backend = backend_for_type(type);
+    active_estimates = estimates_for_type(type);
 }
 
 // return a wind estimation vector, in m/s
