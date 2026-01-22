@@ -1051,6 +1051,8 @@ private:
     AP_AHRS_Backend::Estimates *estimates_for_type(EKFType type);
     void set_active_backend(EKFType type);
 
+    AP_AHRS_Backend::Estimates *get_secondary_estimates();
+
     enum class Options : uint16_t {
         DISABLE_DCM_FALLBACK_FW=(1U<<0),
         DISABLE_DCM_FALLBACK_VTOL=(1U<<1),
