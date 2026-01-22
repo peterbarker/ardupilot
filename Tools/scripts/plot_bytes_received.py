@@ -259,6 +259,66 @@ def make_filter_subtitle(source_system, source_component):
     return f" [filter: {', '.join(parts)}]"
 
 
+def generate_distinct_colors(n):
+    """
+    Generate n visually distinct colors for plotting.
+
+    Uses a combination of qualitative colormaps and manual selection
+    to maximize visual distinction between adjacent colors.
+    """
+    if n <= 0:
+        return []
+
+    # Start with hand-picked highly distinct colors
+    base_colors = [
+        '#1f77b4',  # blue
+        '#ff7f0e',  # orange
+        '#2ca02c',  # green
+        '#d62728',  # red
+        '#9467bd',  # purple
+        '#8c564b',  # brown
+        '#e377c2',  # pink
+        '#17becf',  # cyan
+        '#bcbd22',  # olive
+        '#7f7f7f',  # gray
+    ]
+
+    if n <= len(base_colors):
+        return base_colors[:n]
+
+    # For more colors, combine multiple colormaps
+    colors = list(base_colors)
+
+    # Add colors from tab20, skipping similar ones
+    tab20 = plt.cm.tab20(np.linspace(0, 1, 20))
+    tab20b = plt.cm.tab20b(np.linspace(0, 1, 20))
+    tab20c = plt.cm.tab20c(np.linspace(0, 1, 20))
+
+    # Interleave from different colormaps for maximum distinction
+    extra_colors = []
+    for i in range(20):
+        if i % 3 == 0:
+            extra_colors.append(tab20[i])
+        elif i % 3 == 1:
+            extra_colors.append(tab20b[i])
+        else:
+            extra_colors.append(tab20c[i])
+
+    # Add extra colors until we have enough
+    for c in extra_colors:
+        if len(colors) >= n:
+            break
+        colors.append(c)
+
+    # If still not enough, use hsv colormap for remaining
+    if len(colors) < n:
+        remaining = n - len(colors)
+        hsv_colors = plt.cm.hsv(np.linspace(0, 0.9, remaining + 1)[:-1])
+        colors.extend(hsv_colors)
+
+    return colors[:n]
+
+
 def plot_cumulative(times, bytes_per_window, total_bytes, output=None, source_system=None, source_component=None):
     """Plot cumulative bytes over time."""
     cumulative = np.cumsum(bytes_per_window)
@@ -361,11 +421,12 @@ def plot_by_msgtype(times, msgtype_bytes, window_size, top_n, output=None, sourc
 
     # Convert to rates and stack
     bottom = np.zeros(len(times))
-    colors = plt.cm.tab20(np.linspace(0, 1, top_n + 1))
+    colors = generate_distinct_colors(top_n)
 
     for i, msg_type in enumerate(top_types):
         rate = np.array(msgtype_bytes[msg_type]) / window_size
-        ax.fill_between(times, bottom, bottom + rate, label=msg_type, color=colors[i], alpha=0.7)
+        ax.fill_between(times, bottom, bottom + rate, label=msg_type,
+                        color=colors[i], alpha=0.8)
         bottom += rate
 
     # Add "other" category
