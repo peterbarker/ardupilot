@@ -6,6 +6,7 @@ This script intend to provide a pretty size diff between two binaries.
 AP_FLAKE8_CLEAN
 '''
 
+import filecmp
 import os
 from argparse import ArgumentParser
 from tabulate import tabulate
@@ -51,8 +52,10 @@ def sizes_for_file(filepath):
     return size_list
 
 
-def print_table(summary_data_list_second, summary_data_list_master):
+def print_table(summary_data_list_second, summary_data_list_master, identical_binaries=None):
     """Print the binaries size diff on a table."""
+    if identical_binaries is None:
+        identical_binaries = set()
     print_data = []
     print("")
     # print(summary_data_list_second)
@@ -60,7 +63,8 @@ def print_table(summary_data_list_second, summary_data_list_master):
     for name in summary_data_list_second[0]:
         for master_name in summary_data_list_master[0]:
             if name == master_name:
-                col_data = [name]
+                is_identical = name in identical_binaries
+                col_data = [name + (" *" if is_identical else "")]
                 for key in ["text", "data", "bss", "total"]:
                     bvalue = summary_data_list_second[0][name].get(key)
                     mvalue = summary_data_list_master[0][name].get(key)
@@ -79,10 +83,13 @@ def print_table(summary_data_list_second, summary_data_list_master):
                                   summary_data_list_master[0][name].get("data"))
                         bvalue = (summary_data_list_second[0][name].get("text") +
                                   summary_data_list_second[0][name].get("data"))
-                    diff = (bvalue - mvalue) * 100.0 / mvalue
-                    signum = "+" if diff > 0.0 else ""
-                    print_diff = str(bvalue - mvalue)
-                    print_diff += " (" + signum + "%0.4f%%" % diff + ")"
+                    if is_identical and bvalue == mvalue:
+                        print_diff = "*"
+                    else:
+                        diff = (bvalue - mvalue) * 100.0 / mvalue
+                        signum = "+" if diff > 0.0 else ""
+                        print_diff = str(bvalue - mvalue)
+                        print_diff += " (" + signum + "%0.4f%%" % diff + ")"
                     col_data.append(print_diff)
 
                 # Append free flash space which is equivalent to crash_log's size
@@ -133,4 +140,12 @@ def extract_binaries_size(path):
 master_dict = extract_binaries_size(args.master)
 second_dict = extract_binaries_size(args.second)
 
-print_table(second_dict, master_dict)
+# find binaries that are byte-for-byte identical between master and second
+identical_binaries = set()
+for name in master_dict[0]:
+    master_file = os.path.join(args.master, name)
+    second_file = os.path.join(args.second, name)
+    if filecmp.cmp(master_file, second_file, shallow=False):
+        identical_binaries.add(name)
+
+print_table(second_dict, master_dict, identical_binaries)
