@@ -140,11 +140,19 @@ def extract_binaries_size(path):
 master_dict = extract_binaries_size(args.master)
 second_dict = extract_binaries_size(args.second)
 
+# build a mapping from lowercased name to original filename on disk
+original_names = {}
+for file in os.listdir(args.master):
+    key = os.path.splitext(file)[0].lower()
+    if key not in original_names:
+        original_names[key] = os.path.splitext(file)[0]
+
 # find binaries that are byte-for-byte identical between master and second
 identical_binaries = set()
 for name in master_dict[0]:
-    master_file = os.path.join(args.master, name)
-    second_file = os.path.join(args.second, name)
+    orig = original_names[name]
+    master_file = os.path.join(args.master, orig)
+    second_file = os.path.join(args.second, orig)
     if filecmp.cmp(master_file, second_file, shallow=False):
         identical_binaries.add(name)
 
