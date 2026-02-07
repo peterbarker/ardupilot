@@ -248,7 +248,7 @@ AP_AHRS::AP_AHRS(uint8_t flags) :
     // load default values from var_info table
     AP_Param::setup_object_defaults(this, var_info);
 
-    active_backend = backend_for_type(ekf_type());
+    active_backend = backend_for_type(active_EKF_type());
 
 #if APM_BUILD_COPTER_OR_HELI || APM_BUILD_TYPE(APM_BUILD_ArduSub)
     // Copter and Sub force the use of EKF
@@ -348,7 +348,7 @@ void AP_AHRS::init()
     last_active_ekf_type = (EKFType)_ekf_type.get();
 
     // we may have updated ekf_type()'s results, so set the backend again:
-    active_backend = backend_for_type(ekf_type());
+    active_backend = backend_for_type(active_EKF_type());
 
     // init backends
 #if AP_AHRS_DCM_ENABLED
