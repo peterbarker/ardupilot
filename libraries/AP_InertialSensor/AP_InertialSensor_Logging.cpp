@@ -182,16 +182,16 @@ void AP_InertialSensor::write_notch_log_messages() const
                 now_us,
                 i,
                 notch.num_calculated_notch_frequencies,
-                notches[0], notches[1], notches[2], notches[3],
-                notches[4], notches[5], notches[6], notches[7],
-                notches[8], notches[9], notches[10], notches[11]);
+                double(notches[0]), double(notches[1]), double(notches[2]), double(notches[3]),
+                double(notches[4]), double(notches[5]), double(notches[6]), double(notches[7]),
+                double(notches[8]), double(notches[9]), double(notches[10]), double(notches[11]));
         } else {
             // log single center frequency
             AP::logger().WriteStreaming(
                 "FTNS", "TimeUS,I,NF", "s#z", "F--", "QBf",
                 now_us,
                 i,
-                notches[0]);
+                double(notches[0]));
         }
 
         // ask the HarmonicNotchFilter object for primary gyro to

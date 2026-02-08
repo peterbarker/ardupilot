@@ -186,9 +186,9 @@ void GCS_MAVLINK_Copter::send_nav_controller_output() const
         chan,
         degrees(targets_rad.x),
         degrees(targets_rad.y),
-        degrees(targets_rad.z),
-        flightmode->wp_bearing_deg(),
-        MIN(flightmode->wp_distance_m(), UINT16_MAX),
+        int16_t(degrees(targets_rad.z)),
+        int16_t(flightmode->wp_bearing_deg()),
+        uint16_t(MIN(flightmode->wp_distance_m(), UINT16_MAX)),
         copter.pos_control->get_pos_error_D_m(),
         0,
         flightmode->crosstrack_error_m());

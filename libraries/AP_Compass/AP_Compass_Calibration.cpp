@@ -295,7 +295,7 @@ bool Compass::send_mag_cal_progress(const GCS_MAVLINK& link)
                 link.get_chan(),
                 uint8_t(compass_id),
                 _get_cal_mask(),
-                (uint8_t)cal_state.status, cal_state.attempt, cal_state.completion_pct, cal_state.completion_mask,
+                (uint8_t)cal_state.status, cal_state.attempt, uint8_t(cal_state.completion_pct), cal_state.completion_mask,
                 0.0f, 0.0f, 0.0f
             );
         } else {
@@ -416,7 +416,7 @@ MAV_RESULT Compass::handle_mag_cal_command(const mavlink_command_int_t &packet)
             break;
         }
 
-        uint8_t mag_mask = packet.param1;
+        uint8_t mag_mask = uint8_t(packet.param1);
         bool retry = !is_zero(packet.param2);
         bool autosave = !is_zero(packet.param3);
         float delay = packet.param4;
@@ -447,7 +447,7 @@ MAV_RESULT Compass::handle_mag_cal_command(const mavlink_command_int_t &packet)
             break;
         }
 
-        uint8_t mag_mask = packet.param1;
+        uint8_t mag_mask = uint8_t(packet.param1);
 
         if (mag_mask == 0) { // 0 means all
             mag_mask = 0xFF;
@@ -466,7 +466,7 @@ MAV_RESULT Compass::handle_mag_cal_command(const mavlink_command_int_t &packet)
             break;
         }
         
-        uint8_t mag_mask = packet.param1;
+        uint8_t mag_mask = uint8_t(packet.param1);
         
         if (mag_mask == 0) { // 0 means all
             cancel_calibration_all();

@@ -91,7 +91,7 @@ int32_t AP_L1_Control::nav_roll_cd(void) const
 	float pitchL1 = constrain_float(_ahrs.get_pitch_rad(),-pitchLimL1,pitchLimL1);
     ret = degrees(atanf(_latAccDem * (1.0f/(GRAVITY_MSS * cosf(pitchL1))))) * 100.0f;
     ret = constrain_float(ret, -9000, 9000);
-    return ret;
+    return int32_t(ret);
 }
 
 /*
@@ -105,12 +105,12 @@ float AP_L1_Control::lateral_acceleration(void) const
 
 int32_t AP_L1_Control::nav_bearing_cd(void) const
 {
-    return wrap_180_cd(rad_to_cd(_nav_bearing));
+    return int32_t(wrap_180_cd(rad_to_cd(_nav_bearing)));
 }
 
 int32_t AP_L1_Control::bearing_error_cd(void) const
 {
-    return rad_to_cd(_bearing_error);
+    return int32_t(rad_to_cd(_bearing_error));
 }
 
 int32_t AP_L1_Control::target_bearing_cd(void) const

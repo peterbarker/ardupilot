@@ -113,7 +113,7 @@ void AP_NMEA_Output::update()
 
     // format time string
     char tstring[10];
-    hal.util->snprintf(tstring, sizeof(tstring), "%02u%02u%05.2f", tm->tm_hour, tm->tm_min, tm->tm_sec + (time_usec % 1000000) * 1.0e-6);
+    hal.util->snprintf(tstring, sizeof(tstring), "%02u%02u%05.2f", tm->tm_hour, tm->tm_min, double(tm->tm_sec + (time_usec % 1000000) * 1.0e-6));
 
     Location loc;
     const auto &gps = AP::gps();
@@ -130,8 +130,8 @@ void AP_NMEA_Output::update()
 
     // format latitude
     char lat_string[13];
-    double deg = fabs(loc.lat * 1.0e-7f);
-    double min_dec = ((fabs(loc.lat) - (unsigned)deg * 1.0e7)) * 60 * 1.e-7f;
+    double deg = fabs(loc.lat * 1.0e-7);
+    double min_dec = ((fabs(double(loc.lat)) - double((unsigned)deg) * double(1.0e7))) * double(60.0) * double(1.0e-7);
     hal.util->snprintf(lat_string,
             sizeof(lat_string),
             "%02u%08.5f,%c",
@@ -141,8 +141,8 @@ void AP_NMEA_Output::update()
 
     // format longitude
     char lng_string[14];
-    deg = fabs(loc.lng * 1.0e-7f);
-    min_dec = ((fabs(loc.lng) - (unsigned)deg * 1.0e7)) * 60 * 1.e-7f; 
+    deg = fabs(loc.lng * 1.0e-7);
+    min_dec = ((fabs(double(loc.lng)) - double((unsigned)deg) * double(1.0e7))) * double(60.0) * double(1.0e-7); 
     hal.util->snprintf(lng_string,
             sizeof(lng_string),
             "%03u%08.5f,%c",
@@ -209,8 +209,8 @@ void AP_NMEA_Output::update()
                                     lng_string,
                                     fix_quality,
                                     gps.num_sats(),
-                                    gps.get_hdop()*0.01,
-                                    loc.alt * 0.01f);
+                                    double(gps.get_hdop()*0.01),
+                                    double(loc.alt * 0.01f));
 
         space_required += gga_length;
     }

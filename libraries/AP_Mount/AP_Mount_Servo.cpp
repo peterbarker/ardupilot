@@ -42,9 +42,9 @@ void AP_Mount_Servo::send_target_angles(const MountAngleTarget& angle_rad)
     update_angle_outputs(mnt_target.angle_rad);
 
     // write the results to the servos
-    move_servo(_roll_idx, degrees(_angle_bf_output_rad.x)*10, _params.roll_angle_min*10, _params.roll_angle_max*10);
-    move_servo(_tilt_idx, degrees(_angle_bf_output_rad.y)*10, _params.pitch_angle_min*10, _params.pitch_angle_max*10);
-    move_servo(_pan_idx,  degrees(_angle_bf_output_rad.z)*10, _params.yaw_angle_min*10, _params.yaw_angle_max*10);
+    move_servo(_roll_idx, int16_t(degrees(_angle_bf_output_rad.x)*10), _params.roll_angle_min*10, _params.roll_angle_max*10);
+    move_servo(_tilt_idx, int16_t(degrees(_angle_bf_output_rad.y)*10), _params.pitch_angle_min*10, _params.pitch_angle_max*10);
+    move_servo(_pan_idx,  int16_t(degrees(_angle_bf_output_rad.z)*10), _params.yaw_angle_min*10, _params.yaw_angle_max*10);
 }
 
 // returns true if this mount can control its roll

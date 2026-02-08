@@ -453,7 +453,7 @@ void AP_ADSB_uAvionix_UCP::send_GPS_Data()
     const bool fix_is_good = (fix >= GPS_FIX_3D);
     const Vector3f velocity = fix_is_good ? gps.velocity() : Vector3f();
 
-    msg.utcTime_s = gps.time_epoch_usec() * 1E-6;
+    msg.utcTime_s = uint32_t(gps.time_epoch_usec() * 1E-6);
     msg.latitude_ddE7 = fix_is_good ? _frontend._my_loc.lat : INT32_MAX;
     msg.longitude_ddE7 = fix_is_good ? _frontend._my_loc.lng : INT32_MAX;
     msg.altitudeGnss_mm = fix_is_good ? (_frontend._my_loc.alt * 10): INT32_MAX;
@@ -467,21 +467,21 @@ void AP_ADSB_uAvionix_UCP::send_GPS_Data()
     //  This yields a factor of 3 to estimate HPL from horizontal accuracy.
     float accHoriz;
     bool gotAccHoriz = gps.horizontal_accuracy(accHoriz);
-    msg.HPL_mm = gotAccHoriz ? 3 * accHoriz * 1E3 : UINT32_MAX; // required to calculate NIC
+    msg.HPL_mm = gotAccHoriz ? uint32_t(3 * accHoriz * 1E3) : UINT32_MAX; // required to calculate NIC
     msg.VPL_cm = UINT32_MAX; // unused by ping200X
 
     // Figure of Merits
-    msg.horizontalFOM_mm = gotAccHoriz ? accHoriz * 1E3 : UINT32_MAX;
+    msg.horizontalFOM_mm = gotAccHoriz ? uint32_t(accHoriz * 1E3) : UINT32_MAX;
     float accVert;
-    msg.verticalFOM_cm = gps.vertical_accuracy(accVert) ? accVert * 1E2 : UINT16_MAX;
+    msg.verticalFOM_cm = gps.vertical_accuracy(accVert) ? uint16_t(accVert * 1E2) : UINT16_MAX;
     float accVel;
-    msg.horizontalVelocityFOM_mmps = gps.speed_accuracy(accVel) ? accVel * 1E3 : UINT16_MAX;
+    msg.horizontalVelocityFOM_mmps = gps.speed_accuracy(accVel) ? uint16_t(accVel * 1E3) : UINT16_MAX;
     msg.verticalVelocityFOM_mmps = msg.horizontalVelocityFOM_mmps;
 
     // Velocities
-    msg.verticalVelocity_cmps = fix_is_good ? -1.0f * velocity.z * 1E2 : INT16_MAX;
-    msg.northVelocity_mmps = fix_is_good ? velocity.x * 1E3 : INT32_MAX;
-    msg.eastVelocity_mmps = fix_is_good ? velocity.y * 1E3 : INT32_MAX;
+    msg.verticalVelocity_cmps = fix_is_good ? int16_t(-1.0f * velocity.z * 1E2) : INT16_MAX;
+    msg.northVelocity_mmps = fix_is_good ? int32_t(velocity.x * 1E3) : INT32_MAX;
+    msg.eastVelocity_mmps = fix_is_good ? int32_t(velocity.y * 1E3) : INT32_MAX;
 
     // State
     msg.fixType = fix;

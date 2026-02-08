@@ -171,7 +171,7 @@ void AP_Generator_IE_2400::decode_legacy_data()
     switch (_term_number) {
         case 1: {
             // Float
-            _parsed.tank_bar = strtof(_term, NULL);
+            _parsed.tank_bar = uint16_t(strtof(_term, NULL));
 
             // Scale tank pressure linearly to a value between 0 and 1
             // Min = 5 bar, max = 300 bar, PRESS_GRAD = 1/295.
@@ -496,7 +496,7 @@ void AP_Generator_IE_2400::log_write()
                 "F2---",
                 "Qfiii",
                 AP_HAL::micros64(),
-                _fuel_remaining,
+                double(_fuel_remaining),
                 _spm_pwr,
                 _pwr_out,
                 _err_code
@@ -527,9 +527,9 @@ void AP_Generator_IE_2400::log_write()
                 "F----------",
                 "QfffhHBhBII",
                 AP_HAL::micros64(),
-                _fuel_remaining,
-                _valid_V2.inlet_press,
-                _voltage,
+                double(_fuel_remaining),
+                double(_valid_V2.inlet_press),
+                double(_voltage),
                 _pwr_out,
                 _spm_pwr,
                 _valid_V2.unit_fault,

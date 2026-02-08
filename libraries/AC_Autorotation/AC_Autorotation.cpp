@@ -269,11 +269,11 @@ void AC_Autorotation::update_headspeed_controller(void)
                                 "F00000",
                                 "Qfffff",
                                 AP_HAL::micros64(),
-                                _target_head_speed,
-                                head_speed_norm,
-                                _head_speed_error,
-                                _p_term_hs,
-                                _ff_term_hs);
+                                double(_target_head_speed),
+                                double(head_speed_norm),
+                                double(_head_speed_error),
+                                double(_p_term_hs),
+                                double(_ff_term_hs));
 #endif
 }
 
@@ -378,16 +378,16 @@ void AC_Autorotation::update_forward_speed_controller(float pilot_accel_norm)
                                 "F0000000-00",
                                 "QfffffffBff",
                                 AP_HAL::micros64(),
-                                _desired_vel_ms,
-                                pid_info.target,
-                                pid_info.actual,
-                                pid_info.P,
-                                pid_info.I,
-                                pid_info.D,
-                                pid_info.FF,
+                                double(_desired_vel_ms),
+                                double(pid_info.target),
+                                double(pid_info.actual),
+                                double(pid_info.P),
+                                double(pid_info.I),
+                                double(pid_info.D),
+                                double(pid_info.FF),
                                 uint8_t(_limit_accel),
-                                bf_accel_target_mss.x,
-                                bf_accel_target_mss.y);
+                                double(bf_accel_target_mss.x),
+                                double(bf_accel_target_mss.y));
 #endif
 }
 

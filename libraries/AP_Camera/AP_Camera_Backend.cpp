@@ -101,7 +101,7 @@ void AP_Camera_Backend::update()
     }
 
     // check vehicle has moved at least trigg_dist meters
-    if (current_loc.get_distance(last_location) < _params.trigg_dist) {
+    if (current_loc.get_distance(last_location) < double(_params.trigg_dist)) {
         return;
     }
 

@@ -328,9 +328,9 @@ void AP_MotorsHeli_Swash::write_log(float cyclic_scaler, float col_ang_min, floa
     AP::logger().WriteStreaming("SWSH", "TimeUS,I,Col,TCyc,PCyc,RCyc", "s#dddd", "F-0000", "QBffff",
                                 AP_HAL::micros64(),
                                 _instance,
-                                col,
-                                tcyc,
-                                pcyc,
-                                rcyc);
+                                double(col),
+                                double(tcyc),
+                                double(pcyc),
+                                double(rcyc));
 }
 #endif

@@ -471,7 +471,7 @@ void AP_OSD::update_stats()
 
     // maximum distance
     if (home_is_set) {
-        float distance = home_loc.get_distance(loc);
+        float distance = float(home_loc.get_distance(loc));
         _stats.max_dist_m = fmaxf(_stats.max_dist_m, distance);
     }
 

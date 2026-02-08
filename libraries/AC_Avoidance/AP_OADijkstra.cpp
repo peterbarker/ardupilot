@@ -221,7 +221,7 @@ AP_OADijkstra::AP_OADijkstra_State AP_OADijkstra::update(const Location &current
         dest_to_next_dest_clear = _dest_to_next_dest_clear;
 
         // check if we should advance to next point for next iteration
-        const bool near_oa_wp = current_loc.get_distance(destination_new) <= 2.0f;
+        const bool near_oa_wp = current_loc.get_distance(destination_new) <= ftype(2.0f);
         const bool past_oa_wp = current_loc.past_interval_finish_line(origin_new, destination_new);
         if (near_oa_wp || past_oa_wp) {
             _path_idx_returned++;

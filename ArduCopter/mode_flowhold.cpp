@@ -466,7 +466,7 @@ void ModeFlowHold::update_height_estimate(void)
             continue;
         }
         delta_height_m += (height_m - height_estimate_m) * abs_flow;
-        total_weight += abs_flow;
+        total_weight += uint8_t(abs_flow);
     }
     if (total_weight > 0) {
         delta_height_m /= total_weight;

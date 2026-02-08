@@ -77,7 +77,7 @@ void AP_EFI_Serial_Lutan::update()
                 internal_state.coolant_temperature = degF_to_Kelvin(int16_t(be16toh(data.coolant))*0.1);
                 // CHT is in coolant field
                 internal_state.cylinder_status.cylinder_head_temperature = internal_state.coolant_temperature;
-                internal_state.throttle_position_percent = int16_t(be16toh(data.tps))*0.1;
+                internal_state.throttle_position_percent = uint8_t(int16_t(be16toh(data.tps))*0.1);
 
                 // integrate fuel consumption
                 if (internal_state.engine_speed_rpm > RPM_THRESHOLD) {

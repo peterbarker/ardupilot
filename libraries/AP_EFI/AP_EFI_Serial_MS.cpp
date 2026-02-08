@@ -127,7 +127,7 @@ bool AP_EFI_Serial_MS::read_incoming_realtime_data()
             case TPS_MSB:
                 temp_float = (float)((data << 8) + read_byte_CRC32())*0.1f;
                 offset++;
-                internal_state.throttle_position_percent = roundf(temp_float);
+                internal_state.throttle_position_percent = uint8_t(roundf(temp_float));
                 break;
             case AFR1_MSB:
                 temp_float = (float)((data << 8) + read_byte_CRC32())*0.1f;

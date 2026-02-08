@@ -22,7 +22,7 @@ void PolyFit<order,xtype,vtype>::update(xtype x, vtype y)
 
     temp = 1;
     for (int8_t i = order-1; i >= 0; i--) {
-        vec[i] += y * temp;
+        vec[i] += y * float(temp);
         temp *= x;
     }
 }
@@ -44,15 +44,15 @@ bool PolyFit<order,xtype,vtype>::get_polynomial(vtype res[order]) const
     Vector3d resd[order] {};
     for (uint8_t i = 0; i < order; i++) {
         for (uint8_t j = 0; j < order; j++) {
-            resd[i].x += vec[j].x * inv_mat[i*order+j];
-            resd[i].y += vec[j].y * inv_mat[i*order+j];
-            resd[i].z += vec[j].z * inv_mat[i*order+j];
+            resd[i].x += double(vec[j].x) * inv_mat[i*order+j];
+            resd[i].y += double(vec[j].y) * inv_mat[i*order+j];
+            resd[i].z += double(vec[j].z) * inv_mat[i*order+j];
         }
     }
     for (uint8_t j = 0; j < order; j++) {
-        res[j].x = resd[j].x;
-        res[j].y = resd[j].y;
-        res[j].z = resd[j].z;
+        res[j].x = float(resd[j].x);
+        res[j].y = float(resd[j].y);
+        res[j].z = float(resd[j].z);
     }
     delete[] inv_mat;
     return true;

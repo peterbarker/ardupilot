@@ -38,7 +38,7 @@ bool AP_Camera_Relay::trigger_pic()
     ap_relay->set(AP_Relay_Params::FUNCTION::CAMERA, _params.relay_on);
 
     // set counter to move servo to off position after this many iterations of update (assumes 50hz update rate)
-    trigger_counter = constrain_float(_params.trigger_duration * 50, 0, UINT16_MAX);
+    trigger_counter = uint16_t(constrain_float(_params.trigger_duration * 50, 0, UINT16_MAX));
 
     return true;
 }

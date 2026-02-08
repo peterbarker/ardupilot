@@ -313,7 +313,7 @@ public:
     const Vector3p& get_pos_estimate_NED_m() const { return _pos_estimate_ned_m; }
 
     // Returns estimated altitude above EKF origin in meters.
-    float get_pos_estimate_U_m() const { return -_pos_estimate_ned_m.z; }
+    float get_pos_estimate_U_m() const { return float(-_pos_estimate_ned_m.z); }
 
     // Returns the target position in NED frame, in meters relative to EKF origin.
     const Vector3p& get_pos_target_NED_m() const { return _pos_target_ned_m; }
@@ -329,7 +329,7 @@ public:
     float get_pos_target_U_cm() const { return get_pos_target_U_m() * 100.0; }
 
     // Returns target altitude above EKF origin in meters.
-    float get_pos_target_U_m() const { return -_pos_target_ned_m.z; }
+    float get_pos_target_U_m() const { return float(-_pos_target_ned_m.z); }
 
     // Sets desired altitude above EKF origin in centimeters.
     // See set_pos_desired_U_m() for full details.
@@ -343,7 +343,7 @@ public:
     float get_pos_desired_U_cm() const { return get_pos_desired_U_m() * 100.0; }
 
     // Returns desired altitude above EKF origin in meters.
-    float get_pos_desired_U_m() const { return -_pos_desired_ned_m.z; }
+    float get_pos_desired_U_m() const { return float(-_pos_desired_ned_m.z); }
 
 
     /// Stopping Point
@@ -494,7 +494,7 @@ public:
     void set_pos_offset_D_m(float pos_offset_d_m) { _pos_offset_ned_m.z = pos_offset_d_m; }
 
     // Returns vertical position offset in meters relative to EKF origin in meters, Down-positive.
-    float get_pos_offset_U_m() const { return -_pos_offset_ned_m.z; }
+    float get_pos_offset_U_m() const { return float(-_pos_offset_ned_m.z); }
 
     // Returns vertical velocity offset in m/s.
     float get_vel_offset_D_ms() const { return _vel_offset_ned_ms.z; }

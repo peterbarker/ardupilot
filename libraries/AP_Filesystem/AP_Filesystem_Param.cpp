@@ -252,17 +252,17 @@ uint8_t AP_Filesystem_Param::pack_param(const struct rfile &r, struct cursor &c,
                 // should never happen...
                 break;
             case AP_PARAM_INT8: {
-                const int32_t int8_default = default_val;
+                const int32_t int8_default = int32_t(default_val);
                 memcpy(&buf[2+name_len+type_len], &int8_default, type_len);
                 break;
             }
             case AP_PARAM_INT16: {
-                const int16_t int16_default = default_val;
+                const int16_t int16_default = int16_t(default_val);
                 memcpy(&buf[2+name_len+type_len], &int16_default, type_len);
                 break;
             }
             case AP_PARAM_INT32: {
-                const int32_t int32_default = default_val;
+                const int32_t int32_default = int32_t(default_val);
                 memcpy(&buf[2+name_len+type_len], &int32_default, type_len);
                 break;
             }

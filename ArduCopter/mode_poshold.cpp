@@ -269,7 +269,7 @@ void ModePosHold::run()
                 // scaling factors:
                 // 1.5 × (time to level, s) × 1000 -> ms
                 // time to level ≈ angle_max / brake_rate
-                const uint32_t brake_timeout_roll_ms = MIN(POSHOLD_BRAKE_TIME_ESTIMATE_MAX_MS, (1.5f * 1000.0f * (brake.angle_max_roll_rad / radians(g.poshold_brake_rate_degs))));
+                const uint32_t brake_timeout_roll_ms = MIN(POSHOLD_BRAKE_TIME_ESTIMATE_MAX_MS, uint32_t(1.5f * 1000.0f * (brake.angle_max_roll_rad / radians(g.poshold_brake_rate_degs))));
 
                 // if velocity is very low reduce braking time to 0.5 s
                 if ((fabsf(vel_right_ms) <= POSHOLD_SPEED_0) && (now_ms - brake.start_time_roll_ms > 500) && (brake_timeout_roll_ms > 500)) {
@@ -362,7 +362,7 @@ void ModePosHold::run()
                 }
             } else {
                 // timeout ≈ 1.5 * (angle / rate) in ms
-                const uint32_t brake_timeout_pitch_ms = MIN(POSHOLD_BRAKE_TIME_ESTIMATE_MAX_MS, (1.5 * 1000.0 * (brake.angle_max_pitch_rad / radians(g.poshold_brake_rate_degs))));
+                const uint32_t brake_timeout_pitch_ms = MIN(POSHOLD_BRAKE_TIME_ESTIMATE_MAX_MS, uint32_t(1.5 * 1000.0 * (brake.angle_max_pitch_rad / radians(g.poshold_brake_rate_degs))));
 
                 // if velocity is very low reduce braking time to 0.5 seconds
                 if ((fabsf(vel_fw_ms) <= POSHOLD_SPEED_0) && (now_ms - brake.start_time_pitch_ms > 500) && (brake_timeout_pitch_ms > 500)) {

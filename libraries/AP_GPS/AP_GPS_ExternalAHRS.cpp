@@ -61,8 +61,8 @@ void AP_GPS_ExternalAHRS::handle_external(const AP_ExternalAHRS::gps_data_messag
 #endif
 
     state.location = loc;
-    state.hdop = pkt.hdop;
-    state.vdop = pkt.vdop;
+    state.hdop = uint16_t(pkt.hdop);
+    state.vdop = uint16_t(pkt.vdop);
 
     state.have_vertical_velocity = true;
     state.velocity.x = pkt.ned_vel_north;

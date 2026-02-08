@@ -1058,7 +1058,7 @@ void AP_DroneCAN::notify_state_send()
     // ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_YAW_EARTH_CENTIDEGREES
     // is strange; it's number of degrees *counter-clockwise* from North.
     msg.aux_data_type = ARDUPILOT_INDICATION_NOTIFYSTATE_VEHICLE_YAW_EARTH_CENTIDEGREES;
-    uint16_t yaw_cd = (uint16_t)(360.0f - AP::ahrs().get_yaw_deg())*100.0f;
+    uint16_t yaw_cd = uint16_t((360.0f - AP::ahrs().get_yaw_deg())*100.0f);
     const uint8_t *data = (uint8_t *)&yaw_cd;
     for (uint8_t i=0; i<2; i++) {
         msg.aux_data.data[i] = data[i];
@@ -1333,10 +1333,10 @@ void AP_DroneCAN::handle_traffic_report(const CanardRxTransfer& transfer, const 
     pkt.tslc = msg.tslc;
     pkt.lat = msg.latitude_deg_1e7;
     pkt.lon = msg.longitude_deg_1e7;
-    pkt.altitude = msg.alt_m * 1000;
-    pkt.heading = degrees(msg.heading) * 100;
-    pkt.hor_velocity = norm(msg.velocity[0], msg.velocity[1]) * 100;
-    pkt.ver_velocity = -msg.velocity[2] * 100;
+    pkt.altitude = int32_t(msg.alt_m * 1000);
+    pkt.heading = uint16_t(degrees(msg.heading) * 100);
+    pkt.hor_velocity = uint16_t(norm(msg.velocity[0], msg.velocity[1]) * 100);
+    pkt.ver_velocity = int16_t(-msg.velocity[2] * 100);
     pkt.squawk = msg.squawk;
     for (uint8_t i=0; i<9; i++) {
         pkt.callsign[i] = msg.callsign[i];

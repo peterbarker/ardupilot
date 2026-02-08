@@ -324,8 +324,8 @@ void AP_InertialSensor_TCal::Learn::add_sample(const Vector3f &sample, float tem
                        AP_HAL::micros64(),
                        instance(),
                        si,
-                       T,
-                       st.sum.x, st.sum.y, st.sum.z,
+                       double(T),
+                       double(st.sum.x), double(st.sum.y), double(st.sum.z),
                        st.sum_count);
 #endif
     
@@ -363,7 +363,7 @@ void AP_InertialSensor_TCal::update_accel_learning(const Vector3f &accel, float 
         if (learn) {
             GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "TCAL[%u]: started calibration t=%.1fC tmax=%.1fC",
                           instance()+1,
-                          temperature, learn->start_tmax);
+                          double(temperature), double(learn->start_tmax));
             AP_Notify::events.initiated_temp_cal = 1;
         }
     }
@@ -414,7 +414,7 @@ void AP_InertialSensor_TCal::Learn::finish_calibration(float temperature)
     }
     GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "TCAL[%u]: completed calibration tmin=%.1f tmax=%.1f",
                   instance()+1,
-                  tcal.temp_min.get(), tcal.temp_max.get());
+                  double(tcal.temp_min.get()), double(tcal.temp_max.get()));
     tcal.enable.set_and_save_ifchanged(int8_t(AP_InertialSensor_TCal::Enable::Enabled));
 }
 
@@ -485,17 +485,17 @@ void AP_InertialSensor_TCal::get_persistent_params(ExpandingString &str) const
     }
 #endif
     str.printf("INS_TCAL%u_ENABLE=1\n", imu);
-    str.printf("INS_TCAL%u_TMIN=%.2f\n", imu, temp_min.get());
-    str.printf("INS_TCAL%u_TMAX=%.2f\n", imu, temp_max.get());
+    str.printf("INS_TCAL%u_TMIN=%.2f\n", imu, double(temp_min.get()));
+    str.printf("INS_TCAL%u_TMAX=%.2f\n", imu, double(temp_max.get()));
     for (uint8_t k=0; k<3; k++) {
         const Vector3f &acc = accel_coeff[k].get();
         const Vector3f &gyr = gyro_coeff[k].get();
-        str.printf("INS_TCAL%u_ACC%u_X=%f\n", imu, k+1, acc.x);
-        str.printf("INS_TCAL%u_ACC%u_Y=%f\n", imu, k+1, acc.y);
-        str.printf("INS_TCAL%u_ACC%u_Z=%f\n", imu, k+1, acc.z);
-        str.printf("INS_TCAL%u_GYR%u_X=%f\n", imu, k+1, gyr.x);
-        str.printf("INS_TCAL%u_GYR%u_Y=%f\n", imu, k+1, gyr.y);
-        str.printf("INS_TCAL%u_GYR%u_Z=%f\n", imu, k+1, gyr.z);
+        str.printf("INS_TCAL%u_ACC%u_X=%f\n", imu, k+1, double(acc.x));
+        str.printf("INS_TCAL%u_ACC%u_Y=%f\n", imu, k+1, double(acc.y));
+        str.printf("INS_TCAL%u_ACC%u_Z=%f\n", imu, k+1, double(acc.z));
+        str.printf("INS_TCAL%u_GYR%u_X=%f\n", imu, k+1, double(gyr.x));
+        str.printf("INS_TCAL%u_GYR%u_Y=%f\n", imu, k+1, double(gyr.y));
+        str.printf("INS_TCAL%u_GYR%u_Z=%f\n", imu, k+1, double(gyr.z));
     }
 }
 
@@ -517,13 +517,13 @@ void AP_InertialSensor::get_persistent_params(ExpandingString &str) const
                 id[0] = '1'+i;
             }
             str.printf("INS_ACC%s_ID=%u\n", id, unsigned(_accel_id(i).get()));
-            str.printf("INS_ACC%sOFFS_X=%f\n", id, aoff.x);
-            str.printf("INS_ACC%sOFFS_Y=%f\n", id, aoff.y);
-            str.printf("INS_ACC%sOFFS_Z=%f\n", id, aoff.z);
-            str.printf("INS_ACC%sSCAL_X=%f\n", id, ascl.x);
-            str.printf("INS_ACC%sSCAL_Y=%f\n", id, ascl.y);
-            str.printf("INS_ACC%sSCAL_Z=%f\n", id, ascl.z);
-            str.printf("INS_ACC%u_CALTEMP=%.2f\n", imu, caltemp_accel(i).get());
+            str.printf("INS_ACC%sOFFS_X=%f\n", id, double(aoff.x));
+            str.printf("INS_ACC%sOFFS_Y=%f\n", id, double(aoff.y));
+            str.printf("INS_ACC%sOFFS_Z=%f\n", id, double(aoff.z));
+            str.printf("INS_ACC%sSCAL_X=%f\n", id, double(ascl.x));
+            str.printf("INS_ACC%sSCAL_Y=%f\n", id, double(ascl.y));
+            str.printf("INS_ACC%sSCAL_Z=%f\n", id, double(ascl.z));
+            str.printf("INS_ACC%u_CALTEMP=%.2f\n", imu, double(caltemp_accel(i).get()));
         }
 #if INS_AUX_INSTANCES
         for (uint8_t i=0; i<INS_AUX_INSTANCES; i++) {

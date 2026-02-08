@@ -78,7 +78,7 @@ float AC_WPNav_OA::get_wp_distance_to_destination_m() const
 int32_t AC_WPNav_OA::get_wp_bearing_to_destination_cd() const
 {
     // Convert bearing to destination (in radians) to centidegrees
-    return rad_to_cd(get_wp_bearing_to_destination_rad());
+    return int32_t(rad_to_cd(get_wp_bearing_to_destination_rad()));
 }
 
 // Returns the bearing to the final destination in radians.

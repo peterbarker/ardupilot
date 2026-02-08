@@ -14,7 +14,7 @@
 template <typename T>
 float get_horizontal_distance(const Vector2<T> &origin, const Vector2<T> &destination)
 {
-    return (destination - origin).length();
+    return float((destination - origin).length());
 }
 
 // return bearing in radians between two positions

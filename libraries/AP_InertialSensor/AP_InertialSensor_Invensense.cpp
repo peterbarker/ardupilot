@@ -443,7 +443,7 @@ void AP_InertialSensor_Invensense::start()
 bool AP_InertialSensor_Invensense::get_output_banner(char* banner, uint8_t banner_len) {
     if (_fast_sampling) {
         snprintf(banner, banner_len, "IMU%u: fast sampling enabled %.1fkHz/%.1fkHz",
-            gyro_instance, _gyro_backend_rate_hz * _gyro_fifo_downsample_rate * 0.001, _gyro_backend_rate_hz * 0.001);
+            gyro_instance, double(_gyro_backend_rate_hz * _gyro_fifo_downsample_rate * 0.001f), double(_gyro_backend_rate_hz * 0.001f));
         return true;
     }
     return false;
@@ -633,7 +633,7 @@ bool AP_InertialSensor_Invensense::_accumulate(uint8_t *samples, uint8_t n_sampl
 bool AP_InertialSensor_Invensense::_accumulate_sensor_rate_sampling(uint8_t *samples, uint8_t n_samples)
 {
     int32_t tsum = 0;
-    const int32_t unscaled_clip_limit = _clip_limit / _accel_scale;
+    const int32_t unscaled_clip_limit = int32_t(_clip_limit / _accel_scale);
     bool clipped = false;
     bool ret = true;
     

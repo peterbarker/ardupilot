@@ -170,7 +170,7 @@ float AP_FW_Controller::run_rate_control(float desired_rate_degs, float scaler, 
     _pid_info = rate_pid.get_pid_info();
     auto &pinfo = _pid_info;
 
-    const float deg_scale = degrees(1);
+    const float deg_scale = degrees(1.0f);
     pinfo.FF = ff;
     pinfo.P *= deg_scale;
     pinfo.I *= deg_scale;

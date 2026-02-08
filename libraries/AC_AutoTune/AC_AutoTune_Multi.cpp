@@ -678,8 +678,8 @@ void AC_AutoTune_Multi::report_final_gains(AxisType test_axis) const
 void AC_AutoTune_Multi::report_axis_gains(const char* axis_string, float rate_P, float rate_I, float rate_D, float angle_P, float max_accel_radss) const
 {
     GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s complete", axis_string);
-    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Rate: P:%0.3f, I:%0.3f, D:%0.4f", axis_string, rate_P, rate_I,rate_D);
-    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Angle P:%0.3f, Max Accel:%0.0f", axis_string, angle_P, rad_to_cd(max_accel_radss));
+    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Rate: P:%0.3f, I:%0.3f, D:%0.4f", axis_string, double(rate_P), double(rate_I), double(rate_D));
+    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Angle P:%0.3f, Max Accel:%0.0f", axis_string, double(angle_P), double(rad_to_cd(max_accel_radss)));
 }
 
 // Measures peak angular rates and bounce-back behavior during rate tuning.
@@ -1265,8 +1265,8 @@ void AC_AutoTune_Multi::Log_Write_AutoTune(AxisType _axis, TuneType tune_step, f
         AP_HAL::micros64(),
         axis,
         tune_step,
-        meas_target*0.01,
-        meas_min*0.01,
+        double(meas_target*0.01),
+        double(meas_min*0.01),
         meas_max*0.01,
         new_gain_rp,
         new_gain_rd,

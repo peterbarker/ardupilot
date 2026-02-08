@@ -39,22 +39,22 @@ void AP_OpticalFlow_SITL::update(void)
     }
     last_flow_ms = now;
 
-    Vector3f gyro(radians(_sitl->state.rollRate), 
-                  radians(_sitl->state.pitchRate), 
-                  radians(_sitl->state.yawRate));
+    Vector3f gyro(float(radians(_sitl->state.rollRate)),
+                  float(radians(_sitl->state.pitchRate)),
+                  float(radians(_sitl->state.yawRate)));
 
     AP_OpticalFlow::OpticalFlow_state state;
 
     // NED velocity vector in m/s
-    Vector3f velocity(_sitl->state.speedN,
-                      _sitl->state.speedE,
-                      _sitl->state.speedD);
+    Vector3f velocity(float(_sitl->state.speedN),
+                      float(_sitl->state.speedE),
+                      float(_sitl->state.speedD));
 
     // a rotation matrix following DCM conventions
     Matrix3f rotmat;
-    rotmat.from_euler(radians(_sitl->state.rollDeg),
-                      radians(_sitl->state.pitchDeg),
-                      radians(_sitl->state.yawDeg));
+    rotmat.from_euler(float(radians(_sitl->state.rollDeg)),
+                      float(radians(_sitl->state.pitchDeg)),
+                      float(radians(_sitl->state.yawDeg)));
 
 
     state.surface_quality = 51;

@@ -203,7 +203,7 @@ void AP_Generator_Cortex::send_generator_status(const GCS_MAVLINK &channel)
         generatorVoltage(),
         rectifierTemperature(),
         std::numeric_limits<double>::quiet_NaN(),
-        telemetry.generator.temperature,
+        int16_t(telemetry.generator.temperature),
         telemetry.controller.runTime,
         0  // time until maintenance (not supported)
     );
@@ -223,7 +223,7 @@ int16_t AP_Generator_Cortex::rectifierTemperature(void) const
     const Cortex_TelemetryController_t &controller = telemetry.controller;
 
     // Return the maximum of the two internal temperature values
-    return MAX(controller.rectifierTemperature, controller.regulatorTemperature);
+    return int16_t(MAX(controller.rectifierTemperature, controller.regulatorTemperature));
 }
 
 

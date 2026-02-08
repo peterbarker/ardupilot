@@ -424,16 +424,16 @@ bool AP_GPS_NMEA::_term_complete()
                     // prefer AGRICA
                     break;
                 }
-                state.location.lat     = _ksxt.fields[2]*1.0e7;
-                state.location.lng     = _ksxt.fields[1]*1.0e7;
-                set_alt_amsl_cm(state, _ksxt.fields[3]*1.0e2);
+                state.location.lat     = int32_t(_ksxt.fields[2]*double(1.0e7));
+                state.location.lng     = int32_t(_ksxt.fields[1]*double(1.0e7));
+                set_alt_amsl_cm(state, int32_t(_ksxt.fields[3]*double(1.0e2)));
                 _last_KSXT_pos_ms = now;
                 if (_ksxt.fields[9] >= 1) {
                     // we have 3D fix
-                    constexpr float kmh_to_mps = 1.0 / 3.6;
-                    state.velocity.y = _ksxt.fields[16] * kmh_to_mps;
-                    state.velocity.x = _ksxt.fields[17] * kmh_to_mps;
-                    state.velocity.z = _ksxt.fields[18] * -kmh_to_mps;
+                    constexpr double kmh_to_mps = 1.0 / 3.6;
+                    state.velocity.y = float(_ksxt.fields[16] * kmh_to_mps);
+                    state.velocity.x = float(_ksxt.fields[17] * kmh_to_mps);
+                    state.velocity.z = float(_ksxt.fields[18] * -kmh_to_mps);
                     state.have_vertical_velocity = true;
                     _last_vvelocity_ms = now;
                     // we prefer a true 3D velocity when available
@@ -443,7 +443,7 @@ bool AP_GPS_NMEA::_term_complete()
                 if (is_equal(3.0f, float(_ksxt.fields[10]))) {
                     // have good yaw (from RTK fixed moving baseline solution)
                     _last_yaw_ms = now;
-                    state.gps_yaw = _ksxt.fields[4];
+                    state.gps_yaw = float(_ksxt.fields[4]);
                     state.have_gps_yaw = true;
                     state.gps_yaw_time_ms = now;
                     state.gps_yaw_configured = true;
@@ -456,11 +456,11 @@ bool AP_GPS_NMEA::_term_complete()
                 _last_vvelocity_ms = now;
                 _last_vaccuracy_ms = now;
                 _last_3D_velocity_ms = now;
-                state.location.lat = ag.lat*1.0e7;
-                state.location.lng = ag.lng*1.0e7;
+                state.location.lat = int32_t(ag.lat*double(1.0e7));
+                state.location.lng = int32_t(ag.lng*double(1.0e7));
                 state.undulation   = -ag.undulation;
                 state.have_undulation = true;
-                set_alt_amsl_cm(state, ag.alt*1.0e2);
+                set_alt_amsl_cm(state, int32_t(double(ag.alt * 100.0f)));
                 state.velocity = ag.vel_NED;
                 velocity_to_speed_course(state);
                 state.speed_accuracy = ag.vel_stddev.length();
@@ -863,7 +863,7 @@ void AP_GPS_NMEA::send_config(void)
                      "CONFIG UNDULATION AUTO\r\n" \
                      "CONFIG\r\n" \
                      "UNIHEADINGA %.3f\r\n",
-                     rate_s);
+                     double(rate_s));
         state.gps_yaw_configured = true;
         FALLTHROUGH;
 
@@ -872,7 +872,7 @@ void AP_GPS_NMEA::send_config(void)
                      "MODE MOVINGBASE\r\n" \
                      "GNGGA %.3f\r\n" \
                      "GNRMC %.3f\r\n",
-                     rate_s, rate_s, rate_s);
+                     double(rate_s), double(rate_s), double(rate_s));
         if (!_have_unicore_versiona) {
             // get version information for logging if we don't have it yet
             port->printf("VERSIONA\r\n");

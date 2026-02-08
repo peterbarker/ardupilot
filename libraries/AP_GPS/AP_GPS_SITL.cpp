@@ -68,9 +68,9 @@ bool AP_GPS_SITL::read(void)
 
     auto *sitl = AP::sitl();
 
-    double latitude =sitl->state.latitude;
-    double longitude = sitl->state.longitude;
-    float altitude = sitl->state.altitude;
+    const double lat_deg = sitl->state.latitude;
+    const double lon_deg = sitl->state.longitude;
+    const double alt_m = sitl->state.altitude;
     const double speedN = sitl->state.speedN;
     const double speedE = sitl->state.speedE;
     const double speedD = sitl->state.speedD;
@@ -86,10 +86,14 @@ bool AP_GPS_SITL::read(void)
     state.status = AP_GPS_FixType::FIX_3D;
     state.num_sats = 15;
 
+    const double lat_scaled = double(lat_deg) * double(1.0e7);
+    const double lon_scaled = double(lon_deg) * double(1.0e7);
+    const double alt_cm = double(alt_m) * double(100.0);
+
     state.location = Location{
-        int32_t(latitude*1e7),
-        int32_t(longitude*1e7),
-        int32_t(altitude*100),
+        int32_t(lat_scaled),
+        int32_t(lon_scaled),
+        int32_t(alt_cm),
         Location::AltFrame::ABSOLUTE
     };
 
@@ -97,9 +101,9 @@ bool AP_GPS_SITL::read(void)
     state.vdop = 100;
 
     state.have_vertical_velocity = true;
-    state.velocity.x = speedN;
-    state.velocity.y = speedE;
-    state.velocity.z = speedD;
+    state.velocity.x = float(speedN);
+    state.velocity.y = float(speedE);
+    state.velocity.z = float(speedD);
 
     velocity_to_speed_course(state);
 

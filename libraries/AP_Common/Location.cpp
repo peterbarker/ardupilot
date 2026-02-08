@@ -38,14 +38,14 @@ Location::Location(const Vector3f &ekf_offset_neu_cm, AltFrame frame)
     zero();
 
     // store alt and alt frame
-    set_alt_cm(ekf_offset_neu_cm.z, frame);
+    set_alt_cm(int32_t(ekf_offset_neu_cm.z), frame);
 
     // calculate lat, lon
     Location ekf_origin;
     if (AP::ahrs().get_origin(ekf_origin)) {
         lat = ekf_origin.lat;
         lng = ekf_origin.lng;
-        offset(ekf_offset_neu_cm.x * 0.01, ekf_offset_neu_cm.y * 0.01);
+        offset(double(ekf_offset_neu_cm.x) * double(0.01), double(ekf_offset_neu_cm.y) * double(0.01));
     }
 }
 
@@ -54,14 +54,14 @@ Location::Location(const Vector3d &ekf_offset_neu_cm, AltFrame frame)
     zero();
 
     // store alt and alt frame
-    set_alt_cm(ekf_offset_neu_cm.z, frame);
+    set_alt_cm(int32_t(ekf_offset_neu_cm.z), frame);
 
     // calculate lat, lon
     Location ekf_origin;
     if (AP::ahrs().get_origin(ekf_origin)) {
         lat = ekf_origin.lat;
         lng = ekf_origin.lng;
-        offset(ekf_offset_neu_cm.x * 0.01, ekf_offset_neu_cm.y * 0.01);
+        offset(double(ekf_offset_neu_cm.x) * double(0.01), double(ekf_offset_neu_cm.y) * double(0.01));
     }
 }
 
@@ -74,7 +74,7 @@ Location Location::from_ekf_offset_NED_m(const Vector3f& ekf_offset_ned_m, AltFr
 
 Location Location::from_ekf_offset_NED_m(const Vector3d& ekf_offset_ned_m, AltFrame frame)
 {
-    const Vector3d ekf_offset_neu_cm(ekf_offset_ned_m.x * 100.0, ekf_offset_ned_m.y * 100.0, -ekf_offset_ned_m.z * 100.0);
+    const Vector3d ekf_offset_neu_cm(ekf_offset_ned_m.x * double(100.0), ekf_offset_ned_m.y * double(100.0), -ekf_offset_ned_m.z * double(100.0));
     return Location(ekf_offset_neu_cm, frame);
 }
 
@@ -212,7 +212,7 @@ bool Location::get_alt_cm(AltFrame desired_frame, int32_t &ret_alt_cm) const
             return false;
 #endif  // AP_AHRS_ENABLED
         case AltFrame::ABOVE_TERRAIN:
-            alt_abs = alt + alt_terr_cm;
+            alt_abs = int32_t(alt + alt_terr_cm);
             break;
     }
 
@@ -246,7 +246,7 @@ bool Location::get_alt_cm(AltFrame desired_frame, int32_t &ret_alt_cm) const
             return false;
 #endif  // AP_AHRS_ENABLED
         case AltFrame::ABOVE_TERRAIN:
-            ret_alt_cm = alt_abs - alt_terr_cm;
+            ret_alt_cm = int32_t(alt_abs - alt_terr_cm);
             return true;
     }
     return false;  // LCOV_EXCL_LINE  - not reachable
@@ -273,7 +273,7 @@ bool Location::get_vector_xy_from_origin_NE_cm(T &vec_ne) const
         return false;
     }
     vec_ne.x = (lat-ekf_origin.lat) * LATLON_TO_CM;
-    vec_ne.y = diff_longitude(lng,ekf_origin.lng) * LATLON_TO_CM * longitude_scale((lat+ekf_origin.lat)/2);
+    vec_ne.y = decltype(vec_ne.y)(diff_longitude(lng,ekf_origin.lng) * ftype(LATLON_TO_CM) * longitude_scale((lat+ekf_origin.lat)/2));
     return true;
 }
 
@@ -337,8 +337,8 @@ bool Location::get_vector_from_origin_NED_m(T &vec_ned) const
     if (!get_vector_from_origin_NEU_cm(vec_ned)) {
         return false;
     }
-    vec_ned *= 0.01;
-    vec_ned.z *= -1.0;
+    vec_ned *= decltype(vec_ned.x)(0.01);
+    vec_ned.z *= decltype(vec_ned.z)(-1.0);
     return true;
 }
 // define for float and position vectors
@@ -370,7 +370,7 @@ ftype Location::get_distance(const Location &loc2) const
 {
     ftype dlat = (ftype)(loc2.lat - lat);
     ftype dlng = ((ftype)diff_longitude(loc2.lng,lng)) * longitude_scale((lat+loc2.lat)/2);
-    return norm(dlat, dlng) * LOCATION_SCALING_FACTOR;
+    return norm(dlat, dlng) * ftype(LOCATION_SCALING_FACTOR);
 }
 
 /**
@@ -419,29 +419,29 @@ bool Location::get_height_above(const Location &loc2, ftype &distance) const
 Vector2f Location::get_distance_NE(const Location &loc2) const
 {
     return Vector2f((loc2.lat - lat) * LOCATION_SCALING_FACTOR,
-                    diff_longitude(loc2.lng,lng) * LOCATION_SCALING_FACTOR * longitude_scale((loc2.lat+lat)/2));
+                    float(diff_longitude(loc2.lng,lng) * ftype(LOCATION_SCALING_FACTOR) * longitude_scale((loc2.lat+lat)/2)));
 }
 
 // return the distance in meters in North/East/Down plane as a N/E/D vector to loc2, NOT CONSIDERING ALT FRAME!
 Vector3f Location::get_distance_NED(const Location &loc2) const
 {
     return Vector3f((loc2.lat - lat) * LOCATION_SCALING_FACTOR,
-                    diff_longitude(loc2.lng,lng) * LOCATION_SCALING_FACTOR * longitude_scale((lat+loc2.lat)/2),
-                    (alt - loc2.alt) * 0.01);
+                    float(diff_longitude(loc2.lng,lng) * ftype(LOCATION_SCALING_FACTOR) * longitude_scale((lat+loc2.lat)/2)),
+                    (alt - loc2.alt) * 0.01f);
 }
 
 Vector3p Location::get_distance_NED_postype(const Location &loc2) const
 {
     return Vector3p((loc2.lat - lat) * LOCATION_SCALING_FACTOR,
-                    diff_longitude(loc2.lng,lng) * LOCATION_SCALING_FACTOR * longitude_scale((lat+loc2.lat)/2),
-                    (alt - loc2.alt) * 0.01);
+                    diff_longitude(loc2.lng,lng) * ftype(LOCATION_SCALING_FACTOR) * longitude_scale((lat+loc2.lat)/2),
+                    (alt - loc2.alt) * postype_t(0.01));
 }
 
 // return the distance in meters in North/East/Down plane as a N/E/D vector to loc2
 Vector3d Location::get_distance_NED_double(const Location &loc2) const
 {
     return Vector3d((loc2.lat - lat) * double(LOCATION_SCALING_FACTOR),
-                    diff_longitude(loc2.lng,lng) * LOCATION_SCALING_FACTOR * longitude_scale((lat+loc2.lat)/2),
+                    diff_longitude(loc2.lng,lng) * double(LOCATION_SCALING_FACTOR) * longitude_scale((lat+loc2.lat)/2),
                     (alt - loc2.alt) * 0.01);
 }
 
@@ -454,8 +454,8 @@ Vector3f Location::get_distance_NED_alt_frame(const Location &loc2) const
         alt1 = 0, alt2 = 0;
     }
     return Vector3f((loc2.lat - lat) * LOCATION_SCALING_FACTOR,
-                    diff_longitude(loc2.lng,lng) * LOCATION_SCALING_FACTOR * longitude_scale((loc2.lat+lat)/2),
-                    (alt1 - alt2) * 0.01);
+                    float(diff_longitude(loc2.lng,lng) * ftype(LOCATION_SCALING_FACTOR) * longitude_scale((loc2.lat+lat)/2)),
+                    (alt1 - alt2) * 0.01f);
 }
 
 Vector2d Location::get_distance_NE_double(const Location &loc2) const
@@ -479,8 +479,8 @@ Vector2F Location::get_distance_NE_ftype(const Location &loc2) const
 // extrapolate latitude/longitude given distances (in meters) north and east
 void Location::offset_latlng(int32_t &lat, int32_t &lng, ftype ofs_north, ftype ofs_east)
 {
-    const int32_t dlat = ofs_north * LOCATION_SCALING_FACTOR_INV;
-    const int64_t dlng = (ofs_east * LOCATION_SCALING_FACTOR_INV) / longitude_scale(lat+dlat/2);
+    const int32_t dlat = int32_t(ofs_north * ftype(LOCATION_SCALING_FACTOR_INV));
+    const int64_t dlng = int64_t((ofs_east * ftype(LOCATION_SCALING_FACTOR_INV)) / longitude_scale(lat+dlat/2));
     lat += dlat;
     lat = limit_lattitude(lat);
     lng = wrap_longitude(dlng+lng);
@@ -497,7 +497,7 @@ void Location::offset(ftype ofs_north, ftype ofs_east)
 void Location::offset(const Vector3p &ofs_ned)
 {
     offset_latlng(lat, lng, ofs_ned.x, ofs_ned.y);
-    alt += -ofs_ned.z * 100;  // m -> cm
+    alt += int32_t(-ofs_ned.z * 100);  // m -> cm
 }
 
 /*
@@ -520,15 +520,15 @@ void Location::offset_bearing_and_pitch(ftype bearing_deg, ftype pitch_deg, ftyp
     const ftype ofs_north =  cosF(radians(pitch_deg)) * cosF(radians(bearing_deg)) * distance;
     const ftype ofs_east  =  cosF(radians(pitch_deg)) * sinF(radians(bearing_deg)) * distance;
     offset(ofs_north, ofs_east);
-    const int32_t dalt =  sinF(radians(pitch_deg)) * distance *100.0f;
-    alt += dalt; 
+    const int32_t dalt =  int32_t(sinF(radians(pitch_deg)) * distance * ftype(100.0));
+    alt += dalt;
 }
 
 
 ftype Location::longitude_scale(int32_t lat)
 {
     ftype scale = cosF(lat * (1.0e-7 * DEG_TO_RAD));
-    return MAX(scale, 0.01);
+    return MAX(scale, ftype(0.01));
 }
 
 /*
@@ -567,10 +567,10 @@ bool Location::sanitize(const Location &defaultLoc)
 ftype Location::get_bearing(const Location &loc2) const
 {
     const int32_t off_x = diff_longitude(loc2.lng,lng);
-    const int32_t off_y = (loc2.lat - lat) / loc2.longitude_scale((lat+loc2.lat)/2);
-    ftype bearing = (M_PI*0.5) + atan2F(-off_y, off_x);
+    const int32_t off_y = int32_t((loc2.lat - lat) / loc2.longitude_scale((lat+loc2.lat)/2));
+    ftype bearing = ftype(M_PI*0.5) + atan2F(-off_y, off_x);
     if (bearing < 0) {
-        bearing += 2*M_PI;
+        bearing += ftype(2*M_PI);
     }
     return bearing;
 }
@@ -624,11 +624,11 @@ float Location::line_path_proportion(const Location &point1, const Location &poi
     const Vector2f vec1 = point1.get_distance_NE(point2);
     const Vector2f vec2 = point1.get_distance_NE(*this);
     const ftype dsquared = sq(vec1.x) + sq(vec1.y);
-    if (dsquared < 0.001f) {
+    if (dsquared < ftype(0.001)) {
         // the two points are very close together
         return 1.0f;
     }
-    return (vec1 * vec2) / dsquared;
+    return (vec1 * vec2) / float(dsquared);
 }
 
 /*
@@ -689,7 +689,7 @@ void Location::linearly_interpolate_alt(const Location &point1, const Location &
     }
 #endif
     // new target's distance along the original track and then linear interpolate between the original origin and destination altitudes
-    set_alt_cm(point1.alt + (point2.alt - point1.alt) * constrain_float(line_path_proportion(point1, point2), 0.0f, 1.0f), point2.get_alt_frame());
+    set_alt_cm(int32_t(point1.alt + (point2.alt - point1.alt) * constrain_float(line_path_proportion(point1, point2), 0.0f, 1.0f)), point2.get_alt_frame());
 }
 
 #endif // HAL_BOOTLOADER_BUILD

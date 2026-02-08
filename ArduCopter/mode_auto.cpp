@@ -1913,7 +1913,7 @@ void ModeAuto::do_nav_delay(const AP_Mission::Mission_Command& cmd)
 
     if (cmd.content.nav_delay.seconds > 0) {
         // relative delay
-        nav_delay_time_max_ms = cmd.content.nav_delay.seconds * 1000; // convert seconds to milliseconds
+        nav_delay_time_max_ms = uint32_t(cmd.content.nav_delay.seconds * 1000); // convert seconds to milliseconds
     } else {
         // absolute delay to utc time
 #if AP_RTC_ENABLED
@@ -1967,12 +1967,12 @@ void ModeAuto::do_nav_attitude_time(const AP_Mission::Mission_Command& cmd)
 void ModeAuto::do_wait_delay(const AP_Mission::Mission_Command& cmd)
 {
     condition_start = millis();
-    condition_value = cmd.content.delay.seconds * 1000;     // convert seconds to milliseconds
+    condition_value = int32_t(cmd.content.delay.seconds * 1000);     // convert seconds to milliseconds
 }
 
 void ModeAuto::do_within_distance(const AP_Mission::Mission_Command& cmd)
 {
-    condition_value  = cmd.content.distance.meters;
+    condition_value  = int32_t(cmd.content.distance.meters);
 }
 
 void ModeAuto::do_yaw(const AP_Mission::Mission_Command& cmd)

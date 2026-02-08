@@ -358,7 +358,7 @@ void AP_Mount_Backend::set_yaw_lock(bool yaw_lock)
         if (get_attitude_quaternion(att_quat_bf_rad)) {
             const float euler_yaw_bf_rad = att_quat_bf_rad.get_euler_yaw();
             const float euler_yaw_ef_rad = wrap_PI(euler_yaw_bf_rad + AP::ahrs().get_yaw_rad());
-            _yaw_lock_heading_rad = wrap_PI(euler_yaw_ef_rad - radians(wrap_180((yaw_in + 1.0f) * 0.5f * (_params.yaw_angle_max - _params.yaw_angle_min) + _params.yaw_angle_min)));
+            _yaw_lock_heading_rad = wrap_PI(euler_yaw_ef_rad - radians(wrap_180((yaw_in + 1.0f)) * 0.5f * (_params.yaw_angle_max - _params.yaw_angle_min) + _params.yaw_angle_min));
         }
     }
     _yaw_lock = yaw_lock;
@@ -615,7 +615,7 @@ MAV_RESULT AP_Mount_Backend::handle_command_do_gimbal_manager_configure(const ma
     mavlink_control_id_t prev_control_id = mavlink_control_id;
 
     // convert negative packet1 and packet2 values
-    int16_t new_sysid = packet.param1;
+    int16_t new_sysid = int16_t(packet.param1);
     switch (new_sysid) {
         case -1:
             // leave unchanged
@@ -633,8 +633,8 @@ MAV_RESULT AP_Mount_Backend::handle_command_do_gimbal_manager_configure(const ma
             }
             break;
         default:
-            mavlink_control_id.sysid = packet.param1;
-            mavlink_control_id.compid = packet.param2;
+            mavlink_control_id.sysid = uint8_t(packet.param1);
+            mavlink_control_id.compid = uint8_t(packet.param2);
             break;
     }
 
@@ -656,7 +656,7 @@ bool AP_Mount_Backend::handle_global_position_int(uint8_t msg_sysid, const mavli
     _target_sysid_location.lat = packet.lat;
     _target_sysid_location.lng = packet.lon;
     // global_position_int.alt is *UP*, so is location.
-    _target_sysid_location.set_alt_cm(packet.alt*0.1, Location::AltFrame::ABSOLUTE);
+    _target_sysid_location.set_alt_cm(int32_t(packet.alt*0.1), Location::AltFrame::ABSOLUTE);
 
     return true;
 }
@@ -1033,7 +1033,7 @@ bool AP_Mount_Backend::get_angle_target_to_location(const Location &loc, MountAn
         return false;
     }
     float GPS_vector_z = target_alt_cm - current_alt_cm;
-    float target_distance = 100.0f*norm(GPS_vector_x, GPS_vector_y);      // Careful , centimeters here locally. Baro/alt is in cm, lat/lon is in meters.
+    float target_distance = float(ftype(100.0)*norm(GPS_vector_x, GPS_vector_y));      // Careful , centimeters here locally. Baro/alt is in cm, lat/lon is in meters.
 
     // calculate roll, pitch, yaw angles
     angle_rad.roll = 0;

@@ -42,10 +42,10 @@ void NavEKF2_core::FuseAirspeed()
     // calculate the predicted airspeed
     VtasPred = norm((ve - vwe) , (vn - vwn) , vd);
     // perform fusion of True Airspeed measurement
-    if (VtasPred > 1.0f)
+    if (VtasPred > ftype(1.0))
     {
         // calculate observation jacobians
-        SH_TAS[0] = 1.0f/(sqrtF(sq(ve - vwe) + sq(vn - vwn) + sq(vd)));
+        SH_TAS[0] = ftype(1.0)/(sqrtF(sq(ve - vwe) + sq(vn - vwn) + sq(vd)));
         SH_TAS[1] = (SH_TAS[0]*(2*ve - 2*vwe))/2;
         SH_TAS[2] = (SH_TAS[0]*(2*vn - 2*vwn))/2;
         for (uint8_t i=0; i<=2; i++) H_TAS[i] = 0.0f;
@@ -58,7 +58,7 @@ void NavEKF2_core::FuseAirspeed()
         // calculate Kalman gains
         ftype temp = (R_TAS + SH_TAS[2]*(P[3][3]*SH_TAS[2] + P[4][3]*SH_TAS[1] - P[22][3]*SH_TAS[2] - P[23][3]*SH_TAS[1] + P[5][3]*vd*SH_TAS[0]) + SH_TAS[1]*(P[3][4]*SH_TAS[2] + P[4][4]*SH_TAS[1] - P[22][4]*SH_TAS[2] - P[23][4]*SH_TAS[1] + P[5][4]*vd*SH_TAS[0]) - SH_TAS[2]*(P[3][22]*SH_TAS[2] + P[4][22]*SH_TAS[1] - P[22][22]*SH_TAS[2] - P[23][22]*SH_TAS[1] + P[5][22]*vd*SH_TAS[0]) - SH_TAS[1]*(P[3][23]*SH_TAS[2] + P[4][23]*SH_TAS[1] - P[22][23]*SH_TAS[2] - P[23][23]*SH_TAS[1] + P[5][23]*vd*SH_TAS[0]) + vd*SH_TAS[0]*(P[3][5]*SH_TAS[2] + P[4][5]*SH_TAS[1] - P[22][5]*SH_TAS[2] - P[23][5]*SH_TAS[1] + P[5][5]*vd*SH_TAS[0]));
         if (temp >= R_TAS) {
-            SK_TAS = 1.0f / temp;
+            SK_TAS = ftype(1.0) / temp;
             faultStatus.bad_airspeed = false;
         } else {
             // the calculation is badly conditioned, so we cannot perform fusion on this step
@@ -100,16 +100,16 @@ void NavEKF2_core::FuseAirspeed()
         }
 
         // calculate measurement innovation variance
-        varInnovVtas = 1.0f/SK_TAS;
+        varInnovVtas = ftype(1.0)/SK_TAS;
 
         // calculate measurement innovation
         innovVtas = VtasPred - tasDataDelayed.tas;
 
         // calculate the innovation consistency test ratio
-        tasTestRatio = sq(innovVtas) / (sq(MAX(0.01f * (ftype)frontend->_tasInnovGate, 1.0f)) * varInnovVtas);
+        tasTestRatio = sq(innovVtas) / (sq(MAX(ftype(0.01) * (ftype)frontend->_tasInnovGate, ftype(1.0))) * varInnovVtas);
 
         // fail if the ratio is > 1, but don't fail if bad IMU data
-        bool tasHealth = ((tasTestRatio < 1.0f) || badIMUdata);
+        bool tasHealth = ((tasTestRatio < ftype(1.0)) || badIMUdata);
         tasTimeout = (imuSampleTime_ms - lastTasPassTime_ms) > frontend->tasRetryTime_ms;
 
         if (!tasHealth) {
@@ -184,7 +184,7 @@ void NavEKF2_core::SelectTasFusion()
     // Check if the magnetometer has been fused on that time step and the filter is running at faster than 200 Hz
     // If so, don't fuse measurements on this time step to reduce frame over-runs
     // Only allow one time slip to prevent high rate magnetometer data locking out fusion of other measurements
-    if (magFusePerformed && dtIMUavg < 0.005f && !airSpdFusionDelayed) {
+    if (magFusePerformed && dtIMUavg < ftype(0.005) && !airSpdFusionDelayed) {
         airSpdFusionDelayed = true;
         return;
     } else {
@@ -215,7 +215,7 @@ void NavEKF2_core::SelectBetaFusion()
     // Check if the magnetometer has been fused on that time step and the filter is running at faster than 200 Hz
     // If so, don't fuse measurements on this time step to reduce frame over-runs
     // Only allow one time slip to prevent high rate magnetometer data preventing fusion of other measurements
-    if (magFusePerformed && dtIMUavg < 0.005f && !sideSlipFusionDelayed) {
+    if (magFusePerformed && dtIMUavg < ftype(0.005) && !sideSlipFusionDelayed) {
         sideSlipFusionDelayed = true;
         return;
     } else {
@@ -279,11 +279,11 @@ void NavEKF2_core::FuseSideslip()
     vel_rel_wind = prevTnb * vel_rel_wind;
 
     // perform fusion of assumed sideslip  = 0
-    if (vel_rel_wind.x > 5.0f)
+    if (vel_rel_wind.x > ftype(5.0))
     {
         // Calculate observation jacobians
         SH_BETA[0] = (vn - vwn)*(sq(q0) + sq(q1) - sq(q2) - sq(q3)) - vd*(2*q0*q2 - 2*q1*q3) + (ve - vwe)*(2*q0*q3 + 2*q1*q2);
-        if (fabsF(SH_BETA[0]) <= 1e-9f) {
+        if (fabsF(SH_BETA[0]) <= ftype(1e-9)) {
             faultStatus.bad_sideslip = true;
             return;
         } else {

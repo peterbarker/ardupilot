@@ -78,7 +78,7 @@ void AP_EFI_Loweheiser::update()
         // this is an integer field in internal_state
         internal_state.engine_speed_rpm = 0;
     } else {
-        internal_state.engine_speed_rpm = pkt.efi_rpm;
+        internal_state.engine_speed_rpm = uint32_t(pkt.efi_rpm);
     }
     internal_state.cylinder_status.injection_time_ms = pkt.efi_pw;
     // we convert to cubic-cm-per-minute here from litres/second here:
@@ -92,7 +92,7 @@ void AP_EFI_Loweheiser::update()
         // this is an integer field in internal_state
         internal_state.throttle_position_percent = 0;
     } else {
-        internal_state.throttle_position_percent = pkt.efi_tps;
+        internal_state.throttle_position_percent = uint8_t(pkt.efi_tps);
     }
     internal_state.ignition_voltage = pkt.efi_batt;
 

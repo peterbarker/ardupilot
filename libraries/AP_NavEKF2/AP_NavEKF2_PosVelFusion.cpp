@@ -95,8 +95,8 @@ void NavEKF2_core::ResetPosition(void)
             // record the ID of the GPS for the data we are using for the reset
             last_gps_idx = gps_corrected.sensor_idx;
             // write to state vector and compensate for offset  between last GPS measurement and the EKF time horizon
-            stateStruct.position.x = gps_corrected.pos.x  + 0.001f*gps_corrected.vel.x*(float(imuDataDelayed.time_ms) - float(gps_corrected.time_ms));
-            stateStruct.position.y = gps_corrected.pos.y  + 0.001f*gps_corrected.vel.y*(float(imuDataDelayed.time_ms) - float(gps_corrected.time_ms));
+            stateStruct.position.x = gps_corrected.pos.x  + ftype(0.001)*gps_corrected.vel.x*ftype(float(imuDataDelayed.time_ms) - float(gps_corrected.time_ms));
+            stateStruct.position.y = gps_corrected.pos.y  + ftype(0.001)*gps_corrected.vel.y*ftype(float(imuDataDelayed.time_ms) - float(gps_corrected.time_ms));
             // set the variances using the position measurement noise parameter
             P[6][6] = P[7][7] = sq(MAX(gpsPosAccuracy,frontend->_gpsHorizPosNoise));
             // clear the timeout flags and counters
@@ -291,7 +291,7 @@ bool NavEKF2_core::resetHeightDatum(void)
             // if we don't have GPS lock then we shouldn't be doing a
             // resetHeightDatum, but if we do then the best option is
             // to maintain the old error
-            EKF_origin.alt += (int32_t)(100.0f * oldHgt);
+            EKF_origin.alt += (int32_t)(ftype(100.0) * oldHgt);
         } else {
             // if we have a good GPS lock then reset to the GPS
             // altitude. This ensures the reported AMSL alt from
@@ -321,7 +321,7 @@ void NavEKF2_core::CorrectGPSForAntennaOffset(gps_elements &gps_data) const
     // Don't fuse velocity data if GPS doesn't support it
     if (fuseVelData) {
         // TODO use a filtered angular rate with a group delay that matches the GPS delay
-        Vector3F angRate = imuDataDelayed.delAng * (1.0f/imuDataDelayed.delAngDT);
+        Vector3F angRate = imuDataDelayed.delAng * (ftype(1.0)/imuDataDelayed.delAngDT);
         Vector3F velOffsetBody = angRate % posOffsetBody;
         Vector3F velOffsetEarth = prevTnb.mul_transpose(velOffsetBody);
         gps_data.vel.x -= velOffsetEarth.x;
@@ -367,7 +367,7 @@ void NavEKF2_core::CorrectExtNavVelForSensorOffset(Vector3F &ext_velocity) const
         return;
     }
     // TODO use a filtered angular rate with a group delay that matches the sensor delay
-    const Vector3F angRate = imuDataDelayed.delAng * (1.0f/imuDataDelayed.delAngDT);
+    const Vector3F angRate = imuDataDelayed.delAng * (ftype(1.0)/imuDataDelayed.delAngDT);
     ext_velocity += get_vel_correction_for_sensor_offset(posOffsetBody, prevTnb, angRate);
 #endif
 }
@@ -381,7 +381,7 @@ void NavEKF2_core::SelectVelPosFusion()
     // Check if the magnetometer has been fused on that time step and the filter is running at faster than 200 Hz
     // If so, don't fuse measurements on this time step to reduce frame over-runs
     // Only allow one time slip to prevent high rate magnetometer data preventing fusion of other measurements
-    if (magFusePerformed && dtIMUavg < 0.005f && !posVelFusionDelayed) {
+    if (magFusePerformed && dtIMUavg < ftype(0.005) && !posVelFusionDelayed) {
         posVelFusionDelayed = true;
         return;
     } else {
@@ -586,7 +586,7 @@ void NavEKF2_core::FuseVelPosNED()
     if (fuseVelData || fusePosData || fuseHgtData) {
 
         // calculate additional error in GPS position caused by manoeuvring
-        ftype posErr = frontend->gpsPosVarAccScale * accNavMag;
+        ftype posErr = ftype(frontend->gpsPosVarAccScale) * accNavMag;
 
         // estimate the GPS Velocity, GPS horiz position and height measurement variances.
         // Use different errors if operating without external aiding using an assumed position or velocity of zero
@@ -604,7 +604,7 @@ void NavEKF2_core::FuseVelPosNED()
             R_OBS[4] = R_OBS[0];
             for (uint8_t i=0; i<=2; i++) R_OBS_DATA_CHECKS[i] = R_OBS[i];
         } else {
-            if (gpsSpdAccuracy > 0.0f) {
+            if (gpsSpdAccuracy > ftype(0.0)) {
                 // use GPS receivers reported speed accuracy if available and floor at value set by GPS velocity noise parameter
                 R_OBS[0] = sq(constrain_ftype(gpsSpdAccuracy, frontend->_gpsHorizVelNoise, 50.0f));
                 R_OBS[2] = sq(constrain_ftype(gpsSpdAccuracy, frontend->_gpsVertVelNoise, 50.0f));
@@ -612,12 +612,12 @@ void NavEKF2_core::FuseVelPosNED()
                 R_OBS[2] = R_OBS[0] = sq(constrain_ftype(extNavVelDelayed.err, 0.05f, 5.0f));
             } else {
                 // calculate additional error in GPS velocity caused by manoeuvring
-                R_OBS[0] = sq(constrain_ftype(frontend->_gpsHorizVelNoise, 0.05f, 5.0f)) + sq(frontend->gpsNEVelVarAccScale * accNavMag);
-                R_OBS[2] = sq(constrain_ftype(frontend->_gpsVertVelNoise,  0.05f, 5.0f)) + sq(frontend->gpsDVelVarAccScale  * accNavMag);
+                R_OBS[0] = sq(constrain_ftype(frontend->_gpsHorizVelNoise, 0.05f, 5.0f)) + sq(ftype(frontend->gpsNEVelVarAccScale) * accNavMag);
+                R_OBS[2] = sq(constrain_ftype(frontend->_gpsVertVelNoise,  0.05f, 5.0f)) + sq(ftype(frontend->gpsDVelVarAccScale)  * accNavMag);
             }
             R_OBS[1] = R_OBS[0];
             // Use GPS reported position accuracy if available and floor at value set by GPS position noise parameter
-            if (gpsPosAccuracy > 0.0f) {
+            if (gpsPosAccuracy > ftype(0.0)) {
                 R_OBS[3] = sq(constrain_ftype(gpsPosAccuracy, frontend->_gpsHorizPosNoise, 100.0f));
             } else if (extNavUsedForPos) {
                 R_OBS[3] = sq(constrain_ftype(extNavDataDelayed.posErr, 0.01f, 10.0f));
@@ -630,9 +630,9 @@ void NavEKF2_core::FuseVelPosNED()
             // plus a margin for manoeuvres. It is better to reject GPS horizontal velocity errors early
             ftype obs_data_chk;
             if (extNavVelToFuse) {
-                obs_data_chk = sq(constrain_ftype(extNavVelDelayed.err, 0.05f, 5.0f)) + sq(frontend->extNavVelVarAccScale * accNavMag);
+                obs_data_chk = sq(constrain_ftype(extNavVelDelayed.err, 0.05f, 5.0f)) + sq(ftype(frontend->extNavVelVarAccScale) * accNavMag);
             } else {
-                obs_data_chk = sq(constrain_ftype(frontend->_gpsHorizVelNoise, 0.05f, 5.0f)) + sq(frontend->gpsNEVelVarAccScale * accNavMag);
+                obs_data_chk = sq(constrain_ftype(frontend->_gpsHorizVelNoise, 0.05f, 5.0f)) + sq(ftype(frontend->gpsNEVelVarAccScale) * accNavMag);
             }
             R_OBS_DATA_CHECKS[0] = R_OBS_DATA_CHECKS[1] = R_OBS_DATA_CHECKS[2] = obs_data_chk;
         }

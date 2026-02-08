@@ -67,7 +67,7 @@ int32_t AP_OLC::adjust_latitude(int32_t lat, uint8_t code_len)
 
     if (lat >= LAT_MAX) {
         // Subtract half the code precision to get the latitude into the code area.
-        int32_t precision = compute_precision_for_length(code_len) * OLC_DEG_MULTIPLIER;
+        int32_t precision = int32_t(compute_precision_for_length(code_len) * OLC_DEG_MULTIPLIER);
         lat -= precision / 2;
     }
     return lat;

@@ -59,7 +59,7 @@ void AP_Baro_SITL::_timer()
     }
     _last_sample_time = now;
 
-    float sim_alt = _sitl->state.altitude;
+    float sim_alt = float(_sitl->state.altitude);
 
     if (_sitl->baro[_instance].disable) {
         // barometer is disabled

@@ -170,7 +170,7 @@ MAV_RESULT Copter::mavlink_motor_test_start(const GCS_MAVLINK &gcs_chan, uint8_t
 
     // set timeout
     motor_test_start_ms = AP_HAL::millis();
-    motor_test_timeout_ms = MIN(timeout_sec, MOTOR_TEST_TIMEOUT_SEC) * 1000;
+    motor_test_timeout_ms = uint32_t(MIN(timeout_sec, MOTOR_TEST_TIMEOUT_SEC) * 1000);
 
     // store required output
     motor_test_seq = motor_seq;

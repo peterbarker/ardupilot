@@ -389,11 +389,11 @@ void AP_OpenDroneID::send_location_message()
         direction = wrap_360(degrees(ahrs.groundspeed_vector().angle())); // heading (degrees)
     }
 
-    const float speed_horizontal = create_speed_horizontal(ahrs.groundspeed());
+    const float speed_horizontal = create_speed_horizontal(uint16_t(ahrs.groundspeed()));
 
     Vector3f velNED;
     UNUSED_RESULT(ahrs.get_velocity_NED(velNED));
-    const float climb_rate = create_speed_vertical(-velNED.z); //make sure climb_rate is within Remote ID limit
+    const float climb_rate = create_speed_vertical(int16_t(-velNED.z)); //make sure climb_rate is within Remote ID limit
 
     int32_t latitude = 0;
     int32_t longitude = 0;

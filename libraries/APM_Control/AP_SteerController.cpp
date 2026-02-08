@@ -204,7 +204,7 @@ int32_t AP_SteerController::get_steering_out_rate(float desired_rate)
     }
 
     // Convert to centi-degrees and constrain
-    return constrain_float(_last_out * 100, -derate_constraint, derate_constraint);
+    return int32_t(constrain_float(_last_out * 100, -derate_constraint, derate_constraint));
 }
 
 

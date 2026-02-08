@@ -667,10 +667,10 @@ void AP_ICEngine::update_idle_governor(int8_t &min_throttle)
     }
 
     // Override
-    min_throttle = roundf(idle_governor_integrator);
+    min_throttle = int8_t(roundf(idle_governor_integrator));
 
     // Calculate Error in system
-    int32_t error = idle_rpm - rpmv;
+    int32_t error = int32_t(idle_rpm - rpmv);
 
     bool underspeed = error > 0;
 
@@ -698,7 +698,7 @@ void AP_ICEngine::update_idle_governor(int8_t &min_throttle)
 
     idle_governor_integrator = constrain_float(idle_governor_integrator, min_throttle_base, 40.0f);
 
-    min_throttle = roundf(idle_governor_integrator);
+    min_throttle = int8_t(roundf(idle_governor_integrator));
 }
 #endif // AP_RPM_ENABLED
 

@@ -389,9 +389,9 @@ void AP_ExternalAHRS::update(void)
                                     "F000000GG0-",
                                     "QffffffLLfI",
                                     AP_HAL::micros64(),
-                                    degrees(roll), degrees(pitch), degrees(yaw),
-                                    state.velocity.x, state.velocity.y, state.velocity.z,
-                                    state.location.lat, state.location.lng, state.location.alt*0.01,
+                                    double(degrees(roll)), double(degrees(pitch)), double(degrees(yaw)),
+                                    double(state.velocity.x), double(state.velocity.y), double(state.velocity.z),
+                                    state.location.lat, state.location.lng, double(state.location.alt)*double(0.01),
                                     filterStatus.value);
 
         // @LoggerMessage: EAHV
@@ -411,9 +411,9 @@ void AP_ExternalAHRS::update(void)
             AP::logger().WriteStreaming("EAHV", "TimeUS,Vel,Pos,Hgt,MagX,MagY,MagZ,TAS",
                                         "Qfffffff",
                                         AP_HAL::micros64(),
-                                        velVar, posVar, hgtVar,
-                                        magVar.x, magVar.y, magVar.z,
-                                        tasVar);
+                                        double(velVar), double(posVar), double(hgtVar),
+                                        double(magVar.x), double(magVar.y), double(magVar.z),
+                                        double(tasVar));
         }
     }
 #endif  // HAL_LOGGING_ENABLED

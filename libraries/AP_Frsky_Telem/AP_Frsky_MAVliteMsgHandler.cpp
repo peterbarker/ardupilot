@@ -100,7 +100,7 @@ MAV_RESULT AP_Frsky_MAVliteMsgHandler::handle_command(const mavlink_command_long
 
 MAV_RESULT AP_Frsky_MAVliteMsgHandler::handle_command_do_set_mode(const mavlink_command_long_t &mav_command_long)
 {
-    if (AP::vehicle()->set_mode(mav_command_long.param1, ModeReason::FRSKY_COMMAND)) {
+    if (AP::vehicle()->set_mode(uint8_t(mav_command_long.param1), ModeReason::FRSKY_COMMAND)) {
         return MAV_RESULT_ACCEPTED;
     }
     return MAV_RESULT_FAILED;

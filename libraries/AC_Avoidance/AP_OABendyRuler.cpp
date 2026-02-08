@@ -95,7 +95,7 @@ bool AP_OABendyRuler::update(const Location& current_loc, const Location& destin
 
     // calculate bearing and distance to final destination
     const float bearing_to_dest = current_loc.get_bearing_to(destination) * 0.01f;
-    const float distance_to_dest = current_loc.get_distance(destination);
+    const float distance_to_dest = float(current_loc.get_distance(destination));
 
     // make sure user has set a meaningful value for _lookahead
     _lookahead.set(MAX(_lookahead,1.0f));

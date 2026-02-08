@@ -161,7 +161,7 @@ void AP_BattMonitor_DroneCAN::handle_battery_info_aux(const ardupilot_equipment_
 
     _cycle_count = msg.cycle_count;
     for (uint8_t i = 0; i < cell_count; i++) {
-        _interim_state.cell_voltages.cells[i] = msg.voltage_cell.data[i] * 1000;
+        _interim_state.cell_voltages.cells[i] = uint16_t(msg.voltage_cell.data[i] * 1000);
     }
     _interim_state.is_powering_off = msg.is_powering_off;
     if (!isnan(msg.nominal_voltage) && msg.nominal_voltage > 0) {
@@ -169,7 +169,7 @@ void AP_BattMonitor_DroneCAN::handle_battery_info_aux(const ardupilot_equipment_
         float full_charge_capacity_ah = _full_charge_capacity_wh / msg.nominal_voltage;
         _interim_state.consumed_mah = (full_charge_capacity_ah - remaining_capacity_ah) * 1000;
         _interim_state.consumed_wh = _full_charge_capacity_wh - _remaining_capacity_wh;
-        _interim_state.time_remaining =  is_zero(_interim_state.current_amps) ? 0 : (remaining_capacity_ah / _interim_state.current_amps * 3600);
+        _interim_state.time_remaining =  is_zero(_interim_state.current_amps) ? 0 : uint32_t(remaining_capacity_ah / _interim_state.current_amps * 3600);
         _interim_state.has_time_remaining = true;
     }
 

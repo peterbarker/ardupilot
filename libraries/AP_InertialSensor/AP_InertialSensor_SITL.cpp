@@ -77,9 +77,9 @@ void AP_InertialSensor_SITL::generate_accel()
 
     for (uint8_t j = 0; j < nsamples; j++) {
 
-        Vector3f accel = Vector3f(sitl->state.xAccel,
-                                  sitl->state.yAccel,
-                                  sitl->state.zAccel);
+        Vector3f accel = Vector3f(float(sitl->state.xAccel),
+                                  float(sitl->state.yAccel),
+                                  float(sitl->state.zAccel));
 
         // SIM_BRD_TRIM: simulate a rigid board mounting offset by rotating
         // the sensor frame.  Applied to both accel (here) and gyro so the two
@@ -171,7 +171,7 @@ void AP_InertialSensor_SITL::generate_accel()
             Vector3f lever_arm_accel = angular_accel % pos_offset;
 
             // calculate sensed acceleration due to centripetal acceleration
-            Vector3f angular_rate = Vector3f(radians(sitl->state.rollRate), radians(sitl->state.pitchRate), radians(sitl->state.yawRate));
+            Vector3f angular_rate = Vector3f(float(radians(sitl->state.rollRate)), float(radians(sitl->state.pitchRate)), float(radians(sitl->state.yawRate)));
             Vector3f centripetal_accel = angular_rate % (angular_rate % pos_offset);
 
             // apply corrections
@@ -217,9 +217,9 @@ void AP_InertialSensor_SITL::generate_gyro()
 
     const float _gyro_drift = gyro_drift();
     for (uint8_t j = 0; j < nsamples; j++) {
-        float p = radians(sitl->state.rollRate) + _gyro_drift;
-        float q = radians(sitl->state.pitchRate) + _gyro_drift;
-        float r = radians(sitl->state.yawRate) + _gyro_drift;
+        float p = float(radians(sitl->state.rollRate)) + _gyro_drift;
+        float q = float(radians(sitl->state.pitchRate)) + _gyro_drift;
+        float r = float(radians(sitl->state.yawRate)) + _gyro_drift;
 
         // minimum gyro noise is less than 1 bit
         float gyro_noise = radians(0.04f);
@@ -407,9 +407,9 @@ float AP_InertialSensor_SITL::gyro_drift(void) const
     double period  = sitl->drift_time * 2;
     double minutes = fmod(AP_HAL::micros64() / 60.0e6, period);
     if (minutes < period/2) {
-        return minutes * radians(sitl->drift_speed);
+        return float(minutes * ftype(radians(sitl->drift_speed)));
     }
-    return (period - minutes) * radians(sitl->drift_speed);
+    return float((period - minutes) * ftype(radians(sitl->drift_speed)));
 }
 
 

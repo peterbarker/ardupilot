@@ -277,7 +277,7 @@ void AP_Generator_Loweheiser::update_common_backend_variables()
     if (isnan(packet.efi_rpm)) {
         _rpm = 0;
     } else {
-        _rpm = packet.efi_rpm;
+        _rpm = uint16_t(packet.efi_rpm);
     }
 
     // packet.efi_fuel_consumed goes to NaN while the EFI is off
@@ -400,13 +400,13 @@ void AP_Generator_Loweheiser::command_generator()
             } else if (commanded_runstate == RunState::WARMING_UP) {
                 gcs().send_text(MAV_SEVERITY_INFO,
                                 "LH: Generator warming up (%f < %f)",
-                                packet.efi_clt,
-                                temp_required_for_run.get());
+                                double(packet.efi_clt),
+                                double(temp_required_for_run.get()));
             } else {
                 gcs().send_text(MAV_SEVERITY_INFO,
                                 "LH: Generator cooling down (%f > %f)",
-                                packet.efi_clt,
-                                temp_required_for_idle.get());
+                                double(packet.efi_clt),
+                                double(temp_required_for_idle.get()));
             }
             last_waiting_temperature_change_ms = now_ms;
         }
@@ -512,7 +512,7 @@ void AP_Generator_Loweheiser::command_generator()
             efi_index,
             desired_engine_state,
             desired_governor_state,
-            throttle,
+            double(throttle),
             run_electric_starter
             );
     }
@@ -618,7 +618,7 @@ bool AP_Generator_Loweheiser::pre_arm_check(char *failmsg, uint8_t failmsg_len) 
         break;
     case RunState::WARMING_UP:
         if (!isnan(packet.efi_clt)) {
-            hal.util->snprintf(failmsg, failmsg_len, "LH: Generator warming up (%.0f%%)", ((packet.efi_clt*100.0) / temp_required_for_run));
+            hal.util->snprintf(failmsg, failmsg_len, "LH: Generator warming up (%.0f%%)", double((packet.efi_clt*100.0f) / temp_required_for_run));
         } else {
             hal.util->snprintf(failmsg, failmsg_len, "LH: Generator warming up (waiting for data)");
         }
@@ -731,11 +731,11 @@ void AP_Generator_Loweheiser::send_generator_status(const GCS_MAVLINK &channel)
 
     int16_t rectifier_temp = INT16_MAX;
     if (!isnan(packet.rectifier_temp)) {
-        rectifier_temp = packet.rectifier_temp;
+        rectifier_temp = int16_t(packet.rectifier_temp);
     }
     int16_t generator_temp = INT16_MAX;
     if (!isnan(packet.generator_temp)) {
-        generator_temp = packet.generator_temp;
+        generator_temp = int16_t(packet.generator_temp);
     }
 
     // not all loweheiser firmwares provide runtime and
@@ -825,19 +825,19 @@ void AP_Generator_Loweheiser::Log_Write()
         "Q"       "B"  "f"   "f"   "f"   "f"   "f"   "f"    "f"   "f"   "f"  "f"   "f"    "f"     "f"  ,
         AP_HAL::micros64(),
         packet.efi_index,
-        packet.volt_batt,
-        packet.curr_batt,
-        packet.curr_gen,
-        packet.throttle,
-        packet.efi_batt,
-        packet.efi_rpm,
-        packet.efi_pw,
-        packet.efi_fuel_flow,
-        packet.efi_fuel_consumed,
-        packet.efi_baro,
-        packet.efi_mat,
-        packet.efi_clt,
-        packet.efi_tps
+        double(packet.volt_batt),
+        double(packet.curr_batt),
+        double(packet.curr_gen),
+        double(packet.throttle),
+        double(packet.efi_batt),
+        double(packet.efi_rpm),
+        double(packet.efi_pw),
+        double(packet.efi_fuel_flow),
+        double(packet.efi_fuel_consumed),
+        double(packet.efi_baro),
+        double(packet.efi_mat),
+        double(packet.efi_clt),
+        double(packet.efi_tps)
         );
 #endif // HAL_LOGGING_ENABLED
 }

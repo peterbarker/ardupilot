@@ -70,9 +70,9 @@
  */
 #define IST8310_RESOLUTION 0.3
 
-static const int16_t IST8310_MAX_VAL_XY = (1600 / IST8310_RESOLUTION) + 1;
+static const int16_t IST8310_MAX_VAL_XY = int16_t((1600 / IST8310_RESOLUTION) + 1);
 static const int16_t IST8310_MIN_VAL_XY = -IST8310_MAX_VAL_XY;
-static const int16_t IST8310_MAX_VAL_Z  = (2500 / IST8310_RESOLUTION) + 1;
+static const int16_t IST8310_MAX_VAL_Z  = int16_t((2500 / IST8310_RESOLUTION) + 1);
 static const int16_t IST8310_MIN_VAL_Z  = -IST8310_MAX_VAL_Z;
 
 

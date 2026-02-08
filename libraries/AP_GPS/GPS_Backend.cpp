@@ -435,11 +435,11 @@ good_yaw:
                                 "QBfffffB",
                                 AP_HAL::micros64(),
                                 state.instance,
-                                reported_heading_deg,
-                                reported_distance,
-                                reported_D,
-                                min_D,
-                                max_D,
+                                double(reported_heading_deg),
+                                double(reported_distance),
+                                double(reported_D),
+                                double(min_D),
+                                double(max_D),
                                 interim_state.have_gps_yaw);
 #endif
 
@@ -456,7 +456,7 @@ void AP_GPS_Backend::set_alt_amsl_cm(AP_GPS::GPS_State &_state, int32_t alt_amsl
     if (option_set(AP_GPS::HeightEllipsoid) && _state.have_undulation) {
         // user has asked ArduPilot to use ellipsoid height in the
         // canonical height for mission and navigation
-        _state.location.alt = alt_amsl_cm - _state.undulation*100;
+        _state.location.alt = int32_t(alt_amsl_cm - _state.undulation*100);
     } else {
         _state.location.alt = alt_amsl_cm;
     }

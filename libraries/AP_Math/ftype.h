@@ -69,7 +69,7 @@ inline bool is_zero(const float x) {
  */
 inline bool is_zero(const double x) {
 #if AP_MATH_ALLOW_DOUBLE_FUNCTIONS
-  return fabs(x) < FLT_EPSILON;
+  return fabs(x) < DBL_EPSILON;
 #else
   return fabsf(static_cast<float>(x)) < FLT_EPSILON;
 #endif

@@ -29,7 +29,7 @@ T Vector2<T>::length_squared() const
 template <typename T>
 T Vector2<T>::length(void) const
 {
-    return norm(x, y);
+    return (T)norm(x, y);
 }
 
 // limit vector to a given length. returns true if vector was limited
@@ -218,20 +218,20 @@ bool Vector2<T>::circle_segment_intersection(const Vector2<T>& seg_start, const 
        return false;
     }
 
-    const T delta = sq(b) - (4.0f * a * c);
+    const T delta = sq(b) - (T(4) * a * c);
 
     if (isnan(delta)) {
        return false;
     }
 
     // check for invalid delta (i.e. discriminant)
-    if (delta < 0.0f) {
+    if (delta < T(0)) {
         return false;
     }
 
     const T delta_sqrt = sqrtF(delta);
-    const T t1 = (-b + delta_sqrt) / (2.0f * a);
-    const T t2 = (-b - delta_sqrt) / (2.0f * a);
+    const T t1 = (-b + delta_sqrt) / (T(2) * a);
+    const T t2 = (-b - delta_sqrt) / (T(2) * a);
 
     // Three hit cases:
     //          -o->             --|-->  |            |  --|->
@@ -245,7 +245,7 @@ bool Vector2<T>::circle_segment_intersection(const Vector2<T>& seg_start, const 
     //   intersection.x = seg_start.x + t1 * seg_end_minus_start.x;
     //   intersection.y = seg_start.y + t1 * seg_end_minus_start.y;
 
-    if ((t1 >= 0.0f) && (t1 <= 1.0f)) {
+    if ((t1 >= T(0)) && (t1 <= T(1))) {
         // t1 is the intersection, and it is closer than t2 (since t1 uses -b - discriminant)
         // Impale, Poke
         intersection = seg_start + (seg_end_minus_start * t1);
@@ -253,7 +253,7 @@ bool Vector2<T>::circle_segment_intersection(const Vector2<T>& seg_start, const 
     }
 
     // here t1 did not intersect so we are either started inside the sphere or completely past it
-    if ((t2 >= 0.0f) && (t2 <= 1.0f)) {
+    if ((t2 >= T(0)) && (t2 <= T(1))) {
         // ExitWound
         intersection = seg_start + (seg_end_minus_start * t2);
         return true;

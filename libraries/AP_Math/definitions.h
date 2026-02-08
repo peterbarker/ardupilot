@@ -28,17 +28,19 @@
   #define MATH_CHECK_INDEXES 0
 #endif
 
-#define CDEG_TO_RAD     (M_PI / 18000.0f)
-#define RAD_TO_CDEG     (18000.0f / M_PI)
-#define DEG_TO_RAD      (M_PI / 180.0f)
-#define RAD_TO_DEG      (180.0f / M_PI)
+#define CDEG_TO_RAD     ((float)M_PI / 18000.0f)
+#define RAD_TO_CDEG     (18000.0f / (float)M_PI)
+#define DEG_TO_RAD      ((float)M_PI / 180.0f)
+#define RAD_TO_DEG      (180.0f / (float)M_PI)
 
 // GPS Specific double precision conversions
 // The precision here does matter when using the wsg* functions for converting
 // between LLH and ECEF coordinates.
 #if AP_MATH_ALLOW_DOUBLE_FUNCTIONS
-static const double DEG_TO_RAD_DOUBLE = asin(1) / 90;
-static const double RAD_TO_DEG_DOUBLE = 1 / DEG_TO_RAD_DOUBLE;
+constexpr double DEG_TO_RAD_DOUBLE = (M_PI / 180.0);
+constexpr double RAD_TO_DEG_DOUBLE = (180.0 / M_PI);
+constexpr double CDEG_TO_RAD_DOUBLE = (M_PI / 18000.0);
+constexpr double RAD_TO_CDEG_DOUBLE = (18000.0 / M_PI);
 #endif
 
 // acceleration due to gravity in m/s/s
@@ -49,9 +51,9 @@ static const double RAD_TO_DEG_DOUBLE = 1 / DEG_TO_RAD_DOUBLE;
 
 // convert a longitude or latitude point to meters or centimeters.
 // Note: this does not include the longitude scaling which is dependent upon location
-#define LATLON_TO_M     0.011131884502145034
-#define LATLON_TO_M_INV 89.83204953368922
-#define LATLON_TO_CM    1.1131884502145034
+#define LATLON_TO_M     0.011131884502145034f
+#define LATLON_TO_M_INV 89.83204953368922f
+#define LATLON_TO_CM    1.1131884502145034f
 
 // Semi-major axis of the Earth, in meters.
 static const double WGS84_A = 6378137.0;

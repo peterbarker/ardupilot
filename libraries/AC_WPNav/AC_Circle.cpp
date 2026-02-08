@@ -113,8 +113,8 @@ void AC_Circle::init()
 
     // If INIT_AT_CENTER is not set, project center forward by radius in heading direction
     if ((_options.get() & CircleOptions::INIT_AT_CENTER) == 0) {
-        _center_ned_m.x += _radius_m * _ahrs.cos_yaw();
-        _center_ned_m.y += _radius_m * _ahrs.sin_yaw();
+        _center_ned_m.x += postype_t(_radius_m * _ahrs.cos_yaw());
+        _center_ned_m.y += postype_t(_radius_m * _ahrs.sin_yaw());
     }
 
     // Circle altitude is relative to EKF origin by default
@@ -236,7 +236,7 @@ bool AC_Circle::update_ms(float climb_rate_ms)
     // calculate z-axis target
     float target_d_m;
     if (_is_terrain_alt) {
-        target_d_m = _center_ned_m.z - terrain_u_m;
+        target_d_m = float(_center_ned_m.z) - terrain_u_m;
     } else {
         target_d_m = -_pos_control.get_pos_desired_U_m();
     }
@@ -249,8 +249,8 @@ bool AC_Circle::update_ms(float climb_rate_ms)
     };
     if (!is_zero(_radius_m)) {
         // Calculate position on the circle edge based on current angle
-        target_ned_m.x += _radius_m * cosf(-_angle_rad);
-        target_ned_m.y += - _radius_m * sinf(-_angle_rad);
+        target_ned_m.x += postype_t(_radius_m * cosf(-_angle_rad));
+        target_ned_m.y += postype_t(- _radius_m * sinf(-_angle_rad));
 
         // Compute yaw toward the circle center
         _yaw_rad = get_bearing_rad(_pos_control.get_pos_desired_NED_m().xy().tofloat(), _center_ned_m.xy().tofloat());
@@ -270,7 +270,7 @@ bool AC_Circle::update_ms(float climb_rate_ms)
     _pos_control.input_pos_vel_accel_NE_m(target_ned_m.xy(), zero_ne, zero_ne);
     if (_is_terrain_alt) {
         float vel_zero = 0;
-        float target_pos_d_m = target_ned_m.z;
+        float target_pos_d_m = float(target_ned_m.z);
         _pos_control.input_pos_vel_accel_D_m(target_pos_d_m, vel_zero, 0);
     } else {
         _pos_control.D_set_pos_target_from_climb_rate_ms(climb_rate_ms);
@@ -297,7 +297,7 @@ void AC_Circle::get_closest_point_on_circle_NEU_cm(Vector3f& result_neu_cm, floa
     get_closest_point_on_circle_NED_m(result_ned_m, dist_m);
 
     // Convert results back to neu centimeters
-    result_neu_cm = Vector3f(result_ned_m.x, result_ned_m.y, -result_ned_m.z) * 100.0;
+    result_neu_cm = Vector3f(float(result_ned_m.x), float(result_ned_m.y), float(-result_ned_m.z)) * 100.0f;
     dist_cm = dist_m * 100.0;
 }
 
@@ -325,19 +325,19 @@ void AC_Circle::get_closest_point_on_circle_NED_m(Vector3p& result_ned_m, float&
     const float dist_to_center_m_sq = vec_from_center_ned_m.length_squared();
     // Handle edge case: vehicle is at the exact center of the circle
     if (dist_to_center_m_sq < sq(0.5)) {
-        result_ned_m.x = _center_ned_m.x - _radius_m * _ahrs.cos_yaw();
-        result_ned_m.y = _center_ned_m.y - _radius_m * _ahrs.sin_yaw();
+        result_ned_m.x = _center_ned_m.x - postype_t(_radius_m * _ahrs.cos_yaw());
+        result_ned_m.y = _center_ned_m.y - postype_t(_radius_m * _ahrs.sin_yaw());
         result_ned_m.z = _center_ned_m.z;
-        dist_to_edge_m = (stopping_point_ned_m - result_ned_m).length();
+        dist_to_edge_m = float((stopping_point_ned_m - result_ned_m).length());
         return;
     }
 
     // Calculate the closest point on the circle's edge by projecting out from center
     const float dist_to_center_m_xy = vec_from_center_ned_m.xy().length();
-    result_ned_m.x = _center_ned_m.x + vec_from_center_ned_m.x / dist_to_center_m_xy * _radius_m;
-    result_ned_m.y = _center_ned_m.y + vec_from_center_ned_m.y / dist_to_center_m_xy * _radius_m;
+    result_ned_m.x = _center_ned_m.x + postype_t(vec_from_center_ned_m.x / dist_to_center_m_xy * _radius_m);
+    result_ned_m.y = _center_ned_m.y + postype_t(vec_from_center_ned_m.y / dist_to_center_m_xy * _radius_m);
     result_ned_m.z = _center_ned_m.z;
-    dist_to_edge_m = (stopping_point_ned_m - result_ned_m).length();
+    dist_to_edge_m = float((stopping_point_ned_m - result_ned_m).length());
 }
 
 // Calculates angular velocity and acceleration limits based on the configured radius and rate.
@@ -394,7 +394,7 @@ void AC_Circle::init_start_angle(bool use_heading)
             _angle_rad = wrap_PI(_ahrs.yaw - M_PI);
         } else {
             // Calculate bearing from circle center to current position
-            float bearing_rad = atan2f(curr_pos_desired_ned_m.y - _center_ned_m.y, curr_pos_desired_ned_m.x - _center_ned_m.x);
+            float bearing_rad = atan2f(float(curr_pos_desired_ned_m.y - _center_ned_m.y), float(curr_pos_desired_ned_m.x - _center_ned_m.x));
             _angle_rad = wrap_PI(bearing_rad);
         }
     }

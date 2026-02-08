@@ -290,7 +290,7 @@ int32_t AP_YawController::get_servo_out(float scaler, bool disable_integrator)
     _last_out =  _pid_info.I + _pid_info.D;
 
     // Convert to centi-degrees and constrain
-    return constrain_float(_last_out * 100, -4500, 4500);
+    return int32_t(constrain_float(_last_out * 100, -4500, 4500));
 }
 
 // get actuator output for direct rate control
@@ -340,7 +340,7 @@ float AP_YawController::get_rate_out(float desired_rate, float scaler, bool disa
     _pid_info = rate_pid.get_pid_info();
     auto &pinfo = _pid_info;
 
-    const float deg_scale = degrees(1);
+    const float deg_scale = degrees(1.0f);
     pinfo.FF = ff;
     pinfo.P *= deg_scale;
     pinfo.I *= deg_scale;

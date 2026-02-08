@@ -192,7 +192,7 @@ void Copter::tuning(const RC_Channel *tuning_ch, int8_t tuning_param, float tuni
 
 #if FRAME_CONFIG != HELI_FRAME
     case TUNING_RATE_MOT_YAW_HEADROOM:
-        motors->set_yaw_headroom(tuning_value);
+        motors->set_yaw_headroom(int16_t(tuning_value));
         break;
 #endif
 

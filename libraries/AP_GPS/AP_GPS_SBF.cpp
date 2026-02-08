@@ -493,10 +493,10 @@ AP_GPS_SBF::process_message(void)
             state.have_undulation = !is_DNU(temp.Undulation);
             double height = temp.Height;  // in metres
             if (state.have_undulation) {
-                height -= temp.Undulation;
+                height -= double(temp.Undulation);
                 state.undulation = -temp.Undulation;
             }
-            set_alt_amsl_cm(state, (float)height * 1e2f);  // m -> cm
+            set_alt_amsl_cm(state, int32_t(float(height) * 1e2f));  // m -> cm
         }
 
         state.num_sats = temp.NrSV;
@@ -613,10 +613,10 @@ AP_GPS_SBF::process_message(void)
             check_new_itow(temp.TOW, sbf_msg.length);
             if (temp.N > 0 && temp.ant1.Error == 0 && temp.ant1.AmbiguityType == 0) {
                 // valid RTK integer fix
-                const float rel_heading_deg = degrees(atan2f(temp.ant1.DeltaEast, temp.ant1.DeltaNorth));
+                const float rel_heading_deg = float(degrees(ftype(atan2f(float(temp.ant1.DeltaEast), float(temp.ant1.DeltaNorth)))));
                 calculate_moving_base_yaw(rel_heading_deg,
-                                          Vector3f(temp.ant1.DeltaNorth, temp.ant1.DeltaEast, temp.ant1.DeltaUp).length(),
-                                          -temp.ant1.DeltaUp);
+                                          float(Vector3f(float(temp.ant1.DeltaNorth), float(temp.ant1.DeltaEast), float(temp.ant1.DeltaUp)).length()),
+                                          float(-temp.ant1.DeltaUp));
             }
         }
 #endif
@@ -648,16 +648,16 @@ AP_GPS_SBF::process_message(void)
         if (!is_DNU(temp.info.DeltaEast) && !is_DNU(temp.info.DeltaNorth) && !is_DNU(temp.info.DeltaUp) &&
             (temp.info.Azimuth != uint16DNU)) {
 
-            state.rtk_baseline_y_mm = temp.info.DeltaEast * 1e3;
-            state.rtk_baseline_x_mm = temp.info.DeltaNorth * 1e3;
-            state.rtk_baseline_z_mm = temp.info.DeltaUp * -1e3;
+            state.rtk_baseline_y_mm = int32_t(temp.info.DeltaEast * 1e3);
+            state.rtk_baseline_x_mm = int32_t(temp.info.DeltaNorth * 1e3);
+            state.rtk_baseline_z_mm = int32_t(temp.info.DeltaUp * -1e3);
 
 #if GPS_MOVING_BASELINE
             // copy the baseline data as a yaw source
             if (option_set(AP_GPS::DriverOptions::SBF_UseBaseForYaw)) {
                 calculate_moving_base_yaw(temp.info.Azimuth * 0.01f + 180.0f,
-                                          Vector3f(temp.info.DeltaNorth, temp.info.DeltaEast, temp.info.DeltaUp).length(),
-                                          -temp.info.DeltaUp);
+                                          float(Vector3f(float(temp.info.DeltaNorth), float(temp.info.DeltaEast), float(temp.info.DeltaUp)).length()),
+                                          float(-temp.info.DeltaUp));
             }
 #endif // GPS_MOVING_BASELINE
 

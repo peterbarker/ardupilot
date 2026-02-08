@@ -206,8 +206,8 @@ void AP_ADSB_Sagetech::handle_adsb_in_msg(const Packet_XP &msg)
         vehicle.info.ICAO_address = le24toh_ptr(&msg.payload[10]);
 
         if (validFlags & SAGETECH_VALIDFLAG_LATLNG) {
-            vehicle.info.lat = ((int32_t)le24toh_ptr(&msg.payload[20])) * SAGETECH_SCALER_LATLNG;
-            vehicle.info.lon = ((int32_t)le24toh_ptr(&msg.payload[23])) * SAGETECH_SCALER_LATLNG;
+            vehicle.info.lat = int32_t(((int32_t)le24toh_ptr(&msg.payload[20])) * SAGETECH_SCALER_LATLNG);
+            vehicle.info.lon = int32_t(((int32_t)le24toh_ptr(&msg.payload[23])) * SAGETECH_SCALER_LATLNG);
             vehicle.info.flags |= ADSB_FLAGS_VALID_COORDS;
         }
 
@@ -219,12 +219,12 @@ void AP_ADSB_Sagetech::handle_adsb_in_msg(const Packet_XP &msg)
         if (validFlags & SAGETECH_VALIDFLAG_VELOCITY) {
             const float velNS = ((int32_t)le16toh_ptr(&msg.payload[29])) * SAGETECH_SCALER_KNOTS_TO_CMS;
             const float velEW = ((int32_t)le16toh_ptr(&msg.payload[31])) * SAGETECH_SCALER_KNOTS_TO_CMS;
-            vehicle.info.hor_velocity = Vector2f(velEW, velNS).length();
+            vehicle.info.hor_velocity = uint16_t(Vector2f(velEW, velNS).length());
             vehicle.info.flags |= ADSB_FLAGS_VALID_VELOCITY;
         }
 
         if (validFlags & SAGETECH_VALIDFLAG_HEADING) {
-            vehicle.info.heading = ((float)msg.payload[29]) * SAGETECH_SCALER_HEADING_CM;
+            vehicle.info.heading = uint16_t(((float)msg.payload[29]) * SAGETECH_SCALER_HEADING_CM);
             vehicle.info.flags |= ADSB_FLAGS_VALID_HEADING;
         }
 
@@ -490,20 +490,20 @@ void AP_ADSB_Sagetech::send_msg_GPS()
     // NOTE: these MUST be done in double or else we get roundoff in the maths
     const double lon_deg = longitude * (double)1.0e-7 * (longitude < 0 ? -1 : 1);
     const double lon_minutes = (lon_deg - int(lon_deg)) * 60;
-    snprintf((char*)&pkt.payload[0], 12, "%03u%02u.%05u", (unsigned)lon_deg, (unsigned)lon_minutes, unsigned((lon_minutes - (int)lon_minutes) * 1.0E5));
+    snprintf((char*)&pkt.payload[0], 12, "%03u%02u.%05u", (unsigned)lon_deg, (unsigned)lon_minutes, unsigned((lon_minutes - (int)lon_minutes) * double(1.0E5)));
 
     const double lat_deg = latitude * (double)1.0e-7 * (latitude < 0 ? -1 : 1);
     const double lat_minutes = (lat_deg - int(lat_deg)) * 60;
-    snprintf((char*)&pkt.payload[11], 11, "%02u%02u.%05u", (unsigned)lat_deg, (unsigned)lat_minutes, unsigned((lat_minutes - (int)lat_minutes) * 1.0E5));
+    snprintf((char*)&pkt.payload[11], 11, "%02u%02u.%05u", (unsigned)lat_deg, (unsigned)lat_minutes, unsigned((lat_minutes - (int)lat_minutes) * double(1.0E5)));
 
     // ground speed
     const Vector2f speed = loc.groundspeed_vector();
     float speed_knots = speed.length() * M_PER_SEC_TO_KNOTS;
-    snprintf((char*)&pkt.payload[21], 7, "%03u.%02u", (unsigned)speed_knots, unsigned((speed_knots - (int)speed_knots) * 1.0E2));
+    snprintf((char*)&pkt.payload[21], 7, "%03u.%02u", (unsigned)speed_knots, unsigned((speed_knots - (int)speed_knots) * 1.0E2f));
 
     // heading
     float heading = wrap_360(degrees(speed.angle()));
-    snprintf((char*)&pkt.payload[27], 10, "%03u.%04u", unsigned(heading), unsigned((heading - (int)heading) * 1.0E4));
+    snprintf((char*)&pkt.payload[27], 10, "%03u.%04u", unsigned(heading), unsigned((heading - (int)heading) * 1.0E4f));
 
     // hemisphere
     uint8_t hemisphere = 0;
@@ -521,7 +521,7 @@ void AP_ADSB_Sagetech::send_msg_GPS()
         struct tm* tm = gmtime_r(&time_sec, &tmd);
 
         // format time string
-        snprintf((char*)&pkt.payload[36], 11, "%02u%02u%06.3f", tm->tm_hour, tm->tm_min, tm->tm_sec + (time_usec % 1000000) * 1.0e-6);
+        snprintf((char*)&pkt.payload[36], 11, "%02u%02u%06.3f", tm->tm_hour, tm->tm_min, double(tm->tm_sec) + (double(time_usec % 1000000) * double(1.0e-6)));
     } else {
         memset(&pkt.payload[36],' ', 10);
     }

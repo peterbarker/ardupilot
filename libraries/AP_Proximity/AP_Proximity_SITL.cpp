@@ -48,9 +48,9 @@ AP_Proximity_SITL::AP_Proximity_SITL(AP_Proximity &_frontend,
 // update the state of the sensor
 void AP_Proximity_SITL::update(void)
 {
-    current_loc.lat = sitl->state.latitude * 1.0e7;
-    current_loc.lng = sitl->state.longitude * 1.0e7;
-    current_loc.alt = sitl->state.altitude * 1.0e2;
+    current_loc.lat = int32_t(sitl->state.latitude * double(1.0e7));
+    current_loc.lng = int32_t(sitl->state.longitude * double(1.0e7));
+    current_loc.alt = int32_t(sitl->state.altitude * double(1.0e2));
 
 #if AP_FENCE_ENABLED
     if (!AP::fence()->polyfence().breached()) {
@@ -88,7 +88,7 @@ bool AP_Proximity_SITL::get_distance_to_fence(float angle_deg, float &distance) 
     }
 
     // convert to earth frame
-    angle_deg = wrap_360(sitl->state.yawDeg + angle_deg);
+    angle_deg = wrap_360(double(sitl->state.yawDeg) + angle_deg);
 
     /*
       simple bisection search to find distance. Not really efficient,

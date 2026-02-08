@@ -440,7 +440,7 @@ void AP_ADSB_Sagetech_MXS::handle_svr(const sg_svr_t svr)
     }
     if (svr.validity.geoAlt) {
         vehicle.info.altitude_type = ADSB_ALTITUDE_TYPE_GEOMETRIC;
-        vehicle.info.altitude = svr.airborne.geoAlt * SAGETECH_SCALE_FEET_TO_MM;    // Convert from feet to mm
+        vehicle.info.altitude = int32_t(svr.airborne.geoAlt * SAGETECH_SCALE_FEET_TO_MM);    // Convert from feet to mm
         vehicle.info.flags |= ADSB_FLAGS_VALID_ALTITUDE;
     }
     if (svr.validity.baroAlt) {

@@ -67,9 +67,9 @@ void AP_Beacon_SITL::update(void)
 
     // truth location of the flight vehicle
     const Location current_loc {
-        int32_t(sitl->state.latitude * 1.0e7f),
-        int32_t(sitl->state.longitude * 1.0e7f),
-        int32_t(sitl->state.altitude * 1.0e2f),
+        int32_t(double(sitl->state.latitude) * double(1.0e7)),
+        int32_t(double(sitl->state.longitude) * double(1.0e7)),
+        int32_t(double(sitl->state.altitude) * double(1.0e2)),
         Location::AltFrame::ABSOLUTE
     };
 

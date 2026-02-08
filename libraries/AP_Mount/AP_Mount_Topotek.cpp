@@ -702,7 +702,7 @@ void AP_Mount_Topotek::send_target_angles(const MountAngleTarget& angle_rad)
     // sample command #tpUG6wGIY
     const char* format_str = "%04X%02X";
     const uint8_t speed = 99;
-    const uint16_t yaw_angle_cd = (uint16_t)constrain_int16(degrees(angle_rad.get_bf_yaw()) * 100, MAX(-18000, _params.yaw_angle_min * 100), MIN(18000, _params.yaw_angle_max * 100));
+    const uint16_t yaw_angle_cd = (uint16_t)constrain_int16(int16_t(degrees(angle_rad.get_bf_yaw()) * 100), MAX(-18000, _params.yaw_angle_min * 100), MIN(18000, _params.yaw_angle_max * 100));
 
     uint8_t databuff[7];
     hal.util->snprintf((char *)databuff, ARRAY_SIZE(databuff), format_str, yaw_angle_cd, speed);
@@ -714,7 +714,7 @@ void AP_Mount_Topotek::send_target_angles(const MountAngleTarget& angle_rad)
 
     // send pitch target
     // sample command: #tpUG6wGIP
-    const uint16_t pitch_angle_cd = (uint16_t)constrain_int16(-degrees(angle_rad.pitch) * 100, -9000, 9000);
+    const uint16_t pitch_angle_cd = (uint16_t)constrain_int16(int16_t(-degrees(angle_rad.pitch) * 100), -9000, 9000);
     hal.util->snprintf((char *)databuff, ARRAY_SIZE(databuff), format_str, pitch_angle_cd, speed);
     send_variablelen_packet(HeaderType::VARIABLE_LEN,
                             AddressByte::GIMBAL,
@@ -724,7 +724,7 @@ void AP_Mount_Topotek::send_target_angles(const MountAngleTarget& angle_rad)
 
     // send roll target
     // sample command: #tpUG6wGIR
-    const uint16_t roll_angle_cd = (uint16_t)constrain_int16(degrees(angle_rad.roll) * 100, -18000, 18000);
+    const uint16_t roll_angle_cd = (uint16_t)constrain_int16(int16_t(degrees(angle_rad.roll) * 100), -18000, 18000);
     hal.util->snprintf((char *)databuff, ARRAY_SIZE(databuff), format_str, roll_angle_cd, speed);
     send_variablelen_packet(HeaderType::VARIABLE_LEN,
                             AddressByte::GIMBAL,
@@ -742,9 +742,9 @@ void AP_Mount_Topotek::send_target_rates(const MountRateTarget& rate_rads)
     }
 
     // convert and constrain rates
-    const uint8_t roll_angle_speed = constrain_int16(degrees(rate_rads.roll) * ANGULAR_VELOCITY_CONVERSION, -99, 99);
-    const uint8_t pitch_angle_speed = constrain_int16(-degrees(rate_rads.pitch) * ANGULAR_VELOCITY_CONVERSION, -99, 99);
-    const uint8_t yaw_angle_speed = constrain_int16(degrees(rate_rads.yaw) * ANGULAR_VELOCITY_CONVERSION, -99, 99);
+    const uint8_t roll_angle_speed = constrain_int16(int16_t(degrees(rate_rads.roll) * ANGULAR_VELOCITY_CONVERSION), -99, 99);
+    const uint8_t pitch_angle_speed = constrain_int16(int16_t(-degrees(rate_rads.pitch) * ANGULAR_VELOCITY_CONVERSION), -99, 99);
+    const uint8_t yaw_angle_speed = constrain_int16(int16_t(degrees(rate_rads.yaw) * ANGULAR_VELOCITY_CONVERSION), -99, 99);
 
     // send stop rotation command three times if target roll, pitch and yaw are zero
     if (roll_angle_speed == 0 && pitch_angle_speed == 0 && yaw_angle_speed == 0) {
@@ -805,8 +805,8 @@ bool AP_Mount_Topotek::send_location_info()
     const int16_t lng_deg = (int16_t)longitude;
 
     // get the minute part
-    const double lat_min = (latitude - lat_deg) * 60.0;
-    const double lng_min = (longitude - lng_deg) * 60.0;
+    const double lat_min = (latitude - double(lat_deg)) * double(60.0);
+    const double lng_min = (longitude - double(lng_deg)) * double(60.0);
 
     // prepare and send latitude
     // first byte is N or S, followed by GPS coordinates in degree division format, in the format of ddmm.mmmm
@@ -832,7 +832,7 @@ bool AP_Mount_Topotek::send_location_info()
     // prepare and send vehicle altitude
     // sample command: #tpUD8wALT000000.0, similar format to $GPGGA
     uint8_t databuff_alt[9];
-    hal.util->snprintf((char*)databuff_alt, ARRAY_SIZE(databuff_alt), "%08.1f", alt_amsl_m);
+    hal.util->snprintf((char*)databuff_alt, ARRAY_SIZE(databuff_alt), "%08.1f", double(alt_amsl_m));
     if (!send_variablelen_packet(HeaderType::VARIABLE_LEN, AddressByte::SYSTEM_AND_IMAGE, AP_MOUNT_TOPOTEK_ID3CHAR_SET_ALT, true, (uint8_t*)databuff_alt, ARRAY_SIZE(databuff_alt)-1)) {
         return false;
     }
@@ -841,7 +841,7 @@ bool AP_Mount_Topotek::send_location_info()
     // sample command: #tpUD5wAZI359.9, similar format to $GPRMC
     const float veh_yaw_deg = AP::ahrs().get_yaw_deg();
     uint8_t databuff_azimuth[6];
-    hal.util->snprintf((char*)databuff_azimuth, ARRAY_SIZE(databuff_azimuth), "%05.1f", veh_yaw_deg);
+    hal.util->snprintf((char*)databuff_azimuth, ARRAY_SIZE(databuff_azimuth), "%05.1f", double(veh_yaw_deg));
     if (!send_variablelen_packet(HeaderType::VARIABLE_LEN, AddressByte::SYSTEM_AND_IMAGE, AP_MOUNT_TOPOTEK_ID3CHAR_SET_AZIMUTH, true, (uint8_t*)databuff_azimuth, ARRAY_SIZE(databuff_azimuth)-1)) {
         return false;
     }

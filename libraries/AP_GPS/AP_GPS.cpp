@@ -1364,7 +1364,7 @@ uint16_t AP_GPS::gps_yaw_cdeg(uint8_t instance) const
     if (!gps_yaw_deg(instance, yaw_deg, accuracy_deg, time_ms)) {
         return 65535;
     }
-    int yaw_cd = wrap_360_cd(yaw_deg * 100);
+    int yaw_cd = int(wrap_360_cd(yaw_deg * 100));
     if (yaw_cd == 0) {
         return 36000;
     }
@@ -1386,7 +1386,7 @@ void AP_GPS::send_mavlink_gps_raw(mavlink_channel_t chan)
     float undulation = 0.0;
     int32_t height_elipsoid_mm = 0;
     if (get_undulation(0, undulation)) {
-        height_elipsoid_mm = loc.alt*10 - undulation*1000;
+        height_elipsoid_mm = int32_t(loc.alt*10 - undulation*1000);
     }
     horizontal_accuracy(0, hacc);
     vertical_accuracy(0, vacc);
@@ -1400,13 +1400,13 @@ void AP_GPS::send_mavlink_gps_raw(mavlink_channel_t chan)
         loc.alt * 10UL, // in mm
         get_hdop(0),
         get_vdop(0),
-        ground_speed(0)*100,  // cm/s
-        ground_course(0)*100, // 1/100 degrees,
+        uint16_t(ground_speed(0)*100),  // cm/s
+        uint16_t(ground_course(0)*100), // 1/100 degrees,
         num_sats(0),
         height_elipsoid_mm,   // Ellipsoid height in mm
-        hacc * 1000,          // one-sigma standard deviation in mm
-        vacc * 1000,          // one-sigma standard deviation in mm
-        sacc * 1000,          // one-sigma standard deviation in mm/s
+        uint32_t(hacc * 1000),          // one-sigma standard deviation in mm
+        uint32_t(vacc * 1000),          // one-sigma standard deviation in mm
+        uint32_t(sacc * 1000),          // one-sigma standard deviation in mm/s
         0,                    // TODO one-sigma heading accuracy standard deviation
         gps_yaw_cdeg(0));
 }
@@ -1441,16 +1441,16 @@ void AP_GPS::send_mavlink_gps2_raw(mavlink_channel_t chan)
         loc.alt * 10UL,
         get_hdop(1),
         get_vdop(1),
-        ground_speed(1)*100,  // cm/s
-        ground_course(1)*100, // 1/100 degrees,
+        uint16_t(ground_speed(1)*100),  // cm/s
+        uint16_t(ground_course(1)*100), // 1/100 degrees,
         num_sats(1),
         state[1].rtk_num_sats,
         state[1].rtk_age_ms,
         gps_yaw_cdeg(1),
-        height_elipsoid_mm,   // Ellipsoid height in mm
-        hacc * 1000,          // one-sigma standard deviation in mm
-        vacc * 1000,          // one-sigma standard deviation in mm
-        sacc * 1000,          // one-sigma standard deviation in mm/s
+        int32_t(height_elipsoid_mm),   // Ellipsoid height in mm
+        uint32_t(hacc * 1000),          // one-sigma standard deviation in mm
+        uint32_t(vacc * 1000),          // one-sigma standard deviation in mm
+        uint32_t(sacc * 1000),          // one-sigma standard deviation in mm/s
         0);                    // TODO one-sigma heading accuracy standard deviation
 }
 #endif // AP_GPS_GPS2_RAW_SENDING_ENABLED
@@ -1932,7 +1932,7 @@ void AP_GPS::Write_GPS(uint8_t i)
     vertical_accuracy(i, vacc);
     speed_accuracy(i, sacc);
     if (get_undulation(i, undulation)) {
-        alt_ellipsoid = loc.alt - (undulation*100);
+        alt_ellipsoid = int32_t(loc.alt - (undulation*100));
     }
     struct log_GPA pkt2{
         LOG_PACKET_HEADER_INIT(LOG_GPA_MSG),
@@ -1998,7 +1998,7 @@ bool AP_GPS::gps_yaw_deg(uint8_t instance, float &yaw_deg, float &accuracy_deg, 
     time_ms = state[instance].gps_yaw_time_ms;
     float lag_s;
     if (get_lag(instance, lag_s)) {
-        uint32_t lag_ms = lag_s * 1000;
+        uint32_t lag_ms = uint32_t(lag_s * 1000);
         time_ms -= lag_ms;
     }
 

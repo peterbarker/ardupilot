@@ -57,7 +57,7 @@ bool AP_BattMonitor_Generator_FuelLevel::reset_remaining(float percentage)
 
     if (generator->reset_consumed_energy()) {
         percentage = constrain_float(percentage, 0.0, 100.0);
-        _initial_fuel_pct = percentage;
+        _initial_fuel_pct = uint8_t(percentage);
         return true;
     }
 
@@ -152,12 +152,12 @@ bool AP_BattMonitor_Generator_FuelLevel::capacity_remaining_pct(uint8_t &percent
         }
 
         // now we get the percentage according to tank capacity (pack_capacity parameter)
-        percentage = constrain_float(100 * remaining_ml / _params._pack_capacity, 0, UINT8_MAX);;
+        percentage = uint8_t(constrain_float(100 * remaining_ml / _params._pack_capacity, 0, UINT8_MAX));;
         return true;
         
     // Otherwise use generator's own percentage
     } else {
-        percentage = generator->get_fuel_remaining() * 100;  // convert from scale to actual percentage
+        percentage = uint8_t(generator->get_fuel_remaining() * 100);  // convert from scale to actual percentage
         return true;
     }
 }

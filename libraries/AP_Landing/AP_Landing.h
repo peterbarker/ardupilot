@@ -104,7 +104,7 @@ public:
     // Return the landing type
     Landing_Type get_type() const { return (Landing_Type)type.get(); }
 
-    int16_t get_pitch_cd(void) const { return pitch_deg*100; }
+    int16_t get_pitch_cd(void) const { return int16_t(pitch_deg*100); }
     float get_flare_sec(void) const { return flare_sec; }
     int8_t get_disarm_delay(void) const { return disarm_delay; }
     int8_t get_then_servos_neutral(void) const { return then_servos_neutral; }

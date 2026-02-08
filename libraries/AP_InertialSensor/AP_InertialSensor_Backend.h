@@ -104,7 +104,7 @@ public:
     // if the backend polling rate is the same as the sample rate or higher, return raw sample rate
     // override and return the backend rate in Hz if it is lower than the sample rate
     virtual uint16_t get_gyro_backend_rate_hz() const {
-        return _gyro_raw_sample_rate(gyro_instance);
+        return uint16_t(_gyro_raw_sample_rate(gyro_instance));
     }
 
     // return the maximum allowed gyro bias for this sensor (rad/s).

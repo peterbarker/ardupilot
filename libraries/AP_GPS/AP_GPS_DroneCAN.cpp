@@ -417,7 +417,7 @@ void AP_GPS_DroneCAN::handle_fix2_msg(const uavcan_equipment_gnss_Fix2& msg, uin
     if (!seen_aux) {
         // if we haven't seen an Aux message then populate vdop and
         // hdop from pdop. Some GPS modules don't provide the Aux message
-        interim_state.hdop = interim_state.vdop = msg.pdop * 100.0;
+        interim_state.hdop = interim_state.vdop = uint16_t(msg.pdop * 100.0);
     }
 
     if ((msg.timestamp.usec > msg.gnss_timestamp.usec) && (msg.gnss_timestamp.usec > 0)) {
@@ -473,12 +473,12 @@ void AP_GPS_DroneCAN::handle_aux_msg(const uavcan_equipment_gnss_Auxiliary& msg)
 
     if (!isnan(msg.hdop)) {
         seen_aux = true;
-        interim_state.hdop = msg.hdop * 100.0;
+        interim_state.hdop = uint16_t(msg.hdop * 100.0);
     }
 
     if (!isnan(msg.vdop)) {
         seen_aux = true;
-        interim_state.vdop = msg.vdop * 100.0;
+        interim_state.vdop = uint16_t(msg.vdop * 100.0);
     }
 }
 

@@ -57,12 +57,12 @@ void CompassLearn::update(void)
     if (!gsf->getYawData(yaw_rad, yaw_variance, &n_clips) ||
         !is_positive(yaw_variance) ||
         n_clips > 1 ||
-        yaw_variance >= sq(radians(YAW_ACCURACY_THRESHOLD_DEG))) {
+        yaw_variance >= ftype(sq(radians(YAW_ACCURACY_THRESHOLD_DEG)))) {
         // not converged
         return;
     }
 
-    const bool result = compass.mag_cal_fixed_yaw(degrees(yaw_rad), (1U<<HAL_COMPASS_MAX_SENSORS)-1, 0, 0, true);
+    const bool result = compass.mag_cal_fixed_yaw(float(degrees(yaw_rad)), (1U<<HAL_COMPASS_MAX_SENSORS)-1, 0, 0, true);
     if (result) {
         AP_Notify::flags.compass_cal_running = false;
         compass.set_learn_type(Compass::LearnType::NONE, true);

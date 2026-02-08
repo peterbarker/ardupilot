@@ -39,7 +39,7 @@ void NavEKF2_core::controlMagYawReset()
         deltaQuatTemp.to_axis_angle(deltaRotVecTemp);
 
         // check if the spin rate is OK - high spin rates can cause angular alignment errors
-        bool angRateOK = deltaRotVecTemp.length() < 0.1745f;
+        bool angRateOK = deltaRotVecTemp.length() < ftype(0.1745);
 
         initialResetAllowed = angRateOK;
         flightResetAllowed = angRateOK && !onGround;
@@ -57,14 +57,14 @@ void NavEKF2_core::controlMagYawReset()
     if (flightResetAllowed && !assume_zero_sideslip()) {
         // check that we have reached a height where ground magnetic interference effects are insignificant
         // and can perform a final reset of the yaw and field states
-        finalResetRequest = (stateStruct.position.z  - posDownAtTakeoff) < -EKF2_MAG_FINAL_RESET_ALT;
+        finalResetRequest = (stateStruct.position.z  - posDownAtTakeoff) < -(double)EKF2_MAG_FINAL_RESET_ALT;
 
         // check for increasing height
-        bool hgtIncreasing = (posDownAtLastMagReset-stateStruct.position.z) > 0.5f;
+        bool hgtIncreasing = (posDownAtLastMagReset-stateStruct.position.z) > ftype(0.5);
         ftype yawInnovIncrease = fabsF(innovYaw) - fabsF(yawInnovAtLastMagReset);
 
         // check for increasing yaw innovations
-        bool yawInnovIncreasing = yawInnovIncrease > 0.25f;
+        bool yawInnovIncreasing = yawInnovIncrease > ftype(0.25);
 
         // check that the yaw innovations haven't been caused by a large change in attitude
         deltaQuatTemp = quatAtLastMagReset / stateStruct.quat;
@@ -179,7 +179,7 @@ void NavEKF2_core::controlMagYawReset()
 // vector from GPS. It is used to align the yaw angle after launch or takeoff.
 void NavEKF2_core::realignYawGPS()
 {
-    if ((sq(gpsDataDelayed.vel.x) + sq(gpsDataDelayed.vel.y)) > 25.0f) {
+    if ((sq(gpsDataDelayed.vel.x) + sq(gpsDataDelayed.vel.y)) > ftype(25.0)) {
         // get quaternion from existing filter states and calculate roll, pitch and yaw angles
         Vector3F eulerAngles;
         stateStruct.quat.to_euler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
@@ -194,7 +194,7 @@ void NavEKF2_core::realignYawGPS()
         ftype yawErr = MAX(fabsF(wrap_PI(gpsYaw - velYaw)),fabsF(wrap_PI(gpsYaw - eulerAngles.z)));
 
         // If the angles disagree by more than 45 degrees and GPS innovations are large or no previous yaw alignment, we declare the magnetic yaw as bad
-        bool badMagYaw = ((yawErr > 0.7854f) && (velTestRatio > 1.0f) && (PV_AidingMode == AID_ABSOLUTE)) || !yawAlignComplete;
+        bool badMagYaw = ((yawErr > ftype(0.7854)) && (velTestRatio > ftype(1.0)) && (PV_AidingMode == AID_ABSOLUTE)) || !yawAlignComplete;
 
         // correct yaw angle using GPS ground course if compass yaw bad
         if (badMagYaw) {
@@ -300,7 +300,7 @@ void NavEKF2_core::SelectMagFusion()
     // If the final yaw reset has been performed and the state variances are sufficiently low
     // record that the earth field has been learned.
     if (!magFieldLearned && finalInflightMagInit) {
-        magFieldLearned = (P[16][16] < sq(0.01f)) && (P[17][17] < sq(0.01f)) && (P[18][18] < sq(0.01f));
+        magFieldLearned = (P[16][16] < sq(ftype(0.01))) && (P[17][17] < sq(ftype(0.01))) && (P[18][18] < sq(ftype(0.01)));
     }
 
     // record the last learned field variances
@@ -355,13 +355,13 @@ void NavEKF2_core::FuseMagnetometer()
     // rotate predicted earth components into body axes and calculate
     // predicted measurements
     DCM[0][0] = q0*q0 + q1*q1 - q2*q2 - q3*q3;
-    DCM[0][1] = 2.0f*(q1*q2 + q0*q3);
-    DCM[0][2] = 2.0f*(q1*q3-q0*q2);
-    DCM[1][0] = 2.0f*(q1*q2 - q0*q3);
+    DCM[0][1] = ftype(2.0)*(q1*q2 + q0*q3);
+    DCM[0][2] = ftype(2.0)*(q1*q3-q0*q2);
+    DCM[1][0] = ftype(2.0)*(q1*q2 - q0*q3);
     DCM[1][1] = q0*q0 - q1*q1 + q2*q2 - q3*q3;
-    DCM[1][2] = 2.0f*(q2*q3 + q0*q1);
-    DCM[2][0] = 2.0f*(q1*q3 + q0*q2);
-    DCM[2][1] = 2.0f*(q2*q3 - q0*q1);
+    DCM[1][2] = ftype(2.0)*(q2*q3 + q0*q1);
+    DCM[2][0] = ftype(2.0)*(q1*q3 + q0*q2);
+    DCM[2][1] = ftype(2.0)*(q2*q3 - q0*q1);
     DCM[2][2] = q0*q0 - q1*q1 - q2*q2 + q3*q3;
     MagPred[0] = DCM[0][0]*magN + DCM[0][1]*magE  + DCM[0][2]*magD + magXbias;
     MagPred[1] = DCM[1][0]*magN + DCM[1][1]*magE  + DCM[1][2]*magD + magYbias;
@@ -373,22 +373,22 @@ void NavEKF2_core::FuseMagnetometer()
     }
 
     // scale magnetometer observation error with total angular rate to allow for timing errors
-    R_MAG = sq(constrain_ftype(frontend->_magNoise, 0.01f, 0.5f)) + sq(frontend->magVarRateScale*delAngCorrected.length() / imuDataDelayed.delAngDT);
+    R_MAG = sq(constrain_ftype(frontend->_magNoise, 0.01f, 0.5f)) + sq(ftype(frontend->magVarRateScale)*delAngCorrected.length() / imuDataDelayed.delAngDT);
 
     // calculate common expressions used to calculate observation jacobians an innovation variance for each component
     SH_MAG[0] = sq(q0) - sq(q1) + sq(q2) - sq(q3);
     SH_MAG[1] = sq(q0) + sq(q1) - sq(q2) - sq(q3);
     SH_MAG[2] = sq(q0) - sq(q1) - sq(q2) + sq(q3);
-    SH_MAG[3] = 2.0f*q0*q1 + 2.0f*q2*q3;
-    SH_MAG[4] = 2.0f*q0*q3 + 2.0f*q1*q2;
-    SH_MAG[5] = 2.0f*q0*q2 + 2.0f*q1*q3;
-    SH_MAG[6] = magE*(2.0f*q0*q1 - 2.0f*q2*q3);
-    SH_MAG[7] = 2.0f*q1*q3 - 2.0f*q0*q2;
-    SH_MAG[8] = 2.0f*q0*q3;
+    SH_MAG[3] = ftype(2.0)*q0*q1 + ftype(2.0)*q2*q3;
+    SH_MAG[4] = ftype(2.0)*q0*q3 + ftype(2.0)*q1*q2;
+    SH_MAG[5] = ftype(2.0)*q0*q2 + ftype(2.0)*q1*q3;
+    SH_MAG[6] = magE*(ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3);
+    SH_MAG[7] = ftype(2.0)*q1*q3 - ftype(2.0)*q0*q2;
+    SH_MAG[8] = ftype(2.0)*q0*q3;
 
     // Calculate the innovation variance for each axis
     // X axis
-    varInnovMag[0] = (P[19][19] + R_MAG - P[1][19]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][19]*SH_MAG[1] + P[17][19]*SH_MAG[4] + P[18][19]*SH_MAG[7] + P[2][19]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2)) - (magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5])*(P[19][1] - P[1][1]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][1]*SH_MAG[1] + P[17][1]*SH_MAG[4] + P[18][1]*SH_MAG[7] + P[2][1]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2))) + SH_MAG[1]*(P[19][16] - P[1][16]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][16]*SH_MAG[1] + P[17][16]*SH_MAG[4] + P[18][16]*SH_MAG[7] + P[2][16]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2))) + SH_MAG[4]*(P[19][17] - P[1][17]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][17]*SH_MAG[1] + P[17][17]*SH_MAG[4] + P[18][17]*SH_MAG[7] + P[2][17]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2))) + SH_MAG[7]*(P[19][18] - P[1][18]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][18]*SH_MAG[1] + P[17][18]*SH_MAG[4] + P[18][18]*SH_MAG[7] + P[2][18]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2))) + (magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2))*(P[19][2] - P[1][2]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][2]*SH_MAG[1] + P[17][2]*SH_MAG[4] + P[18][2]*SH_MAG[7] + P[2][2]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2))));
+    varInnovMag[0] = (P[19][19] + R_MAG - P[1][19]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][19]*SH_MAG[1] + P[17][19]*SH_MAG[4] + P[18][19]*SH_MAG[7] + P[2][19]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2)) - (magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5])*(P[19][1] - P[1][1]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][1]*SH_MAG[1] + P[17][1]*SH_MAG[4] + P[18][1]*SH_MAG[7] + P[2][1]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2))) + SH_MAG[1]*(P[19][16] - P[1][16]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][16]*SH_MAG[1] + P[17][16]*SH_MAG[4] + P[18][16]*SH_MAG[7] + P[2][16]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2))) + SH_MAG[4]*(P[19][17] - P[1][17]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][17]*SH_MAG[1] + P[17][17]*SH_MAG[4] + P[18][17]*SH_MAG[7] + P[2][17]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2))) + SH_MAG[7]*(P[19][18] - P[1][18]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][18]*SH_MAG[1] + P[17][18]*SH_MAG[4] + P[18][18]*SH_MAG[7] + P[2][18]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2))) + (magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2))*(P[19][2] - P[1][2]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[16][2]*SH_MAG[1] + P[17][2]*SH_MAG[4] + P[18][2]*SH_MAG[7] + P[2][2]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2))));
     if (varInnovMag[0] >= R_MAG) {
         faultStatus.bad_xmag = false;
     } else {
@@ -400,7 +400,7 @@ void NavEKF2_core::FuseMagnetometer()
     }
 
     // Y axis
-    varInnovMag[1] = (P[20][20] + R_MAG + P[0][20]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][20]*SH_MAG[0] + P[18][20]*SH_MAG[3] - (SH_MAG[8] - 2.0f*q1*q2)*(P[20][16] + P[0][16]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][16]*SH_MAG[0] + P[18][16]*SH_MAG[3] - P[2][16]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][16]*(SH_MAG[8] - 2.0f*q1*q2)) - P[2][20]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) + (magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5])*(P[20][0] + P[0][0]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][0]*SH_MAG[0] + P[18][0]*SH_MAG[3] - P[2][0]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][0]*(SH_MAG[8] - 2.0f*q1*q2)) + SH_MAG[0]*(P[20][17] + P[0][17]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][17]*SH_MAG[0] + P[18][17]*SH_MAG[3] - P[2][17]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][17]*(SH_MAG[8] - 2.0f*q1*q2)) + SH_MAG[3]*(P[20][18] + P[0][18]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][18]*SH_MAG[0] + P[18][18]*SH_MAG[3] - P[2][18]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][18]*(SH_MAG[8] - 2.0f*q1*q2)) - P[16][20]*(SH_MAG[8] - 2.0f*q1*q2) - (magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1])*(P[20][2] + P[0][2]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][2]*SH_MAG[0] + P[18][2]*SH_MAG[3] - P[2][2]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][2]*(SH_MAG[8] - 2.0f*q1*q2)));
+    varInnovMag[1] = (P[20][20] + R_MAG + P[0][20]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][20]*SH_MAG[0] + P[18][20]*SH_MAG[3] - (SH_MAG[8] - ftype(2.0)*q1*q2)*(P[20][16] + P[0][16]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][16]*SH_MAG[0] + P[18][16]*SH_MAG[3] - P[2][16]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][16]*(SH_MAG[8] - ftype(2.0)*q1*q2)) - P[2][20]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) + (magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5])*(P[20][0] + P[0][0]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][0]*SH_MAG[0] + P[18][0]*SH_MAG[3] - P[2][0]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][0]*(SH_MAG[8] - ftype(2.0)*q1*q2)) + SH_MAG[0]*(P[20][17] + P[0][17]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][17]*SH_MAG[0] + P[18][17]*SH_MAG[3] - P[2][17]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][17]*(SH_MAG[8] - ftype(2.0)*q1*q2)) + SH_MAG[3]*(P[20][18] + P[0][18]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][18]*SH_MAG[0] + P[18][18]*SH_MAG[3] - P[2][18]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][18]*(SH_MAG[8] - ftype(2.0)*q1*q2)) - P[16][20]*(SH_MAG[8] - ftype(2.0)*q1*q2) - (magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1])*(P[20][2] + P[0][2]*(magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5]) + P[17][2]*SH_MAG[0] + P[18][2]*SH_MAG[3] - P[2][2]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[16][2]*(SH_MAG[8] - ftype(2.0)*q1*q2)));
     if (varInnovMag[1] >= R_MAG) {
         faultStatus.bad_ymag = false;
     } else {
@@ -412,7 +412,7 @@ void NavEKF2_core::FuseMagnetometer()
     }
 
     // Z axis
-    varInnovMag[2] = (P[21][21] + R_MAG + P[16][21]*SH_MAG[5] + P[18][21]*SH_MAG[2] - (2.0f*q0*q1 - 2.0f*q2*q3)*(P[21][17] + P[16][17]*SH_MAG[5] + P[18][17]*SH_MAG[2] - P[0][17]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2)) + P[1][17]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][17]*(2.0f*q0*q1 - 2.0f*q2*q3)) - P[0][21]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2)) + P[1][21]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) + SH_MAG[5]*(P[21][16] + P[16][16]*SH_MAG[5] + P[18][16]*SH_MAG[2] - P[0][16]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2)) + P[1][16]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][16]*(2.0f*q0*q1 - 2.0f*q2*q3)) + SH_MAG[2]*(P[21][18] + P[16][18]*SH_MAG[5] + P[18][18]*SH_MAG[2] - P[0][18]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2)) + P[1][18]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][18]*(2.0f*q0*q1 - 2.0f*q2*q3)) - (magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2))*(P[21][0] + P[16][0]*SH_MAG[5] + P[18][0]*SH_MAG[2] - P[0][0]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2)) + P[1][0]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][0]*(2.0f*q0*q1 - 2.0f*q2*q3)) - P[17][21]*(2.0f*q0*q1 - 2.0f*q2*q3) + (magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1])*(P[21][1] + P[16][1]*SH_MAG[5] + P[18][1]*SH_MAG[2] - P[0][1]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2)) + P[1][1]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][1]*(2.0f*q0*q1 - 2.0f*q2*q3)));
+    varInnovMag[2] = (P[21][21] + R_MAG + P[16][21]*SH_MAG[5] + P[18][21]*SH_MAG[2] - (ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3)*(P[21][17] + P[16][17]*SH_MAG[5] + P[18][17]*SH_MAG[2] - P[0][17]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2)) + P[1][17]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][17]*(ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3)) - P[0][21]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2)) + P[1][21]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) + SH_MAG[5]*(P[21][16] + P[16][16]*SH_MAG[5] + P[18][16]*SH_MAG[2] - P[0][16]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2)) + P[1][16]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][16]*(ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3)) + SH_MAG[2]*(P[21][18] + P[16][18]*SH_MAG[5] + P[18][18]*SH_MAG[2] - P[0][18]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2)) + P[1][18]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][18]*(ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3)) - (magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2))*(P[21][0] + P[16][0]*SH_MAG[5] + P[18][0]*SH_MAG[2] - P[0][0]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2)) + P[1][0]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][0]*(ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3)) - P[17][21]*(ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3) + (magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1])*(P[21][1] + P[16][1]*SH_MAG[5] + P[18][1]*SH_MAG[2] - P[0][1]*(magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2)) + P[1][1]*(magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1]) - P[17][1]*(ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3)));
     if (varInnovMag[2] >= R_MAG) {
         faultStatus.bad_zmag = false;
     } else {
@@ -425,11 +425,11 @@ void NavEKF2_core::FuseMagnetometer()
 
     // calculate the innovation test ratios
     for (uint8_t i = 0; i<=2; i++) {
-        magTestRatio[i] = sq(innovMag[i]) / (sq(MAX(0.01f * (ftype)frontend->_magInnovGate, 1.0f)) * varInnovMag[i]);
+        magTestRatio[i] = sq(innovMag[i]) / (sq(MAX(ftype(0.01) * (ftype)frontend->_magInnovGate, ftype(1.0))) * varInnovMag[i]);
     }
 
     // check the last values from all components and set magnetometer health accordingly
-    magHealth = (magTestRatio[0] < 1.0f && magTestRatio[1] < 1.0f && magTestRatio[2] < 1.0f);
+    magHealth = (magTestRatio[0] < ftype(1.0) && magTestRatio[1] < ftype(1.0) && magTestRatio[2] < ftype(1.0));
 
     // if the magnetometer is unhealthy, do not proceed further
     if (!magHealth) {
@@ -449,15 +449,15 @@ void NavEKF2_core::FuseMagnetometer()
             // calculate observation jacobians
             ZERO_FARRAY(H_MAG);
             H_MAG[1] = SH_MAG[6] - magD*SH_MAG[2] - magN*SH_MAG[5];
-            H_MAG[2] = magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2);
+            H_MAG[2] = magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2);
             H_MAG[16] = SH_MAG[1];
             H_MAG[17] = SH_MAG[4];
             H_MAG[18] = SH_MAG[7];
-            H_MAG[19] = 1.0f;
+            H_MAG[19] = ftype(1.0);
 
             // calculate Kalman gain
-            SK_MX[0] = 1.0f / varInnovMag[0];
-            SK_MX[1] = magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2);
+            SK_MX[0] = ftype(1.0) / varInnovMag[0];
+            SK_MX[1] = magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2);
             SK_MX[2] = magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5];
             SK_MX[3] = SH_MAG[7];
             Kfusion[0] = SK_MX[0]*(P[0][19] + P[0][16]*SH_MAG[1] + P[0][17]*SH_MAG[4] - P[0][1]*SK_MX[2] + P[0][2]*SK_MX[1] + P[0][18]*SK_MX[3]);
@@ -510,16 +510,16 @@ void NavEKF2_core::FuseMagnetometer()
             ZERO_FARRAY(H_MAG);
             H_MAG[0] = magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5];
             H_MAG[2] = - magE*SH_MAG[4] - magD*SH_MAG[7] - magN*SH_MAG[1];
-            H_MAG[16] = 2.0f*q1*q2 - SH_MAG[8];
+            H_MAG[16] = ftype(2.0)*q1*q2 - SH_MAG[8];
             H_MAG[17] = SH_MAG[0];
             H_MAG[18] = SH_MAG[3];
-            H_MAG[20] = 1.0f;
+            H_MAG[20] = ftype(1.0);
 
             // calculate Kalman gain
-            SK_MY[0] = 1.0f / varInnovMag[1];
+            SK_MY[0] = ftype(1.0) / varInnovMag[1];
             SK_MY[1] = magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1];
             SK_MY[2] = magD*SH_MAG[2] - SH_MAG[6] + magN*SH_MAG[5];
-            SK_MY[3] = SH_MAG[8] - 2.0f*q1*q2;
+            SK_MY[3] = SH_MAG[8] - ftype(2.0)*q1*q2;
             Kfusion[0] = SK_MY[0]*(P[0][20] + P[0][17]*SH_MAG[0] + P[0][18]*SH_MAG[3] + P[0][0]*SK_MY[2] - P[0][2]*SK_MY[1] - P[0][16]*SK_MY[3]);
             Kfusion[1] = SK_MY[0]*(P[1][20] + P[1][17]*SH_MAG[0] + P[1][18]*SH_MAG[3] + P[1][0]*SK_MY[2] - P[1][2]*SK_MY[1] - P[1][16]*SK_MY[3]);
             Kfusion[2] = SK_MY[0]*(P[2][20] + P[2][17]*SH_MAG[0] + P[2][18]*SH_MAG[3] + P[2][0]*SK_MY[2] - P[2][2]*SK_MY[1] - P[2][16]*SK_MY[3]);
@@ -567,18 +567,18 @@ void NavEKF2_core::FuseMagnetometer()
         {
             // calculate observation jacobians
             ZERO_FARRAY(H_MAG);
-            H_MAG[0] = magN*(SH_MAG[8] - 2.0f*q1*q2) - magD*SH_MAG[3] - magE*SH_MAG[0];
+            H_MAG[0] = magN*(SH_MAG[8] - ftype(2.0)*q1*q2) - magD*SH_MAG[3] - magE*SH_MAG[0];
             H_MAG[1] = magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1];
             H_MAG[16] = SH_MAG[5];
-            H_MAG[17] = 2.0f*q2*q3 - 2.0f*q0*q1;
+            H_MAG[17] = ftype(2.0)*q2*q3 - ftype(2.0)*q0*q1;
             H_MAG[18] = SH_MAG[2];
-            H_MAG[21] = 1.0f;
+            H_MAG[21] = ftype(1.0);
 
             // calculate Kalman gain
-            SK_MZ[0] = 1.0f / varInnovMag[2];
-            SK_MZ[1] = magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - 2.0f*q1*q2);
+            SK_MZ[0] = ftype(1.0) / varInnovMag[2];
+            SK_MZ[1] = magE*SH_MAG[0] + magD*SH_MAG[3] - magN*(SH_MAG[8] - ftype(2.0)*q1*q2);
             SK_MZ[2] = magE*SH_MAG[4] + magD*SH_MAG[7] + magN*SH_MAG[1];
-            SK_MZ[3] = 2.0f*q0*q1 - 2.0f*q2*q3;
+            SK_MZ[3] = ftype(2.0)*q0*q1 - ftype(2.0)*q2*q3;
             Kfusion[0] = SK_MZ[0]*(P[0][21] + P[0][18]*SH_MAG[2] + P[0][16]*SH_MAG[5] - P[0][0]*SK_MZ[1] + P[0][1]*SK_MZ[2] - P[0][17]*SK_MZ[3]);
             Kfusion[1] = SK_MZ[0]*(P[1][21] + P[1][18]*SH_MAG[2] + P[1][16]*SH_MAG[5] - P[1][0]*SK_MZ[1] + P[1][1]*SK_MZ[2] - P[1][17]*SK_MZ[3]);
             Kfusion[2] = SK_MZ[0]*(P[2][21] + P[2][18]*SH_MAG[2] + P[2][16]*SH_MAG[5] - P[2][0]*SK_MZ[1] + P[2][1]*SK_MZ[2] - P[2][17]*SK_MZ[3]);
@@ -741,27 +741,27 @@ void NavEKF2_core::fuseEulerYaw()
         ftype t4 = q2*q2;
         ftype t5 = q3*q3;
         ftype t6 = t2+t3-t4-t5;
-        ftype t7 = q0*q3*2.0f;
-        ftype t8 = q1*q2*2.0f;
+        ftype t7 = q0*q3*ftype(2.0);
+        ftype t8 = q1*q2*ftype(2.0);
         ftype t9 = t7+t8;
         ftype t10 = sq(t6);
         if (t10 > 1e-6f) {
-            t10 = 1.0f / t10;
+            t10 = ftype(1.0) / t10;
         } else {
             return;
         }
         ftype t11 = t9*t9;
         ftype t12 = t10*t11;
-        ftype t13 = t12+1.0f;
+        ftype t13 = t12+ftype(1.0);
         ftype t14;
         if (fabsF(t13) > 1e-3f) {
-            t14 = 1.0f/t13;
+            t14 = ftype(1.0)/t13;
         } else {
             return;
         }
-        ftype t15 = 1.0f/t6;
+        ftype t15 = ftype(1.0)/t6;
         H_YAW[0] = 0.0f;
-        H_YAW[1] = t14*(t15*(q0*q1*2.0f-q2*q3*2.0f)+t9*t10*(q0*q2*2.0f+q1*q3*2.0f));
+        H_YAW[1] = t14*(t15*(q0*q1*ftype(2.0)-q2*q3*ftype(2.0))+t9*t10*(q0*q2*ftype(2.0)+q1*q3*ftype(2.0)));
         H_YAW[2] = t14*(t15*(t2-t3+t4-t5)+t9*t10*(t7-t8));
 
         // calculate predicted and measured yaw angle
@@ -803,25 +803,25 @@ void NavEKF2_core::fuseEulerYaw()
         ftype t4 = q2*q2;
         ftype t5 = q3*q3;
         ftype t6 = t2-t3+t4-t5;
-        ftype t7 = q0*q3*2.0f;
-        ftype t10 = q1*q2*2.0f;
+        ftype t7 = q0*q3*ftype(2.0);
+        ftype t10 = q1*q2*ftype(2.0);
         ftype t8 = t7-t10;
         ftype t9 = sq(t6);
         if (t9 > 1e-6f) {
-            t9 = 1.0f/t9;
+            t9 = ftype(1.0)/t9;
         } else {
             return;
         }
         ftype t11 = t8*t8;
         ftype t12 = t9*t11;
-        ftype t13 = t12+1.0f;
+        ftype t13 = t12+ftype(1.0);
         ftype t14;
         if (fabsF(t13) > 1e-3f) {
-            t14 = 1.0f/t13;
+            t14 = ftype(1.0)/t13;
         } else {
             return;
         }
-        ftype t15 = 1.0f/t6;
+        ftype t15 = ftype(1.0)/t6;
         H_YAW[0] = -t14*(t15*(q0*q2*2.0+q1*q3*2.0)-t8*t9*(q0*q1*2.0-q2*q3*2.0));
         H_YAW[1] = 0.0f;
         H_YAW[2] = t14*(t15*(t2+t3-t4-t5)+t8*t9*(t7+t10));
@@ -877,7 +877,7 @@ void NavEKF2_core::fuseEulerYaw()
     }
     ftype varInnovInv;
     if (varInnov >= R_YAW) {
-        varInnovInv = 1.0f / varInnov;
+        varInnovInv = ftype(1.0) / varInnov;
         // output numerical health status
         faultStatus.bad_yaw = false;
     } else {
@@ -899,10 +899,10 @@ void NavEKF2_core::fuseEulerYaw()
     }
 
     // calculate the innovation test ratio
-    yawTestRatio = sq(innovation) / (sq(MAX(0.01f * (ftype)frontend->_yawInnovGate, 1.0f)) * varInnov);
+    yawTestRatio = sq(innovation) / (sq(MAX(0.01f * (ftype)frontend->_yawInnovGate, ftype(1.0))) * varInnov);
 
     // Declare the magnetometer unhealthy if the innovation test fails
-    if (yawTestRatio > 1.0f) {
+    if (yawTestRatio > ftype(1.0)) {
         magHealth = false;
         // On the ground a large innovation could be due to large initial gyro bias or magnetic interference from nearby objects
         // If we are flying, then it is more likely due to a magnetometer fault and we should not fuse the data
@@ -1003,7 +1003,7 @@ void NavEKF2_core::FuseDeclination(ftype declErr)
     ftype t2 = magE*magE;
     ftype t3 = magN*magN;
     ftype t4 = t2+t3;
-    ftype t5 = 1.0f/t4;
+    ftype t5 = ftype(1.0)/t4;
     ftype t22 = magE*t5;
     ftype t23 = magN*t5;
     ftype t6 = P[16][16]*t22;
@@ -1018,7 +1018,7 @@ void NavEKF2_core::FuseDeclination(ftype declErr)
     if (t11 < R_DECL) {
         return;
     }
-    ftype t12 = 1.0f/t11;
+    ftype t12 = ftype(1.0)/t11;
 
     ftype H_MAG[24];
 

@@ -25,7 +25,7 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
     }
 
     // User defined multiplier to be applied to check thresholds
-    ftype checkScaler = 0.01f*(ftype)frontend->_gpsCheckScaler;
+    ftype checkScaler = ftype(0.01)*(ftype)frontend->_gpsCheckScaler;
 
     if (gpsGoodToAlign) {
         /*
@@ -34,12 +34,12 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
           don't continuously change from able to arm to not able to
           arm
          */
-        checkScaler *= 1.3f;
+        checkScaler *= ftype(1.3);
     }
 
     // If we have good magnetometer consistency and bad innovations for longer than 5 seconds then we reset heading and field states
     // This enables us to handle large changes to the external magnetic field environment that occur before arming
-    if ((magTestRatio.x <= 1.0f && magTestRatio.y <= 1.0f && yawTestRatio <= 1.0f) || !consistentMagData) {
+    if ((magTestRatio.x <= ftype(1.0) && magTestRatio.y <= ftype(1.0) && yawTestRatio <= ftype(1.0)) || !consistentMagData) {
         magYawResetTimer_ms = imuSampleTime_ms;
     }
     if ((imuSampleTime_ms - magYawResetTimer_ms > 5000) && !motorsArmed) {
@@ -60,18 +60,18 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
     gpsDriftNE += gpsloc_prev.get_distance(gpsloc);
     gpsloc_prev = gpsloc;
     // Decay distance moved exponentially to zero
-    gpsDriftNE *= (1.0f - deltaTime/posFiltTimeConst);
+    gpsDriftNE *= (ftype(1.0) - deltaTime/posFiltTimeConst);
     // Clamp the filter state to prevent excessive persistence of large transients
     gpsDriftNE = MIN(gpsDriftNE,10.0f);
     // Fail if more than 3 metres drift after filtering whilst on-ground
     // This corresponds to a maximum acceptable average drift rate of 0.3 m/s or single glitch event of 3m
-    bool gpsDriftFail = (gpsDriftNE > 3.0f*checkScaler) && onGround && (frontend->_gpsCheck & MASK_GPS_POS_DRIFT);
+    bool gpsDriftFail = (gpsDriftNE > ftype(3.0)*checkScaler) && onGround && (frontend->_gpsCheck & MASK_GPS_POS_DRIFT);
 
     // Report check result as a text string and bitmask
     if (gpsDriftFail) {
         dal.snprintf(prearm_fail_string,
                            sizeof(prearm_fail_string),
-                           "GPS drift %.1fm (needs %.1f)", (double)gpsDriftNE, (double)(3.0f*checkScaler));
+                           "GPS drift %.1fm (needs %.1f)", (double)gpsDriftNE, (double)(ftype(3.0)*checkScaler));
         gpsCheckStatus.bad_horiz_drift = true;
     } else {
         gpsCheckStatus.bad_horiz_drift = false;
@@ -81,9 +81,9 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
     bool gpsVertVelFail;
     if (gps.have_vertical_velocity() && onGround) {
         // check that the average vertical GPS velocity is close to zero
-        gpsVertVelFilt = 0.1f * gpsDataNew.vel.z + 0.9f * gpsVertVelFilt;
-        gpsVertVelFilt = constrain_ftype(gpsVertVelFilt,-10.0f,10.0f);
-        gpsVertVelFail = (fabsF(gpsVertVelFilt) > 0.3f*checkScaler) && (frontend->_gpsCheck & MASK_GPS_VERT_SPD);
+        gpsVertVelFilt = ftype(0.1) * gpsDataNew.vel.z + ftype(0.9) * gpsVertVelFilt;
+        gpsVertVelFilt = constrain_ftype(gpsVertVelFilt,ftype(-10.0),ftype(10.0));
+        gpsVertVelFail = (fabsF(gpsVertVelFilt) > ftype(0.3)*checkScaler) && (frontend->_gpsCheck & MASK_GPS_VERT_SPD);
     } else {
         gpsVertVelFail = false;
     }
@@ -92,7 +92,7 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
     if (gpsVertVelFail) {
         dal.snprintf(prearm_fail_string,
                            sizeof(prearm_fail_string),
-                           "GPS vertical speed %.2fm/s (needs %.2f)", (double)fabsF(gpsVertVelFilt), (double)(0.3f*checkScaler));
+                           "GPS vertical speed %.2fm/s (needs %.2f)", (double)fabsF(gpsVertVelFilt), (double)(ftype(0.3)*checkScaler));
         gpsCheckStatus.bad_vert_vel = true;
     } else {
         gpsCheckStatus.bad_vert_vel = false;
@@ -102,9 +102,9 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
     // This check can only be used if the vehicle is stationary
     bool gpsHorizVelFail;
     if (onGround) {
-        gpsHorizVelFilt = 0.1f * gpsDataDelayed.vel.xy().length() + 0.9f * gpsHorizVelFilt;
-        gpsHorizVelFilt = constrain_ftype(gpsHorizVelFilt,-10.0f,10.0f);
-        gpsHorizVelFail = (fabsF(gpsHorizVelFilt) > 0.3f*checkScaler) && (frontend->_gpsCheck & MASK_GPS_HORIZ_SPD);
+        gpsHorizVelFilt = ftype(0.1) * gpsDataDelayed.vel.xy().length() + ftype(0.9) * gpsHorizVelFilt;
+        gpsHorizVelFilt = constrain_ftype(gpsHorizVelFilt,ftype(-10.0),ftype(10.0));
+        gpsHorizVelFail = (fabsF(gpsHorizVelFilt) > ftype(0.3)*checkScaler) && (frontend->_gpsCheck & MASK_GPS_HORIZ_SPD);
     } else {
         gpsHorizVelFail = false;
     }
@@ -113,7 +113,7 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
     if (gpsHorizVelFail) {
         dal.snprintf(prearm_fail_string,
                            sizeof(prearm_fail_string),
-                           "GPS horizontal speed %.2fm/s (needs %.2f)", (double)gpsDriftNE, (double)(0.3f*checkScaler));
+                           "GPS horizontal speed %.2fm/s (needs %.2f)", (double)gpsDriftNE, (double)(ftype(0.3)*checkScaler));
         gpsCheckStatus.bad_horiz_vel = true;
     } else {
         gpsCheckStatus.bad_horiz_vel = false;
@@ -123,7 +123,7 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
     float hAcc = 0.0;
     bool hAccFail;
     if (gps.horizontal_accuracy(hAcc)) {
-        hAccFail = (hAcc > 5.0f*checkScaler)  && (frontend->_gpsCheck & MASK_GPS_POS_ERR);
+        hAccFail = (ftype(hAcc) > ftype(5.0)*checkScaler)  && (frontend->_gpsCheck & MASK_GPS_POS_ERR);
     } else {
         hAccFail =  false;
     }

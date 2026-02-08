@@ -354,8 +354,8 @@ void AC_PrecLand::check_target_status(float rangefinder_alt_m, bool rangefinder_
         // check if it's nearby/found recently, else the status will be demoted to "TARGET_LOST"
         Vector2p curr_pos_ne_m;
         if (AP::ahrs().get_relative_position_NE_origin(curr_pos_ne_m)) {
-            const float dist_to_last_target_loc_xy = (curr_pos_ne_m - _last_target_pos_rel_origin_ned_m.xy()).length();
-            const float dist_to_last_loc_ne_m = (curr_pos_ne_m - _last_vehicle_pos_ned_m.xy()).length();
+            const float dist_to_last_target_loc_xy = float((curr_pos_ne_m - _last_target_pos_rel_origin_ned_m.xy()).length());
+            const float dist_to_last_loc_ne_m = float((curr_pos_ne_m - _last_vehicle_pos_ned_m.xy()).length());
             if ((AP_HAL::millis() - _last_valid_target_ms) > LANDING_TARGET_LOST_TIMEOUT_MS) {
                 // the target has not been seen for a long time
                 // might as well consider it as "never seen"

@@ -453,8 +453,8 @@ void AP_Mount_Viewpro::send_target_rates(const MountRateTarget &rate_rads)
     }
 
     // scale pitch and yaw to values gimbal understands
-    const int16_t pitch_rate_output = -degrees(pitch_rads) * 100.0;
-    const int16_t yaw_rate_output = degrees(yaw_rads) * 100.0;
+    const int16_t pitch_rate_output = int16_t(-degrees(pitch_rads) * 100.0);
+    const int16_t yaw_rate_output = int16_t(degrees(yaw_rads) * 100.0);
 
     // fill in packet
     const A1Packet a1_packet {
@@ -494,8 +494,8 @@ void AP_Mount_Viewpro::send_target_angles(const MountAngleTarget &angle_rad)
     }
 
     // scale pitch and yaw to values gimbal understands
-    const int16_t pitch_angle_output = -degrees(pitch_rad) * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT;
-    const int16_t yaw_angle_output = degrees(yaw_bf_rad) * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT;
+    const int16_t pitch_angle_output = int16_t(-degrees(pitch_rad) * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT);
+    const int16_t yaw_angle_output = int16_t(degrees(yaw_bf_rad) * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT);
 
     // fill in packet
     const A1Packet a1_packet {
@@ -619,7 +619,7 @@ bool AP_Mount_Viewpro::send_m_ahrs()
         year = month = day = hour = min = sec = ms = 0;
     }
     uint16_t date = ((year-2000) & 0x7f) | (((month+1) & 0x0F) << 7) | ((day & 0x1F) << 11);
-    uint64_t second_hundredths = (((hour * 60 * 60) + (min * 60) + sec) * 100) + (ms * 0.1);
+    uint64_t second_hundredths = (((hour * 60 * 60) + (min * 60) + sec) * 100) + (ms / 10);
 #else
     const uint16_t date = 0;
     const uint64_t second_hundredths = 0;
@@ -634,7 +634,7 @@ bool AP_Mount_Viewpro::send_m_ahrs()
     uint16_t gps_vdop = AP::gps().get_vdop();
 
     // get vehicle yaw in the range 0 to 360
-    const uint16_t veh_yaw_deg = AP::ahrs().get_yaw_deg();
+    const uint16_t veh_yaw_deg = uint16_t(AP::ahrs().get_yaw_deg());
 
     // fill in packet
     const M_AHRSPacket mahrs_packet {
@@ -642,22 +642,22 @@ bool AP_Mount_Viewpro::send_m_ahrs()
             frame_id: FrameId::M_AHRS,
             data_type: 0x07,                        // Bit0: Attitude, Bit1: GPS, Bit2 Gyro
             unused2to8 : {0, 0, 0, 0, 0, 0, 0},
-            roll_be: htobe16(AP::ahrs().get_roll_deg() * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT),      // vehicle roll angle.  1bit=360deg/65536
-            pitch_be: htobe16(-AP::ahrs().get_pitch_deg() * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT),   // vehicle pitch angle.  1bit=360deg/65536
-            yaw_be: htobe16(veh_yaw_deg * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT),                          // vehicle yaw angle.  1bit=360deg/65536
+            roll_be: htobe16(uint16_t(AP::ahrs().get_roll_deg() * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT)),      // vehicle roll angle.  1bit=360deg/65536
+            pitch_be: htobe16(uint16_t(-AP::ahrs().get_pitch_deg() * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT)),   // vehicle pitch angle.  1bit=360deg/65536
+            yaw_be: htobe16(uint16_t(veh_yaw_deg * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT)),                          // vehicle yaw angle.  1bit=360deg/65536
             date_be: htobe16(date),                 // bit0~6:year, bit7~10:month, bit11~15:day
             seconds_utc: {uint8_t((second_hundredths & 0xFF0000ULL) >> 16), // seconds * 100 MSB.  1bit = 0.01sec
                           uint8_t((second_hundredths & 0xFF00ULL) >> 8),    // seconds * 100 next MSB.  1bit = 0.01sec
                           uint8_t(second_hundredths & 0xFFULL)},            // seconds * 100 LSB.  1bit = 0.01sec
-            gps_yaw_be: htobe16(vel_yaw_deg * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT),  // GPS yaw
+            gps_yaw_be: htobe16(uint16_t(vel_yaw_deg * AP_MOUNT_VIEWPRO_DEG_TO_OUTPUT)),  // GPS yaw
             position_mark_bitmask: 0x0F,            // bit0:new position, bit1:clock fix calced, bit2:horiz calced, bit3:alt calced
             latitude_be: htobe32(loc.lat),          // latitude.  1bit = 10e-7
             longitude_be: htobe32(loc.lng),         // longitude.  1bit = 10e-7
             height_be: htobe32(alt_amsl_cm * 10),   // height.  1bit = 1mm
-            ground_speed_N_be: htobe16(vel_NED.x * 100),    // ground speed in North direction. 1bit = 0.01m/s
-            ground_speed_E_be: htobe16(vel_NED.y * 100),    // ground speed in East direction. 1bit = 0.01m/s
+            ground_speed_N_be: htobe16(uint16_t(vel_NED.x * 100)),    // ground speed in North direction. 1bit = 0.01m/s
+            ground_speed_E_be: htobe16(uint16_t(vel_NED.y * 100)),    // ground speed in East direction. 1bit = 0.01m/s
             vdop_be: htobe16(gps_vdop),             // GPS vdop. 1bit = 0.01
-            ground_speed_D_be: htobe16(vel_NED.z * 100)     // speed downwards. 1bit = 0.01m/s
+            ground_speed_D_be: htobe16(uint16_t(vel_NED.z * 100))     // speed downwards. 1bit = 0.01m/s
         }
     };
 
@@ -729,7 +729,7 @@ bool AP_Mount_Viewpro::set_zoom(ZoomType zoom_type, float zoom_value)
     // zoom percentage
     if (zoom_type == ZoomType::PCT) {
         // convert zoom percentage (0 ~ 100) to zoom value (0 ~ max zoom * 10)
-        return send_camera_command2(CameraCommand2::SET_EO_ZOOM, linear_interpolate(0, AP_MOUNT_VIEWPRO_ZOOM_MAX * 10, zoom_value, 0, 100));
+        return send_camera_command2(CameraCommand2::SET_EO_ZOOM, uint16_t(linear_interpolate(0, AP_MOUNT_VIEWPRO_ZOOM_MAX * 10, zoom_value, 0, 100)));
     }
 
     // unsupported zoom type
@@ -788,13 +788,13 @@ bool AP_Mount_Viewpro::set_tracking(TrackingType tracking_type, const Vector2f& 
         break;
     case TrackingType::TRK_POINT: {
         return (send_tracking_command(TrackingCommand::START, 0) &&
-                send_tracking_command2(TrackingCommand2::SET_POINT, (p1.x - 0.5) * 2.0 * 960, (p1.y - 0.5) * 2.0 * 540));
+                send_tracking_command2(TrackingCommand2::SET_POINT, int16_t((p1.x - 0.5) * 2.0 * 960), int16_t((p1.y - 0.5) * 2.0 * 540)));
         break;
     }
     case TrackingType::TRK_RECTANGLE:
         return (send_tracking_command(TrackingCommand::START, 0) &&
-                send_tracking_command2(TrackingCommand2::SET_RECT_TOPLEFT, (p1.x - 0.5) * 2.0 * 960, (p1.y - 0.5) * 2.0 * 540) &&
-                send_tracking_command2(TrackingCommand2::SET_RECT_BOTTOMRIGHT, (p2.x - 0.5) * 2.0 * 960, (p2.y - 0.5) * 2.0 * 540));
+                send_tracking_command2(TrackingCommand2::SET_RECT_TOPLEFT, int16_t((p1.x - 0.5) * 2.0 * 960), int16_t((p1.y - 0.5) * 2.0 * 540)) &&
+                send_tracking_command2(TrackingCommand2::SET_RECT_BOTTOMRIGHT, int16_t((p2.x - 0.5) * 2.0 * 960), int16_t((p2.y - 0.5) * 2.0 * 540)));
         break;
     }
 

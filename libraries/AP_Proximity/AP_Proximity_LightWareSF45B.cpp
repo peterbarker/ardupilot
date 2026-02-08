@@ -200,7 +200,7 @@ void AP_Proximity_LightWareSF45B::process_message()
 // convert an angle (in degrees) to a mini sector number
 uint8_t AP_Proximity_LightWareSF45B::convert_angle_to_minisector(float angle_deg) const
 {
-    return wrap_360(angle_deg + (PROXIMITY_SF45B_COMBINE_READINGS_DEG * 0.5f)) / PROXIMITY_SF45B_COMBINE_READINGS_DEG;
+    return uint8_t(wrap_360(angle_deg + (PROXIMITY_SF45B_COMBINE_READINGS_DEG * 0.5f)) / PROXIMITY_SF45B_COMBINE_READINGS_DEG);
 }
 
 #endif // AP_PROXIMITY_LIGHTWARE_SF45B_ENABLED

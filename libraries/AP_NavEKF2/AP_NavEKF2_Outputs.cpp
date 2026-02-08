@@ -28,7 +28,7 @@ bool NavEKF2_core::healthy(void) const
     }
     // position and height innovations must be within limits when on-ground and in a static mode of operation
     ftype horizErrSq = sq(innovVelPos[3]) + sq(innovVelPos[4]);
-    if (onGround && (PV_AidingMode == AID_NONE) && ((horizErrSq > 1.0f) || (fabsF(hgtInnovFiltState) > 1.0f))) {
+    if (onGround && (PV_AidingMode == AID_NONE) && ((horizErrSq > ftype(1.0)) || (fabsF(hgtInnovFiltState) > ftype(1.0)))) {
         return false;
     }
 
@@ -43,7 +43,7 @@ ftype NavEKF2_core::errorScore() const
     ftype score = 0.0f;
     if (tiltAlignComplete && yawAlignComplete) {
         // Check GPS fusion performance
-        score = MAX(score, 0.5f * (velTestRatio + posTestRatio));
+        score = MAX(score, ftype(0.5) * (velTestRatio + posTestRatio));
         // Check altimeter fusion performance
         score = MAX(score, hgtTestRatio);
         // Check attitude corrections
@@ -73,7 +73,7 @@ bool NavEKF2_core::getHeightControlLimit(float &height) const
 #endif
         // If we are are not using the range finder as the height reference, then compensate for the difference between terrain and EKF origin
         if (frontend->_altSource != 1) {
-            height -= terrainState;
+            height -= float(terrainState);
         }
         return true;
     } else {
@@ -92,11 +92,11 @@ void NavEKF2_core::getEulerAngles(Vector3f &euler) const
 // return body axis gyro bias estimates in rad/sec
 void NavEKF2_core::getGyroBias(Vector3f &gyroBias) const
 {
-    if (dtEkfAvg < 1e-6f) {
+    if (dtEkfAvg < ftype(1e-6)) {
         gyroBias.zero();
         return;
     }
-    gyroBias = stateStruct.gyro_bias.tofloat() / dtEkfAvg;
+    gyroBias = stateStruct.gyro_bias.tofloat() / float(dtEkfAvg);
 }
 
 // return body axis gyro scale factor error as a percentage
@@ -106,9 +106,9 @@ void NavEKF2_core::getGyroScaleErrorPercentage(Vector3f &gyroScale) const
         gyroScale.x = gyroScale.y = gyroScale.z = 0;
         return;
     }
-    gyroScale.x = 100.0f/stateStruct.gyro_scale.x - 100.0f;
-    gyroScale.y = 100.0f/stateStruct.gyro_scale.y - 100.0f;
-    gyroScale.z = 100.0f/stateStruct.gyro_scale.z - 100.0f;
+    gyroScale.x = float(ftype(100.0)/stateStruct.gyro_scale.x - ftype(100.0));
+    gyroScale.y = float(ftype(100.0)/stateStruct.gyro_scale.y - ftype(100.0));
+    gyroScale.z = float(ftype(100.0)/stateStruct.gyro_scale.z - ftype(100.0));
 }
 
 // return the transformation matrix from XYZ (body) to NED axes
@@ -128,7 +128,7 @@ void NavEKF2_core::getQuaternion(Quaternion& ret) const
 // returns the time of the last yaw angle reset or 0 if no reset has ever occurred
 uint32_t NavEKF2_core::getLastYawResetAngle(float &yawAng) const
 {
-    yawAng = yawResetAngle;
+    yawAng = float(yawResetAngle);
     return lastYawReset_ms;
 }
 
@@ -144,7 +144,7 @@ uint32_t NavEKF2_core::getLastPosNorthEastReset(Vector2f &pos) const
 // returns the time of the last reset or 0 if no reset has ever occurred
 uint32_t NavEKF2_core::getLastPosDownReset(float &posD) const
 {
-    posD = posResetD;
+    posD = float(posResetD);
     return lastPosResetD_ms;
 }
 
@@ -159,8 +159,8 @@ uint32_t NavEKF2_core::getLastVelNorthEastReset(Vector2f &vel) const
 // return the NED wind speed estimates in m/s (positive is air moving in the direction of the axis)
 void NavEKF2_core::getWind(Vector3f &wind) const
 {
-    wind.x = stateStruct.wind_vel.x;
-    wind.y = stateStruct.wind_vel.y;
+    wind.x = float(stateStruct.wind_vel.x);
+    wind.y = float(stateStruct.wind_vel.y);
     wind.z = 0.0f; // currently don't estimate this
 }
 
@@ -182,8 +182,8 @@ bool NavEKF2_core::getAirSpdVec(Vector3f &vel) const
     }
     vel = (outputDataNew.velocity + velOffsetNED).tofloat();
     if (!inhibitWindStates) {
-        vel.x -= stateStruct.wind_vel.x;
-        vel.y -= stateStruct.wind_vel.y;
+        vel.x -= float(stateStruct.wind_vel.x);
+        vel.y -= float(stateStruct.wind_vel.y);
     }
     Matrix3f Tnb; // rotation from nav to body frame
     outputDataNew.quat.inverse().rotation_matrix(Tnb);
@@ -196,7 +196,7 @@ float NavEKF2_core::getPosDownDerivative(void) const
 {
     // return the value calculated from a complementary filter applied to the EKF height and vertical acceleration
     // correct for the IMU offset (EKF calculations are at the IMU)
-    return vertCompFiltState.vel + velOffsetNED.z;
+    return float(vertCompFiltState.vel + velOffsetNED.z);
 }
 
 // return the Z-accel bias estimate in m/s^2

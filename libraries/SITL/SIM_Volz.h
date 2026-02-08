@@ -122,7 +122,7 @@ private:
             if (failed) {
                 return last_good_pwm;
             }
-            last_good_pwm = 1500 + desired_position*500;
+            last_good_pwm = uint16_t(1500 + desired_position*500);
             return last_good_pwm;
         }
 

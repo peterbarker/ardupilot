@@ -449,7 +449,7 @@ public:
             float turns = LOWBYTE(p1);
             if (type_specific_bits & (1U<<1)) {
                 // special storage handling allows for fractional turns
-                turns *= (1.0/256.0);
+                turns *= (1.0f/256.0f);
             }
             return turns;
         }

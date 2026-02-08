@@ -432,13 +432,13 @@ void Copter::rate_controller_set_rates(uint8_t rate_decimation, RateControllerRa
                     warn_cpu_high ? "high" : "normal", (unsigned) attitude_rate);
 #if HAL_LOGGING_ENABLED
     if (attitude_rate > 1000) {
-        rates.fast_logging_rate = calc_gyro_decimation(rate_decimation, 1000);   // 1Khz
+        rates.fast_logging_rate = uint16_t(calc_gyro_decimation(rate_decimation, 1000));   // 1Khz
     } else {
-         rates.fast_logging_rate = calc_gyro_decimation(rate_decimation, AP::scheduler().get_filtered_loop_rate_hz());
+         rates.fast_logging_rate = uint16_t(calc_gyro_decimation(rate_decimation, uint16_t(AP::scheduler().get_filtered_loop_rate_hz())));
     }
-    rates.medium_logging_rate = calc_gyro_decimation(rate_decimation, 10);   // 10Hz
+    rates.medium_logging_rate = uint16_t(calc_gyro_decimation(rate_decimation, 10));   // 10Hz
 #endif
-    rates.main_loop_rate = calc_gyro_decimation(rate_decimation, AP::scheduler().get_filtered_loop_rate_hz());
+    rates.main_loop_rate = uint16_t(calc_gyro_decimation(rate_decimation, AP::scheduler().get_filtered_loop_rate_hz()));
     rates.filter_rate = calc_gyro_decimation(rate_decimation, ins.get_raw_gyro_rate_hz() / 2);
 }
 

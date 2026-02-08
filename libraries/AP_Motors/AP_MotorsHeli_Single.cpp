@@ -470,7 +470,7 @@ void AP_MotorsHeli_Single::output_to_motors()
         case TAIL_TYPE::DIRECTDRIVE_VARPITCH:
         case TAIL_TYPE::DIRECTDRIVE_VARPIT_EXT_GOV:
         default:
-            rc_write_angle(AP_MOTORS_MOT_4, _servo4_out * YAW_SERVO_MAX_ANGLE);
+            rc_write_angle(AP_MOTORS_MOT_4, int16_t(_servo4_out * YAW_SERVO_MAX_ANGLE));
             break;
     }
 

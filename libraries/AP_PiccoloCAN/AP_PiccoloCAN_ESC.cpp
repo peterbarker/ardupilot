@@ -62,7 +62,7 @@ bool AP_PiccoloCAN_ESC::handle_can_frame(AP_HAL::CANFrame &frame)
     } else if (decodeESC_StatusCPacketStructure(&frame, &status.statusC)) {
         AP_ESC_Telem_Backend::TelemetryData telem {};
 
-        telem.temperature_cdeg = temperature() * 100;
+        telem.temperature_cdeg = int16_t(temperature() * 100);
         update_telem_data(addr, telem, AP_ESC_Telem_Backend::TelemetryType::TEMPERATURE);
         newTelemetry = true;
     } else if (decodeESC_WarningErrorStatusPacket(&frame, &status.warnings, &status.errors, &extended, &status.warnings, &status.errors)) {

@@ -269,7 +269,7 @@ public:
 
     // get apparent to true airspeed ratio
     static float get_EAS2TAS(void);
-    static float get_TAS2EAS(void) { return 1.0/get_EAS2TAS(); }
+    static float get_TAS2EAS(void) { return 1.0f/get_EAS2TAS(); }
 
     // return true if airspeed comes from an airspeed sensor, as
     // opposed to an IMU estimate

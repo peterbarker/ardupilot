@@ -124,7 +124,7 @@ void AP_Hott_Telem::send_EAM(void)
     msg.main_voltage = uint16_t(battery.voltage() * 10);
     float used_mah;
     if (battery.consumed_mah(used_mah)) {
-        msg.batt_used = used_mah * 0.1;
+        msg.batt_used = uint16_t(used_mah * 0.1f);
     }
 #endif  // AP_BATTERY_ENABLED
 
@@ -148,13 +148,13 @@ void AP_Hott_Telem::send_EAM(void)
     msg.altitude = uint16_t(500.5 + alt);
 
     msg.climbrate = uint16_t(30000.5 + vel.z * -100);
-    msg.climbrate3s = 120 + vel.z * -3;
+    msg.climbrate3s = uint8_t(120 + vel.z * -3);
 
 #if AP_RPM_ENABLED
     const AP_RPM *rpm = AP::rpm();
     float rpm_value;
     if (rpm && rpm->get_rpm(0, rpm_value)) {
-        msg.rpm = rpm_value * 0.1;
+        msg.rpm = uint16_t(rpm_value * 0.1f);
     }
 #endif
 
@@ -191,7 +191,7 @@ void AP_Hott_Telem::GPS_to_DDM(float decimal, uint8_t &sign, uint16_t &dm, uint1
     uint8_t deg = uint16_t(decimal);
     uint8_t min = uint16_t((decimal - deg) * 60);
     dm = deg*100 + min;
-    sec = (decimal - (deg + min/60.0)) * 60 * 10000 + 0.5;
+    sec = uint16_t((decimal - (deg + min/60.0)) * 60 * 10000 + 0.5);
 }
 
 /*
@@ -246,10 +246,10 @@ void AP_Hott_Telem::send_GPS(void)
         msg.gps_speed_kmh = uint16_t(gps.ground_speed() * 3.6 + 0.5);
         float sacc, hacc;
         if (gps.speed_accuracy(sacc)) {
-            msg.speed_acc = sacc * 100 + 0.5;
+            msg.speed_acc = uint8_t(sacc * 100 + 0.5);
         }
         if (gps.horizontal_accuracy(hacc)) {
-            msg.horiz_acc = hacc * 100 + 0.5;
+            msg.horiz_acc = uint8_t(hacc * 100 + 0.5);
         }
         msg.gps_satelites = gps.num_sats();
     }
@@ -273,7 +273,7 @@ void AP_Hott_Telem::send_GPS(void)
     {
         WITH_SEMAPHORE(ahrs.get_semaphore());
         if (ahrs.get_relative_position_NE_home(home_vec)) {
-            msg.home_distance = home_vec.length();
+            msg.home_distance = uint16_t(home_vec.length());
         }
         ahrs.get_relative_position_D_home(alt);
         alt = -alt;
@@ -281,15 +281,15 @@ void AP_Hott_Telem::send_GPS(void)
     }
 
     msg.climbrate = uint16_t(30000.5 + vel.z * -100);
-    msg.climbrate3s = 120 + vel.z * -3;
-    msg.vel_north = vel.x * 1000 + 0.5;
-    msg.vel_east = vel.y * 1000 + 0.5;
+    msg.climbrate3s = uint8_t(120 + vel.z * -3);
+    msg.vel_north = int16_t(vel.x * 1000 + 0.5);
+    msg.vel_east = int16_t(vel.y * 1000 + 0.5);
     msg.altitude = uint16_t(500.5 + alt);
 
     msg.gps_fix_char = gps.status_onechar();
     msg.free_char3 = msg.gps_fix_char;
 
-    msg.home_direction = degrees(atan2f(home_vec.y, home_vec.x)) * 0.5 + 0.5;
+    msg.home_direction = uint8_t(degrees(atan2f(home_vec.y, home_vec.x)) * 0.5 + 0.5);
 
 #if AP_RTC_ENABLED
     AP_RTC &rtc = AP::rtc();
@@ -336,7 +336,7 @@ void AP_Hott_Telem::send_Vario(void)
         ahrs.get_relative_position_D_home(alt);
         alt = -alt;
         IGNORE_RETURN(ahrs.get_velocity_NED(vel));
-        msg.yaw = wrap_360_cd(ahrs.yaw_sensor) * 0.005;
+        msg.yaw = uint8_t(wrap_360_cd(ahrs.yaw_sensor) * 0.005);
     }
 
     min_alt = MIN(alt, min_alt);
@@ -346,9 +346,9 @@ void AP_Hott_Telem::send_Vario(void)
     msg.altitude_max = uint16_t(500.5 + max_alt);
     msg.altitude_min = uint16_t(500.5 + min_alt);
 
-    msg.climbrate = 30000.5 + vel.z * -100;
-    msg.climbrate3s = 30000.5 + vel.z * -100*3;
-    msg.climbrate10s = 30000.5 + vel.z * -100*10;
+    msg.climbrate = uint16_t(30000.5 + vel.z * -100);
+    msg.climbrate3s = uint16_t(30000.5 + vel.z * -100*3);
+    msg.climbrate10s = uint16_t(30000.5 + vel.z * -100*10);
     
     AP_Notify *notify = AP_Notify::get_singleton();
     char fltmode[5] {};

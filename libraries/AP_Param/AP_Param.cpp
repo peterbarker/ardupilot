@@ -1472,13 +1472,13 @@ void AP_Param::set_value(enum ap_var_type type, void *ptr, float value)
 {
     switch (type) {
     case AP_PARAM_INT8:
-        ((AP_Int8 *)ptr)->set(value);
+        ((AP_Int8 *)ptr)->set(int8_t(value));
         break;
     case AP_PARAM_INT16:
-        ((AP_Int16 *)ptr)->set(value);
+        ((AP_Int16 *)ptr)->set(int16_t(value));
         break;
     case AP_PARAM_INT32:
-        ((AP_Int32 *)ptr)->set(value);
+        ((AP_Int32 *)ptr)->set(int32_t(value));
         break;
     case AP_PARAM_FLOAT:
         ((AP_Float *)ptr)->set(value);
@@ -2249,7 +2249,7 @@ void AP_Param::set_float(float value, enum ap_var_type var_type)
         if (value < 0) rounding_addition = -rounding_addition;
         float v = value+rounding_addition;
         v = constrain_float(v, INT32_MIN, INT32_MAX);
-        ((AP_Int32 *)this)->set(v);
+        ((AP_Int32 *)this)->set(int32_t(v));
     } else if (var_type == AP_PARAM_INT16) {
         if (value < 0) rounding_addition = -rounding_addition;
         float v = value+rounding_addition;

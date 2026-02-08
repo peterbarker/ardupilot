@@ -161,7 +161,7 @@ void AP_MSP_Telem_Backend::process_packet(uint8_t idx)
 #if AP_BATTERY_ENABLED
 uint8_t AP_MSP_Telem_Backend::calc_cell_count(const float battery_voltage)
 {
-    return floorf((battery_voltage / CELLFULL) + 1);
+    return uint8_t(floorf((battery_voltage / CELLFULL) + 1));
 }
 #endif
 
@@ -189,14 +189,14 @@ void AP_MSP_Telem_Backend::update_home_pos(home_state_t &home_state)
     float alt;
     if (_ahrs.get_location(loc) && _ahrs.home_is_set()) {
         const Location &home_loc = _ahrs.get_home();
-        home_state.home_distance_m = home_loc.get_distance(loc);
+        home_state.home_distance_m = uint32_t(home_loc.get_distance(loc));
         home_state.home_bearing_cd = loc.get_bearing_to(home_loc);
     } else {
         home_state.home_distance_m = 0;
         home_state.home_bearing_cd = 0;
     }
     _ahrs.get_relative_position_D_home(alt);
-    home_state.rel_altitude_cm = -alt * 100;
+    home_state.rel_altitude_cm = int32_t(-alt * 100);
     home_state.home_is_set = _ahrs.home_is_set();
 }
 
@@ -216,7 +216,7 @@ void AP_MSP_Telem_Backend::update_gps_state(gps_state_t &gps_state)
         gps_state.lat = loc.lat;
         gps_state.lon = loc.lng;
         gps_state.alt_m = loc.alt/100; // 1m resolution
-        gps_state.speed_cms = gps.ground_speed() * 100;
+        gps_state.speed_cms = uint16_t(gps.ground_speed() * 100);
         gps_state.ground_course_dd = gps.ground_course_cd() / 10;
     }
 }
@@ -312,7 +312,7 @@ void AP_MSP_Telem_Backend::update_flight_mode_str(char *flight_mode_str, uint8_t
         const char* unit = (units == OSD_UNIT_METRIC) ? "m/s" : "f/s";
 
         if (v_length > 1.0f) {
-            const int32_t angle = wrap_360_cd(rad_to_cd(atan2f(v.y, v.x)) - ahrs.yaw_sensor);
+            const int32_t angle = wrap_360_cd(int32_t(rad_to_cd(atan2f(v.y, v.x))) - ahrs.yaw_sensor);
             const int32_t interval = 36000 / ARRAY_SIZE(arrows);
             uint8_t arrow = arrows[((angle + interval / 2) / interval) % ARRAY_SIZE(arrows)];
             snprintf(flight_mode_str, size, "%s %d%s%c%c%c", notify->get_flight_mode_str(),  (uint8_t)roundf(v_length), unit, 0xE2, 0x86, arrow);
@@ -676,7 +676,7 @@ MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_raw_gps(sbuf_t *dst)
     if (airspeed_en) {
         airspeed_state_t airspeed_state;
         update_airspeed(airspeed_state);
-        gps_state.speed_cms = airspeed_state.airspeed_estimate_ms * 100;           // airspeed in cm/s
+        gps_state.speed_cms = uint16_t(airspeed_state.airspeed_estimate_ms * 100);           // airspeed in cm/s
     }
 
     sbuf_write_data(dst, &gps_state, sizeof(gps_state));
@@ -689,7 +689,7 @@ MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_comp_gps(sbuf_t *dst)
     update_home_pos(home_state);
 
     // no need to apply yaw compensation, the DJI air unit will do it for us :-)
-    uint16_t angle_deg = home_state.home_bearing_cd * 0.01;
+    uint16_t angle_deg = uint16_t(home_state.home_bearing_cd * 0.01);
     if (home_state.home_distance_m < 2) {
         //avoid fast rotating arrow at small distances
         angle_deg = 0;
@@ -944,11 +944,11 @@ MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_analog(sbuf_t *dst)
         int16_t current_ca;
         uint16_t voltage_cv;
     } analog {
-        voltage_dv : (uint8_t)constrain_int16(battery_state.batt_voltage_v * 10, 0, 255),                   // battery voltage V to dV
-        mah : (uint16_t)constrain_int32(battery_state.batt_consumed_mah, 0, 0xFFFF),                        // milliamp hours drawn from battery
-        rssi : uint16_t(get_rssi(rssi) ? constrain_float(rssi,0,1) * 1023 : 0),                             // rssi 0-1 to 0-1023)
-        current_ca : (int16_t)constrain_int32(battery_state.batt_current_a * 100, -0x8000, 0x7FFF),         // current A to cA (0.01 steps, range is -320A to 320A)
-        voltage_cv : (uint16_t)constrain_int32(battery_state.batt_voltage_v * 100,0,0xFFFF)                 // battery voltage in 0.01V steps
+        voltage_dv : (uint8_t)constrain_int16(int16_t(battery_state.batt_voltage_v * 10), 0, 255),                   // battery voltage V to dV
+        mah : (uint16_t)constrain_int32(int32_t(battery_state.batt_consumed_mah), 0, 0xFFFF),                        // milliamp hours drawn from battery
+        rssi : uint16_t(get_rssi(rssi) ? int16_t(constrain_float(rssi,0,1) * 1023) : 0),                             // rssi 0-1 to 0-1023)
+        current_ca : (int16_t)constrain_int32(int32_t(battery_state.batt_current_a * 100), -0x8000, 0x7FFF),         // current A to cA (0.01 steps, range is -320A to 320A)
+        voltage_cv : (uint16_t)constrain_int32(int32_t(battery_state.batt_voltage_v * 100),0,0xFFFF)                 // battery voltage in 0.01V steps
     };
 #else
     float rssi;
@@ -991,11 +991,11 @@ MSPCommandResult AP_MSP_Telem_Backend::msp_process_out_battery_state(sbuf_t *dst
     } battery {
         cellcount : (uint8_t)constrain_int16((msp->_cellcount > 0 ? msp->_cellcount : battery_state.batt_cellcount), 0, 255),   // cell count 0 indicates battery not detected.
         capacity_mah : (uint16_t)battery_state.batt_capacity_mah,                                                               // in mAh
-        voltage_dv : (uint8_t)constrain_int16(battery_state.batt_voltage_v * 10, 0, 255),                                       // battery voltage V to dV
+        voltage_dv : (uint8_t)constrain_int16(int16_t(battery_state.batt_voltage_v * 10), 0, 255),                                       // battery voltage V to dV
         mah : (uint16_t)MIN(battery_state.batt_consumed_mah, 0xFFFF),                                                           // milliamp hours drawn from battery
-        current_ca : (int16_t)constrain_int32(battery_state.batt_current_a * 100, -0x8000, 0x7FFF),                             // current A to cA (0.01 steps, range is -320A to 320A)
+        current_ca : (int16_t)constrain_int32(int32_t(battery_state.batt_current_a * 100), -0x8000, 0x7FFF),                             // current A to cA (0.01 steps, range is -320A to 320A)
         state : (uint8_t)battery_state.batt_state,                                                                              // BATTERY: OK=0, CRITICAL=2
-        voltage_cv : (uint16_t)constrain_int32(battery_state.batt_voltage_v * 100, 0, 0x7FFF)                                   // battery voltage in 0.01V steps
+        voltage_cv : (uint16_t)constrain_int32(int32_t(battery_state.batt_voltage_v * 100), 0, 0x7FFF)                                   // battery voltage in 0.01V steps
     };
 
     sbuf_write_data(dst, &battery, sizeof(battery));

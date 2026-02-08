@@ -77,7 +77,7 @@ static_assert((1U<<(ARRAY_SIZE(error_bit_descriptions))) == uint32_t(AP_Internal
 
 void AP_InternalError::error_to_string(char *buffer, const uint16_t len, error_t error_code) const
 {
-    uint32_t temp = log2f(int(error_code));
+    uint32_t temp = uint32_t(log2f(int(error_code)));
     strncpy(buffer, error_bit_descriptions[temp], len - 1);
 }
 

@@ -193,7 +193,7 @@ bool AccelCalibrator::get_sample_corrected(uint8_t i, Vector3f& s) const {
 
 // checks if no new sample has been received for considerable amount of time
 void AccelCalibrator::check_for_timeout() {
-    const uint32_t timeout = _conf_sample_time*2*1000 + 500;
+    const uint32_t timeout = uint32_t(_conf_sample_time*2*1000 + 500);
     if (_status == ACCEL_CAL_COLLECTING_SAMPLE && AP_HAL::millis() - _last_samp_frag_collected_ms > timeout) {
         set_status(ACCEL_CAL_FAILED);
     }

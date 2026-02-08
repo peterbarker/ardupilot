@@ -418,7 +418,7 @@ bool NavEKF2_core::InitialiseFilterBootstrap(void)
 
     // normalise the acceleration vector
     ftype pitch=0, roll=0;
-    if (initAccVec.length() > 0.001f) {
+    if (initAccVec.length() > ftype(0.001)) {
         initAccVec.normalize();
 
         // calculate initial pitch angle
@@ -507,7 +507,7 @@ void NavEKF2_core::CovarianceInit()
     P[13][13] = P[12][12];
     P[14][14] = P[12][12];
     // Z delta velocity bias
-    P[15][15] = sq(INIT_ACCEL_BIAS_UNCERTAINTY * dtEkfAvg);
+    P[15][15] = sq(ftype(INIT_ACCEL_BIAS_UNCERTAINTY) * dtEkfAvg);
     // earth magnetic field
     P[16][16] = 0.0f;
     P[17][17] = P[16][16];
@@ -678,7 +678,7 @@ void NavEKF2_core::UpdateStrapdownEquationsNED()
     // * and + operators have been overloaded
     Vector3F delVelNav;  // delta velocity vector in earth axes
     delVelNav  = prevTnb.mul_transpose(delVelCorrected);
-    delVelNav.z += GRAVITY_MSS*imuDataDelayed.delVelDT;
+    delVelNav.z += ftype(GRAVITY_MSS)*imuDataDelayed.delVelDT;
 
     // calculate the nav to body cosine matrix
     stateStruct.quat.inverse().rotation_matrix(prevTnb);
@@ -696,8 +696,8 @@ void NavEKF2_core::UpdateStrapdownEquationsNED()
 
     // if we are not aiding, then limit the horizontal magnitude of acceleration
     // to prevent large manoeuvre transients disturbing the attitude
-    if ((PV_AidingMode == AID_NONE) && (accNavMagHoriz > 5.0f)) {
-        ftype gain = 5.0f/accNavMagHoriz;
+    if ((PV_AidingMode == AID_NONE) && (accNavMagHoriz > ftype(5.0))) {
+        ftype gain = ftype(5.0)/accNavMagHoriz;
         delVelNav.x *= gain;
         delVelNav.y *= gain;
     }
@@ -709,7 +709,7 @@ void NavEKF2_core::UpdateStrapdownEquationsNED()
     stateStruct.velocity += delVelNav;
 
     // apply a trapezoidal integration to velocities to calculate position
-    stateStruct.position += (stateStruct.velocity + lastVelocity) * (imuDataDelayed.delVelDT*0.5f);
+    stateStruct.position += (stateStruct.velocity + lastVelocity) * (imuDataDelayed.delVelDT*ftype(0.5));
 
     // accumulate the bias delta angle and time since last reset by an OF measurement arrival
     delAngBodyOF += delAngCorrected;
@@ -757,7 +757,7 @@ void NavEKF2_core::calcOutputStates()
 
     // transform body delta velocities to delta velocities in the nav frame
     Vector3F delVelNav  = Tbn_temp*delVelNewCorrected;
-    delVelNav.z += GRAVITY_MSS*imuDataNew.delVelDT;
+    delVelNav.z += ftype(GRAVITY_MSS)*imuDataNew.delVelDT;
 
     // save velocity for use in trapezoidal integration for position calcuation
     Vector3F lastVelocity = outputDataNew.velocity;
@@ -773,18 +773,18 @@ void NavEKF2_core::calcOutputStates()
 
     // Perform filter calculation using backwards Euler integration
     // Coefficients selected to place all three filter poles at omega
-    const ftype CompFiltOmega = M_2PI * constrain_ftype(frontend->_hrt_filt_freq, 0.1f, 30.0f);
+    const ftype CompFiltOmega = ftype(M_2PI) * constrain_ftype(frontend->_hrt_filt_freq, ftype(0.1), ftype(30.0));
     ftype omega2 = CompFiltOmega * CompFiltOmega;
     ftype pos_err = constrain_ftype(outputDataNew.position.z - vertCompFiltState.pos, -1e5, 1e5);
     ftype integ1_input = pos_err * omega2 * CompFiltOmega * imuDataNew.delVelDT;
     vertCompFiltState.acc += integ1_input;
-    ftype integ2_input = delVelNav.z + (vertCompFiltState.acc + pos_err * omega2 * 3.0f) * imuDataNew.delVelDT;
+    ftype integ2_input = delVelNav.z + (vertCompFiltState.acc + pos_err * omega2 * ftype(3.0)) * imuDataNew.delVelDT;
     vertCompFiltState.vel += integ2_input;
-    ftype integ3_input = (vertCompFiltState.vel + pos_err * CompFiltOmega * 3.0f) * imuDataNew.delVelDT;
+    ftype integ3_input = (vertCompFiltState.vel + pos_err * CompFiltOmega * ftype(3.0)) * imuDataNew.delVelDT;
     vertCompFiltState.pos += integ3_input; 
 
     // apply a trapezoidal integration to velocities to calculate position
-    outputDataNew.position += (outputDataNew.velocity + lastVelocity) * (imuDataNew.delVelDT*0.5f);
+    outputDataNew.position += (outputDataNew.velocity + lastVelocity) * (imuDataNew.delVelDT*ftype(0.5));
 
     // If the IMU accelerometer is offset from the body frame origin, then calculate corrections
     // that can be added to the EKF velocity and position outputs so that they represent the velocity
@@ -793,7 +793,7 @@ void NavEKF2_core::calcOutputStates()
     if (!accelPosOffset.is_zero()) {
         // calculate the average angular rate across the last IMU update
         // note delAngDT is prevented from being zero in readIMUData()
-        Vector3F angRate = imuDataNew.delAng * (1.0f/imuDataNew.delAngDT);
+        Vector3F angRate = imuDataNew.delAng * (ftype(1.0)/imuDataNew.delAngDT);
 
         // Calculate the velocity of the body frame origin relative to the IMU in body frame
         // and rotate into earth frame. Note % operator has been overloaded to perform a cross product
@@ -824,10 +824,10 @@ void NavEKF2_core::calcOutputStates()
         quatErr.normalize();
         Vector3F deltaAngErr;
         ftype scaler;
-        if (quatErr[0] >= 0.0f) {
-            scaler = 2.0f;
+        if (quatErr[0] >= ftype(0.0)) {
+            scaler = ftype(2.0);
         } else {
-            scaler = -2.0f;
+            scaler = ftype(-2.0);
         }
         deltaAngErr.x = scaler * quatErr[1];
         deltaAngErr.y = scaler * quatErr[2];
@@ -837,7 +837,7 @@ void NavEKF2_core::calcOutputStates()
         // adjust for changes in time delay to maintain consistent damping ratio of ~0.7
         ftype timeDelay = 1e-3f * (float)(imuDataNew.time_ms - imuDataDelayed.time_ms);
         timeDelay = fmaxF(timeDelay, dtIMUavg);
-        ftype errorGain = 0.5f / timeDelay;
+        ftype errorGain = ftype(0.5) / timeDelay;
 
         // calculate a corrrection to the delta angle
         // that will cause the INS to track the EKF quaternions

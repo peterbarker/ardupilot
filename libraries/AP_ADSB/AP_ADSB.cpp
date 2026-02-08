@@ -451,7 +451,7 @@ void AP_ADSB::determine_furthest_aircraft(void)
         if (is_special_vehicle(in_state.vehicle_list[index].info.ICAO_address)) {
             continue;
         }
-        const float distance = _my_loc.get_distance(get_location(in_state.vehicle_list[index]));
+        const float distance = float(_my_loc.get_distance(get_location(in_state.vehicle_list[index])));
         if (max_distance < distance || index == 0) {
             max_distance = distance;
             max_distance_index = index;

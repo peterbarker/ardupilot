@@ -448,7 +448,7 @@ MAV_RESULT AP_Camera::handle_command(const mavlink_command_int_t &packet)
             }
             return accepted ? MAV_RESULT_ACCEPTED : MAV_RESULT_DENIED;
         }
-        if (set_camera_source(packet.param1-1, (AP_Camera::CameraSource)packet.param2, (AP_Camera::CameraSource)packet.param3)) {
+        if (set_camera_source(uint8_t(packet.param1-1), (AP_Camera::CameraSource)packet.param2, (AP_Camera::CameraSource)packet.param3)) {
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_DENIED;
@@ -470,21 +470,21 @@ MAV_RESULT AP_Camera::handle_command(const mavlink_command_int_t &packet)
                 return take_picture() ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
             }
             // take picture for specified instance
-            return take_picture(packet.param1-1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+            return take_picture(uint8_t(packet.param1-1)) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
         } else if (is_zero(packet.param3)) {
             // multiple picture request, take pictures forever
             if (is_zero(packet.param1)) {
                 // take pictures for every backend
-                return take_multiple_pictures(packet.param2*1000, -1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+                return take_multiple_pictures(uint32_t(packet.param2*1000), -1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
             }
-            return take_multiple_pictures(packet.param1-1, packet.param2*1000, -1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+            return take_multiple_pictures(uint8_t(packet.param1-1), uint32_t(packet.param2*1000), -1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
         } else {
             // take multiple pictures equal to the number specified in param3
             if (is_zero(packet.param1)) {
                 // take pictures for every backend
-                return take_multiple_pictures(packet.param2*1000, packet.param3) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+                return take_multiple_pictures(uint32_t(packet.param2*1000), int16_t(packet.param3)) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
             }
-            return take_multiple_pictures(packet.param1-1, packet.param2*1000, packet.param3) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+            return take_multiple_pictures(uint8_t(packet.param1-1), uint32_t(packet.param2*1000), int16_t(packet.param3)) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
         }
     case MAV_CMD_IMAGE_STOP_CAPTURE:
         // param1 : camera id
@@ -496,7 +496,7 @@ MAV_RESULT AP_Camera::handle_command(const mavlink_command_int_t &packet)
             stop_capture();
             return MAV_RESULT_ACCEPTED;
         }
-        if (stop_capture(packet.param1-1)) {
+        if (stop_capture(uint8_t(packet.param1-1))) {
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_UNSUPPORTED;
@@ -520,7 +520,7 @@ MAV_RESULT AP_Camera::handle_command(const mavlink_command_int_t &packet)
     {
         bool success = false;
         const bool start_recording = (packet.command == MAV_CMD_VIDEO_START_CAPTURE);
-        const uint8_t stream_id = packet.param1;  // Stream ID
+        const uint8_t stream_id = uint8_t(packet.param1);  // Stream ID
         if (stream_id == 0) {
             // stream id of 0 interpreted as primary camera
             success = record_video(start_recording);

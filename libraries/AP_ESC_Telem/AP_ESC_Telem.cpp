@@ -447,13 +447,13 @@ void AP_ESC_Telem::send_esc_telemetry_mavlink(uint8_t mav_chan)
             volatile AP_ESC_Telem_Backend::TelemetryData const &telemdata = _telem_data[esc_id];
 
             s.temperature[j] = telemdata.temperature_cdeg / 100;
-            s.voltage[j] = constrain_float(telemdata.voltage * 100.0f, 0, UINT16_MAX);
-            s.current[j] = constrain_float(telemdata.current * 100.0f, 0, UINT16_MAX);
-            s.totalcurrent[j] = constrain_float(telemdata.consumption_mah, 0, UINT16_MAX);
+            s.voltage[j] = uint16_t(constrain_float(telemdata.voltage * 100.0f, 0, UINT16_MAX));
+            s.current[j] = uint16_t(constrain_float(telemdata.current * 100.0f, 0, UINT16_MAX));
+            s.totalcurrent[j] = uint16_t(constrain_float(telemdata.consumption_mah, 0, UINT16_MAX));
             float rpmf;
             if (get_rpm(esc_id, rpmf)) {
                 // rpm can be negative
-                s.rpm[j] = constrain_float(fabsf(rpmf), 0, UINT16_MAX);
+                s.rpm[j] = uint16_t(constrain_float(fabsf(rpmf), 0, UINT16_MAX));
             }
             s.count[j] = telemdata.count;
         }

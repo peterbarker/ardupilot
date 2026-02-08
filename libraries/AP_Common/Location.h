@@ -41,7 +41,7 @@ public:
     void set_alt_cm(int32_t alt_cm, AltFrame frame);
     // set_alt_m - set altitude in metres
     void set_alt_m(float alt_m, AltFrame frame) {
-        set_alt_cm(alt_m*100, frame);
+        set_alt_cm(int32_t(alt_m*100), frame);
     }
 
     // get altitude (in cm) in the desired frame
@@ -129,7 +129,7 @@ public:
         alt += alt_offset_cm;
     }
     void offset_up_m(float alt_offset_m) {
-        alt += alt_offset_m * 100;
+        alt += int32_t(alt_offset_m * 100);
     }
 
     // extrapolate latitude/longitude given bearing and distance
@@ -153,7 +153,7 @@ public:
 
     // return bearing in centi-degrees from location to loc2, return is 0 to 35999
     int32_t get_bearing_to(const Location &loc2) const {
-        return int32_t(rad_to_cd(get_bearing(loc2)) + 0.5);
+        return int32_t(rad_to_cd(get_bearing(loc2)) + ftype(0.5));
     }
 
     // check if lat and lng match. Ignore altitude and options

@@ -291,7 +291,7 @@ bool AC_PolyFence_loader::breached(const Location& loc, float& distance_outside_
         Location circle_center;
         circle_center.lat = circle.point.x;
         circle_center.lng = circle.point.y;
-        const float diff_cm = loc.get_distance(circle_center)*100.0f;
+        const float diff_cm = float(loc.get_distance(circle_center))*100.0f;
         distance_outside_fence = MAX(distance_outside_fence, circle.radius - diff_cm*0.01f);
         if (diff_cm < circle.radius * 100.0f) {
             return true;
@@ -309,7 +309,7 @@ bool AC_PolyFence_loader::breached(const Location& loc, float& distance_outside_
         }
 
         const float diff_cm = loc.get_distance(circle_center)*100.0f;
-        distance_outside_fence = MAX(distance_outside_fence, diff_cm*0.01f - circle.radius);
+        distance_outside_fence = MAX(distance_outside_fence, ftype(diff_cm)*0.01 - circle.radius);
         if (diff_cm > circle.radius * 100.0f) {
             num_inclusion_outside++;
         }

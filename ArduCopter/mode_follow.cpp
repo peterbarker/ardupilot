@@ -89,7 +89,7 @@ void ModeFollow::run()
 
         pos_control->input_pos_vel_accel_NE_m(pos_ofs_ned_m.xy(), vel_ofs_ned_ms.xy(), accel_ofs_ned_mss.xy(), false);
 
-        float pos_ofs_d_m = pos_ofs_ned_m.z;
+        float pos_ofs_d_m = float(pos_ofs_ned_m.z);
         pos_control->input_pos_vel_accel_D_m(pos_ofs_d_m, vel_ofs_ned_ms.z, accel_ofs_ned_mss.z, false);
 
         // Determine desired yaw behavior based on configured follow mode
@@ -101,7 +101,7 @@ void ModeFollow::run()
                 Vector3f accel_ned_mss;  // accel of lead vehicle
                 if (g2.follow.get_target_pos_vel_accel_NED_m(pos_ned_m, vel_ned_ms, accel_ned_mss)) {
                     const Vector2p vec_to_lead_ne_m = pos_ned_m.xy() - pos_control->get_pos_target_NED_m().xy();
-                    if (vec_to_lead_ne_m.length_squared() > 1.0) {
+                    if (vec_to_lead_ne_m.length_squared() > postype_t(1.0)) {
                         yaw_rad = vec_to_lead_ne_m.angle();
                     }
                 }

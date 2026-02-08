@@ -449,8 +449,8 @@ void AP_Baro_MS5637::_calculate()
 {
     int32_t dT, TEMP;
     int64_t OFF, SENS;
-    int32_t raw_pressure = _D1;
-    int32_t raw_temperature = _D2;
+    int32_t raw_pressure = int32_t(_D1);
+    int32_t raw_temperature = int32_t(_D2);
 
     dT = raw_temperature - (((uint32_t)_cal_reg.c5) << 8);
     TEMP = 2000 + ((int64_t)dT * (int64_t)_cal_reg.c6) / 8388608;
@@ -465,8 +465,8 @@ void AP_Baro_MS5637::_calculate()
         int64_t SENS2 = 29 * aux / 16;
 
         if (TEMP < -1500) {
-            OFF2 += 17 * sq(TEMP+1500);
-            SENS2 += 9 * sq(TEMP+1500);
+            OFF2 += int64_t(17 * sq(TEMP+1500));
+            SENS2 += int64_t(9 * sq(TEMP+1500));
         }
         
         TEMP = TEMP - T2;
@@ -496,29 +496,29 @@ void AP_Baro_MS5837::_calculate_5837_30ba()
 {
     int32_t dT, TEMP, T2;
     int64_t OFF, OFF2, SENS, SENS2;
-    int32_t raw_pressure = _D1;
-    int32_t raw_temperature = _D2;
+    int32_t raw_pressure = int32_t(_D1);
+    int32_t raw_temperature = int32_t(_D2);
 
     dT = raw_temperature - ((uint32_t)_cal_reg.c5 << 8);
     TEMP = 2000 + ((int64_t)dT * (int64_t)_cal_reg.c6) / 8388608;
     OFF = (int64_t)_cal_reg.c2 * (int64_t)65536 + ((int64_t)_cal_reg.c4 * (int64_t)dT) / (int64_t)128;
     SENS = (int64_t)_cal_reg.c1 * (int64_t)32768 + ((int64_t)_cal_reg.c3 * (int64_t)dT) / (int64_t)256;
 
-    int64_t aux = sq(TEMP - 2000);
+    int64_t aux = int64_t(sq(TEMP - 2000));
     if (TEMP < 2000) {
         // second order "low temperature" compensation when under 20 degrees C
-        T2 = (int64_t)3 * sq((int64_t)dT) / (int64_t)8589934592;
+        T2 = int32_t((int64_t)3 * sq((int64_t)dT) / (int64_t)8589934592);
         OFF2 = 3 * aux / 2;
         SENS2 = 5 * aux / 8;
 
         if (TEMP < -1500) {
             // "very low temperature" compensation, when under -15 degrees C
-            OFF2 += 7 * sq(TEMP+1500);
-            SENS2 += 4 * sq(TEMP+1500);
+            OFF2 += int64_t(7 * sq(TEMP+1500));
+            SENS2 += int64_t(4 * sq(TEMP+1500));
         }
     } else {
         // "high temperature" compensation, when at or over 20 degrees C
-        T2 = (int64_t)2 * sq((int64_t)dT) / (int64_t)137438953472;
+        T2 = int32_t((int64_t)2 * sq((int64_t)dT) / (int64_t)137438953472);
         OFF2 = aux / 16;
         SENS2 = 0;
     }
@@ -534,7 +534,7 @@ void AP_Baro_MS5837::_calculate_5837_30ba()
 }
 // Calculate Temperature and compensated Pressure in real units (Celsius degrees*100, mbar*100).
 void AP_Baro_MS5837::_calculate_5837_02ba() {
-    int32_t dT = _D2 - ((int32_t)_cal_reg.c5 << 8);
+    int32_t dT = int32_t(_D2) - ((int32_t)_cal_reg.c5 << 8);
     int32_t TEMP = 2000 + ((dT * _cal_reg.c6) >> 23);
 
     int64_t OFF = ((int64_t)_cal_reg.c2 << 17) + (((int64_t)_cal_reg.c4 * dT) >> 6);
@@ -543,7 +543,7 @@ void AP_Baro_MS5837::_calculate_5837_02ba() {
     if (TEMP < 2000) {
         // Second-order compensation
         int32_t T2 = ((int64_t)11 * (int64_t)sq((int64_t)dT)) >> 35;
-        int64_t aux = sq(TEMP - 2000);
+        int64_t aux = int64_t(sq(TEMP - 2000));
         int64_t OFF2 = 31 * aux >> 3;
         int64_t SENS2 = 63 * aux >> 5;
 

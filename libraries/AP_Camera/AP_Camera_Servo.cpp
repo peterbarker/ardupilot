@@ -56,7 +56,7 @@ bool AP_Camera_Servo::trigger_pic()
     SRV_Channels::set_output_pwm(SRV_Channel::k_cam_trigger, _params.servo_on_pwm);
 
     // set counter to move servo to off position after this many iterations of update (assumes 50hz update rate)
-    trigger_counter = constrain_float(_params.trigger_duration * 50, 0, UINT16_MAX);
+    trigger_counter = uint16_t(constrain_float(_params.trigger_duration * 50, 0, UINT16_MAX));
 
     return true;
 }
@@ -102,7 +102,7 @@ void AP_Camera_Servo::configure(float shooting_mode, float shutter_speed, float 
     // if the message contains non zero values then use them for the below functions
     if (ISO > 0) {
         // set a trigger for the iso function that is flip controlled
-        iso_counter = constrain_float(_params.trigger_duration * 50, 0, UINT16_MAX);
+        iso_counter = uint16_t(constrain_float(_params.trigger_duration * 50, 0, UINT16_MAX));
         SRV_Channels::set_output_pwm(SRV_Channel::k_cam_iso, _params.servo_on_pwm);
     }
 

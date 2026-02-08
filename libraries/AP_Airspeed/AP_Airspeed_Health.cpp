@@ -110,7 +110,7 @@ void AP_Airspeed::check_sensor_ahrs_wind_max_failures(uint8_t i)
 
         if (is_positive(wind_warn) && (speed_diff > wind_warn) && ((now_ms - state[i].failures.last_warn_ms) > 15000)) {
             state[i].failures.last_warn_ms = now_ms;
-            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Airspeed %d warning %0.1fm/s air to gnd speed diff", i+1, speed_diff);
+            GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Airspeed %d warning %0.1fm/s air to gnd speed diff", i+1, double(speed_diff));
         }
 
     // if Re-Enable options is allowed, and sensor is disabled but was previously enabled, and is probably healthy

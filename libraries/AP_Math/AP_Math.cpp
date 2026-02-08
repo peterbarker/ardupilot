@@ -36,7 +36,7 @@ is_equal(const Arithmetic1 v_1, const Arithmetic2 v_2)
 #pragma clang diagnostic ignored "-Wabsolute-value"
     // clang doesn't realise we catch the double case above and warns
     // about loss of precision here.
-    return fabsf(v_1 - v_2) < std::numeric_limits<float>::epsilon();
+    return fabsf(float(v_1 - v_2)) < std::numeric_limits<float>::epsilon();
 #pragma clang diagnostic pop
 }
 

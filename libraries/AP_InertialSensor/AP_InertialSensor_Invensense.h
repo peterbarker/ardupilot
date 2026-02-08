@@ -77,7 +77,7 @@ public:
     // acclerometers on Invensense sensors will return values up to
     // 24G, but they are not guaranteed to be remotely linear past
     // 16G
-    const uint16_t multiplier_accel = INT16_MAX/(26*GRAVITY_MSS);
+    const uint16_t multiplier_accel = uint16_t(INT16_MAX/(26*GRAVITY_MSS));
 
 private:
     AP_InertialSensor_Invensense(AP_InertialSensor &imu,

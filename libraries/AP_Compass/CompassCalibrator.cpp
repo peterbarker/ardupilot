@@ -858,9 +858,9 @@ void CompassCalibrator::AttitudeSample::set_from_ahrs(void)
     const Matrix3f &dcm = AP::ahrs().get_DCM_rotation_body_to_ned();
     float roll_rad, pitch_rad, yaw_rad;
     dcm.to_euler(&roll_rad, &pitch_rad, &yaw_rad);
-    roll = constrain_int16(127 * (roll_rad / M_PI), -INT8_MAX, INT8_MAX);
-    pitch = constrain_int16(127 * (pitch_rad / M_PI_2), -INT8_MAX, INT8_MAX);
-    yaw = constrain_int16(127 * (yaw_rad / M_PI), -INT8_MAX, INT8_MAX);
+    roll = int16_t(constrain_int16(int16_t(127 * (roll_rad / M_PI)), -INT8_MAX, INT8_MAX));
+    pitch = int16_t(constrain_int16(int16_t(127 * (pitch_rad / M_PI_2)), -INT8_MAX, INT8_MAX));
+    yaw = int16_t(constrain_int16(int16_t(127 * (yaw_rad / M_PI)), -INT8_MAX, INT8_MAX));
 }
 
 Matrix3f CompassCalibrator::AttitudeSample::get_rotmat(void) const
@@ -1096,8 +1096,8 @@ bool CompassCalibrator::fix_radius(void)
         // don't allow more than 30% scale factor correction
         GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "Mag(%u) bad radius %.0f expected %.0f",
                         _compass_idx,
-                        _params.radius,
-                        expected_radius);
+                        double(_params.radius),
+                        double(expected_radius));
         set_status(Status::BAD_RADIUS);
         return false;
     }

@@ -73,7 +73,7 @@ void SplineCurve::set_origin_and_destination(const Vector3p &origin, const Vecto
 
     // code below ensures we don't get too much overshoot when the next segment is short
     const float vel_len = _origin_vel.length() + _destination_vel.length();
-    const float pos_len = (_destination - _origin).length() * SPLINE_FACTOR;
+    const float pos_len = float((_destination - _origin).length()) * SPLINE_FACTOR;
     if (vel_len > pos_len) {
         // if total start+stop velocity is more than four times the position difference
         // use a scaled down start and stop velocity
@@ -211,7 +211,7 @@ void SplineCurve::calc_dt_speed_max(float time, float distance_delta, float &spl
         _reached_destination = true;
         return;
     }
-    const float dist = (_destination - target_pos).length();
+    const float dist = float((_destination - target_pos).length());
     speed_max = MIN(speed_max, safe_sqrt(2.0f * accel_max * (dist + sq(_destination_speed_max) / (2.0f*accel_max))));
 }
 

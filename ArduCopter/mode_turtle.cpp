@@ -229,7 +229,7 @@ void ModeTurtle::output_to_motors()
             continue;
         }
 
-        int16_t pwm = motors->get_pwm_output_min() + (motors->get_pwm_output_max() - motors->get_pwm_output_min()) * motors_output;
+        int16_t pwm = motors->get_pwm_output_min() + int16_t((motors->get_pwm_output_max() - motors->get_pwm_output_min()) * motors_output);
 
         motors->rc_write(i, pwm);
     }

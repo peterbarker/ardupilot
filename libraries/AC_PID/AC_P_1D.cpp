@@ -31,10 +31,10 @@ float AC_P_1D::update_all(postype_t &target, postype_t measurement)
     // Clamp error to configured min/max bounds
     if (is_negative(_error_min) && (_error < _error_min)) {
         _error = _error_min;
-        target = measurement + _error;
+        target = measurement + postype_t(_error);
     } else if (is_positive(_error_max) && (_error > _error_max)) {
         _error = _error_max;
-        target = measurement + _error;
+        target = measurement + postype_t(_error);
     }
 
     // Use sqrt_controller to limit output and/or its derivative

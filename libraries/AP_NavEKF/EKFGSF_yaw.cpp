@@ -47,7 +47,7 @@ void EKFGSF_yaw::update(const Vector3F &delAng,
     // The time constant of the filter is a fixed ratio relative to the time constant of the AHRS tilt correction loop
     const ftype filter_coef = fminF(EKFGSF_accelFiltRatio * delVelDT * EKFGSF_tiltGain, 1.0f);
     const Vector3F accel = delVel / fmaxF(delVelDT, 0.001f);
-    ahrs_accel = ahrs_accel * (1.0f - filter_coef) + accel * filter_coef;
+    ahrs_accel = ahrs_accel * (ftype(1.0) - filter_coef) + accel * filter_coef;
 
     // Iniitialise states and only when acceleration is close to 1g to prevent vehicle movement casuing a large initial tilt error
     if (!ahrs_tilt_aligned) {
@@ -71,24 +71,24 @@ void EKFGSF_yaw::update(const Vector3F &delAng,
     // and zero at the min and max g limits. This reduces the effect of large g transients on the attitude
     // estimates.
     ftype EKFGSF_ahrs_ng = ahrs_accel_norm / GRAVITY_MSS;
-    if (EKFGSF_ahrs_ng > 1.0f) {
+    if (EKFGSF_ahrs_ng > ftype(1.0)) {
         if (is_positive(true_airspeed)) {
             // When flying in fixed wing mode we need to allow for more positive g due to coordinated turns
             // Gain varies from unity at 1g to zero at 2g
             accel_gain = EKFGSF_tiltGain * sq(MAX(2.0f - EKFGSF_ahrs_ng, 0.0f));
         } else if (EKFGSF_ahrs_ng <= 1.5f) {
             // Gain varies from unity at 1g to zero at 1.5g
-            accel_gain = EKFGSF_tiltGain * sq(3.0f - 2.0f * EKFGSF_ahrs_ng);
+            accel_gain = EKFGSF_tiltGain * sq(ftype(3.0) - ftype(2.0) * EKFGSF_ahrs_ng);
         } else {
             // Gain is zero above max g
-            accel_gain = 0.0f;
+            accel_gain = ftype(0.0);
         }
-    } else if (EKFGSF_ahrs_ng > 0.5f) {
+    } else if (EKFGSF_ahrs_ng > ftype(0.5)) {
         // Gain varies from zero at 0.5g to unity at 1g
-        accel_gain = EKFGSF_tiltGain * sq(2.0f * EKFGSF_ahrs_ng - 1.0f);
+        accel_gain = EKFGSF_tiltGain * sq(ftype(2.0) * EKFGSF_ahrs_ng - ftype(1.0));
     } else {
         // Gain is zero below min g
-        accel_gain = 0.0f;
+        accel_gain = ftype(0.0);
     }
 
     // Always run the AHRS prediction cycle for each model
@@ -136,7 +136,7 @@ void EKFGSF_yaw::update(const Vector3F &delAng,
 void EKFGSF_yaw::fuseVelData(const Vector2F &vel, const ftype velAcc)
 {
     // convert reported accuracy to a variance, but limit lower value to protect algorithm stability
-    const ftype velObsVar = sq(fmaxF(velAcc, 0.5f));
+    const ftype velObsVar = sq(fmaxF(velAcc, ftype(0.5)));
 
     // The 3-state EKF models only run when flying to avoid corrupted estimates due to operator handling and GPS interference
     if (run_ekf_gsf) {
@@ -179,7 +179,7 @@ void EKFGSF_yaw::fuseVelData(const Vector2F &vel, const ftype velAcc)
                 // Normalise the sum of weights to unity
                 // Reset the filters if all weights have underflowed due to excessive innovation variances
                 if (vel_fuse_running && n_clips < N_MODELS_EKFGSF) {
-                    ftype total_w_inv = 1.0f / total_w;
+                    ftype total_w_inv = ftype(1.0) / total_w;
                     for (uint8_t mdl_idx = 0; mdl_idx < N_MODELS_EKFGSF; mdl_idx++) {
                         GSF.weights[mdl_idx]  = newWeight[mdl_idx] * total_w_inv;
                     }
@@ -206,7 +206,7 @@ void EKFGSF_yaw::predictAHRS(const uint8_t mdl_idx)
 
     Vector3F tilt_error_gyro_correction; // (rad/sec)
 
-    if (accel_gain > 0.0f) {
+    if (accel_gain > ftype(0.0)) {
 
         Vector3F accel = ahrs_accel;
 
@@ -229,7 +229,7 @@ void EKFGSF_yaw::predictAHRS(const uint8_t mdl_idx)
     // Gyro bias estimation
     const ftype gyro_bias_limit = radians(5.0f);
     const ftype spinRate_squared = ang_rate_delayed_raw.length_squared();
-    if (spinRate_squared < sq(0.175f)) {
+    if (spinRate_squared < sq(ftype(0.175))) {
         AHRS[mdl_idx].gyro_bias -= tilt_error_gyro_correction * (EKFGSF_gyroBiasGain * angle_dt);
 
         // sanity check
@@ -420,10 +420,10 @@ bool EKFGSF_yaw::correct(const uint8_t mdl_idx, const Vector2F &vel, const ftype
 
     // Perform a chi-square innovation consistency test and calculate a compression scale factor that limits the magnitude of innovations to 5-sigma
     ftype S_det_inv = (EKF[mdl_idx].S[0][0]*EKF[mdl_idx].S[1][1] - EKF[mdl_idx].S[0][1]*EKF[mdl_idx].S[1][0]);
-    ftype innov_comp_scale_factor = 1.0f;
-    if (fabsF(S_det_inv) > 1E-6f) {
+    ftype innov_comp_scale_factor = ftype(1.0);
+    if (fabsF(S_det_inv) > ftype(1E-6)) {
         // Calculate elements for innovation covariance inverse matrix assuming symmetry
-        S_det_inv = 1.0f / S_det_inv;
+        S_det_inv = ftype(1.0) / S_det_inv;
         const ftype S_inv_NN = EKF[mdl_idx].S[1][1] * S_det_inv;
         const ftype S_inv_EE = EKF[mdl_idx].S[0][0] * S_det_inv;
         const ftype S_inv_NE = EKF[mdl_idx].S[0][1] * S_det_inv;
@@ -433,8 +433,8 @@ bool EKFGSF_yaw::correct(const uint8_t mdl_idx, const Vector2F &vel, const ftype
 
         // If the test ratio is greater than 25 (5 Sigma) then reduce the length of the innovation vector to clip it at 5-Sigma
         // This protects from large measurement spikes
-        if (test_ratio > 25.0f) {
-            innov_comp_scale_factor = sqrtF(25.0f / test_ratio);
+        if (test_ratio > ftype(25.0)) {
+            innov_comp_scale_factor = sqrtF(ftype(25.0) / test_ratio);
         }
     } else {
         // skip this fusion step because calculation is badly conditioned
@@ -451,8 +451,8 @@ bool EKFGSF_yaw::correct(const uint8_t mdl_idx, const Vector2F &vel, const ftype
     const ftype t9 = P01*P10;
     const ftype t6 = t2+t3+t4+t5-t9;
     ftype t7;
-    if (fabsF(t6) > 1e-6f) {
-        t7 = 1.0f/t6;
+    if (fabsF(t6) > ftype(1e-6)) {
+        t7 = ftype(1.0)/t6;
     } else {
         // skip this fusion step
         return false;
@@ -550,16 +550,16 @@ void EKFGSF_yaw::resetEKFGSF()
     run_ekf_gsf = false;
 
     memset(&EKF, 0, sizeof(EKF));
-    const ftype yaw_increment = M_2PI / (ftype)N_MODELS_EKFGSF;
+    const ftype yaw_increment = ftype(M_2PI) / (ftype)N_MODELS_EKFGSF;
     for (uint8_t mdl_idx = 0; mdl_idx < N_MODELS_EKFGSF; mdl_idx++) {
         // evenly space initial yaw estimates in the region between +-Pi
-        EKF[mdl_idx].X[2] = -M_PI + (0.5f * yaw_increment) + ((ftype)mdl_idx * yaw_increment);
+        EKF[mdl_idx].X[2] = ftype(-M_PI) + (ftype(0.5) * yaw_increment) + ((ftype)mdl_idx * yaw_increment);
 
         // All filter models start with the same weight
-        GSF.weights[mdl_idx] = 1.0f / (ftype)N_MODELS_EKFGSF;
+        GSF.weights[mdl_idx] = ftype(1.0) / (ftype)N_MODELS_EKFGSF;
 
         // Use half yaw interval for yaw uncertainty as that is the maximum that the best model can be away from truth
-        GSF.yaw_variance = sq(0.5f * yaw_increment);
+        GSF.yaw_variance = sq(ftype(0.5) * yaw_increment);
         EKF[mdl_idx].P[2][2] = GSF.yaw_variance;
     }
 }
@@ -570,7 +570,7 @@ ftype EKFGSF_yaw::gaussianDensity(const uint8_t mdl_idx) const
     const ftype t2 = EKF[mdl_idx].S[0][0] * EKF[mdl_idx].S[1][1];
     const ftype t5 = EKF[mdl_idx].S[0][1] * EKF[mdl_idx].S[1][0];
     const ftype t3 = t2 - t5; // determinant
-    const ftype t4 = 1.0f / MAX(t3, 1e-12f); // determinant inverse
+    const ftype t4 = ftype(1.0) / MAX(t3, ftype(1e-12)); // determinant inverse
 
     // inv(S)
     ftype invMat[2][2];
@@ -588,16 +588,16 @@ ftype EKFGSF_yaw::gaussianDensity(const uint8_t mdl_idx) const
     ftype normDist = tempVec[0] * EKF[mdl_idx].innov[0] + tempVec[1] * EKF[mdl_idx].innov[1];
 
     // convert from a normalised variance to a probability assuming a Gaussian distribution
-    normDist = expf(-0.5f * normDist);
+    normDist = ftype(expf(float(ftype(-0.5) * normDist)));
     normDist *= sqrtF(t4)/ M_2PI;
     return normDist;
 }
 
 void EKFGSF_yaw::forceSymmetry(const uint8_t mdl_idx)
 {
-    ftype P01 = 0.5f * (EKF[mdl_idx].P[0][1] + EKF[mdl_idx].P[1][0]);
-    ftype P02 = 0.5f * (EKF[mdl_idx].P[0][2] + EKF[mdl_idx].P[2][0]);
-    ftype P12 = 0.5f * (EKF[mdl_idx].P[1][2] + EKF[mdl_idx].P[2][1]);
+    ftype P01 = ftype(0.5) * (EKF[mdl_idx].P[0][1] + EKF[mdl_idx].P[1][0]);
+    ftype P02 = ftype(0.5) * (EKF[mdl_idx].P[0][2] + EKF[mdl_idx].P[2][0]);
+    ftype P12 = ftype(0.5) * (EKF[mdl_idx].P[1][2] + EKF[mdl_idx].P[2][1]);
     EKF[mdl_idx].P[0][1] = EKF[mdl_idx].P[1][0] = P01;
     EKF[mdl_idx].P[0][2] = EKF[mdl_idx].P[2][0] = P02;
     EKF[mdl_idx].P[1][2] = EKF[mdl_idx].P[2][1] = P12;
@@ -623,7 +623,7 @@ Matrix3F EKFGSF_yaw::updateRotMat(const Matrix3F &R, const Vector3F &g) const
         rowLengthSq = ret[r][0] * ret[r][0] + ret[r][1] * ret[r][1] + ret[r][2] * ret[r][2];
         if (is_positive(rowLengthSq)) {
             // Use linear approximation for inverse sqrt taking advantage of the row length being close to 1.0
-            const ftype rowLengthInv = 1.5f - 0.5f * rowLengthSq;
+            const ftype rowLengthInv = 1.5f - ftype(0.5) * rowLengthSq;
             Vector3F &row = ret[r];
             row *= rowLengthInv;
         }

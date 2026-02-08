@@ -181,9 +181,9 @@ void AP_LTM_Telem::send_Aframe(void)
     {
         AP_AHRS &ahrs = AP::ahrs();
         WITH_SEMAPHORE(ahrs.get_semaphore());
-        pitch = roundf(ahrs.get_pitch_deg()); // attitude pitch in degrees
-        roll = roundf(ahrs.get_roll_deg());   // attitude roll in degrees
-        heading = roundf(ahrs.get_yaw_deg()); // heading in degrees
+        pitch = int16_t(roundf(ahrs.get_pitch_deg())); // attitude pitch in degrees
+        roll = int16_t(roundf(ahrs.get_roll_deg()));   // attitude roll in degrees
+        heading = int16_t(roundf(ahrs.get_yaw_deg())); // heading in degrees
     }
 #else
     pitch = 0;

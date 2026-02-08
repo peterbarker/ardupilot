@@ -523,11 +523,11 @@ void AP_AdvancedFailsafe::max_range_update(void)
     }
     
     // check distance from first location
-    float distance_km = _first_location.get_distance(AP::gps().location()) * 0.001;
+    float distance_km = float(_first_location.get_distance(AP::gps().location())) * 0.001f;
     if (distance_km > _max_range_km) {
         uint32_t now = AP_HAL::millis();
         if (now - _term_range_notice_ms > 5000) {
-            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Terminating due to range %.1fkm", distance_km);
+            GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Terminating due to range %.1fkm", double(distance_km));
             _term_range_notice_ms = now;
         }
         _terminate.set_and_notify(1);

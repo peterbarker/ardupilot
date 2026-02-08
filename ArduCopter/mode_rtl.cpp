@@ -295,7 +295,7 @@ void ModeRTL::loiterathome_run()
         if (auto_yaw.mode() == AutoYaw::Mode::RESET_TO_ARMED_YAW) {
             // check if heading is within 2 degrees of heading when vehicle was armed
             // todo: Use the target heading instead of the actual heading to allow landing even if yaw control is lost.
-            if (fabsf(wrap_PI(ahrs.get_yaw_rad() - copter.initial_armed_bearing_rad)) <= radians(2.0)) {
+            if (fabsf(wrap_PI(ahrs.get_yaw_rad() - copter.initial_armed_bearing_rad)) <= float(radians(2.0))) {
                 _state_complete = true;
             }
         } else {
@@ -551,7 +551,7 @@ void ModeRTL::compute_return_target()
     target_alt_m = MAX(target_alt_m, MAX(altitude_m.get(), min_rtl_alt_m));
 
     // reduce climb if close to return target
-    float rtl_return_dist_m = rtl_path.return_target.get_distance(rtl_path.origin_point);
+    float rtl_return_dist_m = float(rtl_path.return_target.get_distance(rtl_path.origin_point));
     // don't allow really shallow slopes
     if (g.rtl_cone_slope >= RTL_MIN_CONE_SLOPE) {
         target_alt_m = MIN(target_alt_m, MAX(rtl_return_dist_m * g.rtl_cone_slope, min_rtl_alt_m));

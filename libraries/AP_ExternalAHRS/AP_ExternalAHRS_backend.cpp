@@ -30,7 +30,7 @@ AP_ExternalAHRS_backend::AP_ExternalAHRS_backend(AP_ExternalAHRS *_frontend,
 
 uint16_t AP_ExternalAHRS_backend::get_rate(void) const
 {
-    return frontend.get_IMU_rate();
+    return uint16_t(frontend.get_IMU_rate());
 }
 
 bool AP_ExternalAHRS_backend::option_is_set(AP_ExternalAHRS::OPTIONS option) const

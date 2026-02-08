@@ -105,8 +105,8 @@ AP_InertialSensor_ADIS1647x::probe(AP_InertialSensor &imu,
 
 void AP_InertialSensor_ADIS1647x::start()
 {
-    if (!_imu.register_accel(accel_instance, expected_sample_rate_hz, dev->get_bus_id_devtype(DEVTYPE_INS_ADIS1647X)) ||
-        !_imu.register_gyro(gyro_instance, expected_sample_rate_hz,   dev->get_bus_id_devtype(DEVTYPE_INS_ADIS1647X))) {
+    if (!_imu.register_accel(accel_instance, uint16_t(expected_sample_rate_hz), dev->get_bus_id_devtype(DEVTYPE_INS_ADIS1647X)) ||
+        !_imu.register_gyro(gyro_instance, uint16_t(expected_sample_rate_hz),   dev->get_bus_id_devtype(DEVTYPE_INS_ADIS1647X))) {
         return;
     }
 
@@ -588,7 +588,7 @@ void AP_InertialSensor_ADIS1647x::loop(void)
         uint32_t tstart = AP_HAL::micros();
         // we deliberately set the period a bit fast to ensure we
         // don't lose a sample
-        const uint32_t period_us = (1000000UL / expected_sample_rate_hz) - 20U;
+        const uint32_t period_us = uint32_t(1000000UL / expected_sample_rate_hz) - 20U;
         bool wait_ok = false;
         if (drdy_pin != 0) {
             // when we have a DRDY pin then wait for it to go high

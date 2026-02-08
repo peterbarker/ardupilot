@@ -33,8 +33,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
     case ROTATION_NONE:
         return;
     case ROTATION_YAW_45: {
-        tmp = HALF_SQRT_2*(ftype)(x - y);
-        y   = HALF_SQRT_2*(ftype)(x + y);
+        tmp = T(HALF_SQRT_2)*T(x - y);
+        y   = T(HALF_SQRT_2)*T(x + y);
         x = tmp;
         return;
     }
@@ -43,8 +43,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_YAW_135: {
-        tmp = -HALF_SQRT_2*(ftype)(x + y);
-        y   =  HALF_SQRT_2*(ftype)(x - y);
+        tmp = -T(HALF_SQRT_2)*T(x + y);
+        y   =  T(HALF_SQRT_2)*T(x - y);
         x = tmp;
         return;
     }
@@ -52,8 +52,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
         x = -x; y = -y;
         return;
     case ROTATION_YAW_225: {
-        tmp = HALF_SQRT_2*(ftype)(y - x);
-        y   = -HALF_SQRT_2*(ftype)(x + y);
+        tmp = T(HALF_SQRT_2)*T(y - x);
+        y   = -T(HALF_SQRT_2)*T(x + y);
         x = tmp;
         return;
     }
@@ -62,8 +62,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_YAW_315: {
-        tmp = HALF_SQRT_2*(ftype)(x + y);
-        y   = HALF_SQRT_2*(ftype)(y - x);
+        tmp = T(HALF_SQRT_2)*T(x + y);
+        y   = T(HALF_SQRT_2)*T(y - x);
         x = tmp;
         return;
     }
@@ -72,8 +72,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_ROLL_180_YAW_45: {
-        tmp = HALF_SQRT_2*(ftype)(x + y);
-        y   = HALF_SQRT_2*(ftype)(x - y);
+        tmp = T(HALF_SQRT_2)*T(x + y);
+        y   = T(HALF_SQRT_2)*T(x - y);
         x = tmp; z = -z;
         return;
     }
@@ -83,8 +83,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_ROLL_180_YAW_135: {
-        tmp = HALF_SQRT_2*(ftype)(y - x);
-        y   = HALF_SQRT_2*(ftype)(y + x);
+        tmp = T(HALF_SQRT_2)*T(y - x);
+        y   = T(HALF_SQRT_2)*T(y + x);
         x = tmp; z = -z;
         return;
     }
@@ -93,8 +93,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_ROLL_180_YAW_225: {
-        tmp = -HALF_SQRT_2*(ftype)(x + y);
-        y   =  HALF_SQRT_2*(ftype)(y - x);
+        tmp = -T(HALF_SQRT_2)*T(x + y);
+        y   =  T(HALF_SQRT_2)*T(y - x);
         x = tmp; z = -z;
         return;
     }
@@ -104,8 +104,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_ROLL_180_YAW_315: {
-        tmp =  HALF_SQRT_2*(ftype)(x - y);
-        y   = -HALF_SQRT_2*(ftype)(x + y);
+        tmp =  T(HALF_SQRT_2)*T(x - y);
+        y   = -T(HALF_SQRT_2)*T(x + y);
         x = tmp; z = -z;
         return;
     }
@@ -115,8 +115,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
     }
     case ROTATION_ROLL_90_YAW_45: {
         tmp = z; z = y; y = -tmp;
-        tmp = HALF_SQRT_2*(ftype)(x - y);
-        y   = HALF_SQRT_2*(ftype)(x + y);
+        tmp = T(HALF_SQRT_2)*T(x - y);
+        y   = T(HALF_SQRT_2)*T(x + y);
         x = tmp;
         return;
     }
@@ -127,8 +127,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
     }
     case ROTATION_ROLL_90_YAW_135: {
         tmp = z; z = y; y = -tmp;
-        tmp = -HALF_SQRT_2*(ftype)(x + y);
-        y   =  HALF_SQRT_2*(ftype)(x - y);
+        tmp = -T(HALF_SQRT_2)*T(x + y);
+        y   =  T(HALF_SQRT_2)*T(x - y);
         x = tmp;
         return;
     }
@@ -138,8 +138,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
     }
     case ROTATION_ROLL_270_YAW_45: {
         tmp = z; z = -y; y = tmp;
-        tmp = HALF_SQRT_2*(ftype)(x - y);
-        y   = HALF_SQRT_2*(ftype)(x + y);
+        tmp = T(HALF_SQRT_2)*T(x - y);
+        y   = T(HALF_SQRT_2)*T(x + y);
         x = tmp;
         return;
     }
@@ -150,8 +150,8 @@ void Vector3<T>::rotate(enum Rotation rotation)
     }
     case ROTATION_ROLL_270_YAW_135: {
         tmp = z; z = -y; y = tmp;
-        tmp = -HALF_SQRT_2*(ftype)(x + y);
-        y   =  HALF_SQRT_2*(ftype)(x - y);
+        tmp = -T(HALF_SQRT_2)*T(x + y);
+        y   =  T(HALF_SQRT_2)*T(x - y);
         x = tmp;
         return;
     }
@@ -224,15 +224,15 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_PITCH_315: {
-        tmp = HALF_SQRT_2*(ftype)(x - z);
-        z   = HALF_SQRT_2*(ftype)(x + z);
+        tmp = T(HALF_SQRT_2)*T(x - z);
+        z   = T(HALF_SQRT_2)*T(x + z);
         x = tmp;
         return;
     }
     case ROTATION_ROLL_90_PITCH_315: {
         tmp = z; z = y; y = -tmp;
-        tmp = HALF_SQRT_2*(ftype)(x - z);
-        z   = HALF_SQRT_2*(ftype)(x + z);
+        tmp = T(HALF_SQRT_2)*T(x - z);
+        z   = T(HALF_SQRT_2)*T(x + z);
         x = tmp;
         return;
     }
@@ -246,14 +246,14 @@ void Vector3<T>::rotate(enum Rotation rotation)
         return;
     }
     case ROTATION_ROLL_45: {
-        tmp = HALF_SQRT_2*(ftype)(y - z);
-        z   = HALF_SQRT_2*(ftype)(y + z);
+        tmp = T(HALF_SQRT_2)*T(y - z);
+        z   = T(HALF_SQRT_2)*T(y + z);
         y = tmp;
         return;
     }
     case ROTATION_ROLL_315: {
-        tmp = HALF_SQRT_2*(ftype)(y + z);
-        z   = HALF_SQRT_2*(ftype)(z - y);
+        tmp = T(HALF_SQRT_2)*T(y + z);
+        z   = T(HALF_SQRT_2)*T(z - y);
         y = tmp;
         return;
     }
@@ -323,14 +323,14 @@ T Vector3<T>::operator *(const Vector3<T> &v) const
 template <typename T>
 T Vector3<T>::length(void) const
 {
-    return norm(x, y, z);
+    return T(norm(x, y, z));
 }
 
 // limit xy component vector to a given length. returns true if vector was limited
 template <typename T>
 bool Vector3<T>::limit_length_xy(T max_length)
 {
-    const T length_xy = norm(x, y);
+    const T length_xy = T(norm(x, y));
     if ((length_xy > max_length) && is_positive(length_xy)) {
         x *= (max_length / length_xy);
         y *= (max_length / length_xy);

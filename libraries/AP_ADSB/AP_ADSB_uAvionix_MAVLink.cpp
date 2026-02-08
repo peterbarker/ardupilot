@@ -68,9 +68,9 @@ void AP_ADSB_uAvionix_MAVLink::send_dynamic_out(const mavlink_channel_t chan) co
     const int32_t latitude = _frontend._my_loc.lat;
     const int32_t longitude = _frontend._my_loc.lng;
     const int32_t altGNSS = _frontend._my_loc.alt * 10; // convert cm to mm
-    const int16_t velVert = -1.0f * gps_velocity.z * 1E2; // convert m/s to cm/s
-    const int16_t nsVog = gps_velocity.x * 1E2; // convert m/s to cm/s
-    const int16_t ewVog = gps_velocity.y * 1E2; // convert m/s to cm/s
+    const int16_t velVert = int16_t(-1.0f * gps_velocity.z * 1E2); // convert m/s to cm/s
+    const int16_t nsVog = int16_t(gps_velocity.x * 1E2); // convert m/s to cm/s
+    const int16_t ewVog = int16_t(gps_velocity.y * 1E2); // convert m/s to cm/s
     const AP_GPS_FixType fixType = gps.status(); // this lines up perfectly with our enum
     const uint8_t emStatus = 0; // TODO: implement this ENUM. no emergency = 0
     const uint8_t numSats = gps.num_sats();
@@ -79,19 +79,19 @@ void AP_ADSB_uAvionix_MAVLink::send_dynamic_out(const mavlink_channel_t chan) co
     uint32_t accHoriz = UINT_MAX;
     float accHoriz_f;
     if (gps.horizontal_accuracy(accHoriz_f)) {
-        accHoriz = accHoriz_f * 1E3; // convert m to mm
+        accHoriz = uint32_t(accHoriz_f * 1E3); // convert m to mm
     }
 
     uint16_t accVert = USHRT_MAX;
     float accVert_f;
     if (gps.vertical_accuracy(accVert_f)) {
-        accVert = accVert_f * 1E2; // convert m to cm
+        accVert = uint16_t(accVert_f * 1E2); // convert m to cm
     }
 
     uint16_t accVel = USHRT_MAX;
     float accVel_f;
     if (gps.speed_accuracy(accVel_f)) {
-        accVel = accVel_f * 1E3; // convert m/s to mm/s
+        accVel = uint16_t(accVel_f * 1E3); // convert m/s to mm/s
     }
 
     uint16_t state = 0;
@@ -109,7 +109,7 @@ void AP_ADSB_uAvionix_MAVLink::send_dynamic_out(const mavlink_channel_t chan) co
     int32_t altPres = INT_MAX;
     if (_my_loc.baro_is_healthy) {
         // Altitude difference between sea level pressure and current pressure. Result in millimeters
-        altPres = _my_loc.baro_alt_press_diff_sea_level * 1E3; // convert m to mm;
+        altPres = int32_t(_my_loc.baro_alt_press_diff_sea_level * 1E3); // convert m to mm;
     }
 
 

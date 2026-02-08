@@ -262,7 +262,7 @@ void AP_Baro_LPS2XH::_update_pressure(void)
     }
 
     int32_t Pressure_Reg_s32 = ((uint32_t)pressure[2]<<16)|((uint32_t)pressure[1]<<8)|(uint32_t)pressure[0];
-    int32_t Pressure_mb = Pressure_Reg_s32 * (100.0f / 4096); // scale for pa
+    int32_t Pressure_mb = int32_t(Pressure_Reg_s32 * (100.0f / 4096)); // scale for pa
 
     WITH_SEMAPHORE(_sem);
     _pressure_sum += Pressure_mb;

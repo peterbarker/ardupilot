@@ -306,7 +306,7 @@ void AP_Mount_Xacti::send_target_rates(const MountRateTarget &rate_rads)
     const float yaw_rads = rate_rads.yaw;
 
     // send gimbal rate target to gimbal
-    send_gimbal_control(3, degrees(pitch_rads) * 100, degrees(yaw_rads) * 100);
+    send_gimbal_control(3, int16_t(degrees(pitch_rads) * 100), int16_t(degrees(yaw_rads) * 100));
 }
 
 // send target pitch and yaw angles to gimbal
@@ -320,7 +320,7 @@ void AP_Mount_Xacti::send_target_angles(const MountAngleTarget &angle_rad)
     const float yaw_bf_rad = yaw_is_ef ? wrap_PI(yaw_rad - AP::ahrs().get_yaw_rad()) : yaw_rad;
 
     // send angle target to gimbal
-    send_gimbal_control(2, degrees(pitch_rad) * 100, degrees(yaw_bf_rad) * 100);
+    send_gimbal_control(2, int16_t(degrees(pitch_rad) * 100), int16_t(degrees(yaw_bf_rad) * 100));
 }
 
 // subscribe to Xacti DroneCAN messages
@@ -748,10 +748,10 @@ bool AP_Mount_Xacti::send_copter_att_status(uint32_t now_ms)
 
     last_send_copter_att_status_ms = now_ms;
     com_xacti_CopterAttStatus copter_att_status_msg {};
-    copter_att_status_msg.quaternion_wxyz_e4[0] = veh_att.q1 * 1e4;
-    copter_att_status_msg.quaternion_wxyz_e4[1] = veh_att.q2 * 1e4;
-    copter_att_status_msg.quaternion_wxyz_e4[2] = veh_att.q3 * 1e4;
-    copter_att_status_msg.quaternion_wxyz_e4[3] = veh_att.q4 * 1e4;
+    copter_att_status_msg.quaternion_wxyz_e4[0] = int16_t(veh_att.q1 * 1e4);
+    copter_att_status_msg.quaternion_wxyz_e4[1] = int16_t(veh_att.q2 * 1e4);
+    copter_att_status_msg.quaternion_wxyz_e4[2] = int16_t(veh_att.q3 * 1e4);
+    copter_att_status_msg.quaternion_wxyz_e4[3] = int16_t(veh_att.q4 * 1e4);
     copter_att_status_msg.reserved.len = 2;
     copter_att_status_msg.reserved.data[0] = 0;
     copter_att_status_msg.reserved.data[1] = 0;

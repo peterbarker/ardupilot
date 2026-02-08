@@ -248,9 +248,9 @@ void AP_MicroStrain::handle_gnss(const MicroStrain_Packet &packet)
             break;
         }
         case GNSSPacketField::LLH_POSITION: {
-            gnss_data[gnss_instance].lat = be64todouble_ptr(packet.payload, i+2) * 1.0e7; // Decimal degrees to degrees
-            gnss_data[gnss_instance].lon = be64todouble_ptr(packet.payload, i+10) * 1.0e7;
-            gnss_data[gnss_instance].msl_altitude = be64todouble_ptr(packet.payload, i+26) * 1.0e2; // Meters to cm
+            gnss_data[gnss_instance].lat = int32_t(be64todouble_ptr(packet.payload, i+2) * double(1.0e7)); // Decimal degrees to degrees
+            gnss_data[gnss_instance].lon = int32_t(be64todouble_ptr(packet.payload, i+10) * double(1.0e7));
+            gnss_data[gnss_instance].msl_altitude = int32_t(be64todouble_ptr(packet.payload, i+26) * double(1.0e2)); // Meters to cm
             gnss_data[gnss_instance].horizontal_position_accuracy = be32tofloat_ptr(packet.payload, i+34);
             gnss_data[gnss_instance].vertical_position_accuracy = be32tofloat_ptr(packet.payload, i+38);
             break;
@@ -279,14 +279,14 @@ void AP_MicroStrain::handle_filter(const MicroStrain_Packet &packet)
     for (uint8_t i = 0; i < packet.payload_length(); i += packet.payload[i]) {
         switch ((FilterPacketField) packet.payload[i+1]) {
         case FilterPacketField::GPS_TIMESTAMP: {
-            filter_data.tow_ms = be64todouble_ptr(packet.payload, i+2) * 1000; // Convert seconds to ms
+            filter_data.tow_ms = uint32_t(be64todouble_ptr(packet.payload, i+2) * 1000); // Convert seconds to ms
             filter_data.week = be16toh_ptr(&packet.payload[i+10]);
             break;
         }
         case FilterPacketField::LLH_POSITION: {
-            filter_data.lat = be64todouble_ptr(packet.payload, i+2) * 1.0e7; // Decimal degrees to degrees
-            filter_data.lon = be64todouble_ptr(packet.payload, i+10) * 1.0e7;
-            filter_data.hae_altitude = be64todouble_ptr(packet.payload, i+26) * 1.0e2; // Meters to cm
+            filter_data.lat = int32_t(be64todouble_ptr(packet.payload, i+2) * double(1.0e7)); // Decimal degrees to degrees
+            filter_data.lon = int32_t(be64todouble_ptr(packet.payload, i+10) * double(1.0e7));
+            filter_data.hae_altitude = int32_t(be64todouble_ptr(packet.payload, i+26) * double(1.0e2)); // Meters to cm
             break;
         }
         case FilterPacketField::NED_VELOCITY: {

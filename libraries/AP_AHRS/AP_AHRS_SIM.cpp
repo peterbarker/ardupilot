@@ -12,9 +12,9 @@ bool AP_AHRS_SIM::get_location(Location &loc) const
 
     const struct SITL::sitl_fdm &fdm = _sitl->state;
     loc = {};
-    loc.lat = fdm.latitude * 1e7;
-    loc.lng = fdm.longitude * 1e7;
-    loc.alt = fdm.altitude*100;
+    loc.lat = int32_t(double(fdm.latitude) * double(1e7));
+    loc.lng = int32_t(double(fdm.longitude) * double(1e7));
+    loc.alt = int32_t(double(fdm.altitude) * double(100));
 
     return true;
 }
@@ -25,7 +25,7 @@ bool AP_AHRS_SIM::airspeed_EAS(float &airspeed_ret) const
         return false;
     }
 
-    airspeed_ret = _sitl->state.airspeed;
+    airspeed_ret = float(_sitl->state.airspeed);
 
     return true;
 }
@@ -233,8 +233,8 @@ void AP_AHRS_SIM::get_results(AP_AHRS_Backend::Estimates &results)
             delAng *= delTime;
             // rotate earth velocity into body frame and calculate delta position
             Matrix3f Tbn;
-            Tbn.from_euler(radians(fdm.rollDeg),radians(fdm.pitchDeg),radians(fdm.yawDeg));
-            const Vector3f earth_vel(fdm.speedN,fdm.speedE,fdm.speedD);
+            Tbn.from_euler(float(radians(fdm.rollDeg)),float(radians(fdm.pitchDeg)),float(radians(fdm.yawDeg)));
+            const Vector3f earth_vel(float(fdm.speedN),float(fdm.speedE),float(fdm.speedD));
             const Vector3f delPos = Tbn.transposed() * (earth_vel * delTime);
             // write to EKF
             EKF3.writeBodyFrameOdom(quality, delPos, delAng, delTime, timeStamp_ms, 0, posOffset);

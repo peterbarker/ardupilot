@@ -68,15 +68,15 @@ void QuaternionT<T>::rotation_matrix(Matrix3f &m) const
     const T q1q4 = q1 * q4;
     const T q4q4 = q4 * q4;
 
-    m.a.x = 1.0f-2.0f*(q3q3 + q4q4);
-    m.a.y = 2.0f*(q2q3 - q1q4);
-    m.a.z = 2.0f*(q2q4 + q1q3);
-    m.b.x = 2.0f*(q2q3 + q1q4);
-    m.b.y = 1.0f-2.0f*(q2q2 + q4q4);
-    m.b.z = 2.0f*(q3q4 - q1q2);
-    m.c.x = 2.0f*(q2q4 - q1q3);
-    m.c.y = 2.0f*(q3q4 + q1q2);
-    m.c.z = 1.0f-2.0f*(q2q2 + q3q3);
+    m.a.x = float(T(1)-T(2)*(q3q3 + q4q4));
+    m.a.y = float(T(2)*(q2q3 - q1q4));
+    m.a.z = float(T(2)*(q2q4 + q1q3));
+    m.b.x = float(T(2)*(q2q3 + q1q4));
+    m.b.y = float(T(1)-T(2)*(q2q2 + q4q4));
+    m.b.z = float(T(2)*(q3q4 - q1q2));
+    m.c.x = float(T(2)*(q2q4 - q1q3));
+    m.c.y = float(T(2)*(q3q4 + q1q2));
+    m.c.z = float(T(1)-T(2)*(q2q2 + q3q3));
 }
 
 // make this quaternion equivalent to the supplied matrix
@@ -108,19 +108,19 @@ void QuaternionT<T>::from_rotation_matrix(const Matrix3<T> &m)
         qy = (m02 - m20) / S;
         qz = (m10 - m01) / S;
     } else if ((m00 > m11) && (m00 > m22)) {
-        const T S = sqrtF(1.0f + m00 - m11 - m22) * 2.0f;
+        const T S = sqrtF(T(1) + m00 - m11 - m22) * T(2);
         qw = (m21 - m12) / S;
         qx = T(0.25) * S;
         qy = (m01 + m10) / S;
         qz = (m02 + m20) / S;
     } else if (m11 > m22) {
-        const T S = sqrtF(1.0f + m11 - m00 - m22) * 2.0f;
+        const T S = sqrtF(T(1) + m11 - m00 - m22) * T(2);
         qw = (m02 - m20) / S;
         qx = (m01 + m10) / S;
         qy = T(0.25) * S;
         qz = (m12 + m21) / S;
     } else {
-        const T S = sqrtF(1.0f + m22 - m00 - m11) * 2.0f;
+        const T S = sqrtF(T(1) + m22 - m00 - m11) * T(2);
         qw = (m10 - m01) / S;
         qx = (m02 + m20) / S;
         qy = (m12 + m21) / S;
@@ -500,7 +500,7 @@ void QuaternionT<T>::to_axis_angle(Vector3<T> &v) const
     v = Vector3<T>(q2,q3,q4);
     if (!::is_zero(l)) {
         v /= l;
-        v *= wrap_PI(2.0f * atan2F(l,q1));
+        v *= (T)wrap_PI(T(2) * atan2F(l,q1));
     }
 }
 
@@ -526,9 +526,9 @@ void QuaternionT<T>::from_axis_angle_fast(const Vector3<T> &axis, T theta)
 {
     const T t2 = T(0.5)*theta;
     const T sqt2 = sq(t2);
-    const T st2 = t2-sqt2*t2/6.0f;
+    const T st2 = t2-sqt2*t2/T(6);
 
-    q1 = 1.0f-(0.5*sqt2)+sq(sqt2)/24.0f;
+    q1 = T(1)-(T(0.5)*sqt2)+sq(sqt2)/T(24);
     q2 = axis.x * st2;
     q3 = axis.y * st2;
     q4 = axis.z * st2;
@@ -539,7 +539,7 @@ void QuaternionT<T>::from_axis_angle_fast(const Vector3<T> &axis, T theta)
 template <typename T>
 void QuaternionT<T>::from_angular_velocity(const Vector3<T>& angular_velocity, float time_delta)
 {
-    const float half_time_delta = 0.5f*time_delta;
+    const T half_time_delta = T(0.5)*T(time_delta);
 
     q1 = 1.0;
     q2 = half_time_delta*angular_velocity.x;
@@ -615,9 +615,9 @@ void QuaternionT<T>::to_euler(double &roll, double &pitch, double &yaw) const
 template <typename T>
 void QuaternionT<T>::to_euler(float &roll, float &pitch, float &yaw) const
 {
-    roll = get_euler_roll();
-    pitch = get_euler_pitch();
-    yaw = get_euler_yaw();
+    roll = float(get_euler_roll());
+    pitch = float(get_euler_pitch());
+    yaw = float(get_euler_yaw());
 }
 
 // create eulers from a quaternion
@@ -694,7 +694,7 @@ void QuaternionT<T>::zero(void)
 template <typename T>
 bool QuaternionT<T>::is_unit_length(void) const
 {
-    if (fabsF(length_squared() - 1) < 1E-3) {
+    if (fabsF(length_squared() - T(1.0)) < T(1E-3)) {
         return true;
     }
 

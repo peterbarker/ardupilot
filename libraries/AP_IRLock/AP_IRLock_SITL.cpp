@@ -48,9 +48,9 @@ bool AP_IRLock_SITL::update()
         _last_timestamp = _sitl->precland_sim.last_update_ms();
         _last_update_ms = _last_timestamp;
         _target_info.timestamp = _last_timestamp;
-        _target_info.pos_x = real_position.y;
-        _target_info.pos_y = -real_position.x;
-        _target_info.pos_z = real_position.z;
+        _target_info.pos_x = float(real_position.y);
+        _target_info.pos_y = float(-real_position.x);
+        _target_info.pos_z = float(real_position.z);
         return true;
     }
     return false;

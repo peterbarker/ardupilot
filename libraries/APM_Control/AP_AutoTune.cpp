@@ -133,7 +133,7 @@ void AP_AutoTune::start(void)
         rpid.ff().set(current.FF);
     }
 
-    Debug("START FF -> %.3f\n", rpid.ff().get());
+    Debug("START FF -> %.3f\n", double(rpid.ff().get()));
 }
 
 /*
@@ -201,7 +201,7 @@ void AP_AutoTune::update(AP_PIDInfo &pinfo, float scaler, float angle_err_deg)
     max_Dmod = MAX(max_Dmod, pinfo.Dmod);
 
     // update the P and D slew rates, using P and D values from before Dmod was applied
-    const float slew_limit_scale = 45.0 / degrees(1);
+    const float slew_limit_scale = 45.0 / degrees(1.0f);
     slew_limit_max = rpid.slew_limit();
     slew_limit_tau = 1.0;
     slew_limiter_P.modifier((pinfo.P/pinfo.Dmod)*slew_limit_scale, dt);
@@ -369,7 +369,7 @@ void AP_AutoTune::update(AP_PIDInfo &pinfo, float scaler, float angle_err_deg)
             D_limit = D;
             D_set_ms = now;
             action = Action::LOWER_D;
-            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%sD: %.4f", axis_string(), D_limit);
+            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%sD: %.4f", axis_string(), double(D_limit));
         }
     } else if (min_Dmod < 1.0) {
         // oscillation, with D_limit set

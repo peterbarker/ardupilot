@@ -76,7 +76,7 @@ template <typename T>
 inline bool is_negative(const T fVal1) {
     static_assert(std::is_floating_point<T>::value || std::is_base_of<T,AP_Float>::value,
                   "Template parameter not of type float");
-    return (static_cast<float>(fVal1) <= (-1.0 * FLT_EPSILON));
+    return (static_cast<float>(fVal1) <= (-1.0f * FLT_EPSILON));
 }
 
 /*
@@ -90,7 +90,7 @@ inline bool is_positive(const double fVal1) {
  * @brief: Check whether a double is less than zero
  */
 inline bool is_negative(const double fVal1) {
-    return (fVal1 <= static_cast<double>((-1.0 * FLT_EPSILON)));
+    return (fVal1 <= static_cast<double>(-FLT_EPSILON));
 }
 
 /*
@@ -224,9 +224,13 @@ inline double constrain_double(const double amt, const double low, const double 
 }
 
 // degrees -> radians
-static inline constexpr double radians(double deg)
+static inline double radians(double deg)
 {
-    return deg * DEG_TO_RAD;
+#if AP_MATH_ALLOW_DOUBLE_FUNCTIONS
+    return deg * DEG_TO_RAD_DOUBLE;
+#else
+    return static_cast<double>(static_cast<float>(deg) * DEG_TO_RAD);
+#endif
 }
 
 static inline constexpr float radians(float deg)
@@ -251,10 +255,26 @@ static inline constexpr float rad_to_cd(float rad)
     return rad * RAD_TO_CDEG;
 }
 
+#if HAL_WITH_EKF_DOUBLE
+static inline double rad_to_cd(double rad)
+{
+    return rad * RAD_TO_CDEG_DOUBLE;
+}
+#endif
+
 // radians -> degrees
 static inline constexpr float degrees(float rad)
 {
     return rad * RAD_TO_DEG;
+}
+
+static inline double degrees(double rad)
+{
+#if AP_MATH_ALLOW_DOUBLE_FUNCTIONS
+    return rad * RAD_TO_DEG_DOUBLE;
+#else
+    return static_cast<double>(static_cast<float>(rad) * RAD_TO_DEG);
+#endif
 }
 
 template<typename T>

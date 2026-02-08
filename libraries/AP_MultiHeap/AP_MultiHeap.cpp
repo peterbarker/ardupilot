@@ -43,7 +43,7 @@ bool MultiHeap::create(uint32_t total_size, uint8_t max_heaps, bool _allow_expan
                 sum_size += alloc_size;
                 break;
             }
-            alloc_size *= 0.9;
+            alloc_size = uint32_t(alloc_size * 0.9);
         }
         if (total_size == 0) {
             break;

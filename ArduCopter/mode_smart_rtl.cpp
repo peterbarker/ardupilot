@@ -110,7 +110,7 @@ void ModeSmartRTL::path_follow_run()
             path_follow_last_pop_fail_ms = 0;
             if (g2.smart_rtl.get_num_points() == 0) {
                 // this is the very last point, add 2m to the target alt and move to pre-land state
-                dest_NED.z -= 2.0f;
+                dest_NED.z -= postype_t(2.0);
                 smart_rtl_state = SubMode::PRELAND_POSITION;
                 wp_nav->set_wp_destination_NED_m(dest_NED);
             } else {
@@ -120,7 +120,7 @@ void ModeSmartRTL::path_follow_run()
                     wp_nav->set_wp_destination_NED_m(dest_NED);
                     if (g2.smart_rtl.get_num_points() == 1) {
                         // this is the very last point, add 2m to the target alt
-                        next_dest_NED.z -= 2.0f;
+                        next_dest_NED.z -= 2.0;
                     }
                     wp_nav->set_wp_destination_next_NED_m(next_dest_NED);
                 } else {

@@ -78,7 +78,7 @@ void NavEKF2_core::setWindMagStateLearningMode()
     }
 
     // determine if the vehicle is manoeuvring
-    if (accNavMagHoriz > 0.5f) {
+    if (accNavMagHoriz > ftype(0.5)) {
         manoeuvring = true;
     } else {
         manoeuvring = false;
@@ -346,10 +346,10 @@ void NavEKF2_core::setAidingMode()
 void NavEKF2_core::checkAttitudeAlignmentStatus()
 {
     // Check for tilt convergence - used during initial alignment
-    ftype alpha = 1.0f*imuDataDelayed.delAngDT;
+    ftype alpha = ftype(1.0)*imuDataDelayed.delAngDT;
     ftype temp=tiltErrVec.length();
-    tiltErrFilt = alpha*temp + (1.0f-alpha)*tiltErrFilt;
-    if (tiltErrFilt < 0.005f && !tiltAlignComplete) {
+    tiltErrFilt = alpha*temp + (ftype(1.0)-alpha)*tiltErrFilt;
+    if (tiltErrFilt < ftype(0.005) && !tiltAlignComplete) {
         tiltAlignComplete = true;
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF2 IMU%u tilt alignment complete",(unsigned)imu_index);
     }
@@ -468,7 +468,7 @@ void NavEKF2_core::recordYawReset()
 bool NavEKF2_core::checkGyroCalStatus(void)
 {
     // check delta angle bias variances
-    const ftype delAngBiasVarMax = sq(radians(0.15f * dtEkfAvg));
+    const ftype delAngBiasVarMax = sq(radians(ftype(0.15) * dtEkfAvg));
     if (!use_compass()) {
         // rotate the variances into earth frame and evaluate horizontal terms only as yaw component is poorly observable without a compass
         // which can make this check fail
@@ -532,10 +532,10 @@ void NavEKF2_core::runYawEstimatorPrediction()
             if (imuDataDelayed.time_ms - tasDataDelayed.time_ms < 5000) {
                 trueAirspeed = tasDataDelayed.tas;
             } else {
-                trueAirspeed = defaultAirSpeed * dal.get_EAS2TAS();
+                trueAirspeed = defaultAirSpeed * ftype(dal.get_EAS2TAS());
             }
         } else {
-            trueAirspeed = 0.0f;
+            trueAirspeed = ftype(0.0);
         }
 
         yawEstimator->update(imuDataDelayed.delAng, imuDataDelayed.delVel, imuDataDelayed.delAngDT, imuDataDelayed.delVelDT, EKFGSF_run_filterbank, trueAirspeed);

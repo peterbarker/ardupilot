@@ -639,7 +639,7 @@ void AP_Mount_Siyi::send_target_rates(const MountRateTarget &rate_rads)
 
     const float pitch_rate_scalar = constrain_float(100.0 * pitch_rads / AP_MOUNT_SIYI_RATE_MAX_RADS, -100, 100);
     const float yaw_rate_scalar = constrain_float(100.0 * yaw_rads / AP_MOUNT_SIYI_RATE_MAX_RADS, -100, 100);
-    rotate_gimbal(pitch_rate_scalar, yaw_rate_scalar, yaw_is_ef);
+    rotate_gimbal(int8_t(pitch_rate_scalar), int8_t(yaw_rate_scalar), yaw_is_ef);
 }
 
 // send target pitch and yaw angles to gimbal
@@ -683,7 +683,7 @@ void AP_Mount_Siyi::send_target_angles(const MountAngleTarget &angle_rad)
     const float yaw_rate_scalar = constrain_float(100.0 * yaw_err_rad * AP_MOUNT_SIYI_YAW_P / AP_MOUNT_SIYI_RATE_MAX_RADS, -100, 100);
 
     // rotate gimbal.  pitch_rate and yaw_rate are scalars in the range -100 ~ +100
-    rotate_gimbal(pitch_rate_scalar, yaw_rate_scalar, yaw_is_ef);
+    rotate_gimbal(int8_t(pitch_rate_scalar), int8_t(yaw_rate_scalar), yaw_is_ef);
 }
 
 // take a picture.  returns true on success
@@ -764,7 +764,7 @@ bool AP_Mount_Siyi::send_zoom_mult(float zoom_mult)
 {
     // separate zoom_mult into integral and fractional parts
     float intpart;
-    uint8_t fracpart = (uint8_t)constrain_int16(modf(zoom_mult, &intpart) * 10, 0, UINT8_MAX);
+    uint8_t fracpart = (uint8_t)constrain_int16(int16_t(modf(zoom_mult, &intpart) * 10), 0, UINT8_MAX);
 
     // create and send 2 byte array
     const uint8_t zoom_mult_data[] {(uint8_t)(intpart), fracpart};
@@ -1208,12 +1208,12 @@ void AP_Mount_Siyi::send_attitude_position(void)
     position.lat = loc.lat;
     position.lon = loc.lng;
     position.alt_msl = loc.alt;
-    position.alt_ellipsoid = position.alt_msl - undulation*100;
+    position.alt_ellipsoid = position.alt_msl - int32_t(undulation*100);
 
     // convert velocity to int32 and scale to mm/s
-    position.velocity_ned_int32.x = velocity_ned.x * 1000;
-    position.velocity_ned_int32.y = velocity_ned.y * 1000;
-    position.velocity_ned_int32.z = velocity_ned.z * 1000;
+    position.velocity_ned_int32.x = int(velocity_ned.x * 1000);
+    position.velocity_ned_int32.y = int(velocity_ned.y * 1000);
+    position.velocity_ned_int32.z = int(velocity_ned.z * 1000);
 
     send_packet(SiyiCommandId::POSITION_DATA, (const uint8_t *)&position, sizeof(position));
 }

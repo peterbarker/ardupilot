@@ -420,7 +420,7 @@ void AC_PosControl::input_pos_NED_m(const Vector3p& pos_ned_m, float pos_terrain
     shape_pos_vel_accel_xy(pos_ned_m.xy(), vel_ne_ms, accel_ne_mss, _pos_desired_ned_m.xy(), _vel_desired_ned_ms.xy(), _accel_desired_ned_mss.xy(),
                            vel_max_ne_ms, _accel_max_ne_mss, _jerk_max_ne_msss, _dt_s, false);
 
-    float pos_d_m = pos_ned_m.z;
+    float pos_d_m = float(pos_ned_m.z);
     shape_pos_vel_accel(pos_d_m, 0, 0,
                         _pos_desired_ned_m.z, _vel_desired_ned_ms.z, _accel_desired_ned_mss.z,
                         -vel_max_d_ms, vel_max_d_ms,
@@ -436,7 +436,7 @@ float AC_PosControl::terrain_scaler_D_m(float pos_terrain_d_m, float terrain_mar
         return 1.0;
     }
     float pos_offset_error_d_m = _pos_estimate_ned_m.z - (_pos_target_ned_m.z + (pos_terrain_d_m - _pos_terrain_d_m));
-    return constrain_float((1.0 - (fabsf(pos_offset_error_d_m) - 0.5 * terrain_margin_m) / (0.5 * terrain_margin_m)), 0.01, 1.0);
+    return constrain_float((1.0f - (fabsf(pos_offset_error_d_m) - 0.5f * terrain_margin_m) / (0.5f * terrain_margin_m)), 0.01f, 1.0f);
 }
 
 ///

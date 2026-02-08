@@ -420,8 +420,8 @@ bool ModeZigZag::calculate_next_dest_m(Destination ab_dest, bool use_wpnav_alt, 
     // lengthen AB_diff_ne_m so that it is at least as long as vehicle is from start point
     // we need to ensure that the lines perpendicular to AB are long enough to reach the vehicle
     float scalar = 1.0f;
-    if (veh_to_start_pos_ne_m.length_squared() > AB_diff_ne_m.length_squared()) {
-        scalar = veh_to_start_pos_ne_m.length() / AB_diff_ne_m.length();
+    if (float(veh_to_start_pos_ne_m.length_squared()) > float(AB_diff_ne_m.length_squared())) {
+        scalar = float(double(veh_to_start_pos_ne_m.length()) / double(AB_diff_ne_m.length()));
     }
 
     // create a line perpendicular to AB but originating at start_pos_ne_m

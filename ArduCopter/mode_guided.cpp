@@ -765,7 +765,7 @@ void ModeGuided::pos_control_run()
 
     float terrain_margin_m = 0.0; // Vertical buffer size in m
     if (guided_is_terrain_alt) {
-        terrain_margin_m = MIN(copter.wp_nav->get_terrain_margin_m(), 0.5 * fabsF(guided_pos_target_ned_m.z));
+        terrain_margin_m = MIN(copter.wp_nav->get_terrain_margin_m(), float(0.5f * float(fabsF(guided_pos_target_ned_m.z))));
     }
     pos_control->input_pos_NED_m(guided_pos_target_ned_m, terrain_d_m, terrain_margin_m);
 

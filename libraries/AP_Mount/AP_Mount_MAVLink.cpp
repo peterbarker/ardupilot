@@ -119,16 +119,16 @@ void AP_Mount_MAVLink::handle_gimbal_device_information(const mavlink_message_t 
 
     // set parameter defaults from gimbal information
     if (!isnan(info.roll_min) && !isnan(info.roll_max)) {
-        _params.roll_angle_min.set_default(degrees(info.roll_min));
-        _params.roll_angle_max.set_default(degrees(info.roll_max));
+        _params.roll_angle_min.set_default(int16_t(float(degrees(info.roll_min))));
+        _params.roll_angle_max.set_default(int16_t(degrees(info.roll_max)));
     }
     if (!isnan(info.pitch_min) && !isnan(info.pitch_max)) {
-        _params.pitch_angle_min.set_default(degrees(info.pitch_min));
-        _params.pitch_angle_max.set_default(degrees(info.pitch_max));
+        _params.pitch_angle_min.set_default(int16_t(float(degrees(info.pitch_min))));
+        _params.pitch_angle_max.set_default(int16_t(float(degrees(info.pitch_max))));
     }
     if (!isnan(info.yaw_min) && !isnan(info.yaw_max)) {
-        _params.yaw_angle_min.set_default(degrees(info.yaw_min));
-        _params.yaw_angle_max.set_default(degrees(info.yaw_max));
+        _params.yaw_angle_min.set_default(int16_t(float(degrees(info.yaw_min))));
+        _params.yaw_angle_max.set_default(int16_t(float(degrees(info.yaw_max))));
     }
 
     const uint8_t fw_ver_major = info.firmware_version & 0x000000FF;

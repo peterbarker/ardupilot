@@ -412,11 +412,11 @@ bool AC_WPNav::set_wp_destination_NED_m(const Vector3p& destination_ned_m, bool 
         // convert origin to alt-above-terrain if necessary
         if (is_terrain_alt) {
             // Convert origin.z to terrain-relative altitude
-            _origin_ned_m.z -= terrain_d_m;
+            _origin_ned_m.z -= postype_t(terrain_d_m);
             _pos_control.init_pos_terrain_D_m(terrain_d_m);
         } else {
             // Convert origin.z to origin-relative altitude
-            _origin_ned_m.z += terrain_d_m;
+            _origin_ned_m.z += postype_t(terrain_d_m);
             _pos_control.init_pos_terrain_D_m(0.0);
         }
     }
@@ -510,7 +510,7 @@ void AC_WPNav::get_wp_stopping_point_NEU_cm(Vector3f& stopping_point_neu_cm) con
     // compute stopping point using meters
     get_wp_stopping_point_NED_m(stopping_point_ned_m);
     // convert result back to centimeters
-    stopping_point_neu_cm = Vector3f(stopping_point_ned_m.x, stopping_point_ned_m.y, -stopping_point_ned_m.z) * 100.0;
+    stopping_point_neu_cm = Vector3f(float(stopping_point_ned_m.x), float(stopping_point_ned_m.y), float(-stopping_point_ned_m.z)) * 100.0f;
 }
 
 // Computes the full 3D NED stopping point in meters based on current velocity and configured acceleration in all axes.
@@ -545,7 +545,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // compute current position in NED frame, adjusted to destination frame (e.g., terrain-relative if needed)
     Vector3p curr_pos_ned_m = _pos_control.get_pos_estimate_NED_m() - psc_pos_offset_ned_m;
-    curr_pos_ned_m.z -= terr_offset_d_m;
+    curr_pos_ned_m.z -= postype_t(terr_offset_d_m);
 
     // get desired velocity and remove offset
     Vector3f curr_target_vel_ned_ms = _pos_control.get_vel_desired_NED_ms();
@@ -668,7 +668,7 @@ float AC_WPNav::get_wp_distance_to_destination_m() const
 int32_t AC_WPNav::get_wp_bearing_to_destination_cd() const
 {
     // compute heading from current position to destination in centidegrees
-    return get_bearing_cd(_pos_control.get_pos_estimate_NED_m().xy().tofloat(), _destination_ned_m.xy().tofloat());
+    return int32_t(get_bearing_cd(_pos_control.get_pos_estimate_NED_m().xy().tofloat(), _destination_ned_m.xy().tofloat()));
 }
 
 // Returns the bearing to the current waypoint destination in radians.
@@ -889,11 +889,11 @@ bool AC_WPNav::set_spline_destination_NED_m(const Vector3p& destination_ned_m, b
         // convert origin to alt-above-terrain if necessary
         if (is_terrain_alt) {
             // new destination is alt-above-terrain, previous destination was alt-above-ekf-origin
-            _origin_ned_m.z -= terrain_d_m;
+            _origin_ned_m.z -= postype_t(terrain_d_m);
             _pos_control.init_pos_terrain_D_m(terrain_d_m);
         } else {
             // new destination is alt-above-ekf-origin, previous destination was alt-above-terrain
-            _origin_ned_m.z += terrain_d_m;
+            _origin_ned_m.z += postype_t(terrain_d_m);
             _pos_control.init_pos_terrain_D_m(0.0);
         }
     }

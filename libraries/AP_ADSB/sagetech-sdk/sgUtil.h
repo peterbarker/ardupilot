@@ -38,12 +38,12 @@
 
 #ifndef toRad
 #define toRad(deg) \
-    ((deg)*PI / 180.0)
+    ((double)(deg)*(double)PI / 180.0)
 #endif
 
 #ifndef toDeg
 #define toDeg(rad) \
-    ((rad)*180 / PI)
+    ((double)(rad)*180.0 / (double)PI)
 #endif
 
 #ifndef toMeter

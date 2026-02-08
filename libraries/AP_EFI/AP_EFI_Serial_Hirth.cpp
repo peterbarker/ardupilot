@@ -211,7 +211,7 @@ bool AP_EFI_Serial_Hirth::send_target_values(uint16_t thr)
 
 #if AP_EFI_THROTTLE_LINEARISATION_ENABLED
     // linearise throttle input
-    thr = linearise_throttle(thr);
+    thr = uint16_t(linearise_throttle(thr));
 #endif
 
     throttle_to_hirth = thr * THROTTLE_POSITION_FACTOR;
@@ -332,7 +332,7 @@ void AP_EFI_Serial_Hirth::decode_data()
         }
         last_fuel_integration_ms = now;
 
-        internal_state.throttle_position_percent = record2->throttle_percent_times_10 * 0.1;
+        internal_state.throttle_position_percent = uint8_t(record2->throttle_percent_times_10 * 0.1);
         break;
     }
 
@@ -382,7 +382,7 @@ void AP_EFI_Serial_Hirth::log_status(void)
                                 uint32_t(crc_fail_cnt),
                                 uint32_t(ack_fail_cnt),
                                 uint32_t(uptime),
-                                float(internal_state.throttle_out),
+                                double(internal_state.throttle_out),
                                 uint16_t(throttle_to_hirth));
 }
 #endif // HAL_LOGGING_ENABLED

@@ -104,15 +104,15 @@ void AP_BattMonitor_SMBus_SUI::read_cell_voltages()
         if (read_word(BATTMONITOR_SMBUS_VOLTAGE, total_mv)) {
             // if total voltage is below pack_voltage_mv then we will
             // read zero volts for the extra cells.
-            total_mv = MAX(total_mv, pack_voltage_mv);
-            const uint16_t cell_mv = (total_mv - pack_voltage_mv) / (cell_count - SUI_MAX_CELL_READ);
+            total_mv = uint16_t(MAX(total_mv, pack_voltage_mv));
+            const uint16_t cell_mv = uint16_t((total_mv - pack_voltage_mv) / (cell_count - SUI_MAX_CELL_READ));
             for (uint8_t i = SUI_MAX_CELL_READ; i < cell_count; i++) {
                 _state.cell_voltages.cells[i] = cell_mv;
             }
             pack_voltage_mv = total_mv;
         } else {
             // we can't get total pack voltage. Use average of cells we have so far
-            const uint16_t cell_mv = pack_voltage_mv / SUI_MAX_CELL_READ;
+            const uint16_t cell_mv = uint16_t(pack_voltage_mv / SUI_MAX_CELL_READ);
             for (uint8_t i = SUI_MAX_CELL_READ; i < cell_count; i++) {
                 _state.cell_voltages.cells[i] = cell_mv;
             }

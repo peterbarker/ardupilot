@@ -48,7 +48,7 @@ void Copter::takeoff_check()
         takeoff_check_warning_ms = now_ms;
         const char* prefix_str = "Takeoff blocked:";
         if (!load_adequate) {
-            gcs().send_text(MAV_SEVERITY_CRITICAL, "%s CPU overload (%4.1f%%)", prefix_str, avg_load);
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "%s CPU overload (%4.1f%%)", prefix_str, double(avg_load));
         }
     }
 #endif

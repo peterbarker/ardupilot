@@ -70,16 +70,16 @@ void AP_GPS_MAV::handle_msg(const mavlink_message_t &msg)
             loc.lat = packet.lat;
             loc.lng = packet.lon;
             if (have_alt) {
-                loc.alt = packet.alt * 100; // convert to centimeters
+                loc.alt = int32_t(packet.alt * 100); // convert to centimeters
             }
             state.location = loc;
 
             if (have_hdop) {
-                state.hdop = packet.hdop * 100; // convert to centimeters
+                state.hdop = uint16_t(packet.hdop * 100); // convert to centimeters
             }
 
             if (have_vdop) {
-                state.vdop = packet.vdop * 100; // convert to centimeters
+                state.vdop = uint16_t(packet.vdop * 100); // convert to centimeters
             }
 
             if (have_vel_h) {

@@ -196,7 +196,7 @@ public:
         return QuaternionT<double>(q1,q2,q3,q4);
     }
     QuaternionT<float> tofloat(void) const {
-        return QuaternionT<float>(q1,q2,q3,q4);
+        return QuaternionT<float>(float(q1),float(q2),float(q3),float(q4));
     }
 };
 

@@ -47,7 +47,7 @@ void AP_EFI_NWPMU::handle_frame(AP_HAL::CANFrame &frame)
         struct ecu_1 data;
         memcpy(&data, frame.data, sizeof(data));
         internal_state.engine_speed_rpm = data.rpm;
-        internal_state.throttle_position_percent = data.tps * 0.1f;
+        internal_state.throttle_position_percent = uint8_t(data.tps * 0.1f);
         internal_state.cylinder_status.ignition_timing_deg = data.ignition_angle * 0.1f;
         break;
     }

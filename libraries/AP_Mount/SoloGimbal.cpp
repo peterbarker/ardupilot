@@ -430,16 +430,16 @@ void SoloGimbal::write_logs()
         "FC000000000",
         "Qffffffffff",
         tstamp,
-        _log_dt,
-        _log_del_ang.x,
-        _log_del_ang.y,
-        _log_del_ang.z,
-        _log_del_vel.x,
-        _log_del_vel.y,
-        _log_del_vel.z,
-        _measurement.joint_angles.x,
-        _measurement.joint_angles.y,
-        _measurement.joint_angles.z
+        double(_log_dt),
+        double(_log_del_ang.x),
+        double(_log_del_ang.y),
+        double(_log_del_ang.z),
+        double(_log_del_vel.x),
+        double(_log_del_vel.y),
+        double(_log_del_vel.z),
+        double(_measurement.joint_angles.x),
+        double(_measurement.joint_angles.y),
+        double(_measurement.joint_angles.z)
         );
 
     Quaternion quatEst;
@@ -469,15 +469,15 @@ void SoloGimbal::write_logs()
         "QBfffffffff",
         tstamp,
         (uint8_t) _ekf.getStatus(),
-        eulerEst.x,
-        eulerEst.y,
-        eulerEst.z,
-        _ang_vel_dem_rads.x,
-        _ang_vel_dem_rads.y,
-        _ang_vel_dem_rads.z,
-        _att_target_euler_rad.x,
-        _att_target_euler_rad.y,
-        _att_target_euler_rad.z
+        double(eulerEst.x),
+        double(eulerEst.y),
+        double(eulerEst.z),
+        double(_ang_vel_dem_rads.x),
+        double(_ang_vel_dem_rads.y),
+        double(_ang_vel_dem_rads.z),
+        double(_att_target_euler_rad.x),
+        double(_att_target_euler_rad.y),
+        double(_att_target_euler_rad.z)
         );
 
     _log_dt = 0;

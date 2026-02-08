@@ -212,15 +212,15 @@ AP_GPS_NOVA::process_message(void)
         state.location.lng = (int32_t) (bestposu.lng * (double)1e7);
         state.have_undulation = true;
         state.undulation = -bestposu.undulation;
-        set_alt_amsl_cm(state, bestposu.hgt * 100);
+        set_alt_amsl_cm(state, int32_t(bestposu.hgt * 100));
 
         state.num_sats = bestposu.svsused;
 
-        state.horizontal_accuracy =  norm(bestposu.latsdev, bestposu.lngsdev);
+        state.horizontal_accuracy = norm(bestposu.latsdev, bestposu.lngsdev);
         state.vertical_accuracy = (float) bestposu.hgtsdev;
         state.have_horizontal_accuracy = true;
         state.have_vertical_accuracy = true;
-        state.rtk_age_ms = bestposu.diffage * 1000;
+        state.rtk_age_ms = uint32_t(bestposu.diffage * 1000);
         state.rtk_num_sats = bestposu.svsused;
 
         if (bestposu.solstat == 0) // have a solution

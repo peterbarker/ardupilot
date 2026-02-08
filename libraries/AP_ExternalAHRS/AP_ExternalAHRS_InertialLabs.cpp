@@ -500,8 +500,8 @@ bool AP_ExternalAHRS_InertialLabs::check_uart()
                                     "F-------",
                                     "QIffffff",
                                     now_us, gps_data.ms_tow,
-                                    ins_data.gyro.x, ins_data.gyro.y, ins_data.gyro.z,
-                                    ins_data.accel.x, ins_data.accel.y, ins_data.accel.z);
+                                    double(ins_data.gyro.x), double(ins_data.gyro.y), double(ins_data.gyro.z),
+                                    double(ins_data.accel.x), double(ins_data.accel.y), double(ins_data.accel.z));
 #endif // HAL_LOGGING_ENABLED
     }
 

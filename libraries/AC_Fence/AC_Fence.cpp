@@ -1005,7 +1005,7 @@ bool AC_Fence::check_location_within_fence(const Location& loc)
 
     // Circular fence check
     if ((get_enabled_fences() & AC_FENCE_TYPE_CIRCLE)) {
-        if (AP::ahrs().get_home().get_distance(loc) > _circle_radius_m) {
+        if (AP::ahrs().get_home().get_distance(loc) > ftype(_circle_radius_m)) {
             return false;
         }
     }
@@ -1074,7 +1074,7 @@ void AC_Fence::record_margin_breach(uint8_t fence_type)
         char msg[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1];
         ExpandingString e(msg, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1);
         AC_Fence::get_fence_names(_breached_fence_margins, e);
-        GCS_SEND_TEXT(MAV_SEVERITY_NOTICE, "%s in %.1fm", e.get_writeable_string(), fabsf(get_breach_distance(_breached_fence_margins)));
+        GCS_SEND_TEXT(MAV_SEVERITY_NOTICE, "%s in %.1fm", e.get_writeable_string(), double(fabsf(get_breach_distance(_breached_fence_margins))));
     }
 }
 

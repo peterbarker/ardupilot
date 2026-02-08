@@ -62,7 +62,7 @@ void update_pos_vel_accel(postype_t& pos, float& vel, float accel, float dt, flo
     if (is_positive(delta_pos * limit) && is_positive(pos_error * limit)) {
         delta_pos = 0.0;
     }
-    pos += delta_pos;
+    pos += postype_t(delta_pos);
 
     update_vel_accel(vel, accel, dt, limit, vel_error);
 }
@@ -269,7 +269,7 @@ void shape_pos_vel_accel(postype_t pos_desired, float vel_desired, float accel_d
     }
 
     // Position error to be corrected.
-    const float pos_error = pos_desired - pos;
+    const auto pos_error = pos_desired - pos;
 
     // Select sqrt_controller parameters based on error sign so the second-order limit
     // (acceleration allowance) matches the direction of motion.

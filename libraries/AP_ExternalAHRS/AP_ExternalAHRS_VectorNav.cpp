@@ -516,9 +516,9 @@ void AP_ExternalAHRS_VectorNav::write_vnat(const VNAT& data_to_log) const {
                        "s----dddddd", "F0000000000",
                        "Qffffffffff",
                        data_to_log.timeUs,
-                       data_to_log.quat[0], data_to_log.quat[1], data_to_log.quat[2], data_to_log.quat[3],
-                       data_to_log.ypr[0], data_to_log.ypr[1], data_to_log.ypr[2], 
-                       data_to_log.yprU[0], data_to_log.yprU[1], data_to_log.yprU[2]);
+                       double(data_to_log.quat[0]), double(data_to_log.quat[1]), double(data_to_log.quat[2]), double(data_to_log.quat[3]),
+                       double(data_to_log.ypr[0]), double(data_to_log.ypr[1]), double(data_to_log.ypr[2]),
+                       double(data_to_log.yprU[0]), double(data_to_log.yprU[1]), double(data_to_log.yprU[2]));
 #endif
 }
 
@@ -595,11 +595,11 @@ void AP_ExternalAHRS_VectorNav::process_imu_packet(const uint8_t *b)
                        "sdPGGGoooEEE", "F00000000000",
                        "Qfffffffffff",
                        AP_HAL::micros64(),
-                       pkt.temp, pkt.pressure*1e3,
-                       pkt.mag[0], pkt.mag[1], pkt.mag[2],
-                       state.accel[0], state.accel[1], state.accel[2],
-                       state.gyro[0], state.gyro[1], state.gyro[2],
-                       state.quat[0], state.quat[1], state.quat[2], state.quat[3]);
+                       double(pkt.temp), double(pkt.pressure)*double(1e3),
+                       double(pkt.mag[0]), double(pkt.mag[1]), double(pkt.mag[2]),
+                       double(state.accel[0]), double(state.accel[1]), double(state.accel[2]),
+                       double(state.gyro[0]), double(state.gyro[1]), double(state.gyro[2]),
+                       double(state.quat[0]), double(state.quat[1]), double(state.quat[2]), double(state.quat[3]));
 #endif  // HAL_LOGGING_ENABLED
 }
 
@@ -636,7 +636,7 @@ void AP_ExternalAHRS_VectorNav::process_ins_ekf_packet(const uint8_t *b) {
     state.velocity      = Vector3f{pkt.velNed[0], pkt.velNed[1], pkt.velNed[2]};
     state.have_velocity = true;
 
-    state.location = Location{int32_t(pkt.posLla[0] * 1.0e7), int32_t(pkt.posLla[1] * 1.0e7), int32_t(pkt.posLla[2] * 1.0e2), Location::AltFrame::ABSOLUTE};
+    state.location = Location{int32_t(pkt.posLla[0] * double(1.0e7)), int32_t(pkt.posLla[1] * double(1.0e7)), int32_t(pkt.posLla[2] * double(1.0e2)), Location::AltFrame::ABSOLUTE};
     state.last_location_update_us = AP_HAL::micros();
     state.have_location           = true;
 
@@ -668,8 +668,8 @@ void AP_ExternalAHRS_VectorNav::process_ins_ekf_packet(const uint8_t *b) {
                        now,
                        pkt.insStatus,
                        pkt.posLla[0], pkt.posLla[1], pkt.posLla[2],
-                       pkt.velNed[0], pkt.velNed[1], pkt.velNed[2],
-                       pkt.posU, pkt.velU);
+                       double(pkt.velNed[0]), double(pkt.velNed[1]), double(pkt.velNed[2]),
+                       double(pkt.posU), double(pkt.velU));
 #endif  // HAL_LOGGING_ENABLED
 
 }
@@ -696,9 +696,9 @@ void AP_ExternalAHRS_VectorNav::process_ins_gnss_packet(const uint8_t *b) {
     gps.hdop = pkt.dop1[4];
     gps.vdop = pkt.dop1[3];
 
-    gps.latitude     = pkt.posLla1[0] * 1.0e7;
-    gps.longitude    = pkt.posLla1[1] * 1.0e7;
-    gps.msl_altitude = pkt.posLla1[2] * 1.0e2;
+    gps.latitude     = int32_t(pkt.posLla1[0] * double(1.0e7));
+    gps.longitude    = int32_t(pkt.posLla1[1] * double(1.0e7));
+    gps.msl_altitude = int32_t(pkt.posLla1[2] * double(1.0e2));
 
     gps.ned_vel_north = pkt.velNed1[0];
     gps.ned_vel_east  = pkt.velNed1[1];
@@ -706,8 +706,8 @@ void AP_ExternalAHRS_VectorNav::process_ins_gnss_packet(const uint8_t *b) {
 
     if (!state.have_origin && gps.fix_type >= AP_GPS_FixType::FIX_3D) {
         WITH_SEMAPHORE(state.sem);
-        state.origin = Location{int32_t(pkt.posLla1[0] * 1.0e7), int32_t(pkt.posLla1[1] * 1.0e7),
-                                int32_t(pkt.posLla1[2] * 1.0e2), Location::AltFrame::ABSOLUTE};
+        state.origin = Location{int32_t(pkt.posLla1[0] * double(1.0e7)), int32_t(pkt.posLla1[1] * double(1.0e7)),
+                                int32_t(pkt.posLla1[2] * double(1.0e2)), Location::AltFrame::ABSOLUTE};
         state.have_origin = true;
     }
     uint8_t instance;

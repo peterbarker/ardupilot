@@ -350,8 +350,8 @@ void AP_Generator_RichenPower::Log_Write()
         last_reading.seconds_until_maintenance,
         last_reading.errors,
         last_reading.rpm,
-        last_reading.output_voltage,
-        last_reading.output_current,
+        double(last_reading.output_voltage),
+        double(last_reading.output_current),
         last_reading.mode
         );
 }
@@ -407,7 +407,7 @@ bool AP_Generator_RichenPower::pre_arm_check(char *failmsg, uint8_t failmsg_len)
         return false;
     }
     if (commanded_runstate != RunState::RUN) {
-        hal.util->snprintf(failmsg, failmsg_len, "Generator warming up (%.0f%%)", (heat *100 / heat_required_for_run()));
+        hal.util->snprintf(failmsg, failmsg_len, "Generator warming up (%.0f%%)", double(heat *100 / heat_required_for_run()));
         return false;
     }
     if (last_reading.mode != Mode::RUN &&

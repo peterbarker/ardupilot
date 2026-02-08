@@ -1247,7 +1247,7 @@ void AP_AHRS::get_relative_position_D_home(float &posD) const
         return;
     }
 
-    posD = originD - ((originLLH.alt - _home.alt) * 0.01f);
+    posD = originD - postype_t((originLLH.alt - _home.alt) * 0.01f);
     return;
 }
 

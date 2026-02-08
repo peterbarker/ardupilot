@@ -612,7 +612,7 @@ int32_t AP_Landing::get_target_airspeed_cm(void)
 {
     if (!flags.in_progress) {
         // not landing, use regular cruise airspeed
-        return aparm.airspeed_cruise*100;
+        return int32_t(aparm.airspeed_cruise*100);
     }
 
     switch (type) {
@@ -626,7 +626,7 @@ int32_t AP_Landing::get_target_airspeed_cm(void)
         // don't return the landing airspeed, because if type is invalid we have
         // no postive indication that the land airspeed has been configured or
         // how it was meant to be utilized
-        return tecs_Controller->get_target_airspeed();
+        return int32_t(tecs_Controller->get_target_airspeed());
     }
 }
 

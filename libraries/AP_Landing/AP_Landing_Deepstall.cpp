@@ -357,8 +357,8 @@ bool AP_Landing_Deepstall::override_servos(void)
     }
 
     // mix the elevator to the correct value
-    elevator->set_output_pwm(linear_interpolate(initial_elevator_pwm, elevator_pwm,
-                             slew_progress, 0.0f, 1.0f));
+    elevator->set_output_pwm(uint16_t(linear_interpolate(initial_elevator_pwm, elevator_pwm,
+                             slew_progress, 0.0f, 1.0f)));
 
     // use the current airspeed to dictate the travel limits
     float airspeed;
@@ -427,9 +427,9 @@ int32_t AP_Landing_Deepstall::get_target_airspeed_cm(void) const
 {
     if (stage == DEEPSTALL_STAGE_APPROACH ||
         stage == DEEPSTALL_STAGE_LAND) {
-        return landing.pre_flare_airspeed * 100;
+        return int32_t(landing.pre_flare_airspeed * 100);
     } else {
-        return landing.aparm.airspeed_cruise*100;
+        return int32_t(landing.aparm.airspeed_cruise*100);
     }
 }
 

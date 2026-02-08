@@ -762,7 +762,7 @@ bool AP_Arming::gps_checks(bool report)
             const Location gps_loc = gps.location();
             Location ahrs_loc;
             if (AP::ahrs().get_location(ahrs_loc)) {
-                const float distance = gps_loc.get_distance(ahrs_loc);
+                const float distance = float(gps_loc.get_distance(ahrs_loc));
                 if (distance > AP_ARMING_AHRS_GPS_ERROR_MAX) {
                     check_failed(Check::GPS, report, "GPS and AHRS differ by %4.1fm", (double)distance);
                     return false;

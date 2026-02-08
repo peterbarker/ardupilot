@@ -281,9 +281,9 @@ void AP_InertialSensor::BatchSampler::sample(uint8_t _instance, AP_InertialSenso
         measurement_started_us = sample_us;
     }
 
-    data_x[data_write_offset] = multiplier*_sample.x;
-    data_y[data_write_offset] = multiplier*_sample.y;
-    data_z[data_write_offset] = multiplier*_sample.z;
+    data_x[data_write_offset] = int16_t(multiplier*_sample.x);
+    data_y[data_write_offset] = int16_t(multiplier*_sample.y);
+    data_z[data_write_offset] = int16_t(multiplier*_sample.z);
 
     data_write_offset++; // may unblock the reading process
 #endif

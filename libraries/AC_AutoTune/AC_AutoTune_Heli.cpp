@@ -730,8 +730,8 @@ void AC_AutoTune_Heli::report_final_gains(AxisType test_axis) const
 void AC_AutoTune_Heli::report_axis_gains(const char* axis_string, float rate_P, float rate_I, float rate_D, float rate_ff, float angle_P, float max_accel_radss) const
 {
     GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s complete", axis_string);
-    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Rate: P:%0.4f, I:%0.4f, D:%0.5f, FF:%0.4f", axis_string, rate_P, rate_I, rate_D, rate_ff);
-    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Angle P:%0.2f, Max Accel:%0.0f", axis_string, angle_P, rad_to_cd(max_accel_radss));
+    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Rate: P:%0.4f, I:%0.4f, D:%0.5f, FF:%0.4f", axis_string, double(rate_P), double(rate_I), double(rate_D), double(rate_ff));
+    GCS_SEND_TEXT(MAV_SEVERITY_NOTICE,"AutoTune: %s Angle P:%0.2f, Max Accel:%0.0f", axis_string, double(angle_P), double(rad_to_cd(max_accel_radss)));
 }
 
 void AC_AutoTune_Heli::dwell_test_init(float start_frq, float stop_frq, float amplitude, float filt_freq, FreqRespInput freq_resp_input, FreqRespCalcType calc_type, AC_AutoTune_FreqResp::ResponseType resp_type, AC_AutoTune_FreqResp::InputType waveform_input_type)
@@ -745,7 +745,7 @@ void AC_AutoTune_Heli::dwell_test_init(float start_frq, float stop_frq, float am
 
     // initialize frequency response object
     if (test_input_type == AC_AutoTune_FreqResp::InputType::SWEEP) {
-        step_timeout_ms = sweep_time_ms + 500;
+        step_timeout_ms = uint32_t(sweep_time_ms + 500);
         reset_sweep_variables();
         curr_test.gain = 0.0f;
         curr_test.phase = 0.0f;
@@ -1585,14 +1585,14 @@ void AC_AutoTune_Heli::Log_Write_AutoTune(AxisType _axis, TuneType tune_step, fl
         AP_HAL::micros64(),
         (uint8_t)axis,
         tune_step,
-        dwell_freq,
-        meas_gain,
-        meas_phase,
-        new_gain_rff,
-        new_gain_rp,
-        new_gain_rd,
-        new_gain_sp,
-        degrees(max_accel_radss));
+        double(dwell_freq),
+        double(meas_gain),
+        double(meas_phase),
+        double(new_gain_rff),
+        double(new_gain_rp),
+        double(new_gain_rd),
+        double(new_gain_sp),
+        double(degrees(max_accel_radss)));
 }
 
 // Write an Autotune detailed data packet
@@ -1614,11 +1614,11 @@ void AC_AutoTune_Heli::Log_Write_AutoTuneDetails(float motor_cmd, float tgt_rate
         "F00000",
         "Qfffff",
         AP_HAL::micros64(),
-        motor_cmd,
-        tgt_rate_rads*57.3,
-        rate_rads*57.3f,
-        tgt_ang_rad*57.3,
-        ang_rad*57.3f);
+        double(motor_cmd),
+        double(tgt_rate_rads*57.3),
+        double(rate_rads*57.3f),
+        double(tgt_ang_rad*57.3),
+        double(ang_rad*57.3f));
 }
 
 // Write an Autotune frequency response data packet
@@ -1641,12 +1641,12 @@ void AC_AutoTune_Heli::Log_Write_AutoTuneSweep(float freq_mtr, float gain_mtr, f
         "F000000",
         "Qffffff",
         AP_HAL::micros64(),
-        freq_mtr,
-        gain_mtr,
-        phase_mtr,
-        freq_tgt,
-        gain_tgt,
-        phase_tgt);
+        double(freq_mtr),
+        double(gain_mtr),
+        double(phase_mtr),
+        double(freq_tgt),
+        double(gain_tgt),
+        double(phase_tgt));
 }
 #endif  // HAL_LOGGING_ENABLED
 

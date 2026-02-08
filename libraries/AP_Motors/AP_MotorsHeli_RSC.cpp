@@ -773,11 +773,11 @@ void AP_MotorsHeli_RSC::write_log(void) const
                         "QBfffff",
                         AP_HAL::micros64(),
                         _instance,
-                        get_desired_rotor_speed(),
-                        _rotor_runup_output,
-                        _governor_output,
-                        get_control_output(),
-                        _rotor_ramp_output);
+                        double(get_desired_rotor_speed()),
+                        double(_rotor_runup_output),
+                        double(_governor_output),
+                        double(get_control_output()),
+                        double(_rotor_ramp_output));
 }
 #endif
 

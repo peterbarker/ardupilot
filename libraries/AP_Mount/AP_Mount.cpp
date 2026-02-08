@@ -1128,7 +1128,7 @@ void AP_Mount::convert_params()
     // convert MNT_JSTICK_SPD to MNT1_RC_RATE
     int8_t jstick_spd = 0;
     if (AP_Param::get_param_by_index(this, 16, AP_PARAM_INT8, &jstick_spd) && (jstick_spd > 0)) {
-        _params[0].rc_rate_max.set_and_save(jstick_spd * 0.3);
+        _params[0].rc_rate_max.set_and_save(int16_t(jstick_spd * 0.3));
     }
 
     // find Mount's top level key

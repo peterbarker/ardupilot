@@ -139,7 +139,7 @@ public:
 
     // Returns the destination waypoint vector in NEU frame, in centimeters from EKF origin.
     // See get_wp_destination_NED_m() for full details.
-    const Vector3f get_wp_destination_NEU_cm() const { return Vector3f(_destination_ned_m.x, _destination_ned_m.y, -_destination_ned_m.z) * 100.0; }
+    const Vector3f get_wp_destination_NEU_cm() const { return Vector3f(float(_destination_ned_m.x), float(_destination_ned_m.y), float(-_destination_ned_m.z)) * 100.0f; }
 
     // Returns the destination waypoint vector in NED frame, in meters from EKF origin.
     // Z is relative to terrain or EKF origin, depending on _is_terrain_alt.
@@ -147,7 +147,7 @@ public:
 
     // Returns the origin waypoint vector in NEU frame, in centimeters from EKF origin.
     // See get_wp_origin_NED_m() for full details.
-    const Vector3f get_wp_origin_NEU_cm() const { return Vector3f(_origin_ned_m.x, _origin_ned_m.y, -_origin_ned_m.z) * 100.0; }
+    const Vector3f get_wp_origin_NEU_cm() const { return Vector3f(float(_origin_ned_m.x), float(_origin_ned_m.y), float(-_origin_ned_m.z)) * 100.0f; }
 
     // Returns the origin waypoint vector in NED frame, in meters from EKF origin.
     // This marks the start of the current waypoint leg.

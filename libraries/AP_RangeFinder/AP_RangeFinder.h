@@ -290,16 +290,16 @@ public:
 #if AP_SCRIPTING_ENABLED
     // centimetre accessors - do not use, reduce use where possible
     uint16_t distance_cm_orient(enum Rotation orientation) const {
-        return distance_orient(orientation) * 100.0;
+        return uint16_t(distance_orient(orientation) * 100.0f);
     }
     int32_t max_distance_cm_orient(enum Rotation orientation) const {
-        return max_distance_orient(orientation) * 100;
+        return int32_t(max_distance_orient(orientation) * 100);
     }
     int32_t min_distance_cm_orient(enum Rotation orientation) const {
-        return min_distance_orient(orientation) * 100;
+        return int32_t(min_distance_orient(orientation) * 100);
     }
     int32_t ground_clearance_cm_orient(enum Rotation orientation) const {
-        return ground_clearance_orient(orientation) * 100;
+        return int32_t(ground_clearance_orient(orientation) * 100);
     }
 #endif
     // metre accessors - use these in preference to the cm accessors

@@ -18,7 +18,7 @@ void AP_BattMonitor_Backend::Log_Write_BAT(const uint8_t instance, const uint64_
     float temperature;
     int16_t temperature_cd = 0;
     if (get_temperature(temperature)) {
-        temperature_cd = temperature * 100.0;
+        temperature_cd = int16_t(temperature * 100.0);
     }
 
     uint8_t soh_pct = 0;

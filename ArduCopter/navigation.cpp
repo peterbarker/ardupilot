@@ -12,7 +12,7 @@ void Copter::run_nav_updates(void)
 float Copter::home_distance_m()
 {
     if (position_ok()) {
-        _home_distance_m = current_loc.get_distance(ahrs.get_home());
+        _home_distance_m = float(current_loc.get_distance(ahrs.get_home()));
     }
     return _home_distance_m;
 }
@@ -21,7 +21,7 @@ float Copter::home_distance_m()
 float Copter::home_bearing_rad()
 {
     if (position_ok()) {
-        _home_bearing_rad = current_loc.get_bearing(ahrs.get_home());
+        _home_bearing_rad = float(current_loc.get_bearing(ahrs.get_home()));
     }
     return _home_bearing_rad;
 }

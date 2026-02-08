@@ -85,13 +85,13 @@ bool AP_Mission::start_command_do_servorelayevents(const AP_Mission::Mission_Com
         return sre->do_repeat_servo(cmd.content.repeat_servo.channel,
                                     cmd.content.repeat_servo.pwm,
                                     cmd.content.repeat_servo.repeat_count,
-                                    cmd.content.repeat_servo.cycle_time * 1000.0f);
+                                    uint16_t(cmd.content.repeat_servo.cycle_time * 1000.0f));
 
 #if AP_RELAY_ENABLED
     case MAV_CMD_DO_REPEAT_RELAY:
         return sre->do_repeat_relay(cmd.content.repeat_relay.num,
                                     cmd.content.repeat_relay.repeat_count,
-                                    cmd.content.repeat_relay.cycle_time * 1000.0f);
+                                    uint32_t(cmd.content.repeat_relay.cycle_time * 1000.0f));
 #endif
 
     default:
@@ -181,15 +181,15 @@ bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
             // multiple picture request, take pictures forever
             if (cmd.content.image_start_capture.instance == 0) {
                 // take pictures for every backend
-                return camera->take_multiple_pictures(cmd.content.image_start_capture.interval_s*1000, -1);
+                return camera->take_multiple_pictures(uint32_t(cmd.content.image_start_capture.interval_s*1000), -1);
             }
-            return camera->take_multiple_pictures(cmd.content.image_start_capture.instance-1, cmd.content.image_start_capture.interval_s*1000, -1);
+            return camera->take_multiple_pictures(cmd.content.image_start_capture.instance-1, uint32_t(cmd.content.image_start_capture.interval_s*1000), -1);
         } else {
             if (cmd.content.image_start_capture.instance == 0) {
                 // take pictures for every backend
-                return camera->take_multiple_pictures(cmd.content.image_start_capture.interval_s*1000, cmd.content.image_start_capture.total_num_images);
+                return camera->take_multiple_pictures(uint32_t(cmd.content.image_start_capture.interval_s*1000), cmd.content.image_start_capture.total_num_images);
             }
-            return camera->take_multiple_pictures(cmd.content.image_start_capture.instance-1, cmd.content.image_start_capture.interval_s*1000, cmd.content.image_start_capture.total_num_images);
+            return camera->take_multiple_pictures(cmd.content.image_start_capture.instance-1, uint32_t(cmd.content.image_start_capture.interval_s*1000), cmd.content.image_start_capture.total_num_images);
         }
     case MAV_CMD_IMAGE_STOP_CAPTURE:
         if (cmd.p1 == 0) {

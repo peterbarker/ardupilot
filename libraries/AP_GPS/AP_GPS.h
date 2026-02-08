@@ -382,7 +382,7 @@ public:
     }
     // ground course in centi-degrees
     int32_t ground_course_cd(uint8_t instance) const {
-        return ground_course(instance) * 100;
+        return int32_t(ground_course(instance) * 100);
     }
     int32_t ground_course_cd() const {
         return ground_course_cd(primary_instance);

@@ -602,7 +602,7 @@ void AP_Airspeed::update_calibration(uint8_t i, float raw_pressure)
             param[i].offset.set_and_save(calibrated_offset);
             state[i].cal.state = CalibrationState::SUCCESS;
             if (_options & AP_Airspeed::OptionsMask::REPORT_OFFSET ){
-                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Airspeed %u calibrated, offset = %4.0f", i + 1, calibrated_offset);
+                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Airspeed %u calibrated, offset = %4.0f", i + 1, double(calibrated_offset));
             } else {
                  GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Airspeed %u calibrated", i + 1);
             }

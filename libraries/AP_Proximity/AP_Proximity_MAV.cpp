@@ -135,7 +135,7 @@ void AP_Proximity_MAV::handle_obstacle_distance_msg(const mavlink_message_t &msg
         return;
     }
 
-    const uint8_t total_distances = MIN(((360.0f / fabsf(increment)) + 0.5f), MAVLINK_MSG_OBSTACLE_DISTANCE_FIELD_DISTANCES_LEN); // usually 72
+    const uint8_t total_distances = uint8_t(MIN(((360.0f / fabsf(increment)) + 0.5f), MAVLINK_MSG_OBSTACLE_DISTANCE_FIELD_DISTANCES_LEN)); // usually 72
 
     // set distance min and max
     _distance_min = packet.min_distance * 0.01f;

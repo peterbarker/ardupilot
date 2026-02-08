@@ -127,11 +127,11 @@ void NavEKF2_core::writeOptFlowMeas(const uint8_t rawFlowQuality, const Vector2f
     // calculate bias errors on flow sensor gyro rates, but protect against spikes in data
     // reset the accumulated body delta angle and time
     // don't do the calculation if not enough time lapsed for a reliable body rate measurement
-    if (delTimeOF > 0.01f) {
-        flowGyroBias.x = 0.99f * flowGyroBias.x + 0.01f * constrain_ftype((rawGyroRates.x - delAngBodyOF.x/delTimeOF),-0.1f,0.1f);
-        flowGyroBias.y = 0.99f * flowGyroBias.y + 0.01f * constrain_ftype((rawGyroRates.y - delAngBodyOF.y/delTimeOF),-0.1f,0.1f);
+    if (delTimeOF > ftype(0.01)) {
+        flowGyroBias.x = ftype(0.99) * flowGyroBias.x + ftype(0.01) * constrain_ftype(ftype(ftype(rawGyroRates.x) - delAngBodyOF.x/delTimeOF),ftype(-0.1),ftype(0.1));
+        flowGyroBias.y = ftype(0.99) * flowGyroBias.y + ftype(0.01) * constrain_ftype(ftype(ftype(rawGyroRates.y) - delAngBodyOF.y/delTimeOF),ftype(-0.1),ftype(0.1));
         delAngBodyOF.zero();
-        delTimeOF = 0.0f;
+        delTimeOF = ftype(0.0);
     }
     // by definition if this function is called, then flow measurements have been provided so we
     // need to run the optical flow takeoff detection
@@ -142,13 +142,13 @@ void NavEKF2_core::writeOptFlowMeas(const uint8_t rawFlowQuality, const Vector2f
     // don't use data with a low quality indicator or extreme rates (helps catch corrupt sensor data)
     if ((rawFlowQuality > 0) && rawFlowRates.length() < 4.2f && rawGyroRates.length() < 4.2f) {
         // correct flow sensor body rates for bias and write
-        ofDataNew.bodyRadXYZ.x = rawGyroRates.x - flowGyroBias.x;
-        ofDataNew.bodyRadXYZ.y = rawGyroRates.y - flowGyroBias.y;
+        ofDataNew.bodyRadXYZ.x = ftype(rawGyroRates.x) - flowGyroBias.x;
+        ofDataNew.bodyRadXYZ.y = ftype(rawGyroRates.y) - flowGyroBias.y;
         // the sensor interface doesn't provide a z axis rate so use the rate from the nav sensor instead
-        if (delTimeOF > 0.001f) {
+        if (delTimeOF > ftype(0.001)) {
             // first preference is to use the rate averaged over the same sampling period as the flow sensor
             ofDataNew.bodyRadXYZ.z = delAngBodyOF.z / delTimeOF;
-        } else if (imuDataNew.delAngDT > 0.001f){
+        } else if (imuDataNew.delAngDT > ftype(0.001)){
             // second preference is to use most recent IMU data
             ofDataNew.bodyRadXYZ.z = imuDataNew.delAng.z / imuDataNew.delAngDT;
         } else {
@@ -412,8 +412,8 @@ void NavEKF2_core::readIMUData()
      * than twice the target time has lapsed. Adjust the target EKF step time threshold to allow for timing jitter in the
      * IMU data.
      */
-    if ((dtIMUavg*(float)framesSincePredict >= (EKF_TARGET_DT-(dtIMUavg*0.5)) &&
-         startPredictEnabled) || (dtIMUavg*(float)framesSincePredict >= 2.0f*EKF_TARGET_DT)) {
+    if ((dtIMUavg*ftype(framesSincePredict) >= (EKF_TARGET_DT-(dtIMUavg*ftype(0.5))) &&
+         startPredictEnabled) || (dtIMUavg*ftype(framesSincePredict) >= ftype(2.0)*EKF_TARGET_DT)) {
 
         // convert the accumulated quaternion to an equivalent delta angle
         imuQuatDownSampleNew.to_axis_angle(imuDataDownSampledNew.delAng);

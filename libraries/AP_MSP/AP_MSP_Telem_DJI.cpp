@@ -135,11 +135,11 @@ void AP_MSP_Telem_DJI::update_home_pos(home_state_t &home_state)
     // override telemetry with max distance and altitude info
     // alternate max distance with traveled distance every 2 seconds
     if (msp->_msp_status.slow_flashing_on) {
-        home_state.home_distance_m = osd->get_stats_info().max_dist_m;
+        home_state.home_distance_m = uint32_t(osd->get_stats_info().max_dist_m);
     } else {
-        home_state.home_distance_m = osd->get_stats_info().last_distance_m;
+        home_state.home_distance_m = uint32_t(osd->get_stats_info().last_distance_m);
     }
-    home_state.rel_altitude_cm = osd->get_stats_info().max_alt_m * 100;
+    home_state.rel_altitude_cm = int32_t(osd->get_stats_info().max_alt_m * 100);
 #endif
 }
 
@@ -174,7 +174,7 @@ void AP_MSP_Telem_DJI::update_gps_state(gps_state_t &gps_state)
     }
     WITH_SEMAPHORE(osd->get_semaphore());
     // override telemetry with max speed info
-    gps_state.speed_cms = osd->get_stats_info().max_speed_mps * 100;
+    gps_state.speed_cms = uint16_t(osd->get_stats_info().max_speed_mps * 100);
 #endif
 }
 

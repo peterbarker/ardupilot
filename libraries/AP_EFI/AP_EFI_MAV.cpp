@@ -33,12 +33,12 @@ void AP_EFI_MAV::handle_EFI_message(const mavlink_message_t &msg)
     mavlink_efi_status_t state;
     mavlink_msg_efi_status_decode(&msg, &state);
 
-    internal_state.ecu_index = state.ecu_index;
-    internal_state.engine_speed_rpm = state.rpm;
+    internal_state.ecu_index = uint8_t(state.ecu_index);
+    internal_state.engine_speed_rpm = uint32_t(state.rpm);
     internal_state.estimated_consumed_fuel_volume_cm3 = state.fuel_consumed;
     internal_state.fuel_consumption_rate_cm3pm = state.fuel_flow;
-    internal_state.engine_load_percent = state.engine_load;
-    internal_state.throttle_position_percent = state.throttle_position;
+    internal_state.engine_load_percent = uint8_t(state.engine_load);
+    internal_state.throttle_position_percent = uint8_t(state.throttle_position);
     internal_state.spark_dwell_time_ms = state.spark_dwell_time;
     internal_state.atmospheric_pressure_kpa = state.barometric_pressure;
     internal_state.intake_manifold_pressure_kpa = state.intake_manifold_pressure;
