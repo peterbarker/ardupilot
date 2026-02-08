@@ -288,6 +288,8 @@ class Board:
             '-Werror=format-extra-args',
             '-Werror=ignored-qualifiers',
             '-Werror=undef',
+            '-Werror=double-promotion',
+            '-Werror=float-conversion',
             '-DARDUPILOT_BUILD',
         ]
 
@@ -319,6 +321,7 @@ class Board:
                 '-Wno-mismatched-tags',
                 '-Wno-gnu-variable-sized-type-not-at-end',
                 '-Werror=implicit-fallthrough',
+                '-Werror=implicit-float-conversion',
                 '-cl-single-precision-constant',
                 '-Wno-vla-extension',
                 '-ftrapping-math',  # prevent re-ordering of sanity checks
@@ -410,6 +413,8 @@ class Board:
             '-Wfatal-errors',
             '-Wno-trigraphs',
             '-Werror=parentheses',
+            '-Werror=double-promotion',
+            '-Werror=float-conversion',
             '-DARDUPILOT_BUILD',
             '-Wuninitialized',
             '-Warray-bounds',
@@ -438,6 +443,7 @@ class Board:
                 '-Werror=objc-literal-conversion',
 #                '-Werror=shorten-64-to-32',  # ARRAY_SIZE() creates this all over the place as the caller typically takes a uint32_t not a size_t
                 '-Werror=string-conversion',
+                '-Werror=implicit-float-conversion',
                 #    '-Werror=sign-conversion', # can't use as we assign into AP_Int8 from uint8_ts
 
                 '-Wno-gnu-designator',

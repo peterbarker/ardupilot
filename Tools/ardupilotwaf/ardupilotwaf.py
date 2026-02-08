@@ -469,6 +469,41 @@ def ap_stlib_target(self):
         self.target = self.target[1:]
     self.target = '#%s' % os.path.join('lib', self.target)
 
+@feature('c', 'cxx')
+@before_method('process_source')
+def ap_exempt_sagetech_sdk(self):
+    """Exempt sagetech-sdk from strict float conversion warnings.
+
+    The sagetech-sdk is third-party vendor code that we should not modify.
+    Remove strict float warning flags for files in this directory.
+    """
+    if not hasattr(self, 'source'):
+        return
+
+    # Check if any source files are in the sagetech-sdk directory
+    has_sagetech = False
+    for src in self.to_list(getattr(self, 'source', [])):
+        if isinstance(src, str) and 'sagetech-sdk' in src:
+            has_sagetech = True
+            break
+
+    if not has_sagetech:
+        return
+
+    # Create derived environment and remove strict float warning flags
+    self.env = self.env.derive()
+    flags_to_remove = [
+        '-Werror=double-promotion',
+        '-Werror=float-conversion',
+        '-Werror=implicit-float-conversion',
+    ]
+
+    for flag in flags_to_remove:
+        while flag in self.env.CFLAGS:
+            self.env.CFLAGS.remove(flag)
+        while flag in self.env.CXXFLAGS:
+            self.env.CXXFLAGS.remove(flag)
+
 @conf
 def ap_find_tests(bld, use=[], DOUBLE_PRECISION_SOURCES=[]):
     if not bld.env.HAS_GTEST:
