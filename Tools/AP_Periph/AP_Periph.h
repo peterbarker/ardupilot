@@ -51,12 +51,8 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_DAC/AP_DAC.h>
 
-#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
-#include "FSOPowerStack.h"
-#endif
-
-#ifdef AP_PERIPH_ENABLE_RELAY
-#ifdef AP_PERIPH_ENABLE_PWM_HARDPOINT
+#if AP_PERIPH_RELAY_ENABLED
+#if AP_PERIPH_PWM_HARDPOINT_ENABLED
     #error "Relay and PWM_HARDPOINT both use hardpoint message"
 #endif
 #include <AP_Relay/AP_Relay.h>
@@ -110,6 +106,15 @@
 #ifndef AP_SIM_PARAM_ENABLED
 #define AP_SIM_PARAM_ENABLED AP_SIM_ENABLED
 #endif
+
+#ifndef AP_PERIPH_FSO_POWERSTACK_ENABLED
+#define AP_PERIPH_FSO_POWERSTACK_ENABLED 0
+#endif  // AP_PERIPH_FSO_POWERSTACK_ENABLED
+
+#if AP_PERIPH_FSO_POWERSTACK_ENABLED
+#include "FSOPowerStack.h"
+#endif  // AP_PERIPH_FSO_POWERSTACK_ENABLED
+#include <AP_DAC/AP_DAC.h>
 
 #if defined(HAL_PERIPH_LISTEN_FOR_SERIAL_UART_REBOOT_CMD_PORT) && !defined(HAL_DEBUG_BUILD) && !defined(HAL_PERIPH_LISTEN_FOR_SERIAL_UART_REBOOT_NON_DEBUG)
 /* this checking for reboot can lose bytes on GPS modules and other
@@ -410,9 +415,9 @@ public:
     ActuatorTelem actuator_telem;
 #endif
 
-#ifdef HAL_PERIPH_ENABLE_FSO_POWER_STACK
+#if AP_PERIPH_FSO_POWERSTACK_ENABLED
     FSOPowerStack FSO_power_stack;
-#endif
+#endif  // AP_PERIPH_FSO_POWERSTACK_ENABLED
 
 #if AP_PERIPH_SERIAL_OPTIONS_ENABLED
     SerialOptions serial_options;
