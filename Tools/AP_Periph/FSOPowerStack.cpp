@@ -240,11 +240,11 @@ void FSOPowerStack::init()
     init_fan(FSO_FAN_TACH3_PIN, fans[2]);
     init_fan(FSO_FAN_TACH4_PIN, fans[3]);
 
-    float sample_freq = 1.0 / FSO_LOOP_TIME_MS;
     float over_current_tc = FSO_OVER_CURRENT_TC;
-    payload_HV_current_filter.set_cutoff_frequency(sample_freq, 1.0/over_current_tc);
-    payload_1_current_filter.set_cutoff_frequency(sample_freq, 1.0/over_current_tc);
-    payload_2_current_filter.set_cutoff_frequency(sample_freq, 1.0/over_current_tc);
+    payload_HV_current_filter.set_cutoff_frequency(1.0/over_current_tc);
+    payload_1_current_filter.set_cutoff_frequency(1.0/over_current_tc);
+    payload_2_current_filter.set_cutoff_frequency(1.0/over_current_tc);
+
     set_internal_HC_on();
     if (option_is_set(Option::H16_PRO_ON)) {
         set_h16pro_on();
