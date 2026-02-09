@@ -693,6 +693,7 @@ void FSOPowerStack::update_payload_BEC()
 void FSOPowerStack::update_DAC()
 {
     const float v1 = (cal_payload_P1c1 - payload_1_voltage) * cal_payload_P1c2;
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "DAC %u input: v=%f", 0, v1);
     if (!periph.dac.set_voltage(0, 0, v1)) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "set voltage %u %.3f failed", unsigned(0), v1);
     }
