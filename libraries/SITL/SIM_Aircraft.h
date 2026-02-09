@@ -34,6 +34,7 @@
 #include "SIM_FETtecOneWireESC.h"
 #include "SIM_Volz.h"
 #include "SIM_I2C.h"
+#include "SIM_FSO_PowerStack.h"
 #include "SIM_Buzzer.h"
 #include "SIM_Battery.h"
 #include <Filter/Filter.h>
@@ -197,6 +198,10 @@ public:
      */
     static bool set_pose(uint8_t instance, const Location &loc, const Quaternion &quat,
                          const Vector3f &velocity_ef, const Vector3f &gyro_rads);
+
+#if AP_SIM_FSO_POWERSTACK_ENABLED
+    FSO_PowerStack fso_powerstack;
+#endif
 
 protected:
     SIM *sitl;
