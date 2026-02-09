@@ -14,13 +14,13 @@ void GPIO::init()
 
 void GPIO::pinMode(uint8_t pin, uint8_t output)
 {
-    if (pin > 7) {
+    if (!valid_pin(pin)) {
         return;
     }
     if (output) {
-        pin_mode_is_write |= (1U<<pin);
+        pin_mode_is_write.set(pin);
     } else {
-        pin_mode_is_write &= ~(1U<<pin);
+        pin_mode_is_write.clear(pin);
     }
 }
 
@@ -30,17 +30,17 @@ uint8_t GPIO::read(uint8_t pin)
     if (sitl == nullptr) {
         return 0;
     }
+
     if (!valid_pin(pin)) {
         return 0;
     }
-    
+
     // weight on wheels pin support
     if (pin == sitl->wow_pin.get()) {
         return sitl->state.altitude < SITL_WOW_ALTITUDE ? 1 : 0;
     }
-    
-    uint16_t mask = static_cast<uint16_t>(sitl->pin_mask.get());
-    return static_cast<uint16_t>((mask & (1U << pin)) ? 1 : 0);
+
+    return sitl->full_pin_mask.get(pin);
 }
 
 void GPIO::write(uint8_t pin, uint8_t value)
@@ -53,18 +53,26 @@ void GPIO::write(uint8_t pin, uint8_t value)
     if (!valid_pin(pin)) {
         return;
     }
-    if (pin < 8) {
-        if (!(pin_mode_is_write & (1U<<pin))) {
-            // ignore setting of pull-up resistors
-            return;
-        }
-    }
-    uint16_t mask = static_cast<uint16_t>(sitl->pin_mask.get());
-    uint16_t new_mask = mask;
 
+    // weight-on-wheels pin support:
     if (pin == sitl->wow_pin.get()) {
         return;
     }
+
+    if (!(pin_mode_is_write.get(pin))) {
+        // ignore setting of pull-up resistors
+        return;
+    }
+
+    if (value) {
+        sitl->full_pin_mask.set(pin);
+    } else {
+        sitl->full_pin_mask.clear(pin);
+    }
+    // also update the parameter used to provide external visibility
+    // for the first 16 bits:
+    uint16_t mask = static_cast<uint16_t>(_sitlState->_sitl->pin_mask.get());
+    uint16_t new_mask = mask;
 
     if (value) {
         new_mask |= (1U << pin);
@@ -83,12 +91,10 @@ void GPIO::toggle(uint8_t pin)
 
 /* Alternative interface: */
 AP_HAL::DigitalSource* GPIO::channel(uint16_t n) {
-    if (n < 16) {  // (ie. sizeof(pin_mask)*8)
-        return NEW_NOTHROW DigitalSource(static_cast<uint8_t>(n));
-    } else {
+    if (!valid_pin(n)) {
         return nullptr;
     }
-
+    return NEW_NOTHROW DigitalSource(static_cast<uint8_t>(n));
 }
 
 bool GPIO::usb_connected(void)
