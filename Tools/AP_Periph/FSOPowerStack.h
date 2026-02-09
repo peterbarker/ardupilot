@@ -2,8 +2,6 @@
 
 #if AP_PERIPH_FSO_POWERSTACK_ENABLED
 
-#include <AP_DAC/AP_DAC.h>
-
 extern const AP_HAL::HAL &hal;
 
 class FSOPowerStack {
@@ -235,8 +233,6 @@ private:
 
     TurnOnState main_state = Off;
     TurnOnState payload_HV_state = Off;
-
-    AP_DAC dac;
 
     // init called after CAN init
     void late_init(void);

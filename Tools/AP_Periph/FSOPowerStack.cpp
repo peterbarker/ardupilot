@@ -61,9 +61,7 @@ extern const AP_HAL::HAL &hal;
 
 const AP_Param::GroupInfo FSOPowerStack::var_info[] {
 
-    // @Group: DAC
-    // @Path: ../../libraries/AP_DAC/AP_DAC.cpp
-    AP_SUBGROUPINFO(dac, "_DAC", 1, FSOPowerStack, AP_DAC),
+    // 1 was DAC_ - that is now using DAC from AP_Periph's Parameters.cpp
 
     // @Param: _OPTIONS
     // @DisplayName: FSO Options
@@ -258,7 +256,7 @@ void FSOPowerStack::init()
  */
 void FSOPowerStack::late_init()
 {
-    dac.init();
+    periph.dac.init();
     if (option_is_set(Option::PAYLOAD_HV_ON)) {
         set_HV_payload_on();
     } else {
@@ -690,11 +688,11 @@ void FSOPowerStack::update_payload_BEC()
 void FSOPowerStack::update_DAC()
 {
     const float v1 = (cal_payload_P1c1 - payload_1_voltage) * cal_payload_P1c2;
-    if (!dac.set_voltage(0, 0, v1)) {
+    if (!periph.dac.set_voltage(0, 0, v1)) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "set voltage %u %.3f failed", unsigned(0), v1);
     }
     const float v2 = (cal_payload_P2c1 - payload_2_voltage) * cal_payload_P2c2;
-    if (!dac.set_voltage(0, 3, v2)) {
+    if (!periph.dac.set_voltage(0, 3, v2)) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "set voltage %u %.3f failed", unsigned(3), v2);
     }
 }
@@ -743,10 +741,10 @@ void FSOPowerStack::calibrate()
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating BEC control: C1");
 
             // Setup for Payload_BEC_C1
-            if (!dac.set_voltage(0, 0, 0)) {
+            if (!periph.dac.set_voltage(0, 0, 0)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Set voltage %u %.3f failed", unsigned(0), 0.0);
             }
-            if (!dac.set_voltage(0, 3, 0)) {
+            if (!periph.dac.set_voltage(0, 3, 0)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Set voltage %u %.3f failed", unsigned(3), 0.0);
             }
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Press Main Button to start");
@@ -799,10 +797,10 @@ void FSOPowerStack::calibrate()
             set_switch_1_off();
             set_LED_1_off();
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating BEC control: C2");
-            if (!dac.set_voltage(0, 0, FSO_C2_TEST_VOLTAGE)) {
+            if (!periph.dac.set_voltage(0, 0, FSO_C2_TEST_VOLTAGE)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Set voltage %u %.3f failed", unsigned(0), FSO_C2_TEST_VOLTAGE);
             }
-            if (!dac.set_voltage(0, 3, FSO_C2_TEST_VOLTAGE)) {
+            if (!periph.dac.set_voltage(0, 3, FSO_C2_TEST_VOLTAGE)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Set voltage %u %.3f failed", unsigned(3), FSO_C2_TEST_VOLTAGE);
             }
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Press Main Button to start");
@@ -856,7 +854,7 @@ void FSOPowerStack::calibrate()
             waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Payload BEC 1 shunt");
             const float v1 = (cal_payload_P1c1 - 5.0) * cal_payload_P1c2;
-            if (!dac.set_voltage(0, 0, v1)) {
+            if (!periph.dac.set_voltage(0, 0, v1)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "set voltage %u %.3f failed", unsigned(0), v1);
             }
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Connect P1 and set Load to %.1f A", (float)cal_HCB_current);
@@ -926,7 +924,7 @@ void FSOPowerStack::calibrate()
             waiting_for_test = false;
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Calibrating Payload BEC 2 shunt");
             const float v2 = (cal_payload_P2c1 - 5.0) * cal_payload_P2c2;
-            if (!dac.set_voltage(0, 3, v2)) {
+            if (!periph.dac.set_voltage(0, 3, v2)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "set voltage %u %.3f failed", unsigned(3), v2);
             }
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Connect P2 and set Load to %.1f A", (float)cal_HCB_current);

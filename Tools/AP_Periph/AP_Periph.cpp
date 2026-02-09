@@ -163,7 +163,7 @@ void AP_Periph_FW::init()
     }
 #endif  // AP_PERIPH_GPS_ENABLED
 
-#if AP_DAC_ENABLED
+#if AP_DAC_ENABLED && !AP_PERIPH_FSO_POWERSTACK_ENABLED
     dac.init();
 #endif
 
@@ -472,7 +472,7 @@ void AP_Periph_FW::update()
         rcout_init_1Hz();
 #endif
 
-#if AP_DAC_ENABLED
+#if AP_DAC_ENABLED && !AP_PERIPH_FSO_POWERSTACK_ENABLED
         dac.update();
 #endif
 

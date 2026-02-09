@@ -114,7 +114,6 @@
 #if AP_PERIPH_FSO_POWERSTACK_ENABLED
 #include "FSOPowerStack.h"
 #endif  // AP_PERIPH_FSO_POWERSTACK_ENABLED
-#include <AP_DAC/AP_DAC.h>
 
 #if defined(HAL_PERIPH_LISTEN_FOR_SERIAL_UART_REBOOT_CMD_PORT) && !defined(HAL_DEBUG_BUILD) && !defined(HAL_PERIPH_LISTEN_FOR_SERIAL_UART_REBOOT_NON_DEBUG)
 /* this checking for reboot can lose bytes on GPS modules and other
