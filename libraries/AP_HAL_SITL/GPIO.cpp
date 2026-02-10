@@ -26,28 +26,26 @@ void GPIO::pinMode(uint8_t pin, uint8_t output)
 
 uint8_t GPIO::read(uint8_t pin)
 {
-    if (!_sitlState->_sitl) {
-        return 0;
-    }
     if (!valid_pin(pin)) {
         return 0;
     }
-    
+
+    const auto *sitl = _sitlState->_sitl;
+    if (sitl == nullptr) {
+        return 0;
+    }
+
     // weight on wheels pin support
-    if (pin == _sitlState->_sitl->wow_pin.get()) {
-        return _sitlState->_sitl->state.altitude < SITL_WOW_ALTITUDE ? 1 : 0;
+    if (pin == sitl->wow_pin.get()) {
+        return sitl->state.altitude < SITL_WOW_ALTITUDE ? 1 : 0;
     }
     
-    uint16_t mask = static_cast<uint16_t>(_sitlState->_sitl->pin_mask.get());
+    uint16_t mask = static_cast<uint16_t>(sitl->pin_mask.get());
     return static_cast<uint16_t>((mask & (1U << pin)) ? 1 : 0);
 }
 
 void GPIO::write(uint8_t pin, uint8_t value)
 {
-    if (!_sitlState->_sitl) {
-        return;
-    }
-
     if (!valid_pin(pin)) {
         return;
     }
@@ -57,10 +55,16 @@ void GPIO::write(uint8_t pin, uint8_t value)
             return;
         }
     }
-    uint16_t mask = static_cast<uint16_t>(_sitlState->_sitl->pin_mask.get());
+
+    auto *sitl = _sitlState->_sitl;
+    if (sitl == nullptr) {
+        return;
+    }
+
+    uint16_t mask = static_cast<uint16_t>(sitl->pin_mask.get());
     uint16_t new_mask = mask;
 
-    if (pin == _sitlState->_sitl->wow_pin.get()) {
+    if (pin == sitl->wow_pin.get()) {
         return;
     }
 
@@ -70,7 +74,7 @@ void GPIO::write(uint8_t pin, uint8_t value)
         new_mask &= ~(1U << pin);
     }
     if (mask != new_mask) {
-        _sitlState->_sitl->pin_mask.set_and_notify(new_mask);
+        sitl->pin_mask.set_and_notify(new_mask);
     }
 }
 
