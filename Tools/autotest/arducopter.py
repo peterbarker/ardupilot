@@ -4647,6 +4647,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.change_mode('RTL')
         self.wait_groundspeed(rtl_speed_ms-tolerance, rtl_speed_ms+tolerance)
         self.monitor_groundspeed(rtl_speed_ms, timeout=5)
+        self.context_set_message_rate_hz('HEARTBEAT', 200)
         self.change_mode('AUTO')
         self.wait_groundspeed(0-tolerance, 0+tolerance)
         self.wait_groundspeed(wpnav_speed_ms-tolerance, wpnav_speed_ms+tolerance)
