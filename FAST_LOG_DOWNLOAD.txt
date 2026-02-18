@@ -54,3 +54,20 @@ MANUAL> Transfer at offset 775680 with 0 gaps 0 retries 176.4 kByte/sec
 # SCHED_LOOP_RATE to  200 747kB/s
 # SCHED_LOOP_RATE to  400 752kB/s
 # SCHED_LOOP_RATE to 1200 566kB/s
+
+http://172.16.3.68:8080/
+
+
+
+pbarker@crun:~/rc/ardupilot(DEBUG/raphe/fast-log-download)$ wget http://172.16.3.68:8080/mnt/APM/LOGS/00000001.BIN
+--2026-02-18 17:37:32--  http://172.16.3.68:8080/mnt/APM/LOGS/00000001.BIN
+Connecting to 172.16.3.68:8080... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 38366640 (37M) [application/octet-stream]
+Saving to: ‘00000001.BIN’
+
+00000001.BIN        100%[===================>]  36.59M  4.18MB/s    in 8.8s    
+
+2026-02-18 17:37:41 (4.15 MB/s) - ‘00000001.BIN’ saved [38366640/38366640]
+
+pbarker@crun:~/rc/ardupilot(DEBUG/raphe/fast-log-download)$ 
