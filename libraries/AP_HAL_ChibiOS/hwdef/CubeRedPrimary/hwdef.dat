@@ -309,3 +309,5 @@ define AP_IOMCU_CHIBIOS_BOOTLOADER 1
 
 define AP_NETWORKING_CAN_MCAST_ENABLED 1
 define AP_GPS_UBLOX_CFGV2_ENABLED AP_GPS_UBLOX_ENABLED
+
+ROMFS scripts/net_webserver.lua libraries/AP_Scripting/applets/net_webserver.lua
