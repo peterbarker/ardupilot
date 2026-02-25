@@ -630,11 +630,7 @@ protected:
 
     // check if an option is set
     bool option_set(const DriverOptions option) const {
-#if AP_GPS_UBLOX_CFGV2_ENABLED
         return (uint16_t(_driver_options.get()) & uint16_t(option)) != 0;
-#else
-        return (uint8_t(_driver_options.get()) & uint8_t(option)) != 0;
-#endif
     }
 
 private:
