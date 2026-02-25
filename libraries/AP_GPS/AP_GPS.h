@@ -305,9 +305,6 @@ public:
     // Query the highest status this GPS supports (always reports GPS_OK_FIX_3D for the blended GPS)
     GPS_Status highest_supported_status(uint8_t instance) const WARN_IF_UNUSED;
 
-    // Check if GPS instance is configured
-    bool is_configured(uint8_t instance) const;
-
     // location of last fix
     const Location &location(uint8_t instance) const {
         return state[instance].location;
@@ -633,7 +630,11 @@ protected:
 
     // check if an option is set
     bool option_set(const DriverOptions option) const {
+#if AP_GPS_UBLOX_CFGV2_ENABLED
         return (uint16_t(_driver_options.get()) & uint16_t(option)) != 0;
+#else
+        return (uint8_t(_driver_options.get()) & uint8_t(option)) != 0;
+#endif
     }
 
 private:
