@@ -1,0 +1,1 @@
+test file: triggers fixup! commit message check
