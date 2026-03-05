@@ -156,60 +156,7 @@ void SIMState::fdm_input_local(void)
                       attitude);
     }
 #endif  // AP_SIM_VICON_ENABLED
-    if (benewake_tf02 != nullptr) {
-        benewake_tf02->update(sitl_model->rangefinder_range());
-    }
-    if (benewake_tf03 != nullptr) {
-        benewake_tf03->update(sitl_model->rangefinder_range());
-    }
-    if (benewake_tfmini != nullptr) {
-        benewake_tfmini->update(sitl_model->rangefinder_range());
-    }
-    if (nooploop != nullptr) {
-        nooploop->update(sitl_model->rangefinder_range());
-    }
-    if (teraranger_serial != nullptr) {
-        teraranger_serial->update(sitl_model->rangefinder_range());
-    }
-    if (lightwareserial != nullptr) {
-        lightwareserial->update(sitl_model->rangefinder_range());
-    }
-    if (lightwareserial_binary != nullptr) {
-        lightwareserial_binary->update(sitl_model->rangefinder_range());
-    }
-    if (lanbao != nullptr) {
-        lanbao->update(sitl_model->rangefinder_range());
-    }
-    if (blping != nullptr) {
-        blping->update(sitl_model->rangefinder_range());
-    }
-    if (leddarone != nullptr) {
-        leddarone->update(sitl_model->rangefinder_range());
-    }
-    if (rds02uf != nullptr) {
-        rds02uf->update(sitl_model->rangefinder_range());
-    }
-    if (USD1_v0 != nullptr) {
-        USD1_v0->update(sitl_model->rangefinder_range());
-    }
-    if (USD1_v1 != nullptr) {
-        USD1_v1->update(sitl_model->rangefinder_range());
-    }
-    if (maxsonarseriallv != nullptr) {
-        maxsonarseriallv->update(sitl_model->rangefinder_range());
-    }
-    if (wasp != nullptr) {
-        wasp->update(sitl_model->rangefinder_range());
-    }
-    if (nmea != nullptr) {
-        nmea->update(sitl_model->rangefinder_range());
-    }
-    if (rf_mavlink != nullptr) {
-        rf_mavlink->update(sitl_model->rangefinder_range());
-    }
-    if (gyus42v2 != nullptr) {
-        gyus42v2->update(sitl_model->rangefinder_range());
-    }
+
     if (efi_ms != nullptr) {
         efi_ms->update();
     }
