@@ -1205,6 +1205,7 @@ void AP_Mount_Backend::send_target_to_gimbal()
 
     // the easy case, where the gimbal natively supports the MntTargetType:
     if (natively_supports(mnt_target.target_type)) {
+        output_type = mnt_target.target_type;
         switch (mnt_target.target_type) {
         case MountTargetType::ANGLE:
             send_target_angles(mnt_target.angle_rad);
@@ -1238,6 +1239,7 @@ void AP_Mount_Backend::send_target_to_gimbal()
             // we integrate the rates into the angle:
             update_angle_target_from_rate(mnt_target.rate_rads, mnt_target.angle_rad);
             send_target_angles(mnt_target.angle_rad);
+            output_type = MountTargetType::ANGLE;
             return;
         }
         break;
@@ -1248,6 +1250,7 @@ void AP_Mount_Backend::send_target_to_gimbal()
             const Vector3f &angle_bf_target = _params.retract_angles.get();
             mnt_target.angle_rad.set(angle_bf_target*DEG_TO_RAD, false);
             send_target_angles(mnt_target.angle_rad);
+            output_type = MountTargetType::ANGLE;
             return;
         }
         break;
@@ -1258,6 +1261,7 @@ void AP_Mount_Backend::send_target_to_gimbal()
             const Vector3f &angle_bf_target = _params.neutral_angles.get();
             mnt_target.angle_rad.set(angle_bf_target*DEG_TO_RAD, false);
             send_target_angles(mnt_target.angle_rad);
+            output_type = MountTargetType::ANGLE;
             return;
         }
         break;
@@ -1265,6 +1269,7 @@ void AP_Mount_Backend::send_target_to_gimbal()
         if (natively_supports(MountTargetType::ANGLE)) {
             if (get_angle_target_to_roi(mnt_target.angle_rad)) {
                 send_target_angles(mnt_target.angle_rad);
+                output_type = MountTargetType::ANGLE;
             }
             return;
         }

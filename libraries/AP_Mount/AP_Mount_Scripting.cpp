@@ -47,4 +47,6 @@ bool AP_Mount_Scripting::get_attitude_quaternion(Quaternion& att_quat)
     return true;
 }
 
+
+
 #endif // HAL_MOUNT_SCRIPTING_ENABLED

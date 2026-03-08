@@ -328,6 +328,8 @@ function init()
   else
     gcs:send_text(MAV_SEVERITY.CRITICAL, "DJIR: failed to connect to CAN bus")   
   end
+
+  mount:set_natively_supported_mount_target_types(MOUNT_INSTANCE, ANGLE|RATE)
 end
 
 -- send serial message over CAN bus

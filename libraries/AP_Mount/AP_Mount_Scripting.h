@@ -38,12 +38,17 @@ public:
 
 protected:
 
+    void set_natively_supported_mount_target_types(uint8_t types_mask) override {
+        supported_target_types_mask = types_mask;
+    }
+
     // Scripting doesn't actually send anything (the script polls the
     // library for the targets)
     uint8_t natively_supported_mount_target_types() const override {
-        return NATIVE_ANGLES_ONLY;
+        return supported_target_types_mask;
     };
-    void send_target_angles(const MountAngleTarget &angle_rad) override {};
+    void send_target_angles(const MountAngleTarget &angle_rad) override;
+    void send_target_rates(const MountAngleTarget &angle_rad) override;
 
     // get attitude as a quaternion.  returns true on success
     bool get_attitude_quaternion(Quaternion& att_quat) override;
@@ -54,6 +59,7 @@ private:
     uint32_t last_update_ms;        // system time of last call to one of the get_ methods.  Used for health reporting
     Vector3f current_angle_deg;     // current gimbal angles in degrees (x=roll, y=pitch, z=yaw)
 
+    uint8_t supported_target_types_mask = NATIVE_ANGLES_ONLY;
 };
 
 #endif // HAL_MOUNT_SCRIPTING_ENABLED
