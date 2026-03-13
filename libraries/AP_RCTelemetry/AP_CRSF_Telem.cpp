@@ -1634,14 +1634,15 @@ void AP_CRSF_Telem::calc_text_selection(AP_OSD_ParamSetting* param, uint8_t chun
     chunker.put_string(name, strnlen(name, 16)); // parameter name
     chunker.put_byte(0);  // trailing null
 
-    for (uint8_t i = 0; i < metadata->values_max; i++) {
-        uint8_t len = strnlen(metadata->values[i], 16);
-        if (len == 0) {
+    const uint8_t values_max = uint8_t(metadata->max_value) + 1;
+    for (uint8_t i = 0; i < values_max; i++) {
+        const char *vname = metadata->name_for_value(i);
+        if (vname == nullptr || vname[0] == '\0') {
             chunker.put_string("---", 3);
         } else {
-            chunker.put_string(metadata->values[i], len);
+            chunker.put_string(vname, strnlen(vname, 16));
         }
-        if (i == metadata->values_max - 1) {
+        if (i == values_max - 1) {
             chunker.put_byte(0);
         } else {
             chunker.put_byte(';');
@@ -1664,10 +1665,10 @@ void AP_CRSF_Telem::calc_text_selection(AP_OSD_ParamSetting* param, uint8_t chun
     }
 
     // out of range values really confuse the TX
-    val = constrain_int16(val, 0, metadata->values_max - 1);
+    val = constrain_int16(val, 0, int32_t(values_max) - 1);
     chunker.put_byte(val);  // value
     chunker.put_byte(0);  // min
-    chunker.put_byte(metadata->values_max); // max
+    chunker.put_byte(values_max); // max
     chunker.put_byte(0);  // default
     chunker.put_byte(0); // units
 
