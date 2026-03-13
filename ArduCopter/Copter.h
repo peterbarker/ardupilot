@@ -596,6 +596,7 @@ private:
         ESCCAL_DISABLED = 9,
     };
 
+public:
     enum class FailsafeAction : uint8_t {
         NONE               = 0,
         LAND               = 1,
@@ -615,6 +616,8 @@ private:
         GCS_CONTINUE_IF_PILOT_CONTROL   = (1<<4),   // 16
         RELEASE_GRIPPER                 = (1<<5),   // 32
     };
+
+private:
 
 
     enum class FlightOption : uint32_t {

@@ -37,8 +37,14 @@ void Copter::init_ardupilot()
     // setup telem slots with serial ports
     gcs().setup_uarts();
 
+#if OSD_PARAM_ENABLED
+    extern void osd_register_copter_metadata();
+#endif
 #if OSD_ENABLED
     osd.init();
+#if OSD_PARAM_ENABLED
+    osd_register_copter_metadata();
+#endif
 #endif
 
     // update motor interlock state
