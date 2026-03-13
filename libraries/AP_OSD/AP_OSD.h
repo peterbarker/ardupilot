@@ -414,7 +414,9 @@ public:
         Type type;
     };
 
-    static const ParamMetadata* const _param_metadata[];
+    static const ParamMetadata* _param_metadata[];
+
+    static void set_metadata(Type type, const ParamMetadata* meta);
 
     AP_OSD_ParamSetting() {};
     AP_OSD_ParamSetting(uint8_t param_number);

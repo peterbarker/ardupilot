@@ -24,7 +24,6 @@
 #include "AP_OSD.h"
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 #include <GCS_MAVLink/GCS.h>
-#include <SRV_Channel/SRV_Channel.h>
 #include <AP_SerialManager/AP_SerialManager.h>
 #include <ctype.h>
 #include <AP_ADSB/AP_ADSB_config.h>
@@ -306,157 +305,6 @@ struct SerialProtocolMeta : AP_OSD_ParamSetting::ParamMetadata {
 };
 static const SerialProtocolMeta meta_serial_protocol;
 
-struct ServoFunctionMeta : AP_OSD_ParamSetting::ParamMetadata {
-    ServoFunctionMeta() : AP_OSD_ParamSetting::ParamMetadata(0, SRV_Channel::k_nr_aux_servo_functions - 1, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case SRV_Channel::k_none:                return "NONE";
-        case SRV_Channel::k_manual:              return "RCPASS";
-        case SRV_Channel::k_flap:                return "FLAP";
-        case SRV_Channel::k_flap_auto:           return "FLAP_AUTO";
-        case SRV_Channel::k_aileron:             return "AIL";
-#if HAL_MOUNT_ENABLED
-        case SRV_Channel::k_mount_pan:           return "MNT_PAN";
-        case SRV_Channel::k_mount_tilt:          return "MNT_TLT";
-        case SRV_Channel::k_mount_roll:          return "MNT_RLL";
-        case SRV_Channel::k_mount_open:          return "MNT_OPEN";
-#endif
-#if AP_CAMERA_ENABLED
-        case SRV_Channel::k_cam_trigger:         return "CAM_TRG";
-#endif
-#if HAL_MOUNT_ENABLED
-        case SRV_Channel::k_mount2_pan:          return "MNT2_PAN";
-        case SRV_Channel::k_mount2_tilt:         return "MNT2_TLT";
-        case SRV_Channel::k_mount2_roll:         return "MNT2_RLL";
-        case SRV_Channel::k_mount2_open:         return "MNT2_OPEN";
-#endif
-        case SRV_Channel::k_dspoilerLeft1:       return "DIF_SPL_L1";
-        case SRV_Channel::k_dspoilerRight1:      return "DIF_SPL_R1";
-        case SRV_Channel::k_elevator:            return "ELE";
-        case SRV_Channel::k_rudder:              return "RUD";
-#if HAL_SPRAYER_ENABLED
-        case SRV_Channel::k_sprayer_pump:        return "SPR_PMP";
-        case SRV_Channel::k_sprayer_spinner:     return "SPR_SPIN";
-#endif
-        case SRV_Channel::k_flaperon_left:       return "FLPRON_L";
-        case SRV_Channel::k_flaperon_right:      return "FLPRON_R";
-        case SRV_Channel::k_steering:            return "GRND_STEER";
-#if HAL_PARACHUTE_ENABLED
-        case SRV_Channel::k_parachute_release:   return "PARACHT";
-#endif
-#if AP_GRIPPER_ENABLED
-        case SRV_Channel::k_gripper:             return "GRIP";
-#endif
-#if AP_LANDINGGEAR_ENABLED
-        case SRV_Channel::k_landing_gear_control: return "GEAR";
-#endif
-#if AP_ICENGINE_ENABLED
-        case SRV_Channel::k_engine_run_enable:   return "ENG_RUN_EN";
-#endif
-#if APM_BUILD_COPTER_OR_HELI
-        case SRV_Channel::k_heli_rsc:            return "HELI_RSC";
-        case SRV_Channel::k_heli_tail_rsc:       return "HELI_TAIL_RSC";
-#endif
-        case SRV_Channel::k_motor1:              return "MOT_1";
-        case SRV_Channel::k_motor2:              return "MOT_2";
-        case SRV_Channel::k_motor3:              return "MOT_3";
-        case SRV_Channel::k_motor4:              return "MOT_4";
-        case SRV_Channel::k_motor5:              return "MOT_5";
-        case SRV_Channel::k_motor6:              return "MOT_6";
-        case SRV_Channel::k_motor7:              return "MOT_7";
-        case SRV_Channel::k_motor8:              return "MOT_8";
-        case SRV_Channel::k_motor_tilt:          return "MOT_TLT";
-        case SRV_Channel::k_rcin1:               return "RCIN_1";
-        case SRV_Channel::k_rcin2:               return "RCIN_2";
-        case SRV_Channel::k_rcin3:               return "RCIN_3";
-        case SRV_Channel::k_rcin4:               return "RCIN_4";
-        case SRV_Channel::k_rcin5:               return "RCIN_5";
-        case SRV_Channel::k_rcin6:               return "RCIN_6";
-        case SRV_Channel::k_rcin7:               return "RCIN_7";
-        case SRV_Channel::k_rcin8:               return "RCIN_8";
-        case SRV_Channel::k_rcin9:               return "RCIN_9";
-        case SRV_Channel::k_rcin10:              return "RCIN_10";
-        case SRV_Channel::k_rcin11:              return "RCIN_11";
-        case SRV_Channel::k_rcin12:              return "RCIN_12";
-        case SRV_Channel::k_rcin13:              return "RCIN_13";
-        case SRV_Channel::k_rcin14:              return "RCIN_14";
-        case SRV_Channel::k_rcin15:              return "RCIN_15";
-        case SRV_Channel::k_rcin16:              return "RCIN_16";
-#if AP_ICENGINE_ENABLED
-        case SRV_Channel::k_ignition:            return "IGN";
-        case SRV_Channel::k_starter:             return "START";
-#endif
-        case SRV_Channel::k_throttle:            return "THR";
-        case SRV_Channel::k_tracker_yaw:         return "TRCK_YAW";
-        case SRV_Channel::k_tracker_pitch:       return "TRCK_PIT";
-        case SRV_Channel::k_throttleLeft:        return "THR_L";
-        case SRV_Channel::k_throttleRight:       return "THR_R";
-        case SRV_Channel::k_tiltMotorLeft:       return "TLTMOT_L";
-        case SRV_Channel::k_tiltMotorRight:      return "TLTMOT_R";
-        case SRV_Channel::k_elevon_left:         return "ELEVN_L";
-        case SRV_Channel::k_elevon_right:        return "ELEVN_R";
-        case SRV_Channel::k_vtail_left:          return "VTAIL_L";
-        case SRV_Channel::k_vtail_right:         return "VTAIL_R";
-#if APM_BUILD_COPTER_OR_HELI
-        case SRV_Channel::k_boost_throttle:      return "BOOST_THR";
-#endif
-        case SRV_Channel::k_motor9:              return "MOT_9";
-        case SRV_Channel::k_motor10:             return "MOT_10";
-        case SRV_Channel::k_motor11:             return "MOT_11";
-        case SRV_Channel::k_motor12:             return "MOT_12";
-        case SRV_Channel::k_dspoilerLeft2:       return "DIF_SPL_L2";
-        case SRV_Channel::k_dspoilerRight2:      return "DIF_SPL_R2";
-        case SRV_Channel::k_mainsail_sheet:      return "MAIN_SAIL";
-#if AP_CAMERA_ENABLED
-        case SRV_Channel::k_cam_iso:             return "CAM_ISO";
-        case SRV_Channel::k_cam_aperture:        return "CAM_APTR";
-        case SRV_Channel::k_cam_focus:           return "CAM_FOC";
-        case SRV_Channel::k_cam_shutter_speed:   return "CAM_SH_SPD";
-#endif
-#if AP_SCRIPTING_ENABLED
-        case SRV_Channel::k_scripting1:          return "SCRPT_1";
-        case SRV_Channel::k_scripting2:          return "SCRPT_2";
-        case SRV_Channel::k_scripting3:          return "SCRPT_3";
-        case SRV_Channel::k_scripting4:          return "SCRPT_4";
-        case SRV_Channel::k_scripting5:          return "SCRPT_5";
-        case SRV_Channel::k_scripting6:          return "SCRPT_6";
-        case SRV_Channel::k_scripting7:          return "SCRPT_7";
-        case SRV_Channel::k_scripting8:          return "SCRPT_8";
-        case SRV_Channel::k_scripting9:          return "SCRPT_9";
-        case SRV_Channel::k_scripting10:         return "SCRPT_10";
-        case SRV_Channel::k_scripting11:         return "SCRPT_11";
-        case SRV_Channel::k_scripting12:         return "SCRPT_12";
-        case SRV_Channel::k_scripting13:         return "SCRPT_13";
-        case SRV_Channel::k_scripting14:         return "SCRPT_14";
-        case SRV_Channel::k_scripting15:         return "SCRPT_15";
-        case SRV_Channel::k_scripting16:         return "SCRPT_16";
-#endif
-#if AP_NOTIFY_NEOPIXEL_ENABLED
-        case SRV_Channel::k_LED_neopixel1:       return "NEOPX_1";
-        case SRV_Channel::k_LED_neopixel2:       return "NEOPX_2";
-        case SRV_Channel::k_LED_neopixel3:       return "NEOPX_3";
-        case SRV_Channel::k_LED_neopixel4:       return "NEOPX_4";
-#endif
-        case SRV_Channel::k_roll_out:            return "RAT_RLL";
-        case SRV_Channel::k_pitch_out:           return "RAT_PIT";
-        case SRV_Channel::k_thrust_out:          return "RAT_THRST";
-        case SRV_Channel::k_yaw_out:             return "RAT_YAW";
-        case SRV_Channel::k_wingsail_elevator:   return "WSAIL_EL";
-#if AP_NOTIFY_PROFILED_ENABLED
-        case SRV_Channel::k_ProfiLED_1:          return "PRLED_1";
-        case SRV_Channel::k_ProfiLED_2:          return "PRLED_2";
-        case SRV_Channel::k_ProfiLED_3:          return "PRLED_3";
-        case SRV_Channel::k_ProfiLED_Clock:      return "PRLED_CLK";
-#endif
-#if AP_WINCH_ENABLED
-        case SRV_Channel::k_winch_clutch:        return "WNCH_CL";
-#endif
-        default:  return nullptr;
-        }
-    }
-};
-static const ServoFunctionMeta meta_servo_function;
-
 #endif  // APM_BUILD_TYPE(APM_BUILD_ArduPlane) || APM_BUILD_COPTER_OR_HELI
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduPlane)
@@ -534,97 +382,15 @@ struct PlaneAuxOptionsMeta : AP_OSD_ParamSetting::ParamMetadata {
 };
 static const PlaneAuxOptionsMeta meta_aux_options;
 
-struct PlaneFlightModesMeta : AP_OSD_ParamSetting::ParamMetadata {
-    PlaneFlightModesMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 25, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0:  return "MAN";
-        case 1:  return "CIRC";
-        case 2:  return "STAB";
-        case 3:  return "TRAIN";
-        case 4:  return "ACRO";
-        case 5:  return "FBWA";
-        case 6:  return "FBWB";
-        case 7:  return "CRUISE";
-        case 8:  return "ATUNE";
-        case 10: return "AUTO";
-        case 11: return "RTL";
-        case 12: return "LOIT";
-        case 13: return "TKOF";
-        case 14: return "ADSB";
-        case 15: return "GUID";
-#if 1  // HAL_QUADPLANE_ENABLED
-        case 17: return "QSTAB";
-        case 18: return "QHOV";
-        case 19: return "QLOIT";
-        case 20: return "QLAND";
-        case 21: return "QRTL";
-        case 22: return "QTUNE";
-        case 23: return "QACRO";
-#endif
-        case 24: return "THRML";
-#if 1  // HAL_QUADPLANE_ENABLED — no library-level config, always enabled for Plane builds
-        case 25: return "L2QLND";
-#endif
-        default: return nullptr;
-        }
-    }
-};
-static const PlaneFlightModesMeta meta_flt_modes;
-
-struct PlaneFailsafeActionMeta : AP_OSD_ParamSetting::ParamMetadata {
-    PlaneFailsafeActionMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 5, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0: return "NONE";
-        case 1: return "RTL";
-        case 2: return "LAND";
-        case 3: return "TERM";
-        case 4: return "QLAND";
-        case 5: return "PARA";
-        default: return nullptr;
-        }
-    }
-};
-static const PlaneFailsafeActionMeta meta_fs_act;
-
-struct PlaneShortFailsafeMeta : AP_OSD_ParamSetting::ParamMetadata {
-    PlaneShortFailsafeMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 3, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0: return "CRC_NOCHNGE";
-        case 1: return "CIRC";
-        case 2: return "FBWA";
-        case 3: return "DSABLE";
-        default: return nullptr;
-        }
-    }
-};
-static const PlaneShortFailsafeMeta meta_fs_shrt;
-
-struct PlaneLongFailsafeMeta : AP_OSD_ParamSetting::ParamMetadata {
-    PlaneLongFailsafeMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 3, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0: return "CNTNUE";
-        case 1: return "RTL";
-        case 2: return "GLIDE";
-        case 3: return "PARACHT";
-        default: return nullptr;
-        }
-    }
-};
-static const PlaneLongFailsafeMeta meta_fs_lng;
-
 // plane parameters
-const AP_OSD_ParamSetting::ParamMetadata* const AP_OSD_ParamSetting::_param_metadata[] = {
+const AP_OSD_ParamSetting::ParamMetadata* AP_OSD_ParamSetting::_param_metadata[] = {
     &meta_serial_protocol,  // SERIAL_PROTOCOL      (1)
-    &meta_servo_function,   // SERVO_FUNCTION        (2)
+    nullptr,                // SERVO_FUNCTION        (2) — registered by vehicle
     &meta_aux_options,      // AUX_FUNCTION          (3)
-    &meta_flt_modes,        // FLIGHT_MODE           (4)
-    &meta_fs_act,           // FAILSAFE_ACTION       (5)
-    &meta_fs_shrt,          // FAILSAFE_ACTION_1     (6)
-    &meta_fs_lng,           // FAILSAFE_ACTION_2     (7)
+    nullptr,                // FLIGHT_MODE           (4) — registered by vehicle
+    nullptr,                // FAILSAFE_ACTION       (5) — registered by vehicle
+    nullptr,                // FAILSAFE_ACTION_1     (6) — registered by vehicle
+    nullptr,                // FAILSAFE_ACTION_2     (7) — registered by vehicle
 };
 
 #elif APM_BUILD_COPTER_OR_HELI
@@ -748,105 +514,19 @@ struct CopterAuxOptionsMeta : AP_OSD_ParamSetting::ParamMetadata {
 };
 static const CopterAuxOptionsMeta meta_aux_options;
 
-struct CopterFlightModesMeta : AP_OSD_ParamSetting::ParamMetadata {
-    CopterFlightModesMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 28, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0:  return "STAB";
-        case 1:  return "ACRO";
-        case 2:  return "ALTHOLD";
-        case 3:  return "AUTO";
-        case 4:  return "GUIDED";
-        case 5:  return "LOIT";
-        case 6:  return "RTL";
-        case 7:  return "CIRC";
-        case 9:  return "LAND";
-        case 11: return "DRFT";
-        case 13: return "SPORT";
-        case 14: return "FLIP";
-        case 15: return "ATUN";
-        case 16: return "POSHLD";
-        case 17: return "BRAKE";
-        case 18: return "THROW";
-        case 19: return "AVD_ADSB";
-        case 20: return "GUID_NOGPS";
-        case 21: return "SMRTRTL";
-        case 22: return "FLOHOLD";
-        case 23: return "FOLLOW";
-        case 24: return "ZIGZAG";
-        case 25: return "SYSID";
-        case 26: return "HELI_ARO";
-        case 27: return "AUTORTL";
-        case 28: return "TRTLE";
-        default: return nullptr;
-        }
-    }
-};
-static const CopterFlightModesMeta meta_flt_modes;
-
-struct CopterFailsafeOptionsMeta : AP_OSD_ParamSetting::ParamMetadata {
-    CopterFailsafeOptionsMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 3, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0:  return "NONE";
-        case 1:  return "CONT_RCFS";
-        case 2:  return "CONT_GCSFS";
-        case 3:  return "CONT_RC/GCSFS";
-        case 4:  return "CONT_GUID_RC";
-        case 8:  return "CONT_LAND";
-        case 15: return "CONT_CTRL_GCS";
-        case 18: return "CONTNUE";
-        default: return nullptr;
-        }
-    }
-};
-static const CopterFailsafeOptionsMeta meta_fs_options;
-
-struct CopterFailsafeActionMeta : AP_OSD_ParamSetting::ParamMetadata {
-    CopterFailsafeActionMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 5, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0: return "NONE";
-        case 1: return "LAND";
-        case 2: return "RTL";
-        case 3: return "SRTL_RTL";
-        case 4: return "SRTL_LAND";
-        case 5: return "TERM";
-        default: return nullptr;
-        }
-    }
-};
-static const CopterFailsafeActionMeta meta_fs_act;
-
-struct CopterThrFailsafeActionMeta : AP_OSD_ParamSetting::ParamMetadata {
-    CopterThrFailsafeActionMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 5, 1) {}
-    const char *name_for_value(uint8_t v) const override {
-        switch (v) {
-        case 0: return "NONE";
-        case 1: return "RTL";
-        case 2: return "CONT";
-        case 3: return "LAND";
-        case 4: return "SRTL_RTL";
-        case 5: return "SRTL_LAND";
-        default: return nullptr;
-        }
-    }
-};
-static const CopterThrFailsafeActionMeta meta_thr_fs_act;
-
 // copter parameters
-const AP_OSD_ParamSetting::ParamMetadata* const AP_OSD_ParamSetting::_param_metadata[] = {
+const AP_OSD_ParamSetting::ParamMetadata* AP_OSD_ParamSetting::_param_metadata[] = {
     &meta_serial_protocol,  // SERIAL_PROTOCOL      (1)
-    &meta_servo_function,   // SERVO_FUNCTION        (2)
+    nullptr,                // SERVO_FUNCTION        (2) — registered by vehicle
     &meta_aux_options,      // AUX_FUNCTION          (3)
-    &meta_flt_modes,        // FLIGHT_MODE           (4)
-    &meta_fs_options,       // FAILSAFE_ACTION       (5)
-    &meta_fs_act,           // FAILSAFE_ACTION_1     (6)
-    &meta_thr_fs_act,       // FAILSAFE_ACTION_2     (7)
+    nullptr,                // FLIGHT_MODE           (4) — registered by vehicle
+    nullptr,                // FAILSAFE_ACTION       (5) — registered by vehicle
+    nullptr,                // FAILSAFE_ACTION_1     (6) — registered by vehicle
+    nullptr,                // FAILSAFE_ACTION_2     (7) — registered by vehicle
 };
 
 #else
-const AP_OSD_ParamSetting::ParamMetadata* const AP_OSD_ParamSetting::_param_metadata[] = {};
+const AP_OSD_ParamSetting::ParamMetadata* AP_OSD_ParamSetting::_param_metadata[] = {};
 #endif
 
 extern const AP_HAL::HAL& hal;
@@ -1072,6 +752,14 @@ void AP_OSD_ParamSetting::save_as_new()
     }
     if (_param_incr.configured()) {
         _param_incr.save();
+    }
+}
+
+void AP_OSD_ParamSetting::set_metadata(Type type, const ParamMetadata* meta)
+{
+    const uint8_t idx = uint8_t(type) - 1;
+    if (uint8_t(type) > 0 && idx < ARRAY_SIZE(_param_metadata)) {
+        _param_metadata[idx] = meta;
     }
 }
 
