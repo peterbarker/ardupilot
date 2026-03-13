@@ -401,8 +401,10 @@ public:
         float min_value;
         float max_value;
         float increment;
-        uint8_t values_max;
-        const char** values;
+        virtual const char *name_for_value(uint8_t value) const = 0;
+    protected:
+        ParamMetadata(float min, float max, float incr)
+            : min_value(min), max_value(max), increment(incr) {}
     };
 
     // compact structure used to hold default values for static initialization
@@ -412,7 +414,7 @@ public:
         Type type;
     };
 
-    static const ParamMetadata _param_metadata[];
+    static const ParamMetadata* const _param_metadata[];
 
     AP_OSD_ParamSetting() {};
     AP_OSD_ParamSetting(uint8_t param_number);
@@ -434,7 +436,8 @@ public:
     void save_as_new();
 
     const ParamMetadata* get_custom_metadata() const {
-        return (_type > 0 ? &_param_metadata[_type - 1] : nullptr);
+        return (_type > 0 && _type < uint8_t(Type::NUM_TYPES))
+            ? _param_metadata[_type - 1] : nullptr;
     }
 
     // User settable parameters
