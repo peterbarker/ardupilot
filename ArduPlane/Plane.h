@@ -1233,6 +1233,7 @@ private:
     bool nav_scripting_enable(uint8_t mode) override;
 #endif
  
+public:
     enum Failsafe_Action {
         Failsafe_Action_None      = 0,
         Failsafe_Action_RTL       = 1,
@@ -1247,6 +1248,8 @@ private:
 #endif
         Failsafe_Action_AUTOLAND_OR_RTL = 7,
     };
+
+private:
 
     // list of priorities, highest priority first
     static constexpr int8_t _failsafe_priorities[] = {

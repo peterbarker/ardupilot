@@ -54,8 +54,14 @@ void Plane::init_ardupilot()
     gcs().setup_uarts();
 
 
+#if OSD_PARAM_ENABLED
+    extern void osd_register_plane_metadata();
+#endif
 #if OSD_ENABLED
     osd.init();
+#if OSD_PARAM_ENABLED
+    osd_register_plane_metadata();
+#endif
 #endif
 
     AP::compass().set_log_bit(MASK_LOG_COMPASS);
