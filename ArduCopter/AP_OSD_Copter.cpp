@@ -248,14 +248,16 @@ struct CopterFailsafeActionMeta : AP_OSD_ParamSetting::ParamMetadata {
     CopterFailsafeActionMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 5, 1) {}
     const char *name_for_value(uint8_t v) const override {
         switch ((Copter::FailsafeAction)v) {
-        case Copter::FailsafeAction::NONE:          return "NONE";
-        case Copter::FailsafeAction::LAND:          return "LAND";
-        case Copter::FailsafeAction::RTL:           return "RTL";
-        case Copter::FailsafeAction::SMARTRTL:      return "SRTL_RTL";
-        case Copter::FailsafeAction::SMARTRTL_LAND: return "SRTL_LAND";
-        case Copter::FailsafeAction::TERMINATE:     return "TERM";
-        default: return nullptr;
+        case Copter::FailsafeAction::NONE:               return "NONE";
+        case Copter::FailsafeAction::LAND:               return "LAND";
+        case Copter::FailsafeAction::RTL:                return "RTL";
+        case Copter::FailsafeAction::SMARTRTL:           return "SRTL_RTL";
+        case Copter::FailsafeAction::SMARTRTL_LAND:      return "SRTL_LAND";
+        case Copter::FailsafeAction::TERMINATE:          return "TERM";
+        case Copter::FailsafeAction::AUTO_DO_LAND_START: return "DO_LAND_ST";
+        case Copter::FailsafeAction::BRAKE_LAND:         return "BRK_LAND";
         }
+        return nullptr;
     }
 };
 static const CopterFailsafeActionMeta meta_fs_act;
@@ -270,8 +272,8 @@ struct CopterThrFailsafeActionMeta : AP_OSD_ParamSetting::ParamMetadata {
         case FS_THR_ENABLED_ALWAYS_LAND:             return "LAND";
         case FS_THR_ENABLED_ALWAYS_SMARTRTL_OR_RTL:  return "SRTL_RTL";
         case FS_THR_ENABLED_ALWAYS_SMARTRTL_OR_LAND: return "SRTL_LAND";
-        default: return nullptr;
         }
+        return nullptr;
     }
 };
 static const CopterThrFailsafeActionMeta meta_thr_fs_act;
