@@ -215,16 +215,18 @@ struct PlaneFailsafeActionMeta : AP_OSD_ParamSetting::ParamMetadata {
     PlaneFailsafeActionMeta() : AP_OSD_ParamSetting::ParamMetadata(0, 5, 1) {}
     const char *name_for_value(uint8_t v) const override {
         switch ((Plane::Failsafe_Action)v) {
-        case Plane::Failsafe_Action_None:      return "NONE";
-        case Plane::Failsafe_Action_RTL:       return "RTL";
-        case Plane::Failsafe_Action_Land:      return "LAND";
-        case Plane::Failsafe_Action_Terminate: return "TERM";
+        case Plane::Failsafe_Action_None:           return "NONE";
+        case Plane::Failsafe_Action_RTL:            return "RTL";
+        case Plane::Failsafe_Action_Land:           return "LAND";
+        case Plane::Failsafe_Action_Terminate:      return "TERM";
 #if HAL_QUADPLANE_ENABLED
-        case Plane::Failsafe_Action_QLand:     return "QLAND";
+        case Plane::Failsafe_Action_QLand:          return "QLAND";
+        case Plane::Failsafe_Action_Loiter_alt_QLand: return "LOIT_QLAND";
 #endif
-        case Plane::Failsafe_Action_Parachute: return "PARA";
-        default: return nullptr;
+        case Plane::Failsafe_Action_Parachute:      return "PARA";
+        case Plane::Failsafe_Action_AUTOLAND_OR_RTL: return "ALND_RTL";
         }
+        return nullptr;
     }
 };
 static const PlaneFailsafeActionMeta meta_fs_act;
@@ -237,8 +239,9 @@ struct PlaneShortFailsafeMeta : AP_OSD_ParamSetting::ParamMetadata {
         case FS_ACTION_SHORT_CIRCLE:    return "CIRC";
         case FS_ACTION_SHORT_FBWA:      return "FBWA";
         case FS_ACTION_SHORT_DISABLED:  return "DSABLE";
-        default: return nullptr;
+        case FS_ACTION_SHORT_FBWB:      return "FBWB";
         }
+        return nullptr;
     }
 };
 static const PlaneShortFailsafeMeta meta_fs_shrt;
@@ -250,11 +253,11 @@ struct PlaneLongFailsafeMeta : AP_OSD_ParamSetting::ParamMetadata {
         case FS_ACTION_LONG_CONTINUE:   return "CNTNUE";
         case FS_ACTION_LONG_RTL:        return "RTL";
         case FS_ACTION_LONG_GLIDE:      return "GLIDE";
-#if HAL_PARACHUTE_ENABLED
         case FS_ACTION_LONG_PARACHUTE:  return "PARACHT";
-#endif  // HAL_PARACHUTE_ENABLED
-        default: return nullptr;
+        case FS_ACTION_LONG_AUTO:       return "AUTO";
+        case FS_ACTION_LONG_AUTOLAND:   return "AUTOLND";
         }
+        return nullptr;
     }
 };
 static const PlaneLongFailsafeMeta meta_fs_lng;
