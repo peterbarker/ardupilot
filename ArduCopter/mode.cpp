@@ -183,35 +183,86 @@ void Copter::mode_change_failed(const Mode *mode, const char *reason)
 // Check if this mode can be entered from the GCS
 bool Copter::gcs_mode_enabled(const Mode::Number mode_num)
 {
-    // List of modes that can be blocked, index is bit number in parameter bitmask
-    static const uint8_t mode_list [] {
-        (uint8_t)Mode::Number::STABILIZE,
-        (uint8_t)Mode::Number::ACRO,
-        (uint8_t)Mode::Number::ALT_HOLD,
-        (uint8_t)Mode::Number::AUTO,
-        (uint8_t)Mode::Number::GUIDED,
-        (uint8_t)Mode::Number::LOITER,
-        (uint8_t)Mode::Number::CIRCLE,
-        (uint8_t)Mode::Number::DRIFT,
-        (uint8_t)Mode::Number::SPORT,
-        (uint8_t)Mode::Number::FLIP,
-        (uint8_t)Mode::Number::AUTOTUNE,
-        (uint8_t)Mode::Number::POSHOLD,
-        (uint8_t)Mode::Number::BRAKE,
-        (uint8_t)Mode::Number::THROW,
-        (uint8_t)Mode::Number::AVOID_ADSB,
-        (uint8_t)Mode::Number::GUIDED_NOGPS,
-        (uint8_t)Mode::Number::SMART_RTL,
-        (uint8_t)Mode::Number::FLOWHOLD,
-        (uint8_t)Mode::Number::FOLLOW,
-        (uint8_t)Mode::Number::ZIGZAG,
-        (uint8_t)Mode::Number::SYSTEMID,
-        (uint8_t)Mode::Number::AUTOROTATE,
-        (uint8_t)Mode::Number::AUTO_RTL,
-        (uint8_t)Mode::Number::TURTLE
-    };
-
-    return !block_GCS_mode_change((uint8_t)mode_num, mode_list, ARRAY_SIZE(mode_list));
+    // Map mode to its bit index in the GCS_BLOCK parameter bitmask.
+    // Modes absent from this switch (RTL, LAND, or any compiled-out mode) are not blockable.
+    uint8_t bit;
+    switch (mode_num) {
+#if MODE_STABILIZE_ENABLED
+    case Mode::Number::STABILIZE:    bit =  0; break;
+#endif
+#if MODE_ACRO_ENABLED
+    case Mode::Number::ACRO:         bit =  1; break;
+#endif
+#if MODE_ALT_HOLD_ENABLED
+    case Mode::Number::ALT_HOLD:     bit =  2; break;
+#endif
+#if MODE_AUTO_ENABLED
+    case Mode::Number::AUTO:         bit =  3; break;
+#endif
+#if MODE_GUIDED_ENABLED
+    case Mode::Number::GUIDED:       bit =  4; break;
+#endif
+#if MODE_LOITER_ENABLED
+    case Mode::Number::LOITER:       bit =  5; break;
+#endif
+#if MODE_CIRCLE_ENABLED
+    case Mode::Number::CIRCLE:       bit =  6; break;
+#endif
+#if MODE_DRIFT_ENABLED
+    case Mode::Number::DRIFT:        bit =  7; break;
+#endif
+#if MODE_SPORT_ENABLED
+    case Mode::Number::SPORT:        bit =  8; break;
+#endif
+#if MODE_FLIP_ENABLED
+    case Mode::Number::FLIP:         bit =  9; break;
+#endif
+#if MODE_AUTOTUNE_ENABLED
+    case Mode::Number::AUTOTUNE:     bit = 10; break;
+#endif
+#if MODE_POSHOLD_ENABLED
+    case Mode::Number::POSHOLD:      bit = 11; break;
+#endif
+#if MODE_BRAKE_ENABLED
+    case Mode::Number::BRAKE:        bit = 12; break;
+#endif
+#if MODE_THROW_ENABLED
+    case Mode::Number::THROW:        bit = 13; break;
+#endif
+#if MODE_AVOID_ADSB_ENABLED
+    case Mode::Number::AVOID_ADSB:   bit = 14; break;
+#endif
+#if MODE_GUIDED_NOGPS_ENABLED
+    case Mode::Number::GUIDED_NOGPS: bit = 15; break;
+#endif
+#if MODE_SMART_RTL_ENABLED
+    case Mode::Number::SMART_RTL:    bit = 16; break;
+#endif
+#if MODE_FLOWHOLD_ENABLED
+    case Mode::Number::FLOWHOLD:     bit = 17; break;
+#endif
+#if MODE_FOLLOW_ENABLED
+    case Mode::Number::FOLLOW:       bit = 18; break;
+#endif
+#if MODE_ZIGZAG_ENABLED
+    case Mode::Number::ZIGZAG:       bit = 19; break;
+#endif
+#if MODE_SYSTEMID_ENABLED
+    case Mode::Number::SYSTEMID:     bit = 20; break;
+#endif
+#if MODE_AUTOROTATE_ENABLED
+    case Mode::Number::AUTOROTATE:   bit = 21; break;
+#endif
+#if MODE_AUTO_RTL_ENABLED
+    case Mode::Number::AUTO_RTL:     bit = 22; break;
+#endif
+#if MODE_TURTLE_ENABLED
+    case Mode::Number::TURTLE:       bit = 23; break;
+#endif
+    default:
+        return true;
+    }
+    return !(uint32_t(flight_mode_GCS_block) & (1U << bit));
 }
 
 // Return mask of enabled modes, order does not matter, its just for tracking changes

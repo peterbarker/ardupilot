@@ -821,7 +821,11 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_SOLO_BTN_PAUSE_CLICK(const mavlink
             } else {
                 // assume that shots modes are all done in guided.
                 // NOTE: this may need to change if we add a non-guided shot mode
-                bool shot_mode = (!is_zero(packet.param1) && (copter.flightmode->mode_number() == Mode::Number::GUIDED || copter.flightmode->mode_number() == Mode::Number::GUIDED_NOGPS));
+                bool shot_mode = (!is_zero(packet.param1) && (copter.flightmode->mode_number() == Mode::Number::GUIDED
+#if MODE_GUIDED_NOGPS_ENABLED
+                    || copter.flightmode->mode_number() == Mode::Number::GUIDED_NOGPS
+#endif
+                ));
 
                 if (!shot_mode) {
 #if MODE_BRAKE_ENABLED

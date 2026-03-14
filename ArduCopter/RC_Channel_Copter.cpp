@@ -331,9 +331,11 @@ bool RC_Channel_Copter::do_aux_function(const AuxFuncTrigger &trigger)
             do_aux_function_change_mode(Mode::Number::LOITER, ch_flag);
             break;
 
+#if MODE_FOLLOW_ENABLED
         case AUX_FUNC::FOLLOW:
             do_aux_function_change_mode(Mode::Number::FOLLOW, ch_flag);
             break;
+#endif
 
 #if HAL_PARACHUTE_ENABLED
         case AUX_FUNC::PARACHUTE_ENABLE:

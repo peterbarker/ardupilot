@@ -119,11 +119,32 @@
 #ifndef AUTOTUNE_ENABLED
  # define AUTOTUNE_ENABLED  1
 #endif
+#ifndef MODE_AUTOTUNE_ENABLED
+# define MODE_AUTOTUNE_ENABLED AUTOTUNE_ENABLED
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Nav-Guided - allows external nav computer to control vehicle
 #ifndef AC_NAV_GUIDED
  # define AC_NAV_GUIDED    1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// Stabilize - always enabled
+#ifndef MODE_STABILIZE_ENABLED
+# define MODE_STABILIZE_ENABLED 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// AltHold - always enabled
+#ifndef MODE_ALT_HOLD_ENABLED
+# define MODE_ALT_HOLD_ENABLED 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// Land - always enabled
+#ifndef MODE_LAND_ENABLED
+# define MODE_LAND_ENABLED 1
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -136,6 +157,10 @@
 // Auto mode - allows vehicle to trace waypoints and perform automated actions
 #ifndef MODE_AUTO_ENABLED
 # define MODE_AUTO_ENABLED 1
+#endif
+// Auto RTL uses the same enable guard as Auto
+#ifndef MODE_AUTO_RTL_ENABLED
+# define MODE_AUTO_RTL_ENABLED MODE_AUTO_ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -207,6 +232,9 @@
 #ifndef MODE_SMARTRTL_ENABLED
 # define MODE_SMARTRTL_ENABLED 1
 #endif
+#ifndef MODE_SMART_RTL_ENABLED
+# define MODE_SMART_RTL_ENABLED MODE_SMARTRTL_ENABLED
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Sport - fly vehicle in rate-controlled (earth-frame) mode
@@ -268,6 +296,12 @@
 #else
     # define MODE_AUTOROTATE_ENABLED 0
 #endif
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// Avoid ADSB - avoidance of full-size aircraft via ADSB
+#ifndef MODE_AVOID_ADSB_ENABLED
+# define MODE_AVOID_ADSB_ENABLED AP_ADSB_AVOIDANCE_ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

@@ -75,32 +75,84 @@ public:
 
     // Auto Pilot Modes enumeration
     enum class Number : uint8_t {
+#if MODE_STABILIZE_ENABLED
         STABILIZE =     0,  // manual airframe angle with manual throttle
+#endif
+#if MODE_ACRO_ENABLED
         ACRO =          1,  // manual body-frame angular rate with manual throttle
+#endif
+#if MODE_ALT_HOLD_ENABLED
         ALT_HOLD =      2,  // manual airframe angle with automatic throttle
+#endif
+#if MODE_AUTO_ENABLED
         AUTO =          3,  // fully automatic waypoint control using mission commands
+#endif
+#if MODE_GUIDED_ENABLED
         GUIDED =        4,  // fully automatic fly to coordinate or fly at velocity/direction using GCS immediate commands
+#endif
+#if MODE_LOITER_ENABLED
         LOITER =        5,  // automatic horizontal acceleration with automatic throttle
+#endif
+#if MODE_RTL_ENABLED
         RTL =           6,  // automatic return to launching point
+#endif
+#if MODE_CIRCLE_ENABLED
         CIRCLE =        7,  // automatic circular flight with automatic throttle
+#endif
+#if MODE_LAND_ENABLED
         LAND =          9,  // automatic landing with horizontal position control
+#endif
+#if MODE_DRIFT_ENABLED
         DRIFT =        11,  // semi-autonomous position, yaw and throttle control
+#endif
+#if MODE_SPORT_ENABLED
         SPORT =        13,  // manual earth-frame angular rate control with manual throttle
+#endif
+#if MODE_FLIP_ENABLED
         FLIP =         14,  // automatically flip the vehicle on the roll axis
+#endif
+#if MODE_AUTOTUNE_ENABLED
         AUTOTUNE =     15,  // automatically tune the vehicle's roll and pitch gains
+#endif
+#if MODE_POSHOLD_ENABLED
         POSHOLD =      16,  // automatic position hold with manual override, with automatic throttle
+#endif
+#if MODE_BRAKE_ENABLED
         BRAKE =        17,  // full-brake using inertial/GPS system, no pilot input
+#endif
+#if MODE_THROW_ENABLED
         THROW =        18,  // throw to launch mode using inertial/GPS system, no pilot input
+#endif
+#if MODE_AVOID_ADSB_ENABLED
         AVOID_ADSB =   19,  // automatic avoidance of obstacles in the macro scale - e.g. full-sized aircraft
+#endif
+#if MODE_GUIDED_NOGPS_ENABLED
         GUIDED_NOGPS = 20,  // guided mode but only accepts attitude and altitude
+#endif
+#if MODE_SMART_RTL_ENABLED
         SMART_RTL =    21,  // SMART_RTL returns to home by retracing its steps
+#endif
+#if MODE_FLOWHOLD_ENABLED
         FLOWHOLD  =    22,  // FLOWHOLD holds position with optical flow without rangefinder
+#endif
+#if MODE_FOLLOW_ENABLED
         FOLLOW    =    23,  // follow attempts to follow another vehicle or ground station
+#endif
+#if MODE_ZIGZAG_ENABLED
         ZIGZAG    =    24,  // ZIGZAG mode is able to fly in a zigzag manner with predefined point A and point B
+#endif
+#if MODE_SYSTEMID_ENABLED
         SYSTEMID  =    25,  // System ID mode produces automated system identification signals in the controllers
+#endif
+#if MODE_AUTOROTATE_ENABLED
         AUTOROTATE =   26,  // Autonomous autorotation
+#endif
+#if MODE_AUTO_RTL_ENABLED
         AUTO_RTL =     27,  // Auto RTL, this is not a true mode, AUTO will report as this mode if entered to perform a DO_LAND_START Landing sequence
+#endif
+#if MODE_TURTLE_ENABLED
         TURTLE =       28,  // Flip over after crash
+#endif
 
         // Mode number 30 reserved for "offboard" for external/lua control.
 
@@ -495,6 +547,7 @@ private:
 #endif
 
 
+#if MODE_ALT_HOLD_ENABLED
 class ModeAltHold : public Mode {
 
 public:
@@ -527,7 +580,9 @@ protected:
 private:
 
 };
+#endif  // MODE_ALT_HOLD_ENABLED
 
+#if MODE_AUTO_ENABLED
 class ModeAuto : public Mode {
 
 public:
@@ -811,8 +866,9 @@ private:
 
     float circle_last_num_complete;
 };
+#endif  // MODE_AUTO_ENABLED
 
-#if AUTOTUNE_ENABLED
+#if MODE_AUTOTUNE_ENABLED
 /*
   wrapper class for AC_AutoTune
  */
@@ -866,6 +922,7 @@ protected:
 #endif
 
 
+#if MODE_BRAKE_ENABLED
 class ModeBrake : public Mode {
 
 public:
@@ -894,8 +951,9 @@ private:
     uint32_t _timeout_ms;
 
 };
+#endif  // MODE_BRAKE_ENABLED
 
-
+#if MODE_CIRCLE_ENABLED
 class ModeCircle : public Mode {
 
 public:
@@ -924,8 +982,9 @@ private:
     // Circle
     bool speed_changing = false;     // true when the roll stick is being held to facilitate stopping at 0 rate
 };
+#endif  // MODE_CIRCLE_ENABLED
 
-
+#if MODE_DRIFT_ENABLED
 class ModeDrift : public Mode {
 
 public:
@@ -952,8 +1011,9 @@ private:
     float get_throttle_assist(float vel_d_ms, float pilot_throttle_scaled);
 
 };
+#endif  // MODE_DRIFT_ENABLED
 
-
+#if MODE_FLIP_ENABLED
 class ModeFlip : public Mode {
 
 public:
@@ -994,7 +1054,7 @@ private:
     int8_t roll_dir;                    // roll direction (-1 = roll left, 1 = roll right)
     int8_t pitch_dir;                   // pitch direction (-1 = pitch forward, 1 = pitch back)
 };
-
+#endif  // MODE_FLIP_ENABLED
 
 #if MODE_FLOWHOLD_ENABLED
 /*
@@ -1087,7 +1147,7 @@ private:
 };
 #endif // MODE_FLOWHOLD_ENABLED
 
-
+#if MODE_GUIDED_ENABLED
 class ModeGuided : public Mode {
 
 public:
@@ -1261,8 +1321,9 @@ private:
     const char* full_name;
     const char* short_name;
 };
-#endif
+#endif  // AP_SCRIPTING_ENABLED
 
+#if MODE_GUIDED_NOGPS_ENABLED
 class ModeGuidedNoGPS : public ModeGuided {
 
 public:
@@ -1285,8 +1346,10 @@ protected:
 private:
 
 };
+#endif  // MODE_GUIDED_NOGPS_ENABLED
+#endif  // MODE_GUIDED_ENABLED
 
-
+#if MODE_LAND_ENABLED
 class ModeLand : public Mode {
 
 public:
@@ -1346,8 +1409,9 @@ private:
     uint32_t land_start_time;
     bool land_pause;
 };
+#endif  // MODE_LAND_ENABLED
 
-
+#if MODE_LOITER_ENABLED
 class ModeLoiter : public Mode {
 
 public:
@@ -1396,8 +1460,9 @@ private:
 #endif
 
 };
+#endif  // MODE_LOITER_ENABLED
 
-
+#if MODE_POSHOLD_ENABLED
 class ModePosHold : public Mode {
 
 public:
@@ -1490,8 +1555,9 @@ private:
     float roll_rad;     // final roll angle sent to attitude controller
     float pitch_rad;    // final pitch angle sent to attitude controller
 };
+#endif  // MODE_POSHOLD_ENABLED
 
-
+#if MODE_RTL_ENABLED
 class ModeRTL : public Mode {
 
 public:
@@ -1627,8 +1693,9 @@ private:
     bool option_is_enabled(Option option) const;
 
 };
+#endif  // MODE_RTL_ENABLED
 
-
+#if MODE_SMART_RTL_ENABLED
 class ModeSmartRTL : public ModeRTL {
 
 public:
@@ -1690,8 +1757,9 @@ private:
     // if vehicle exits SmartRTL mode before reaching home. invalid if zero
     Vector3p dest_NED_backup;
 };
+#endif  // MODE_SMART_RTL_ENABLED
 
-
+#if MODE_SPORT_ENABLED
 class ModeSport : public Mode {
 
 public:
@@ -1718,8 +1786,9 @@ protected:
 private:
 
 };
+#endif  // MODE_SPORT_ENABLED
 
-
+#if MODE_STABILIZE_ENABLED
 class ModeStabilize : public Mode {
 
 public:
@@ -1765,8 +1834,10 @@ protected:
 private:
 
 };
-#endif
+#endif  // FRAME_CONFIG == HELI_FRAME
+#endif  // MODE_STABILIZE_ENABLED
 
+#if MODE_SYSTEMID_ENABLED
 class ModeSystemId : public Mode {
 
 public:
@@ -1848,7 +1919,9 @@ private:
         SYSTEMID_STATE_TESTING
     } systemid_state;
 };
+#endif  // MODE_SYSTEMID_ENABLED
 
+#if MODE_THROW_ENABLED
 class ModeThrow : public Mode {
 
 public:
@@ -1904,6 +1977,7 @@ private:
     uint32_t free_fall_start_ms;    // system time free fall was detected
     float free_fall_start_vel_u_ms;     // vertical velocity when free fall was detected
 };
+#endif  // MODE_THROW_ENABLED
 
 #if MODE_TURTLE_ENABLED
 class ModeTurtle : public Mode {
@@ -1948,7 +2022,7 @@ private:
 
 // modes below rely on Guided mode so must be declared at the end (instead of in alphabetical order)
 
-#if AP_ADSB_AVOIDANCE_ENABLED
+#if MODE_AVOID_ADSB_ENABLED
 class ModeAvoidADSB : public ModeGuided {
 
 public:
@@ -1974,7 +2048,7 @@ protected:
 private:
 
 };
-#endif  // AP_ADSB_AVOIDANCE_ENABLED
+#endif  // MODE_AVOID_ADSB_ENABLED
 
 #if MODE_FOLLOW_ENABLED
 class ModeFollow : public ModeGuided {
@@ -2011,7 +2085,8 @@ protected:
 };
 #endif
 
-class ModeZigZag : public Mode {        
+#if MODE_ZIGZAG_ENABLED
+class ModeZigZag : public Mode {
 
 public:
     ModeZigZag(void);
@@ -2107,6 +2182,7 @@ private:
     int16_t line_num = 0;           // target line number
     bool is_suspended;              // true if zigzag auto is suspended
 };
+#endif  // MODE_ZIGZAG_ENABLED
 
 #if MODE_AUTOROTATE_ENABLED
 class ModeAutorotate : public Mode {
