@@ -11,6 +11,8 @@
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
 
+#include <stdio.h>
+
 AP_Compass_Backend::AP_Compass_Backend()
     : _compass(AP::compass())
 {
@@ -166,6 +168,13 @@ void AP_Compass_Backend::drain_accumulated_samples(const Vector3f *scaling)
     WITH_SEMAPHORE(_sem);
 
     Compass::mag_state &state = _compass._state[Compass::StateIndex(instance)];
+
+    static uint32_t last_debug_ms;
+    const uint32_t now_ms = AP_HAL::millis();
+    if (now_ms - last_debug_ms > 1000) {
+        printf("Draining %u samples\n", state.accum_count);
+        last_debug_ms = now_ms;
+    }
 
     if (state.accum_count == 0) {
         return;
