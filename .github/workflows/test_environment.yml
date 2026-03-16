@@ -1,18 +1,5 @@
 name: test environment setup
-on:
-  schedule:
-    - cron: '0 0 * * 6'  # every saturday at midnight
-  workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/test_environment.yml'
-      - 'Tools/environment_install/**'
-
-  pull_request:
-    paths:
-      - '.github/workflows/test_environment.yml'
-      - 'Tools/environment_install/**'
-
+on: workflow_dispatch:
 
 concurrency:
   group: ci-${{github.workflow}}-${{ github.ref }}
