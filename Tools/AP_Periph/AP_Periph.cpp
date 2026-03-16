@@ -168,6 +168,7 @@ void AP_Periph_FW::init()
 #endif
 
 #if AP_PERIPH_MAG_ENABLED
+    printf("Calling compass.init()\n");
     compass.init();
 #endif
 

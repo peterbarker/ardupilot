@@ -8,6 +8,8 @@
 
 #include <dronecan_msgs.h>
 
+#include <stdio.h>
+
 #ifndef AP_PERIPH_MAG_MAX_RATE
 #define AP_PERIPH_MAG_MAX_RATE 25U
 #endif
@@ -27,7 +29,15 @@ extern const AP_HAL::HAL &hal;
  */
 void AP_Periph_FW::can_mag_update(void)
 {
+    static uint32_t last_debug_ms;
+    const uint32_t x_now_ms = AP_HAL::millis();
+    const bool debug = x_now_ms - last_debug_ms > 1000;
+    if (debug ) {
+        last_debug_ms = x_now_ms;
+    }
+
     if (!compass.available()) {
+        if (debug) { printf("Compass not available\n"); }
         return;
     }
 
@@ -39,6 +49,7 @@ void AP_Periph_FW::can_mag_update(void)
     }
 #endif
 
+    if (debug) { printf("calling Compass read\n"); }
     compass.read();
 
 #if AP_PERIPH_PROBE_CONTINUOUS
@@ -53,9 +64,11 @@ void AP_Periph_FW::can_mag_update(void)
 #endif
 
     if (last_mag_update_ms == compass.last_update_ms()) {
+        if (debug) { printf("not ready to update\n"); }
         return;
     }
     if (!compass.healthy()) {
+        if (debug) { printf("compass not healthy\n"); }
         return;
     }
 
