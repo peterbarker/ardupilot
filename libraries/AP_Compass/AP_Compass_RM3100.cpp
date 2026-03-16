@@ -182,18 +182,28 @@ void AP_Compass_RM3100::timer()
     int32_t magy = 0;
     int32_t magz = 0;
 
+    static uint32_t last_debug_ms;
+    const uint32_t now_ms = AP_HAL::millis();
+    const bool debug = (now_ms - last_debug_ms) > 1000;
+    if (debug) {
+        last_debug_ms = now_ms;
+    }
+
     // check data ready on 3 axis
     uint8_t status;
     if (!dev->read_registers(RM3100_STATUS_REG, (uint8_t *)&status, 1)) {
+        printf("no status\n");
         goto check_registers;
     }
 
     if (!(status & 0x80)) {
         // data not available yet
+        printf("no data avail\n");
         goto check_registers;
     }
 
     if (!dev->read_registers(RM3100_MX2_REG, (uint8_t *)&data, sizeof(data))) {
+        printf("bad data\n");
         goto check_registers;
     }
 
