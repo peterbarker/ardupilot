@@ -198,7 +198,7 @@ void AP_Compass_RM3100::timer()
 
     if (!(status & 0x80)) {
         // data not available yet
-        printf("no data avail\n");
+        printf("no data avail (%u)\n", status);
         goto check_registers;
     }
 
