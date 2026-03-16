@@ -6,7 +6,7 @@
 #include <AP_Scripting/AP_Scripting_config.h>
 
 #ifndef HAL_MOUNT_ENABLED
-#define HAL_MOUNT_ENABLED 1
+#define HAL_MOUNT_ENABLED 0
 #endif
 
 #ifndef AP_MOUNT_BACKEND_DEFAULT_ENABLED
