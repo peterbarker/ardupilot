@@ -31,6 +31,9 @@ protected:
 #endif
 
     void send_nav_controller_output() const override; //TODO Apparently can't remove this or the build fails.
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+    bool wp(Location &loc) const override;
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
     uint64_t capabilities() const override;
 
     virtual MAV_VTOL_STATE vtol_state() const override

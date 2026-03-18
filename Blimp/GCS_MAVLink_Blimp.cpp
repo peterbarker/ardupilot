@@ -58,6 +58,13 @@ void GCS_MAVLINK_Blimp::send_nav_controller_output() const
 
 }
 
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+bool GCS_MAVLINK_Blimp::wp(Location &loc) const
+{
+    return blimp.flightmode->get_wp(loc);
+}
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+
 float GCS_MAVLINK_Blimp::vfr_hud_airspeed() const
 {
     Vector3f airspeed_vec_bf;
