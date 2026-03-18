@@ -44,6 +44,9 @@ protected:
     void handle_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) override;
 
     void send_nav_controller_output() const override;
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+    bool wp(Location &loc) const override;
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
     uint64_t capabilities() const override;
 
     virtual MAV_VTOL_STATE vtol_state() const override { return MAV_VTOL_STATE_MC; };

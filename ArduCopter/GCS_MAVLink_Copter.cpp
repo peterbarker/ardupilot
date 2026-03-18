@@ -194,6 +194,13 @@ void GCS_MAVLINK_Copter::send_nav_controller_output() const
         flightmode->crosstrack_error_m());
 }
 
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+bool GCS_MAVLINK_Copter::wp(Location &loc) const
+{
+    return copter.flightmode->get_wp(loc);
+}
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+
 float GCS_MAVLINK_Copter::vfr_hud_airspeed() const
 {
 #if AP_AIRSPEED_ENABLED
