@@ -243,6 +243,20 @@ void GCS_MAVLINK_Plane::send_nav_controller_output() const
     }
 }
 
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+bool GCS_MAVLINK_Plane::wp(Location &loc) const
+{
+    if (plane.control_mode == &plane.mode_manual) {
+        return false;
+    }
+    if (plane.next_WP_loc.is_zero()) {
+        return false;
+    }
+    loc = plane.next_WP_loc;
+    return true;
+}
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+
 bool GCS_MAVLINK_Plane::get_target_location(Location &loc) const
 {
     if (plane.control_mode == &plane.mode_manual) {
