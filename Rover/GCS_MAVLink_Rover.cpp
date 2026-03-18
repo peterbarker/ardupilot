@@ -97,6 +97,13 @@ void GCS_MAVLINK_Rover::send_nav_controller_output() const
         control_mode->crosstrack_error());
 }
 
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+bool GCS_MAVLINK_Rover::wp(Location &loc) const
+{
+    return rover.control_mode->get_desired_location(loc);
+}
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+
 int16_t GCS_MAVLINK_Rover::vfr_hud_throttle() const
 {
     return rover.g2.motors.get_throttle();
