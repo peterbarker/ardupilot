@@ -1202,7 +1202,10 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_AVAILABLE_MODES_MONITOR, MSG_AVAILABLE_MODES_MONITOR},
 #if AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED
         { MAVLINK_MSG_ID_FLIGHT_INFORMATION, MSG_FLIGHT_INFORMATION},
-#endif
+#endif  // AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+        { MAVLINK_MSG_ID_UTM_GLOBAL_POSITION, MSG_UTM_GLOBAL_POSITION},
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
     };
 
     for (uint8_t i=0; i<ARRAY_SIZE(map); i++) {
@@ -6143,6 +6146,114 @@ void GCS_MAVLINK::send_global_position_int()
 #endif  // AP_AHRS_ENABLED
 }
 
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+void GCS_MAVLINK::send_utm_global_position() const
+{
+    uint8_t flags = 0;
+
+    // time (UNIX epoch microseconds)
+    uint64_t time_usec = 0;
+#if AP_RTC_ENABLED
+    if (AP::rtc().get_utc_usec(time_usec)) {
+        flags |= UTM_DATA_AVAIL_FLAGS_TIME_VALID;
+    }
+#endif  // AP_RTC_ENABLED
+
+    // UAS ID from hardware UID
+    uint8_t uas_id[18] = {};
+    {
+        uint8_t len = ARRAY_SIZE(uas_id);
+        hal.util->get_system_id_unformatted(uas_id, len);
+    }
+    flags |= UTM_DATA_AVAIL_FLAGS_UAS_ID_AVAILABLE;
+
+    // position
+    int32_t lat = 0;
+    int32_t lon = 0;
+    int32_t alt_mm = 0;
+    int32_t relative_alt_mm = 0;
+
+    AP_AHRS &ahrs = AP::ahrs();
+    Location loc;
+    if (ahrs.get_location(loc)) {
+        lat = loc.lat;
+        lon = loc.lng;
+        alt_mm = global_position_int_alt();
+        flags |= UTM_DATA_AVAIL_FLAGS_POSITION_AVAILABLE;
+        flags |= UTM_DATA_AVAIL_FLAGS_ALTITUDE_AVAILABLE;
+    }
+    relative_alt_mm = global_position_int_relative_alt();
+    flags |= UTM_DATA_AVAIL_FLAGS_RELATIVE_ALTITUDE_AVAILABLE;
+
+    // velocity
+    int16_t vx = 0;
+    int16_t vy = 0;
+    int16_t vz = 0;
+    Vector3f vel;
+    if (ahrs.get_velocity_NED(vel)) {
+        vx = vel.x * 100;
+        vy = vel.y * 100;
+        vz = vel.z * 100;
+        flags |= UTM_DATA_AVAIL_FLAGS_HORIZONTAL_VELO_AVAILABLE;
+        flags |= UTM_DATA_AVAIL_FLAGS_VERTICAL_VELO_AVAILABLE;
+    }
+
+    // next waypoint from vehicle-specific navigation
+    int32_t next_lat = 0;
+    int32_t next_lon = 0;
+    int32_t next_alt_mm = 0;
+    Location next_loc;
+    if (wp(next_loc)) {
+        float next_alt_m;
+        if (next_loc.get_alt_m(Location::AltFrame::ABSOLUTE, next_alt_m)) {
+            next_lat = next_loc.lat;
+            next_lon = next_loc.lng;
+            next_alt_mm = (int32_t)(next_alt_m * 1000.0f);
+            flags |= UTM_DATA_AVAIL_FLAGS_NEXT_WAYPOINT_AVAILABLE;
+        }
+    }
+
+    // flight state mapped from landed_state()
+    uint8_t flight_state = UTM_FLIGHT_STATE_UNKNOWN;
+    switch (landed_state()) {
+    case MAV_LANDED_STATE_UNDEFINED:
+    case MAV_LANDED_STATE_ENUM_END:
+        flight_state = UTM_FLIGHT_STATE_UNKNOWN;
+        break;
+    case MAV_LANDED_STATE_ON_GROUND:
+        flight_state = UTM_FLIGHT_STATE_GROUND;
+        break;
+    case MAV_LANDED_STATE_IN_AIR:
+    case MAV_LANDED_STATE_TAKEOFF:
+    case MAV_LANDED_STATE_LANDING:
+        flight_state = UTM_FLIGHT_STATE_AIRBORNE;
+        break;
+    }
+
+    mavlink_msg_utm_global_position_send(
+        chan,
+        time_usec,
+        uas_id,
+        lat,
+        lon,
+        alt_mm,
+        relative_alt_mm,
+        vx,
+        vy,
+        vz,
+        0,              // h_acc: not available from AHRS
+        0,              // v_acc: not available from AHRS
+        0,              // vel_acc: not available from AHRS
+        next_lat,
+        next_lon,
+        next_alt_mm,
+        0,              // update_rate: 0 = unknown/data-driven
+        flight_state,
+        flags
+    );
+}
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+
 #if HAL_MOUNT_ENABLED
 void GCS_MAVLINK::send_gimbal_device_attitude_status() const
 {
@@ -6489,6 +6600,13 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         send_gps_global_origin();
         break;
 #endif  // AP_AHRS_ENABLED
+
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+    case MSG_UTM_GLOBAL_POSITION:
+        CHECK_PAYLOAD_SIZE(UTM_GLOBAL_POSITION);
+        send_utm_global_position();
+        break;
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
 
 #if AP_RPM_ENABLED
     case MSG_RPM:
