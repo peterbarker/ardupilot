@@ -29,6 +29,9 @@ protected:
     void send_banner() override;
 
     void send_nav_controller_output() const override;
+#if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+    bool wp(Location &loc) const override;
+#endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
     void send_pid_tuning() override;
 
     uint64_t capabilities() const override;
