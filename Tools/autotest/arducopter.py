@@ -152,14 +152,16 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.change_mode(mode)
         if not self.armed():
             self.wait_ready_to_arm(require_absolute=require_absolute, timeout=timeout)
-            self.zero_throttle()
+            if mode != 'GUIDED':
+                self.zero_throttle()
             self.arm_vehicle()
         if mode == 'GUIDED':
             self.user_takeoff(alt_min=alt_min, timeout=timeout, max_err=max_err)
         else:
             self.set_rc(3, takeoff_throttle)
         self.wait_altitude(alt_min-1, alt_min+max_err, relative=True, timeout=timeout, minimum_duration=alt_minimum_duration)
-        self.hover()
+        if mode != 'GUIDED':
+            self.hover()
         self.progress("TAKEOFF COMPLETE")
 
     def land_and_disarm(self, timeout=60):
@@ -15267,6 +15269,17 @@ RTL_ALT_M 111
         self.arm_vehicle()
         self.wait_disarmed()
 
+    def RC_OPTIONS_1_FS_THR_ENABLE_0(self):
+        '''check behaviour with unusual RC parameters'''
+        self.set_parameters({
+            "RC_OPTIONS": 1,
+            "FS_THR_ENABLE": 0,
+        })
+        self.reboot_sitl()
+        self.takeoff(10, mode='GUIDED')
+        self.wait_yaw_speed(0, minimum_duration=10)
+        self.do_land()
+
     def WaitAndMaintainAttitude_RCFlight(self):
         '''just test WaitAndMaintainAttitude works'''
         WaitAndMaintainAttitude(self, 0, 0, epsilon=1).run()
@@ -15937,6 +15950,7 @@ return update, 1000
             self.AHRSOriginRecorded,
             self.TestTetherStuck,
             self.ScriptingFlipMode,
+            self.RC_OPTIONS_1_FS_THR_ENABLE_0,
             self.ScriptingFlyVelocity,
             self.EK3_EXT_NAV_vel_without_vert,
             self.CompassLearnCopyFromEKF,
