@@ -135,7 +135,10 @@ This universal controller does not provide power to the servos. To power them, a
 
 The autopilot defaults are setup to DroneCAN BatteryInfo:
 
-- :ref:`BATT_MONITOR<BATT_MONITOR>` = 8
+```
+BATT_MONITOR=8
+```
+
 - :ref:`CAN_P1_DRIVER<CAN_P1_DRIVER>` = 1
 - :ref:`CAN_P2_DRIVER<CAN_P2_DRIVER>` = 1
 - :ref:`CAN_D1_PROTOCOL<CAN_D1_PROTOCOL>` = 1
