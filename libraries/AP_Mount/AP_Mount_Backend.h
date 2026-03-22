@@ -208,7 +208,7 @@ public:
     void send_camera_information(mavlink_channel_t chan) const;
 
     // virtual methods supplying data for send_camera_information
-    // backends with a camera should override get_camera_vendor_name (returning non-nullptr enables sending)
+    // returning nullptr from get_camera_vendor_name suppresses sending CAMERA_INFORMATION entirely
     virtual const char* get_camera_vendor_name() const { return nullptr; }
     virtual const char* get_camera_model_name() const { return ""; }
     virtual uint32_t get_camera_firmware_version() const { return 0; }
