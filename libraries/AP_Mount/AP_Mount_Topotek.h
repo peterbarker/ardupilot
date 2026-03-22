@@ -85,8 +85,11 @@ public:
     bool set_camera_source(uint8_t primary_source, uint8_t secondary_source) override;
 #endif
 
-    // send camera information message to GCS
-    void send_camera_information(mavlink_channel_t chan) const override;
+    // camera information getters
+    const char* get_camera_vendor_name() const override { return _initialised ? "Topotek" : nullptr; }
+    const char* get_camera_model_name() const override { return _got_gimbal_model_name ? _model_name : ""; }
+    uint32_t get_camera_firmware_version() const override { return _firmware_ver; }
+    uint32_t get_camera_cap_flags() const override;
 
     // send camera settings message to GCS
     void send_camera_settings(mavlink_channel_t chan) const override;

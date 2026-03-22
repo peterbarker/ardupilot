@@ -68,8 +68,11 @@ public:
     // primary and secondary sources use the AP_Camera::CameraSource enum cast to uint8_t
     bool set_camera_source(uint8_t primary_source, uint8_t secondary_source) override;
 
-    // send camera information message to GCS
-    void send_camera_information(mavlink_channel_t chan) const override;
+    // camera information getters
+    const char* get_camera_vendor_name() const override { return _initialised ? "Xacti" : nullptr; }
+    const char* get_camera_model_name() const override { return "CX-GB100"; }
+    uint32_t get_camera_firmware_version() const override { return _firmware_version.received ? _firmware_version.mav_ver : 0; }
+    uint32_t get_camera_cap_flags() const override;
 
     // send camera settings message to GCS
     void send_camera_settings(mavlink_channel_t chan) const override;
