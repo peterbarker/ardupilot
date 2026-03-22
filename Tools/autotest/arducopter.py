@@ -6693,6 +6693,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         '''test type=2, a "Solo" mount'''
         self.set_parameters({
             "MNT1_TYPE": 2,
+            "CAM1_TYPE": 4,       # Mount
             "RC6_OPTION": 213,  # MOUNT1_PITCH
         })
         self.customise_SITL_commandline([
@@ -6703,6 +6704,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             do_rate_tests=False,  # solo can't do rate control (yet?)
             constrain_sysid_target=False,  # not everything constrains all angles
         )
+        self.mount_check_camera_information("3DR", "Solo Gimbal")
 
     def mount_check_camera_information(
             self,

@@ -44,6 +44,10 @@ protected:
     // get attitude as a quaternion.  returns true on success
     bool get_attitude_quaternion(Quaternion& att_quat) override;
 
+    // camera information getters for CAMERA_INFORMATION message
+    const char* get_camera_vendor_name() const override { return "3DR"; }
+    const char* get_camera_model_name() const override { return "Solo Gimbal"; }
+
 private:
     // internal variables
     bool _initialised;              // true once the driver has been initialised
