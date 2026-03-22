@@ -959,7 +959,13 @@ void AP_Mount_Topotek::gimbal_version_analyse()
 
     // extract firmware version
     // the version can be in the format "1.2.3" or "123"
+    // _msg_buff[5] holds the ASCII hex-encoded data length byte from the packet header;
+    // char_to_hex returns 255 for an invalid (non-hex) character, which we treat as a
+    // malformed packet rather than capping, since a valid length field is always a hex digit
     const uint8_t data_buf_len = char_to_hex(_msg_buff[5]);
+    if (data_buf_len == 255) {
+        return;
+    }
 
     // check for "."
     bool contains_period = false;
