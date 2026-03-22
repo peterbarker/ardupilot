@@ -121,7 +121,24 @@ private:
 
     HAL_Semaphore write_mtx;
 
+    // _sim_serial_device can be one of two things:
+
+    // - A simulated device attached to a UART using (e.g.)
+    // "--uart5=sim:rf_benewake" which is read/written by ArduPilot.
+    // drivers and by the simulated device.
+
+    // a simulates device attached to a UART and the other end the
+    // UART device corresponding to that serial port.  In SITL these
+    // might bet network connections.  Currently refered to as a
+    // "client serial sim"
+
     SITL::SerialDevice *_sim_serial_device;
+
+    bool is_client_serial_sim;
+    void set_client_serial_sim(SITL::SerialDevice &device) {
+        _sim_serial_device = &device;
+        is_client_serial_sim = true;
+    };
 
     struct {
         bool active;
