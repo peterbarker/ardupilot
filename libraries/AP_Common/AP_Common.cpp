@@ -74,6 +74,41 @@ bool hex_to_uint8(uint8_t a, uint8_t &res)
     return true;
 }
 
+bool hex_charpair_to_uint8(const char s[2], uint8_t &res)
+{
+    uint8_t hi, lo;
+    if (!hex_to_uint8(s[0], hi) || !hex_to_uint8(s[1], lo)) {
+        return false;
+    }
+    res = (hi << 4) | lo;
+    return true;
+}
+
+bool hex_charpairs_to_uint8s(const char *s, uint8_t len, uint8_t *out)
+{
+    for (uint8_t i = 0; i < len; i++) {
+        uint8_t hi, lo;
+        if (!hex_to_uint8(s[i*2], hi) || !hex_to_uint8(s[i*2+1], lo)) {
+            return false;
+        }
+        out[i] = (hi << 4) | lo;
+    }
+    return true;
+}
+
+bool hex_chars_to_uint32(const char *s, uint8_t len, uint32_t &out)
+{
+    out = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        uint8_t nibble;
+        if (!hex_to_uint8(s[i], nibble)) {
+            return false;
+        }
+        out = (out << 4) | nibble;
+    }
+    return true;
+}
+
 /*
   strncpy without the warning for not leaving room for nul termination
  */
@@ -89,20 +124,3 @@ size_t strncpy_noterm(char *dest, const char *src, size_t n)
     return ret;
 }
 
-/**
- * return the numeric value of an ascii hex character
- * 
- * @param[in] a Hexadecimal character 
- * @return  Returns a binary value.  If 'a' is not a valid hex character 255 (AKA -1) is returned
- */
-uint8_t char_to_hex(char a)
-{
-    if (a >= 'A' && a <= 'F') {
-        return a - 'A' + 10;
-    } else if (a >= 'a' && a <= 'f') {
-        return a - 'a' + 10;
-    } else if (a >= '0' && a <= '9') {
-        return a - '0';
-    }
-    return 255;
-}

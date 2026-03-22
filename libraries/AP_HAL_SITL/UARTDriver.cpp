@@ -783,7 +783,7 @@ uint16_t UARTDriver::read_from_async_csv(uint8_t *buffer, uint16_t space)
                     if (!logic_async_csv.done_first_line) {
                         break;
                     }
-                    logic_async_csv.loaded_data.b = (char_to_hex(logic_async_csv.term[2]) << 4) | char_to_hex(logic_async_csv.term[3]);
+                    hex_charpair_to_uint8((const char*)&logic_async_csv.term[2], logic_async_csv.loaded_data.b);
                     break;
                 case 2:  // error
                 case 3:  // framing error

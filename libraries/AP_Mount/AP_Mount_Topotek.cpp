@@ -603,15 +603,17 @@ void AP_Mount_Topotek::read_incoming_packets()
             reset_parser = true;
             break;
 
-        case ParseState::WAITING_FOR_DATALEN:
+        case ParseState::WAITING_FOR_DATALEN: {
             // sanity check data length
-            _parser.data_len = (uint8_t)char_to_hex(b);
-            if (_parser.data_len <= AP_MOUNT_TOPOTEK_DATALEN_MAX) {
+            uint8_t data_len;
+            if (hex_to_uint8(b, data_len) && data_len <= AP_MOUNT_TOPOTEK_DATALEN_MAX) {
+                _parser.data_len = data_len;
                 _parser.state = ParseState::WAITING_FOR_CONTROL;
                 break;
             }
             reset_parser = true;
             break;
+        }
 
         case ParseState::WAITING_FOR_CONTROL:
             // r or w
@@ -975,12 +977,13 @@ void AP_Mount_Topotek::gimbal_dist_info_analyse()
     }
 
     // distance is in meters in the format, "12345.6" where each digit is in decimal
-    _measure_dist_m = char_to_hex(_msg_buff[10]) * 10000.0 +
-                      char_to_hex(_msg_buff[11]) * 1000.0 +
-                      char_to_hex(_msg_buff[12]) * 100.0 +
-                      char_to_hex(_msg_buff[13]) * 10.0 +
-                      char_to_hex(_msg_buff[14]) +
-                      char_to_hex(_msg_buff[16]) * 0.1;
+    uint8_t d0, d1, d2, d3, d4, d5;
+    if (!hex_to_uint8(_msg_buff[10], d0) || !hex_to_uint8(_msg_buff[11], d1) ||
+        !hex_to_uint8(_msg_buff[12], d2) || !hex_to_uint8(_msg_buff[13], d3) ||
+        !hex_to_uint8(_msg_buff[14], d4) || !hex_to_uint8(_msg_buff[16], d5)) {
+        return;
+    }
+    _measure_dist_m = d0 * 10000.0 + d1 * 1000.0 + d2 * 100.0 + d3 * 10.0 + d4 + d5 * 0.1;
 }
 
 // gimbal basic information analysis
@@ -991,7 +994,10 @@ void AP_Mount_Topotek::gimbal_version_analyse()
 
     // extract firmware version
     // the version can be in the format "1.2.3" or "123"
-    const uint8_t data_buf_len = char_to_hex(_msg_buff[5]);
+    uint8_t data_buf_len;
+    if (!hex_to_uint8(_msg_buff[5], data_buf_len)) {
+        return;
+    }
 
     // check for "."
     bool contains_period = false;
@@ -1005,7 +1011,11 @@ void AP_Mount_Topotek::gimbal_version_analyse()
     if (contains_period) {
         for (uint8_t i = 0; i < data_buf_len; i++) {
             if (_msg_buff[10 + i] != '.') {
-                ver_num = ver_num * 10 + char_to_hex(_msg_buff[10 + i]);
+                uint8_t digit;
+                if (!hex_to_uint8(_msg_buff[10 + i], digit)) {
+                    return;
+                }
+                ver_num = ver_num * 10 + digit;
             } else {
                 version[ver_count++] = ver_num;
                 ver_num = 0;
@@ -1015,14 +1025,18 @@ void AP_Mount_Topotek::gimbal_version_analyse()
             }
         }
     } else {
+        uint8_t d;
         if (data_buf_len >= 1) {
-            version[0] = char_to_hex(_msg_buff[10]);
+            if (!hex_to_uint8(_msg_buff[10], d)) { return; }
+            version[0] = d;
         }
         if (data_buf_len >= 2) {
-            version[1] = char_to_hex(_msg_buff[11]);
+            if (!hex_to_uint8(_msg_buff[11], d)) { return; }
+            version[1] = d;
         }
         if (data_buf_len >= 3) {
-            version[2] = char_to_hex(_msg_buff[12]);
+            if (!hex_to_uint8(_msg_buff[12], d)) { return; }
+            version[2] = d;
         }
     }
     _firmware_ver = (version[2] << 16) | (version[1] << 8) | (version[0]);
@@ -1040,7 +1054,11 @@ void AP_Mount_Topotek::gimbal_version_analyse()
 // gimbal model name message analysis
 void AP_Mount_Topotek::gimbal_model_name_analyse()
 {
-    strncpy((char *)_model_name, (const char *)_msg_buff + 10, char_to_hex(_msg_buff[5]));
+    uint8_t name_len;
+    if (!hex_to_uint8(_msg_buff[5], name_len)) {
+        return;
+    }
+    strncpy((char *)_model_name, (const char *)_msg_buff + 10, name_len);
 
     // display gimbal model name to user
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s %s", send_message_prefix, _model_name);
@@ -1072,12 +1090,12 @@ uint8_t AP_Mount_Topotek::hex2char(uint8_t data) const
 // the characters are in the format "1234" where the most significant digit is first
 int16_t AP_Mount_Topotek::hexchar4_to_int16(char high, char mid_high, char mid_low, char low) const
 {
-    const int16_t value = (char_to_hex(high) << 12) |
-                          (char_to_hex(mid_high) << 8) |
-                          (char_to_hex(mid_low) << 4) |
-                          (char_to_hex(low));
-
-    return value;
+    uint8_t h, mh, ml, l;
+    if (!hex_to_uint8(high, h) || !hex_to_uint8(mid_high, mh) ||
+        !hex_to_uint8(mid_low, ml) || !hex_to_uint8(low, l)) {
+        return 0;
+    }
+    return (int16_t)((h << 12) | (mh << 8) | (ml << 4) | l);
 }
 
 // send a fixed length packet

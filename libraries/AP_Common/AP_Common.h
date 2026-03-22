@@ -172,12 +172,26 @@ bool is_bounded_int32(int32_t value, int32_t lower_bound, int32_t upper_bound);
 bool hex_to_uint8(uint8_t a, uint8_t &res);  // return the uint8 value of an ascii hex character
 
 /*
+  decode a pair of hex characters into a byte
+ */
+bool hex_charpair_to_uint8(const char s[2], uint8_t &res);
+
+/*
+  decode len pairs of hex characters into bytes at out[]
+ */
+bool hex_charpairs_to_uint8s(const char *s, uint8_t len, uint8_t *out);
+
+/*
+  decode up to 8 hex characters into a uint32_t, treating each character
+  as a nibble (most-significant first)
+ */
+bool hex_chars_to_uint32(const char *s, uint8_t len, uint32_t &out);
+
+/*
   strncpy without the warning for not leaving room for nul termination
  */
 size_t strncpy_noterm(char *dest, const char *src, size_t n);
 
-// return the numeric value of an ascii hex character
-uint8_t char_to_hex(char a);
 
 /*
   Bit manipulation

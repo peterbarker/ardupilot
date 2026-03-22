@@ -21,23 +21,28 @@
 static const uint8_t *flash_base = (const uint8_t *)(0x08000000 + (FLASH_BOOTLOADER_LOAD_KB + APP_START_OFFSET_KB)*1024U);
 
 
-// taken from AP_Common.cpp as we don't want to compile the AP_Common
-// directory.  This function is defined in AP_Common.h - so we can't
-// use "static" here.
-/**
- * return the numeric value of an ascii hex character
- * 
- * @param[in] a Hexadecimal character 
- * @return  Returns a binary value
- */
-uint8_t char_to_hex(char a)
+// taken from AP_Common.cpp as we don't want to compile the AP_Common directory
+static bool hex_to_uint8(uint8_t a, uint8_t &res)
 {
-    if (a >= 'A' && a <= 'F')
-        return a - 'A' + 10;
-    else if (a >= 'a' && a <= 'f')
-        return a - 'a' + 10;
-    else
-        return a - '0';
+    uint8_t nibble_low = a & 0xf;
+    switch (a & 0xf0) {
+    case 0x30:  // 0-9
+        if (nibble_low > 9) {
+            return false;
+        }
+        res = nibble_low;
+        break;
+    case 0x40:  // uppercase A-F
+    case 0x60:  // lowercase a-f
+        if (nibble_low == 0 || nibble_low > 6) {
+            return false;
+        }
+        res = nibble_low + 9;
+        break;
+    default:
+        return false;
+    }
+    return true;
 }
 
 #define MAX_IO_SIZE 4096
@@ -220,7 +225,11 @@ protected:
 
         // convert from 32-byte-string to 16-byte number:
         for (uint8_t j=0; j<16; j++) {
-            expected_md5[j] = (char_to_hex(value[j*2]) << 4) | char_to_hex(value[j*2+1]);
+            uint8_t hi, lo;
+            if (!hex_to_uint8(value[j*2], hi) || !hex_to_uint8(value[j*2+1], lo)) {
+                return;
+            }
+            expected_md5[j] = (hi << 4) | lo;
         }
     }
 
