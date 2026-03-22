@@ -6200,8 +6200,8 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.wait_disarmed()
 
     def constrained_mount_pitch(self, pitch_angle_deg, mount_instance=1):
-        PITCH_MIN = self.get_parameter("MNT%u_PITCH_MIN" % mount_instance)
-        PITCH_MAX = self.get_parameter("MNT%u_PITCH_MAX" % mount_instance)
+        PITCH_MIN = self.get_parameter("MNT%u_PITCH_MIN" % mount_instance, verbose=False)
+        PITCH_MAX = self.get_parameter("MNT%u_PITCH_MAX" % mount_instance, verbose=False)
         return min(max(pitch_angle_deg, PITCH_MIN), PITCH_MAX)
 
     def test_mount_pitch(self, despitch, despitch_tolerance, mount_mode, timeout=10, hold=0, constrained=True):
@@ -6702,6 +6702,105 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             pitch_rc_neutral=1818,
             do_rate_tests=False,  # solo can't do rate control (yet?)
             constrain_sysid_target=False,  # not everything constrains all angles
+        )
+
+    def mount_check_camera_information(
+            self,
+            expected_vendor: str,
+            expected_model: str,
+            expected_fw_version: int | None = None,
+            expected_cap_flags: int | None = None,
+            timeout: int = 30,
+    ) -> None:
+        '''poll CAMERA_INFORMATION, retrying until vendor name, model name and
+        firmware version all match what the simulated backend sends.  Vendor
+        name is used to detect driver initialisation; model name and firmware
+        version may arrive in separate handshake messages so we keep retrying
+        on empty/zero values rather than failing immediately.'''
+        self.assert_receive_message('GIMBAL_DEVICE_ATTITUDE_STATUS', timeout=10, very_verbose=True)
+        tstart = self.get_sim_time()
+        while True:
+            if self.get_sim_time_cached() - tstart > timeout:
+                raise NotAchievedException(
+                    "Never received complete CAMERA_INFORMATION for vendor=%s" % expected_vendor)
+            try:
+                m = self.poll_message('CAMERA_INFORMATION', timeout=5)
+            except NotAchievedException:
+                continue
+            got_vendor = bytes(m.vendor_name).split(b'\x00')[0].decode('utf-8')
+            if not got_vendor:
+                continue  # driver not initialised yet
+            if got_vendor != expected_vendor:
+                raise NotAchievedException(
+                    "Unexpected vendor name: want=%s got=%s" % (expected_vendor, got_vendor))
+            got_model = bytes(m.model_name).split(b'\x00')[0].decode('utf-8')
+            if not got_model:
+                continue  # model name handshake not complete yet
+            if got_model != expected_model:
+                raise NotAchievedException(
+                    "Unexpected model name: want=%s got=%s" % (expected_model, got_model))
+            if expected_fw_version is not None:
+                if m.firmware_version == 0:
+                    continue  # firmware version handshake not complete yet
+                if m.firmware_version != expected_fw_version:
+                    raise NotAchievedException(
+                        "Unexpected firmware version: want=0x%08x got=0x%08x" %
+                        (expected_fw_version, m.firmware_version))
+            if expected_cap_flags is not None:
+                if m.flags != expected_cap_flags:
+                    raise NotAchievedException(
+                        "Unexpected cap flags: want=0x%08x got=0x%08x" %
+                        (expected_cap_flags, m.flags))
+            return
+
+    def MountSiyiZT30(self):
+        '''test Siyi ZT30 gimbal using SIM_Siyi_ZT30 simulator'''
+        self.set_parameters({
+            "MNT1_TYPE": 8,       # Siyi
+            "CAM1_TYPE": 4,       # Mount
+            "SERIAL5_PROTOCOL": 8,  # gimbal
+            "RC6_OPTION": 213,    # MOUNT1_PITCH
+        })
+        self.customise_SITL_commandline(["--serial5=sim:siyi_zt30:"])
+        # camera fw 1.2.3 from SIM_Siyi_ZT30: major=1, minor=2, patch=3
+        # firmware_version = major | (minor<<8) | (patch<<16) = 0x030201
+        # cap flags: CAPTURE_VIDEO | CAPTURE_IMAGE | HAS_BASIC_ZOOM | HAS_BASIC_FOCUS
+        self.mount_check_camera_information(
+            "Siyi", "ZT30",
+            expected_fw_version=0x030201,
+            expected_cap_flags=0xC3,
+        )
+
+    def MountTopotek(self):
+        '''test Topotek gimbal using SIM_Topotek simulator'''
+        self.set_parameters({
+            "MNT1_TYPE": 12,      # Topotek
+            "CAM1_TYPE": 4,       # Mount
+            "SERIAL5_PROTOCOL": 8,  # gimbal
+        })
+        self.customise_SITL_commandline(["--serial5=sim:topotek:"])
+        # version "1.0.0" from SIM_Topotek: major=1 | (minor=0)<<8 | (patch=0)<<16 = 1
+        # cap flags: CAPTURE_VIDEO | CAPTURE_IMAGE | HAS_BASIC_ZOOM | HAS_BASIC_FOCUS |
+        #            HAS_TRACKING_POINT | HAS_TRACKING_RECTANGLE
+        self.mount_check_camera_information("Topotek", "SIM_TP", expected_fw_version=1,
+                                            expected_cap_flags=0x6C3)
+
+    def MountViewPro(self):
+        '''test Viewpro gimbal using SIM_Viewpro simulator'''
+        self.set_parameters({
+            "MNT1_TYPE": 11,      # Viewpro
+            "CAM1_TYPE": 4,       # Mount
+            "SERIAL5_PROTOCOL": 8,  # gimbal
+        })
+        self.customise_SITL_commandline(["--serial5=sim:viewpro:"])
+        # firmware "Sys20220101" from SIM_Viewpro: major=20, minor=22, patch=1
+        # firmware_version = major | (minor<<8) | (patch<<16) = 0x011614
+        # cap flags: CAPTURE_VIDEO | CAPTURE_IMAGE | HAS_BASIC_ZOOM | HAS_BASIC_FOCUS |
+        #            HAS_TRACKING_POINT | HAS_TRACKING_RECTANGLE
+        self.mount_check_camera_information(
+            "Viewpro", "SIM_VP",
+            expected_fw_version=0x011614,
+            expected_cap_flags=0x6C3,
         )
 
     def assert_mount_rpy(self, r, p, y, tolerance=1):
@@ -15884,6 +15983,9 @@ return update, 1000
             self.ScriptMountAllModes,
             self.ScriptCopterPosOffsets,
             self.MountSolo,
+            self.MountSiyiZT30,
+            self.MountTopotek,
+            self.MountViewPro,
             self.FlyMissionTwice,
             self.FlyMissionTwiceWithReset,
             self.MissionIndexValidity,
