@@ -43,6 +43,9 @@
 #include "SIM_GPIO_LED_2.h"
 #include "SIM_GPIO_LED_3.h"
 #include "SIM_GPIO_LED_RGB.h"
+#include "SIM_Siyi.h"
+#include "SIM_Topotek.h"
+#include "SIM_Viewpro.h"
 
 #define MAX_SIM_INSTANCES 16
 
@@ -177,6 +180,33 @@ public:
     float get_battery_temperature() const { return battery.get_temperature(); }
 
     float ambient_temperature_degC() const;
+
+#if AP_SIM_SIYI_ENABLED
+    void add_siyi(Siyi &_siyi, const char *arg) {
+        if (siyi != nullptr) {
+            AP_HAL::panic("One siyi only");
+        }
+        siyi = &_siyi;
+    }
+#endif  // AP_SIM_SIYI_ENABLED
+
+#if AP_SIM_TOPOTEK_ENABLED
+    void add_topotek(Topotek &_topotek, const char *arg) {
+        if (topotek != nullptr) {
+            AP_HAL::panic("One topotek only");
+        }
+        topotek = &_topotek;
+    }
+#endif  // AP_SIM_TOPOTEK_ENABLED
+
+#if AP_SIM_VIEWPRO_ENABLED
+    void add_viewpro(Viewpro &_viewpro, const char *arg) {
+        if (viewpro != nullptr) {
+            AP_HAL::panic("One viewpro only");
+        }
+        viewpro = &_viewpro;
+    }
+#endif  // AP_SIM_VIEWPRO_ENABLED
 
     ADSB *adsb;
 
@@ -425,6 +455,18 @@ private:
 
     static Aircraft *instances[MAX_SIM_INSTANCES];
     HAL_Semaphore pose_sem;
+
+#if AP_SIM_SIYI_ENABLED
+    Siyi *siyi;
+#endif
+
+#if AP_SIM_TOPOTEK_ENABLED
+    Topotek *topotek;
+#endif
+
+#if AP_SIM_VIEWPRO_ENABLED
+    Viewpro *viewpro;
+#endif
 };
 
 } // namespace SITL

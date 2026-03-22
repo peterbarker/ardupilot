@@ -177,6 +177,7 @@ void Gimbal::get_deltas(Vector3f &_delta_angle, Vector3f &_delta_velocity, uint3
     delta_angle.zero();
     delta_velocity.zero();
     delta_start_us = now_us;
+
 }
 
 } // namespace SITL

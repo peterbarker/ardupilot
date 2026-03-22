@@ -36,7 +36,9 @@ public:
     }
 
     void get_deltas(Vector3f &_delta_angle, Vector3f &_delta_velocity, uint32_t &_delta_time_us);
-    void get_joint_angles(Vector3f &_angles) { _angles = joint_angles; }
+    void get_joint_angles(Vector3f &_angles) {
+        _angles = joint_angles;
+    }
 
 private:
 
