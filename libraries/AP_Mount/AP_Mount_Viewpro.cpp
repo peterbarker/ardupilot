@@ -867,7 +867,7 @@ void AP_Mount_Viewpro::send_camera_information(mavlink_channel_t chan) const
         return;
     }
 
-    static const uint8_t vendor_name[MAVLINK_MSG_CAMERA_INFORMATION_FIELD_VENDOR_NAME_LEN] = "Viewpro";
+    static const uint8_t vendor_name[MAVLINK_MSG_CAMERA_INFORMATION_FIELD_VENDOR_NAME_LEN] { "Viewpro" };
     uint8_t model_name[MAVLINK_MSG_CAMERA_INFORMATION_FIELD_MODEL_NAME_LEN] {};
     if (_got_model_name) {
         strncpy_noterm((char *)model_name, _model_name, sizeof(model_name));
