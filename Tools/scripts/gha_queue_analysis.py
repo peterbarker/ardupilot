@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # AP_FLAKE8_CLEAN
-"""Analyse the GitHub Actions queue for a repository.
+"""Analyse the GitHub Actions queue for a repository or organisation.
 
 Fetches all runs (paginated) and writes a report broken down by PR and author.
 
@@ -14,12 +14,12 @@ NOTE ON TERMINOLOGY
   queued count will be higher than the run count shown here.
 
 Usage:
-    gha_queue_analysis.py [--repo OWNER/REPO] [--out FILE] [--status STATUS]
-                          [--jobs]
+    gha_queue_analysis.py [--org ORG | --repo OWNER/REPO] [--out FILE]
+                          [--status STATUS] [--jobs]
 
 Defaults:
-    --repo   ArduPilot/ardupilot
-    --out    /tmp/gha_queue_report.txt
+    --org    ArduPilot      (scan all non-archived repos in the org)
+    --out    /tmp/gha_queue_report_YYYYMMDD_HHMMSS.txt
     --status queued        (use 'all' for every status)
 
 Requires: gh CLI authenticated with repo read access.
@@ -30,6 +30,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -87,25 +88,50 @@ def gh_api_single(endpoint):
     return json.loads(result.stdout)
 
 
+def fetch_repos_in_org(org):
+    """Return list of 'owner/repo' full_names for all non-archived repos in org."""
+    repos = gh_api_paginate(f"orgs/{org}/repos", "type=all")
+    return [r["full_name"] for r in repos if not r.get("archived")]
+
+
 def fetch_runs(repo, status):
     """Fetch workflow runs, optionally filtered by status.
 
     When status is 'queued' we also fetch 'in_progress' runs so that the
     running/failed/ok columns in the report are populated.  Fetching all
     completed runs is too expensive by default; use status='all' for that.
+
+    Each returned run dict has a '_repo' field set to repo.
     """
     endpoint = f"repos/{repo}/actions/runs"
     if status == "all":
-        return gh_api_paginate(endpoint, "per_page=100")
-    if status == "queued":
+        runs = gh_api_paginate(endpoint, "per_page=100")
+    elif status == "queued":
         # Fetch both queued and in_progress to give a complete live picture.
-        statuses = ["queued", "in_progress"]
+        runs = []
+        for s in ("queued", "in_progress"):
+            runs.extend(gh_api_paginate(endpoint, f"status={s}&per_page=100"))
     else:
-        statuses = [status]
-    runs = []
-    for s in statuses:
-        runs.extend(gh_api_paginate(endpoint, f"status={s}&per_page=100"))
+        runs = gh_api_paginate(endpoint, f"status={status}&per_page=100")
+    for run in runs:
+        run["_repo"] = repo
     return runs
+
+
+def fetch_runs_for_repos(repos, status):
+    """Fetch runs from every repo in the list, returning all combined."""
+    all_runs = []
+    for repo in repos:
+        t0 = time.perf_counter()
+        repo_runs = fetch_runs(repo, status)
+        elapsed = time.perf_counter() - t0
+        if repo_runs:
+            print(f"  {repo}: {len(repo_runs)} runs in {elapsed:.1f}s",
+                  file=sys.stderr)
+        else:
+            print(f"  {repo}: 0 runs in {elapsed:.1f}s", file=sys.stderr)
+        all_runs.extend(repo_runs)
+    return all_runs
 
 
 def fetch_prs(repo):
@@ -181,14 +207,20 @@ def age_str(ts):
 _PULL_REF_RE = re.compile(r"^refs/pull/(\d+)/")
 
 
-def pr_from_run(run, pr_map):
+def pr_from_run(run, pr_maps):
     """Return PR info dict for a run, or None.
+
+    pr_maps is a dict keyed by 'owner/repo', each value being the per-repo
+    branch -> PR info map returned by fetch_prs().
 
     Resolution order:
       1. pull_requests[] array embedded in the run (most reliable)
       2. refs/pull/NNN/head branch name
       3. Branch name lookup in pr_map
     """
+    repo = run.get("_repo", "")
+    pr_map = pr_maps.get(repo, {})
+
     # 1. Embedded pull_requests
     prs = run.get("pull_requests") or []
     if prs:
@@ -227,19 +259,24 @@ def pr_from_run(run, pr_map):
 # Analysis
 # ---------------------------------------------------------------------------
 
-def analyse(runs, pr_map, repo, fetch_jobs):
+def analyse(runs, pr_maps, fetch_jobs):
     """Return (by_branch, by_author) analysis dicts."""
     by_branch = defaultdict(lambda: {
-        "runs": [], "title": "", "actor": "", "pr": None,
+        "runs": [], "title": "", "actor": "", "pr": None, "repo": "",
+        "branch": "",
     })
 
     for r in runs:
+        repo = r.get("_repo", "")
         branch = r["head_branch"]
-        b = by_branch[branch]
+        key = f"{repo}#{branch}"
+        b = by_branch[key]
+        b["repo"] = repo
+        b["branch"] = branch
         b["title"] = r.get("display_title") or r.get("name", "")
         b["actor"] = r.get("actor", {}).get("login", "?")
 
-        pr = pr_from_run(r, pr_map)
+        pr = pr_from_run(r, pr_maps)
         if pr and b["pr"] is None:
             b["pr"] = pr
 
@@ -250,6 +287,7 @@ def analyse(runs, pr_map, repo, fetch_jobs):
             "created": r.get("created_at", ""),
             "updated": r.get("updated_at", ""),
             "run_id": r["id"],
+            "_repo": repo,
             # Job-level counts populated below if --jobs
             "job_counts": None,
         }
@@ -267,11 +305,11 @@ def analyse(runs, pr_map, repo, fetch_jobs):
         "failed": 0, "ok": 0, "cancelled": 0,
         "jobs_queued": 0,
     })
-    for branch, info in by_branch.items():
+    for key, info in by_branch.items():
         author = info["pr"]["author"] if info["pr"] else info["actor"]
         a = by_author[author]
-        if branch not in a["branches"]:
-            a["branches"].append(branch)
+        if key not in a["branches"]:
+            a["branches"].append(key)
         for run in info["runs"]:
             if run["status"] == "queued":
                 a["queued"] += 1
@@ -298,7 +336,7 @@ def oldest_queued(runs):
 # Report rendering
 # ---------------------------------------------------------------------------
 
-def render(runs, by_branch, by_author, repo, status_filter, out_path, fetch_jobs):
+def render(runs, by_branch, by_author, label, status_filter, out_path, fetch_jobs):
     lines = []
     w = lines.append
 
@@ -309,7 +347,7 @@ def render(runs, by_branch, by_author, repo, status_filter, out_path, fetch_jobs
     total_cancel = sum(1 for r in runs if r.get("conclusion") == "cancelled")
 
     w("=" * 76)
-    w(f"GitHub Actions Queue Analysis — {repo}")
+    w(f"GitHub Actions Queue Analysis — {label}")
     w(f"Generated : {NOW.strftime('%Y-%m-%d %H:%M:%S UTC')}")
     w(f"Filter    : status={status_filter}")
     w("=" * 76)
@@ -320,6 +358,17 @@ def render(runs, by_branch, by_author, repo, status_filter, out_path, fetch_jobs
     if fetch_jobs:
         w("      --jobs: queued job counts fetched and shown where available.")
     w("")
+
+    # List repos with activity when in org mode (label contains " (all repos)")
+    active_repos = sorted({r.get("_repo", "") for r in runs if r.get("_repo")})
+    if len(active_repos) > 1:
+        w(f"Repos with activity ({len(active_repos)}):")
+        for rp in active_repos:
+            repo_q = sum(1 for r in runs if r.get("_repo") == rp and r["status"] == "queued")
+            repo_r = sum(1 for r in runs if r.get("_repo") == rp and r["status"] == "in_progress")
+            w(f"  {rp:<45}  queued={repo_q}  running={repo_r}")
+        w("")
+
     w(f"Total workflow runs : {len(runs)}")
     w(f"  Queued            : {total_q}")
     w(f"  In progress       : {total_r}")
@@ -348,7 +397,7 @@ def render(runs, by_branch, by_author, repo, status_filter, out_path, fetch_jobs
             return (2, oldest)
         return (3, oldest)
 
-    for branch, info in sorted(by_branch.items(), key=sort_key):
+    for _key, info in sorted(by_branch.items(), key=sort_key):
         branch_runs = info["runs"]
         q  = [r for r in branch_runs if r["status"] == "queued"]
         rn = [r for r in branch_runs if r["status"] == "in_progress"]
@@ -362,7 +411,9 @@ def render(runs, by_branch, by_author, repo, status_filter, out_path, fetch_jobs
         draft  = " [DRAFT]" if pr and pr["draft"] else ""
 
         w("")
-        w(f"  Branch : {branch}")
+        if info["repo"]:
+            w(f"  Repo   : {info['repo']}")
+        w(f"  Branch : {info['branch']}")
         w(f"  PR     : {pr_num}{draft}  Author: {author}")
         w(f"  Title  : {info['title'][:68]}")
 
@@ -474,10 +525,15 @@ def main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--repo",   default="ArduPilot/ardupilot",
-                        help="GitHub repo in OWNER/REPO format")
-    parser.add_argument("--out",    default="/tmp/gha_queue_report.txt",
-                        help="Output file path")
+    parser.add_argument("--repo",   default=None,
+                        help="GitHub repo in OWNER/REPO format "
+                             "(mutually exclusive with --org)")
+    parser.add_argument("--org",    default=None,
+                        help="GitHub org — scan all non-archived repos "
+                             "(mutually exclusive with --repo; default: ArduPilot)")
+    parser.add_argument("--out",    default=None,
+                        help="Output file path "
+                             "(default: /tmp/gha_queue_report_YYYYMMDD_HHMMSS.txt)")
     parser.add_argument("--status", default="queued",
                         help="Run status filter: queued, in_progress, completed, all")
     parser.add_argument("--jobs",   action="store_true",
@@ -485,22 +541,71 @@ def main():
                              "(one extra API call per run — slow)")
     args = parser.parse_args()
 
-    print(f"Fetching runs from {args.repo} (status={args.status})…", file=sys.stderr)
-    runs = fetch_runs(args.repo, args.status)
-    print(f"  {len(runs)} runs fetched", file=sys.stderr)
+    if args.repo and args.org:
+        parser.error("--repo and --org are mutually exclusive")
 
-    print("Fetching open PRs…", file=sys.stderr)
-    pr_map = fetch_prs(args.repo)
-    print(f"  {len(pr_map)} open PRs", file=sys.stderr)
+    if args.out is None:
+        ts = NOW.strftime("%Y%m%d_%H%M%S")
+        args.out = f"/tmp/gha_queue_report_{ts}.txt"
 
-    by_branch, by_author = analyse(runs, pr_map, args.repo, args.jobs)
-    report = render(runs, by_branch, by_author, args.repo, args.status,
+    script_t0 = time.perf_counter()
+
+    if args.org or (not args.repo):
+        # Org-wide mode (default)
+        org = args.org or "ArduPilot"
+
+        print(f"Listing repos in {org}…", file=sys.stderr)
+        t0 = time.perf_counter()
+        repos = fetch_repos_in_org(org)
+        print(f"  {len(repos)} repos listed in {time.perf_counter()-t0:.1f}s",
+              file=sys.stderr)
+
+        print(f"Fetching runs from all repos (status={args.status})…",
+              file=sys.stderr)
+        t0 = time.perf_counter()
+        runs = fetch_runs_for_repos(repos, args.status)
+        print(f"  {len(runs)} total runs fetched in {time.perf_counter()-t0:.1f}s",
+              file=sys.stderr)
+
+        repos_with_runs = sorted({r["_repo"] for r in runs})
+        print(f"Fetching open PRs for {len(repos_with_runs)} repos with runs…",
+              file=sys.stderr)
+        t0 = time.perf_counter()
+        pr_maps = {}
+        for repo in repos_with_runs:
+            pr_maps[repo] = fetch_prs(repo)
+        total_prs = sum(len(m) for m in pr_maps.values())
+        print(f"  {total_prs} open PRs fetched in {time.perf_counter()-t0:.1f}s",
+              file=sys.stderr)
+
+        label = f"{org} (all repos)"
+    else:
+        # Single-repo mode
+        repo = args.repo
+        print(f"Fetching runs from {repo} (status={args.status})…",
+              file=sys.stderr)
+        t0 = time.perf_counter()
+        runs = fetch_runs(repo, args.status)
+        print(f"  {len(runs)} runs fetched in {time.perf_counter()-t0:.1f}s",
+              file=sys.stderr)
+
+        print("Fetching open PRs…", file=sys.stderr)
+        t0 = time.perf_counter()
+        pr_maps = {repo: fetch_prs(repo)}
+        print(f"  {len(pr_maps[repo])} open PRs fetched in "
+              f"{time.perf_counter()-t0:.1f}s", file=sys.stderr)
+
+        label = repo
+
+    by_branch, by_author = analyse(runs, pr_maps, args.jobs)
+    report = render(runs, by_branch, by_author, label, args.status,
                     args.out, args.jobs)
 
     out = Path(args.out)
     out.write_text(report, encoding="utf-8")
     print(report)
     print(f"\nSaved to {out}", file=sys.stderr)
+    print(f"Total elapsed: {time.perf_counter()-script_t0:.1f}s", file=sys.stderr)
 
 
 if __name__ == "__main__":
