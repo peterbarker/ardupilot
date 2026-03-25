@@ -5437,6 +5437,192 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                      timeout=1,
                      want_result=mavutil.mavlink.MAV_RESULT_DENIED)
 
+    def MissionDoInstantCmdOrdering(self):
+        '''Two consecutive JUMP_TAGs between two NAV cmds must both fire before the
+        next NAV cmd starts.  Without PR #31954 the second JUMP_TAG is deferred to
+        advance_current_do_cmd and fires after NAV_RTL has already started.'''
+        self.set_parameter("AUTO_OPTIONS", 3)
+        self.context_push()
+        self.context_collect("STATUSTEXT")
+        # item indices (home prepended at 0):
+        # 1=NAV_TAKEOFF  2=NAV_DELAY(2s)  3=JUMP_TAG(5)  4=JUMP_TAG(7)  5=NAV_RTL
+        self.start_flying_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 20),
+            (mavutil.mavlink.MAV_CMD_NAV_DELAY, 0, 0, 0, {"p1": 2}),
+            (mavutil.mavlink.MAV_CMD_JUMP_TAG, 0, 0, 0, {"p1": 5}),
+            (mavutil.mavlink.MAV_CMD_JUMP_TAG, 0, 0, 0, {"p1": 7}),
+            (mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0),
+        ])
+        # wait for both JUMP_TAGs and NAV_RTL in any order, then check sequence
+        self.wait_statustext("Mission: 3", timeout=60, check_context=True)
+        self.wait_statustext("Mission: 4", timeout=10, check_context=True)
+        self.wait_statustext("Mission: 5", timeout=10, check_context=True)
+        texts = [m.text for m in self.context_collection("STATUSTEXT")]
+        self.context_pop()
+
+        def cmd_text_idx(n):
+            for i, t in enumerate(texts):
+                if t.startswith("Mission: %u " % n):
+                    return i
+            raise NotAchievedException("Never saw Mission: %u in STATUSTEXT" % n)
+
+        idx3 = cmd_text_idx(3)
+        idx4 = cmd_text_idx(4)
+        idx5 = cmd_text_idx(5)
+        if idx3 >= idx5:
+            raise NotAchievedException("JUMP_TAG cmd3 did not fire before NAV_RTL cmd5")
+        if idx4 >= idx5:
+            raise NotAchievedException("JUMP_TAG cmd4 did not fire before NAV_RTL cmd5")
+        if idx3 >= idx4:
+            raise NotAchievedException("cmd3 did not fire before cmd4")
+        self.wait_disarmed()
+
+    def MissionFiniteDoJump(self):
+        '''DO_JUMP with a finite repeat count exhausts its counter and then advances
+        to the following NAV command.'''
+        self.set_parameter("AUTO_OPTIONS", 3)
+        # item indices: 1=NAV_TAKEOFF  2=NAV_DELAY(1s)  3=DO_JUMP(->2,x5)  4=NAV_RTL
+        self.start_flying_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 20),
+            (mavutil.mavlink.MAV_CMD_NAV_DELAY, 0, 0, 0, {"p1": 1}),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_DO_JUMP,
+                p1=2,
+                p2=5,
+            ),
+            (mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0),
+        ])
+        # after 5 loop passes the jump counter expires and NAV_RTL (item 4) starts
+        self.wait_statustext("Mission: 4", timeout=60)
+        self.wait_disarmed()
+
+    def MissionDoCommandDuringActiveNav(self):
+        '''Two JUMP_TAGs between a long NAV_DELAY and NAV_RTL must both appear in
+        STATUSTEXT before NAV_RTL.  Complementary to MissionDoInstantCmdOrdering
+        with a 4-second delay and different tag values.'''
+        self.set_parameter("AUTO_OPTIONS", 3)
+        self.context_push()
+        self.context_collect("STATUSTEXT")
+        # item indices: 1=NAV_TAKEOFF  2=NAV_DELAY(4s)  3=JUMP_TAG(11)
+        #               4=JUMP_TAG(13)  5=NAV_RTL
+        self.start_flying_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 20),
+            (mavutil.mavlink.MAV_CMD_NAV_DELAY, 0, 0, 0, {"p1": 4}),
+            (mavutil.mavlink.MAV_CMD_JUMP_TAG, 0, 0, 0, {"p1": 11}),
+            (mavutil.mavlink.MAV_CMD_JUMP_TAG, 0, 0, 0, {"p1": 13}),
+            (mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0),
+        ])
+        # wait for both JUMP_TAGs and NAV_RTL in any order, then check sequence
+        self.wait_statustext("Mission: 3", timeout=60, check_context=True)
+        self.wait_statustext("Mission: 4", timeout=10, check_context=True)
+        self.wait_statustext("Mission: 5", timeout=10, check_context=True)
+        texts = [m.text for m in self.context_collection("STATUSTEXT")]
+        self.context_pop()
+
+        def cmd_text_idx(n):
+            for i, t in enumerate(texts):
+                if t.startswith("Mission: %u " % n):
+                    return i
+            raise NotAchievedException("Never saw Mission: %u in STATUSTEXT" % n)
+
+        idx3 = cmd_text_idx(3)
+        idx4 = cmd_text_idx(4)
+        idx5 = cmd_text_idx(5)
+        if idx3 >= idx5:
+            raise NotAchievedException("JUMP_TAG cmd3 did not fire before NAV_RTL cmd5")
+        if idx4 >= idx5:
+            raise NotAchievedException("JUMP_TAG cmd4 did not fire before NAV_RTL cmd5")
+        self.wait_disarmed()
+
+    def MissionScriptingQueue(self):
+        '''three consecutive DO_SEND_SCRIPT_MESSAGE commands must all be queued
+        for the script; none may be lost.  The script only drains the queue once
+        the following NAV command has started, by which time all three commands
+        have been handed to the scripting library.'''
+        self.set_parameters({
+            "SCR_ENABLE": 1,
+            "AUTO_OPTIONS": 3,
+        })
+        # item indices (home prepended at 0):
+        # 1=NAV_TAKEOFF  2=NAV_DELAY(2s)  3,4,5=DO_SEND_SCRIPT_MESSAGE  6=NAV_RTL
+        nav_index_after_do_cmds = 6
+        script_content = """
+local drained = false
+
+function update()
+  if not drained and mission:get_current_nav_index() == %u then
+    -- all of the scripting commands have been run by now; drain the queue
+    local got = {}
+    while true do
+      local time_ms, p1 = mission_receive()
+      if not time_ms then
+        break
+      end
+      got[#got+1] = p1
+    end
+    gcs:send_text(6, string.format("SCRQUEUE %%u %%s", #got, table.concat(got, ",")))
+    drained = true
+  end
+  return update, 100
+end
+
+return update, 100
+""" % nav_index_after_do_cmds
+        self.install_script_content_context("test.lua", script_content)
+        self.reboot_sitl()
+
+        def script_message(p1):
+            return self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_DO_SEND_SCRIPT_MESSAGE,
+                p1=p1,
+            )
+
+        self.start_flying_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 20),
+            (mavutil.mavlink.MAV_CMD_NAV_DELAY, 0, 0, 0, {"p1": 2}),
+            script_message(1),
+            script_message(2),
+            script_message(3),
+            (mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0),
+        ])
+        self.wait_statustext("SCRQUEUE 3 1,2,3", timeout=60)
+        self.wait_disarmed()
+
+    def MissionDoJumpBackToDoCommands(self):
+        '''a run of five DO commands terminated by a DO_JUMP back to the first of
+        them is an endless do-command loop.  AP_Mission must break out of it and
+        the vehicle must stay flyable.'''
+        self.set_parameter("AUTO_OPTIONS", 3)
+        # item indices (home prepended at 0):
+        # 1=NAV_TAKEOFF  2=NAV_DELAY(2s)  3..7=JUMP_TAG  8=DO_JUMP(->3, forever)
+        # 9=NAV_RTL (never reached)
+        first_do_cmd_index = 3
+        items = [
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 20),
+            (mavutil.mavlink.MAV_CMD_NAV_DELAY, 0, 0, 0, {"p1": 2}),
+        ]
+        for tag in range(1, 6):
+            items.append((mavutil.mavlink.MAV_CMD_JUMP_TAG, 0, 0, 0, {"p1": tag}))
+        items.append(self.create_MISSION_ITEM_INT(
+            mavutil.mavlink.MAV_CMD_DO_JUMP,
+            p1=first_do_cmd_index,
+            p2=-1,  # repeat forever
+        ))
+        items.append((mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0))
+        self.start_flying_simple_relhome_mission(items)
+
+        # the endless do-command loop is broken out of and the mission ends:
+        self.wait_message_field_values(
+            'MISSION_CURRENT',
+            {'mission_state': mavutil.mavlink.MISSION_STATE_COMPLETE},
+            timeout=60,
+        )
+        # the vehicle is still flying and still taking orders:
+        self.assert_mode('AUTO')
+        self.assert_armed()
+        self.change_mode('RTL')
+        self.wait_disarmed()
+
     def GPSViconSwitching(self):
         """Fly GPS and Vicon switching test"""
         """Setup parameters including switching to EKF3"""
@@ -18823,6 +19009,11 @@ return update, 1000
             self.FlyMissionTwiceWithReset,
             self.MissionIndexValidity,
             self.InvalidJumpTags,
+            self.MissionDoInstantCmdOrdering,
+            self.MissionFiniteDoJump,
+            self.MissionDoCommandDuringActiveNav,
+            self.MissionScriptingQueue,
+            self.MissionDoJumpBackToDoCommands,
             self.IMUConsistency,
             self.AHRSTrimLand,
             self.IBus,

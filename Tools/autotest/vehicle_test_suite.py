@@ -5361,11 +5361,14 @@ class TestSuite(abc.ABC):
             mavutil.mavlink.MAV_CMD_CONDITION_YAW,
             mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
             mavutil.mavlink.MAV_CMD_NAV_LOITER_TIME,
+            mavutil.mavlink.MAV_CMD_NAV_DELAY,
             mavutil.mavlink.MAV_CMD_DO_JUMP,
             mavutil.mavlink.MAV_CMD_DO_JUMP_TAG,
+            mavutil.mavlink.MAV_CMD_JUMP_TAG,
             mavutil.mavlink.MAV_CMD_DO_DIGICAM_CONTROL,
             mavutil.mavlink.MAV_CMD_DO_SET_SERVO,
             mavutil.mavlink.MAV_CMD_DO_PAUSE_CONTINUE,
+            mavutil.mavlink.MAV_CMD_DO_SEND_SCRIPT_MESSAGE,
         ]
 
     def assert_mission_files_same(self, file1, file2, match_comments=False):
