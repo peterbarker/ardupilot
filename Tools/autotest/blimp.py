@@ -9,6 +9,8 @@ import shutil
 
 from pymavlink import mavutil
 
+from pymavlink.rotmat import Vector3
+
 from vehicle_test_suite import NotAchievedException
 from vehicle_test_suite import TestSuite
 
@@ -136,11 +138,11 @@ class AutoTestBlimp(TestSuite):
         self.wait_distance_to_location(tr, 0, acc, timeout=10)
         self.set_rc(1, 1500)
         self.wait_distance_to_location(ttr, 0, acc, timeout=15)
-        
+
         self.change_mode('RTL')
         self.progress("Testing mode RTL.")
         self.wait_distance_to_location(bl, 0, 0.5, timeout=40, minimum_duration=10) # make sure it can hold position
-        
+
         self.change_mode('MANUAL')
         self.wait_distance_to_location(bl, 0, acc, timeout=5) # make sure we haven't moved from the spot
 
@@ -256,6 +258,57 @@ class AutoTestBlimp(TestSuite):
             p3=1, # p3, baro
         )
 
+    def FlyManualFourMotor(self):
+        '''test manual mode on the four-motor blimp frame'''
+        self.set_parameters({
+            "FRAME_CLASS": 2,
+            "SERVO1_MAX": 2000,
+            "SERVO1_MIN": 1000,
+            "SERVO1_TRIM": 1500,
+            "SERVO2_MAX": 2000,
+            "SERVO2_MIN": 1000,
+            "SERVO2_TRIM": 1500,
+            "SERVO3_MAX": 2000,
+            "SERVO3_MIN": 1000,
+            "SERVO3_TRIM": 1500,
+            "SERVO4_MAX": 2000,
+            "SERVO4_MIN": 1000,
+            "SERVO4_TRIM": 1500,
+            "FINS_THR_MAX": 0.4,
+        })
+        self.reboot_sitl()
+
+        self.change_mode('MANUAL')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+
+        stopped = Vector3(0, 0, 0)
+
+        self.progress("Moving forward.")
+        self.set_rc(2, 2000)
+        self.wait_speed_vector(Vector3(0.2, 0, 0), accuracy=0.15, timeout=15)
+        self.set_rc(2, 1500)
+        self.wait_speed_vector(stopped, accuracy=0.1, timeout=20)
+
+        self.progress("Moving right.")
+        self.set_rc(1, 2000)
+        self.wait_speed_vector(Vector3(0, 0.2, 0), accuracy=0.15, timeout=15)
+        self.set_rc(1, 1500)
+        self.wait_speed_vector(stopped, accuracy=0.1, timeout=20)
+
+        self.progress("Moving up.")
+        self.set_rc(3, 2000)
+        self.wait_speed_vector(Vector3(0, 0, -0.2), accuracy=0.15, timeout=15)
+        self.set_rc(3, 1500)
+        self.wait_speed_vector(stopped, accuracy=0.1, timeout=20)
+
+        self.progress("Yawing left.")
+        self.set_rc(4, 1000)
+        self.wait_heading(340, accuracy=10, timeout=15)
+        self.set_rc(4, 1500)
+
+        self.disarm_vehicle()
+
     def tests(self):
         '''return list of all tests'''
         # ret = super(AutoTestBlimp, self).tests()
@@ -263,6 +316,7 @@ class AutoTestBlimp(TestSuite):
         ret.extend([
             self.FlyManual,
             self.FlyLoiter,
+            self.FlyManualFourMotor,
             self.PREFLIGHT_Pressure,
             self.UTMGlobalPosition,
         ])
