@@ -6865,8 +6865,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # constrain_sysid_target=False: the driver does not yet clamp pitch to
         # MNT1_PITCH_MAX before sending, so the 68-deg sysid test is skipped
         # until AP_Mount_Topotek::send_target_angles enforces the limit.
-        self.mount_test_body(pitch_rc_neutral=1818, do_rate_tests=False,
-                             constrain_sysid_target=False)
+        self.mount_test_body(pitch_rc_neutral=1818, do_rate_tests=False)
 
     def MountViewPro(self):
         '''test Viewpro gimbal using SIM_Viewpro simulator'''
@@ -6896,7 +6895,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # MNT1_PITCH_MAX before sending, so the 68-deg sysid test is skipped
         # until AP_Mount_Viewpro::send_target_angles enforces the limit.
         self.mount_test_body(pitch_rc_neutral=1818, neutral_tol_deg=0.05,
-                             do_rate_tests=False, constrain_sysid_target=False)
+                             do_rate_tests=False)
 
     def MountAVTCM62(self):
         '''test MAVLink (Gimbal Protocol v2) gimbal using SIM_AVT_CM62 simulator'''
