@@ -756,7 +756,8 @@ void AP_Mount_Topotek::send_target_angles(const MountAngleTarget& angle_rad)
 
     // send pitch target
     // sample command: #tpUG6wGIP
-    const uint16_t pitch_angle_cd = (uint16_t)constrain_int16(-degrees(angle_rad.pitch) * 100, -9000, 9000);
+    const float pitch_rad_clamped = constrain_float(angle_rad.pitch, radians(_params.pitch_angle_min), radians(_params.pitch_angle_max));
+    const uint16_t pitch_angle_cd = (uint16_t)constrain_int16(-degrees(pitch_rad_clamped) * 100, -9000, 9000);
     hal.util->snprintf((char *)databuff, ARRAY_SIZE(databuff), format_str, pitch_angle_cd, speed);
     send_variablelen_packet(HeaderType::VARIABLE_LEN,
                             AddressByte::GIMBAL,
