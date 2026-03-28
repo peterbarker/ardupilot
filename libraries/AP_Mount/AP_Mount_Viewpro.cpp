@@ -469,7 +469,7 @@ void AP_Mount_Viewpro::send_target_rates(const MountRateTarget &rate_rads)
 // send target pitch and yaw angles to gimbal
 void AP_Mount_Viewpro::send_target_angles(const MountAngleTarget &angle_rad)
 {
-    const float pitch_rad = angle_rad.pitch;
+    float pitch_rad = angle_rad.pitch;
     const float yaw_rad = angle_rad.yaw;
     bool yaw_is_ef = angle_rad.yaw_is_ef;
 
@@ -477,6 +477,9 @@ void AP_Mount_Viewpro::send_target_angles(const MountAngleTarget &angle_rad)
     if (!set_lock(false)) {
         return;
     }
+
+    // enforce pitch angle limits
+    pitch_rad = constrain_float(pitch_rad, radians(_params.pitch_angle_min), radians(_params.pitch_angle_max));
 
     // convert yaw angle to body-frame
     float yaw_bf_rad = yaw_is_ef ? wrap_PI(yaw_rad - AP::ahrs().get_yaw_rad()) : yaw_rad;
