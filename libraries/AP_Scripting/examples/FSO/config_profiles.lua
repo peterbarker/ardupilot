@@ -11,7 +11,7 @@
 --   far flung future - change parameters on peripherals too
 
 
-gcs:send_text(6, string.format("CFG: v2.0_beta2 FSO starting"))
+gcs:send_text(6, string.format("CFG: v2.0_beta3 FSO starting"))
 
 local msg_pfx = "CFG: "
 local auth_id = arming:get_aux_auth_id() or 0
@@ -209,9 +209,24 @@ local config_domains = {
                ["FLTMODE6"] = 6,
                ["FLTMODE_CH"] = 5,
                ["PSC_ANGLE_MAX"] = 2500,
+               ["FENCE_RADIUS"] = 2500,
             },
          },
          [102] = {
+            name = "FSO BVLOS",
+            params = {
+               ["FLTMODE1"] = 5,
+               ["FLTMODE2"] = 5,
+               ["FLTMODE3"] = 3,
+               ["FLTMODE4"] = 3,
+               ["FLTMODE5"] = 6,
+               ["FLTMODE6"] = 6,
+               ["FLTMODE_CH"] = 5,
+               ["PSC_ANGLE_MAX"] = 2500,
+               ["FENCE_RADIUS"] = 10000,
+            },
+         },
+         [103] = {
             name = "Battery Test",
             params = {
                ["BATT_OPTIONS"] = 1,
