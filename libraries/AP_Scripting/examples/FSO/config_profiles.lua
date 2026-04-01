@@ -11,7 +11,7 @@
 --   far flung future - change parameters on peripherals too
 
 
-gcs:send_text(6, string.format("CFG: v2.0_beta1 FSO starting"))
+gcs:send_text(6, string.format("CFG: v2.0_beta2 FSO starting"))
 
 local msg_pfx = "CFG: "
 local auth_id = arming:get_aux_auth_id() or 0
@@ -693,11 +693,12 @@ local config_domains = {
          [3] = {
             name = "Gimbal - AVT_CM62",
             params = {
-               ["MNT1_TYPE"] = 6,           -- 6 = Mount type MAVLinkv2 (or Custom)
-               ["RC13_OPTION"] = 214,       -- 214 = Mount Yaw
-               ["RC14_OPTION"] = 213,       -- 213 = Mount Pitch
-               ["SERIAL5_BAUD"] = 460,      -- 460 = 460800 baud
-               ["SERIAL5_PROTOCOL"] = 2,    -- 2 = MAVLink2
+			      ["CAM1_TYPE"] = 6,		   -- 6 = AVT/MavV2 Cam
+               ["MNT1_TYPE"] = 6,         -- 6 = Mount type MAVLinkv2 (or Custom)
+               ["RC13_OPTION"] = 214,     -- 214 = Mount Yaw
+               ["RC14_OPTION"] = 213,     -- 213 = Mount Pitch
+               ["SERIAL5_BAUD"] = 460,    -- 460 = 460800 baud
+               ["SERIAL5_PROTOCOL"] = 2,  -- 2 = MAVLink2
             },
          },
          [4] = {
@@ -753,20 +754,44 @@ local config_domains = {
                ["NET_P4_TYPE"] = 0,
             }
          },
-         [13] = {
-            name = "Silvus & CM62 & Kutta", --Ap perif can node
+         [12] = {
+            name = "Silvus & CM62 & Kutta (flush hook)", --Ap perif can node + flush hook as gripper
             params = {
                ["CAN_D1_UC_SER_EN"] = 1,
-               ["CAN_D1_UC_S1_IDX"] = 1,
-               ["CAN_D1_UC_S1_NOD"] = 100,
-               ["CAN_D1_UC_S1_PRO"] = 2,
-               ["CAN_D1_UC_S2_BD"] = 115,
-               ["CAN_D1_UC_S2_IDX"] = 4,
-               ["CAN_D1_UC_S2_NOD"] = 100,
-               ["CAN_D1_UC_S2_PRO"] = 2,
-               ["MNT1_TYPE"] = 6,
+               ["CAN_D1_UC_S1_IDX"] = 1,		-- uart 2 on board 
+               ["CAN_D1_UC_S1_NOD"] = 100,   -- ap board can node ID
+               ["CAN_D1_UC_S1_PRO"] = 2,		-- MavLinkV2
+			      ["CAN_D1_UC_S1_BD"] = 460,		-- camera baud rate
+               ["CAN_D1_UC_S2_BD"] = 115,		-- silvus baud rate
+               ["CAN_D1_UC_S2_IDX"] = 4,		-- RS232 5 on board
+               ["CAN_D1_UC_S2_NOD"] = 100,		-- ap board can node ID
+               ["CAN_D1_UC_S2_PRO"] = 2,		-- MavLinkV2
+               ["MNT1_TYPE"] = 6,				-- 6 = AVT/MavV2 Cam
+			      ["CAM1_TYPE"] = 6,				-- 6 = AVT/MavV2 Cam
+			      ["GRIP_ENABLE"] = 1,
+               ["SERVO9_REVERSED"] = 1,
+			      ["SERVO9_FUNCTION"] = 28, 		-- gripper flush
             }
          },
+        [13] = {
+            name = "Silvus/CM62 - HookSlung", --Ap perif can node (slung hook as gripper)
+            params = {
+               ["CAN_D1_UC_SER_EN"] = 1,		
+               ["CAN_D1_UC_S1_IDX"] = 1,		-- uart 2 on board 
+               ["CAN_D1_UC_S1_NOD"] = 100,		-- ap board can node ID
+               ["CAN_D1_UC_S1_PRO"] = 2,		-- MavLinkV2
+               ["CAN_D1_UC_S1_BD"] = 460,		-- camera baud rate
+               ["CAN_D1_UC_S2_BD"] = 115,		-- silvus baud rate
+               ["CAN_D1_UC_S2_IDX"] = 4,		-- RS232 5 on board
+               ["CAN_D1_UC_S2_NOD"] = 100,   -- ap board can node ID
+               ["CAN_D1_UC_S2_PRO"] = 2,		-- MavLinkV2
+               ["MNT1_TYPE"] = 6,				-- 6 = AVT/MavV2 Cam
+			      ["CAM1_TYPE"] = 6,				-- 6 = AVT/MavV2 Cam
+			      ["GRIP_ENABLE"] = 1,
+               ["SERVO9_REVERSED"] = 1,      -- To ensure hook stays closed
+			      ["SERVO10_FUNCTION"] = 28,    -- gripper slung
+            }
+         },	
          [14] = {
             name = "ping1090i",
             params = {
@@ -804,62 +829,60 @@ local config_domains = {
          [30] = {
             name = "ZR30",
             params = {
-               ["RC13_OPTION"] = 214,  -- mount pitch
-               ["RC14_OPTION"] = 213,  -- mount yaw
-               ["RC6_OPTION"] = 163,   -- Switch between mount lock and follow
-			      ["RC11_OPTION"] = 169,  -- manual focus in/out
-               ["RC12_OPTION"] = 167,  -- camera zoom
-               ["SERIAL5_BAUD"] = 115,
-               ["SERIAL5_OPTIONS"] = 0,
-               ["SERIAL5_PROTOCOL"] = 8,
+               ["RC13_OPTION"] = 214,     -- mount pitch
+               ["RC14_OPTION"] = 213,     -- mount yaw
+               ["RC6_OPTION"] = 163,      -- Switch between mount lock and follow
+			      ["RC11_OPTION"] = 169,     -- manual focus in/out
+               ["RC12_OPTION"] = 167,     -- camera zoom
+               ["SERIAL5_BAUD"] = 115,    -- camera baud rate
+               ["SERIAL5_PROTOCOL"] = 8,  -- gimbal
                ["MNT1_PITCH_MAX"] = 25,
-               ["MNT1_TYPE"] = 8,
+               ["MNT1_TYPE"] = 8,         -- SIYI option
                ["MNT1_YAW_MAX"] = 80,
                ["MNT1_YAW_MIN"] = -80,
-               ["CAM1_TYPE"] = 4,
+               ["CAM1_TYPE"] = 4,         -- SIYI/Viewpro option
             }
          },
          [31] = {
             name = "ZR30 - HookFixed",
             params = {
 			      ["GRIP_ENABLE"] = 1,
-               ["RC8_OPTION"] = 19,       -- 19 = Gripper
+               ["RC8_OPTION"] = 19,       -- 19 = gripper
 			      ["SERVO9_FUNCTION"] = 28,  -- 28 = gripper
                ["RC13_OPTION"] = 214,     -- mount pitch
                ["RC6_OPTION"] = 163,      -- Switch between mount lock and follow
 			      ["RC11_OPTION"] = 169,     -- manual focus in/out
                ["RC12_OPTION"] = 167,     -- camera zoom
                ["RC14_OPTION"] = 213,     -- mount yaw
-               ["SERIAL5_BAUD"] = 115,
-               ["SERIAL5_OPTIONS"] = 0,
-               ["SERIAL5_PROTOCOL"] = 8,
+               ["SERIAL5_BAUD"] = 115,	  	-- camera baud rate
+               ["SERIAL5_PROTOCOL"] = 8,	-- gimbal
                ["MNT1_PITCH_MAX"] = 25,
-               ["MNT1_TYPE"] = 8,
+               ["MNT1_TYPE"] = 8,			-- SIYI option
                ["MNT1_YAW_MAX"] = 80,
                ["MNT1_YAW_MIN"] = -80,
-               ["CAM1_TYPE"] = 4,
+               ["CAM1_TYPE"] = 4,			-- SIYI/Viewpro option
             }
          },
          [32] = {
             name = "ZR30 - Hook Slung",
             params = {
-			      ["GRIP_ENABLE"] = 1,
-               ["RC8_OPTION"] = 19,       -- 19 = Gripper
+			   ["GRIP_ENABLE"] = 1,
+               ["RC8_OPTION"] = 19,       -- 19 = gripper
                ["SERVO9_FUNCTION"] = 146, -- 146 = k_rcin7_mapped?!
                ["SERVO9_REVERSED"] = 1,
                ["SERVO10_FUNCTION"] = 28, -- 28 = gripper
 			      ["RC11_OPTION"] = 169,     -- manual focus in/out
                ["RC12_OPTION"] = 167,     -- camera zoom			 
                ["RC13_OPTION"] = 214,     -- mount pitch
-               ["RC14_OPTION"] = 213,     -- mount yaw  
-               ["SERIAL5_BAUD"] = 115,
-               ["SERIAL5_OPTIONS"] = 0,
-               ["SERIAL5_PROTOCOL"] = 8,
+               ["RC14_OPTION"] = 213,    	-- mount yaw  
+			      ["RC6_OPTION"] = 163,     	-- Switch between mount lock and follow
+               ["SERIAL5_BAUD"] = 115,		-- camera baud rate
+               ["SERIAL5_PROTOCOL"] = 8,	-- gimbal
                ["MNT1_PITCH_MAX"] = 25,
-               ["MNT1_TYPE"] = 8,
+               ["MNT1_TYPE"] = 8,			-- SIYI option
                ["MNT1_YAW_MAX"] = 80,
                ["MNT1_YAW_MIN"] = -80,
-               ["CAM1_TYPE"] = 4,
+               ["CAM1_TYPE"] = 4,			-- SIYI/Viewpro option
             }
          },
       },
