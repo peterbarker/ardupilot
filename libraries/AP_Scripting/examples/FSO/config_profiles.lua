@@ -36,7 +36,6 @@ local must_be_set = "must be set"
 local param_index = {
    ["enable"]    =  1,
    ["pm_filter"] =  2,
-
    ["JOB"]       = 10,
    ["ARMS"]      = 11,
    ["BAT"]       = 12,
@@ -155,6 +154,9 @@ local config_domains = {
          ["SERIAL1_BAUD"] = 57,
          ["SERIAL1_OPTIONS"] = 0,
          ["SERIAL1_PROTOCOL"] = 2,
+
+         ["SIMPLE"] = 0,
+         ["SUPER_SIMPLE"] = 0,
 
          -- Terrain Following
          ["TERRAIN_ENABLE"] = 1,
@@ -490,6 +492,16 @@ local config_domains = {
                ["BATT_LOW_VOLT"] = 44.25,
             },
          },
+         [80] = {
+            name = "80Ah",
+            params = {
+               ["BATT_CAPACITY"] = 160000,
+               ["BATT_CRT_MAH"] = 32000,
+               ["BATT_CRT_VOLT"] = 43.75,
+               ["BATT_LOW_MAH"] = 48000,
+               ["BATT_LOW_VOLT"] = 44.25,
+            },
+         },
       },
    },
 
@@ -647,6 +659,7 @@ local config_domains = {
          ["SERVO14_MIN"] = 1100,
          ["SERVO14_REVERSED"] = 0,
          ["SERVO14_TRIM"] = 1500,
+         ["SERVO15_FUNCTION"] = -1,
          ["SERVO15_MAX"] = 1900,
          ["SERVO15_MIN"] = 1100,
          ["SERVO15_REVERSED"] = 0,
@@ -683,6 +696,8 @@ local config_domains = {
                ["MNT1_TYPE"] = 6,           -- 6 = Mount type MAVLinkv2 (or Custom)
                ["RC13_OPTION"] = 214,       -- 214 = Mount Yaw
                ["RC14_OPTION"] = 213,       -- 213 = Mount Pitch
+               ["SERIAL5_BAUD"] = 460,      -- 460 = 460800 baud
+               ["SERIAL5_PROTOCOL"] = 2,    -- 2 = MAVLink2
             },
          },
          [4] = {
@@ -738,24 +753,6 @@ local config_domains = {
                ["NET_P4_TYPE"] = 0,
             }
          },
-         [12] = {
-            name = "ZR30",
-            params = {
-               ["CAM1_TYPE"] = 4,
-               ["MNT1_PITCH_MAX"] = 25,
-               ["MNT1_TYPE"] = 8,
-               ["MNT1_YAW_MAX"] = 80,
-               ["MNT1_YAW_MIN"] = -80,
-               ["RC6_OPTION"] = 163,
-               ["RC7_OPTION"] = 166,
-               ["RC8_OPTION"] = 167,
-               ["RC13_OPTION"] = 214,
-               ["RC14_OPTION"] = 213,
-               ["SERIAL5_BAUD"] = 115,
-               ["SERIAL5_OPTIONS"] = 0,
-               ["SERIAL5_PROTOCOL"] = 8,
-            }
-         },
          [13] = {
             name = "Silvus & CM62 & Kutta", --Ap perif can node
             params = {
@@ -804,6 +801,67 @@ local config_domains = {
             }
          },
          -- reserve 16 for Vio and hook
+         [30] = {
+            name = "ZR30",
+            params = {
+               ["RC13_OPTION"] = 214,  -- mount pitch
+               ["RC14_OPTION"] = 213,  -- mount yaw
+               ["RC6_OPTION"] = 163,   -- Switch between mount lock and follow
+			      ["RC11_OPTION"] = 169,  -- manual focus in/out
+               ["RC12_OPTION"] = 167,  -- camera zoom
+               ["SERIAL5_BAUD"] = 115,
+               ["SERIAL5_OPTIONS"] = 0,
+               ["SERIAL5_PROTOCOL"] = 8,
+               ["MNT1_PITCH_MAX"] = 25,
+               ["MNT1_TYPE"] = 8,
+               ["MNT1_YAW_MAX"] = 80,
+               ["MNT1_YAW_MIN"] = -80,
+               ["CAM1_TYPE"] = 4,
+            }
+         },
+         [31] = {
+            name = "ZR30 - HookFixed",
+            params = {
+			      ["GRIP_ENABLE"] = 1,
+               ["RC8_OPTION"] = 19,       -- 19 = Gripper
+			      ["SERVO9_FUNCTION"] = 28,  -- 28 = gripper
+               ["RC13_OPTION"] = 214,     -- mount pitch
+               ["RC6_OPTION"] = 163,      -- Switch between mount lock and follow
+			      ["RC11_OPTION"] = 169,     -- manual focus in/out
+               ["RC12_OPTION"] = 167,     -- camera zoom
+               ["RC14_OPTION"] = 213,     -- mount yaw
+               ["SERIAL5_BAUD"] = 115,
+               ["SERIAL5_OPTIONS"] = 0,
+               ["SERIAL5_PROTOCOL"] = 8,
+               ["MNT1_PITCH_MAX"] = 25,
+               ["MNT1_TYPE"] = 8,
+               ["MNT1_YAW_MAX"] = 80,
+               ["MNT1_YAW_MIN"] = -80,
+               ["CAM1_TYPE"] = 4,
+            }
+         },
+         [32] = {
+            name = "ZR30 - Hook Slung",
+            params = {
+			      ["GRIP_ENABLE"] = 1,
+               ["RC8_OPTION"] = 19,       -- 19 = Gripper
+               ["SERVO9_FUNCTION"] = 146, -- 146 = k_rcin7_mapped?!
+               ["SERVO9_REVERSED"] = 1,
+               ["SERVO10_FUNCTION"] = 28, -- 28 = gripper
+			      ["RC11_OPTION"] = 169,     -- manual focus in/out
+               ["RC12_OPTION"] = 167,     -- camera zoom			 
+               ["RC13_OPTION"] = 214,     -- mount pitch
+               ["RC14_OPTION"] = 213,     -- mount yaw  
+               ["SERIAL5_BAUD"] = 115,
+               ["SERIAL5_OPTIONS"] = 0,
+               ["SERIAL5_PROTOCOL"] = 8,
+               ["MNT1_PITCH_MAX"] = 25,
+               ["MNT1_TYPE"] = 8,
+               ["MNT1_YAW_MAX"] = 80,
+               ["MNT1_YAW_MIN"] = -80,
+               ["CAM1_TYPE"] = 4,
+            }
+         },
       },
    },
 }
