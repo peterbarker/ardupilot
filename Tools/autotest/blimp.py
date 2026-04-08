@@ -260,23 +260,11 @@ class AutoTestBlimp(TestSuite):
 
     def FlyManualFourMotor(self):
         '''test manual mode on the four-motor blimp frame'''
-        self.set_parameters({
-            "FRAME_CLASS": 2,
-            "SERVO1_MAX": 2000,
-            "SERVO1_MIN": 1000,
-            "SERVO1_TRIM": 1500,
-            "SERVO2_MAX": 2000,
-            "SERVO2_MIN": 1000,
-            "SERVO2_TRIM": 1500,
-            "SERVO3_MAX": 2000,
-            "SERVO3_MIN": 1000,
-            "SERVO3_TRIM": 1500,
-            "SERVO4_MAX": 2000,
-            "SERVO4_MIN": 1000,
-            "SERVO4_TRIM": 1500,
-            "FINS_THR_MAX": 0.4,
-        })
-        self.reboot_sitl()
+        self.customise_SITL_commandline(
+            [],
+            model='blimp-motor',
+            defaults_filepath=self.model_defaults_filepath('blimp-motor'),
+        )
 
         self.change_mode('MANUAL')
         self.wait_ready_to_arm()
@@ -286,19 +274,19 @@ class AutoTestBlimp(TestSuite):
 
         self.progress("Moving forward.")
         self.set_rc(2, 2000)
-        self.wait_speed_vector(Vector3(0.2, 0, 0), accuracy=0.15, timeout=15)
+        self.wait_speed_vector(Vector3(1.0, 0, 0), accuracy=0.5, timeout=15)
         self.set_rc(2, 1500)
         self.wait_speed_vector(stopped, accuracy=0.1, timeout=20)
 
         self.progress("Moving right.")
         self.set_rc(1, 2000)
-        self.wait_speed_vector(Vector3(0, 0.2, 0), accuracy=0.15, timeout=15)
+        self.wait_speed_vector(Vector3(0, 1.0, 0), accuracy=0.5, timeout=15)
         self.set_rc(1, 1500)
         self.wait_speed_vector(stopped, accuracy=0.1, timeout=20)
 
         self.progress("Moving up.")
         self.set_rc(3, 2000)
-        self.wait_speed_vector(Vector3(0, 0, -0.2), accuracy=0.15, timeout=15)
+        self.wait_speed_vector(Vector3(0, 0, -1.0), accuracy=0.5, timeout=15)
         self.set_rc(3, 1500)
         self.wait_speed_vector(stopped, accuracy=0.1, timeout=20)
 
