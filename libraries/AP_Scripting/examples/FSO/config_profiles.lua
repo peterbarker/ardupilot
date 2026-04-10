@@ -11,7 +11,7 @@
 --   far flung future - change parameters on peripherals too
 
 
-gcs:send_text(6, string.format("CFG: v2.0_beta4 FSO starting"))
+gcs:send_text(6, string.format("CFG: v2.0_beta5 FSO starting"))
 
 local msg_pfx = "CFG: "
 local auth_id = arming:get_aux_auth_id() or 0
@@ -1411,8 +1411,9 @@ end
 local a_parameter_was_ever_set = false
 
 
--- utility: apply one profile
+-- utility: apply one profile, returns true if any parameter was changed
 local function apply_parameters(domain, params)
+   local did_set = false
    for param_name, new_value in pairs(domain.all_param_defaults) do
       local profile_param_value = params[param_name]
       if profile_param_value ~= nil then
@@ -1420,23 +1421,24 @@ local function apply_parameters(domain, params)
       end
       if new_value == nil then
          send_text(3, string.format("Validation code has failed as %s has nil value", param_name))
-         return
+         return false
       end
       if new_value == must_be_set then
          send_text(3, string.format("Validation code has failed as %s is must_be_set", param_name))
-         return
+         return false
       end
       local old_value = param:get(param_name)
       if old_value == nil then
          send_text(3, string.format("Unable to fetch parameter %s", param_name))
-         return
+         return false
       end
       if old_value ~= new_value then
          send_text(6, string.format("Set %s=%s (was %.3f)", param_name, new_value, old_value))
          param:set_and_save(param_name, new_value)
-         a_parameter_was_ever_set = true
+         did_set = true
       end
    end
+   return did_set
 end
 
 -- check each domain configuration parameter, act if any has changed
@@ -1489,7 +1491,10 @@ local function handle_domains()
          if sel_value_changed then
             send_text(6, string.format("Applying %s defaults", domain.param_name))
          end
-         apply_parameters(domain, {})
+         local did_set = apply_parameters(domain, {})
+         if did_set and sel_value_changed then
+            a_parameter_was_ever_set = true
+         end
          goto cd_next_domain
       end
 
@@ -1509,7 +1514,13 @@ local function handle_domains()
          domain.last_sel_value = sel_value
          send_text(6, string.format("Applying %s profile: %s", domain.param_name, profile.name))
       end
-      apply_parameters(domain, profile.params)
+      local did_set = apply_parameters(domain, profile.params)
+      -- only require reboot when a profile selection change caused
+      -- parameter writes, not when correcting transient RAM changes
+      -- (e.g. motor test temporarily overrides failsafe params)
+      if did_set and sel_value_changed then
+         a_parameter_was_ever_set = true
+      end
       goto cd_next_domain
 
       ::cd_next_domain::
