@@ -856,6 +856,7 @@ local config_domains = {
                ["MNT1_YAW_MAX"] = 80,
                ["MNT1_YAW_MIN"] = -80,
                ["CAM1_TYPE"] = 4,         -- SIYI/Viewpro option
+			      ["MNT1_RC_RATE"] = 30,
             }
          },
          [31] = {
@@ -876,6 +877,7 @@ local config_domains = {
                ["MNT1_YAW_MAX"] = 80,
                ["MNT1_YAW_MIN"] = -80,
                ["CAM1_TYPE"] = 4,         -- SIYI/Viewpro option
+			      ["MNT1_RC_RATE"] = 30,
             }
          },
          [32] = {
@@ -898,6 +900,7 @@ local config_domains = {
                ["MNT1_YAW_MAX"] = 80,
                ["MNT1_YAW_MIN"] = -80,
                ["CAM1_TYPE"] = 4,         -- SIYI/Viewpro option
+			      ["MNT1_RC_RATE"] = 30,     --reduced speed 30deg/s
             }
          },
       },
