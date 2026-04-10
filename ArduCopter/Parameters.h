@@ -464,7 +464,54 @@ public:
     AP_Int32        log_bitmask;
     AP_Int8         esc_calibrate;
 #if AP_RC_TRANSMITTER_TUNING_ENABLED
-    AP_Int8         rc_tuning_param;
+    // Tuning parameter selector (TUNE / TUNE2 parameters)
+    enum class RCTuningFunction {
+        NONE                         = 0,
+        STABILIZE_ROLL_PITCH_KP      = 1,
+        STABILIZE_YAW_KP             = 3,
+        RATE_ROLL_PITCH_KP           = 4,
+        RATE_ROLL_PITCH_KI           = 5,
+        YAW_RATE_KP                  = 6,
+        THROTTLE_RATE_KP             = 7,
+        LOITER_POSITION_KP           = 12,
+        ALTITUDE_HOLD_KP             = 14,
+        RATE_ROLL_PITCH_KD           = 21,
+        VEL_XY_KP                    = 22,
+        ACRO_RP_RATE                 = 25,
+        YAW_RATE_KD                  = 26,
+        VEL_XY_KI                    = 28,
+        AHRS_YAW_KP                  = 30,
+        AHRS_KP                      = 31,
+        ACCEL_Z_KP                   = 34,
+        ACCEL_Z_KI                   = 35,
+        ACCEL_Z_KD                   = 36,
+        DECLINATION                  = 38,
+        CIRCLE_RATE                  = 39,
+        ACRO_YAW_RATE                = 40,
+        RANGEFINDER_GAIN             = 41,
+        EKF_VERTICAL_POS             = 42,
+        EKF_HORIZONTAL_POS           = 43,
+        EKF_ACCEL_NOISE              = 44,
+        RC_FEEL_RP                   = 45,
+        RATE_PITCH_KP                = 46,
+        RATE_PITCH_KI                = 47,
+        RATE_PITCH_KD                = 48,
+        RATE_ROLL_KP                 = 49,
+        RATE_ROLL_KI                 = 50,
+        RATE_ROLL_KD                 = 51,
+        RATE_PITCH_FF                = 52,
+        RATE_ROLL_FF                 = 53,
+        RATE_YAW_FF                  = 54,
+        RATE_MOT_YAW_HEADROOM        = 55,
+        RATE_YAW_FILT                = 56,
+        UNUSED                       = 57, // was winch control
+        SYSTEM_ID_MAGNITUDE          = 58,
+        POS_CONTROL_ANGLE_MAX        = 59,
+        LOITER_MAX_XY_SPEED          = 60,
+        WP_SPEED_MS                  = 61,
+    };
+
+    AP_Enum<RCTuningFunction> rc_tuning_param;
 #endif  // AP_RC_TRANSMITTER_TUNING_ENABLED
     AP_Int8         frame_type;
     AP_Int8         disarm_delay;
@@ -721,7 +768,7 @@ public:
 
 #if AP_RC_TRANSMITTER_TUNING_ENABLED
     // second transmitter channel for tuning:
-    AP_Int8 rc_tuning2_param;
+    AP_Enum<Parameters::RCTuningFunction> rc_tuning2_param;
     AP_Float rc_tuning2_min;
     AP_Float rc_tuning2_max;
 #endif  // AP_RC_TRANSMITTER_TUNING_ENABLED

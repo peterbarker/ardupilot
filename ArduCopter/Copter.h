@@ -415,6 +415,9 @@ private:
     using FS_THR_Action = Parameters::FS_THR_Action;
     using FS_EKF_Action = Parameters::FS_EKF_Action;
     using WPYawBehavior = Parameters::WPYawBehavior;
+#if AP_RC_TRANSMITTER_TUNING_ENABLED
+    using RCTuningFunction = Parameters::RCTuningFunction;
+#endif
 
     // dead reckoning state
     struct {
@@ -1009,8 +1012,8 @@ private:
 #if AP_RC_TRANSMITTER_TUNING_ENABLED
     // tuning.cpp
     void tuning();
-    void tuning(const class RC_Channel *tuning_ch, int8_t tuning_param, float tuning_min, float tuning_max);
-    bool being_tuned(int8_t tuning_param) const;
+    void tuning(const class RC_Channel *tuning_ch, RCTuningFunction tuning_param, float tuning_min, float tuning_max);
+    bool being_tuned(RCTuningFunction tuning_param) const;
 #endif  // AP_RC_TRANSMITTER_TUNING_ENABLED
 
     // UserCode.cpp

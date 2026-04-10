@@ -70,7 +70,7 @@ void ModeCircle::run()
         // update the orbicular rate target based on pilot roll stick inputs
 #if AP_RC_TRANSMITTER_TUNING_ENABLED
         // skip if using transmitter based tuning knob for circle rate
-        if (!copter.being_tuned(TUNING_CIRCLE_RATE)) {
+        if (!copter.being_tuned(Copter::RCTuningFunction::CIRCLE_RATE)) {
 #else
         {
 #endif

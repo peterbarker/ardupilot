@@ -7,53 +7,6 @@
 #define MULTICOPTER_FRAME 1
 #define HELI_FRAME 2
 
-// Tuning enumeration
-enum tuning_func {
-    TUNING_NONE =                        0, //
-    TUNING_STABILIZE_ROLL_PITCH_KP =     1, // stabilize roll/pitch angle controller's P term
-    TUNING_STABILIZE_YAW_KP =            3, // stabilize yaw heading controller's P term
-    TUNING_RATE_ROLL_PITCH_KP =          4, // body frame roll/pitch rate controller's P term
-    TUNING_RATE_ROLL_PITCH_KI =          5, // body frame roll/pitch rate controller's I term
-    TUNING_YAW_RATE_KP =                 6, // body frame yaw rate controller's P term
-    TUNING_THROTTLE_RATE_KP =            7, // throttle rate controller's P term (desired rate to acceleration or motor output)
-    TUNING_LOITER_POSITION_KP =         12, // loiter distance controller's P term (position error to speed)
-    TUNING_ALTITUDE_HOLD_KP =           14, // altitude hold controller's P term (alt error to desired rate)
-    TUNING_RATE_ROLL_PITCH_KD =         21, // body frame roll/pitch rate controller's D term
-    TUNING_VEL_XY_KP =                  22, // loiter rate controller's P term (speed error to tilt angle)
-    TUNING_ACRO_RP_RATE =               25, // acro controller's desired roll and pitch rate in deg/s
-    TUNING_YAW_RATE_KD =                26, // body frame yaw rate controller's D term
-    TUNING_VEL_XY_KI =                  28, // loiter rate controller's I term (speed error to tilt angle)
-    TUNING_AHRS_YAW_KP =                30, // ahrs's compass effect on yaw angle (0 = very low, 1 = very high)
-    TUNING_AHRS_KP =                    31, // accelerometer effect on roll/pitch angle (0=low)
-    TUNING_ACCEL_Z_KP =                 34, // accel based throttle controller's P term
-    TUNING_ACCEL_Z_KI =                 35, // accel based throttle controller's I term
-    TUNING_ACCEL_Z_KD =                 36, // accel based throttle controller's D term
-    TUNING_DECLINATION =                38, // compass declination in radians
-    TUNING_CIRCLE_RATE =                39, // circle turn rate in degrees (hard coded to about 45 degrees in either direction)
-    TUNING_ACRO_YAW_RATE =              40, // acro controller's desired yaw rate in deg/s
-    TUNING_RANGEFINDER_GAIN =           41, // unused
-    TUNING_EKF_VERTICAL_POS =           42, // unused
-    TUNING_EKF_HORIZONTAL_POS =         43, // unused
-    TUNING_EKF_ACCEL_NOISE =            44, // unused
-    TUNING_RC_FEEL_RP =                 45, // roll-pitch input smoothing
-    TUNING_RATE_PITCH_KP =              46, // body frame pitch rate controller's P term
-    TUNING_RATE_PITCH_KI =              47, // body frame pitch rate controller's I term
-    TUNING_RATE_PITCH_KD =              48, // body frame pitch rate controller's D term
-    TUNING_RATE_ROLL_KP =               49, // body frame roll rate controller's P term
-    TUNING_RATE_ROLL_KI =               50, // body frame roll rate controller's I term
-    TUNING_RATE_ROLL_KD =               51, // body frame roll rate controller's D term
-    TUNING_RATE_PITCH_FF =              52, // body frame pitch rate controller FF term
-    TUNING_RATE_ROLL_FF =               53, // body frame roll rate controller FF term
-    TUNING_RATE_YAW_FF =                54, // body frame yaw rate controller FF term
-    TUNING_RATE_MOT_YAW_HEADROOM =      55, // motors yaw headroom minimum
-    TUNING_RATE_YAW_FILT =              56, // yaw rate input filter
-    UNUSED =                            57, // was winch control
-    TUNING_SYSTEM_ID_MAGNITUDE =        58, // magnitude of the system ID signal
-    TUNING_POS_CONTROL_ANGLE_MAX =      59, // position controller maximum angle
-    TUNING_LOITER_MAX_XY_SPEED =        60, // maximum loiter horizontal speed
-    TUNING_WP_SPEED_MS =                61, // maximum speed to next waypoint in m/s
-};
-
 // Airmode
 enum class AirMode {
     AIRMODE_NONE,
