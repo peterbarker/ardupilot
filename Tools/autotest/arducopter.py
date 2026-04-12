@@ -25602,7 +25602,6 @@ return update, 1000
             if pname in all_params:
                 raise ValueError(f"{pname} in fetched-all-parameters when it should have gone away")
 
-    def tests2b(self):
         '''return list of all tests'''
         ret = ([
             self.ThrottleFailsafe,
@@ -25746,6 +25745,7 @@ return update, 1000
             self.GripperInitialPosition,
             self.FTPScriptUpload,
             self.Scripting6DoFMotors,
+            self.ForceSensorNAU7802,
             self.CompassLearnCopyFromEKF,
             self.Ch6TuningLoitMaxXYSpeed,
         ])
