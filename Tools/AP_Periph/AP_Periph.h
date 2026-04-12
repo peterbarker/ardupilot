@@ -14,6 +14,7 @@
 #include <AP_Airspeed/AP_Airspeed.h>
 #include <AP_RangeFinder/AP_RangeFinder.h>
 #include <AP_RangeFinder/AP_RangeFinder_Backend.h>
+#include <AP_ForceSensor/AP_ForceSensor.h>
 #include <AP_Proximity/AP_Proximity.h>
 #include <AP_EFI/AP_EFI.h>
 #include <AP_KDECAN/AP_KDECAN.h>
@@ -197,6 +198,9 @@ public:
 #if AP_PERIPH_RANGEFINDER_ENABLED
     void can_rangefinder_update();
 #endif
+#if AP_PERIPH_FORCE_SENSOR_ENABLED
+    void can_force_sensor_update();
+#endif
     void can_battery_update();
     void can_battery_send_cells(uint8_t instance);
 #if AP_PERIPH_CAN_CIRCUIT_SENDING_ENABLED
@@ -324,6 +328,11 @@ public:
     RangeFinder rangefinder;
     uint32_t last_rangefinder_update_ms;
     uint32_t last_rangefinder_sample_ms[RANGEFINDER_MAX_INSTANCES];
+#endif
+
+#if AP_PERIPH_FORCE_SENSOR_ENABLED
+    AP_ForceSensor force_sensor;
+    uint32_t last_force_sensor_update_ms;
 #endif
 
 #if AP_PERIPH_PROXIMITY_ENABLED
