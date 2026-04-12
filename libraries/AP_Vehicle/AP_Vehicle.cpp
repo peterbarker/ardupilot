@@ -298,6 +298,12 @@ const AP_Param::GroupInfo AP_Vehicle::var_info[] = {
     AP_SUBGROUPINFO(beacon, "BCN", 33, AP_Vehicle, AP_Beacon),
 #endif  // AP_BEACON_ENABLED
 
+#if AP_FORCESENSOR_ENABLED
+    // @Group: FSCL
+    // @Path: ../AP_ForceSensor/AP_ForceSensor.cpp
+    AP_SUBGROUPINFO(force_sensor, "FSCL", 34, AP_Vehicle, AP_ForceSensor),
+#endif  // AP_FORCESENSOR_ENABLED
+
     AP_GROUPEND
 };
 
@@ -458,6 +464,9 @@ void AP_Vehicle::setup()
 #endif
 #endif  // AP_AIRSPEED_ENABLED
 
+#if AP_FORCESENSOR_ENABLED
+    force_sensor.init();
+#endif
 
 #if AP_SRV_CHANNELS_ENABLED
     AP::srv().init();
@@ -635,6 +644,9 @@ const AP_Scheduler::Task AP_Vehicle::scheduler_tasks[] = {
 #if AP_BEACON_ENABLED
     SCHED_TASK_CLASS(AP_Beacon,    &vehicle.beacon,         update,                  400, 200, 24),
 #endif  // AP_BEACON_ENABLED
+#if AP_FORCESENSOR_ENABLED
+    SCHED_TASK_CLASS(AP_ForceSensor, &vehicle.force_sensor, update,                   10,  50, 40),
+#endif  // AP_FORCESENSOR_ENABLED
 #if AP_AIRSPEED_ENABLED
     SCHED_TASK_CLASS(AP_Airspeed,  &vehicle.airspeed,       update,                   10, 100, 41),    // NOTE: the priority number here should be right before Plane's calc_airspeed_errors
 #endif
