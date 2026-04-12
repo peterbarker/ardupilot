@@ -304,6 +304,15 @@ singleton AP_Airspeed depends AP_AIRSPEED_SCRIPTING_ENABLED && APM_BUILD_TYPE(AP
 singleton AP_Airspeed rename airspeed
 singleton AP_Airspeed method get_backend AP_Airspeed_Backend uint8_t'skip_check
 
+include AP_ForceSensor/AP_ForceSensor.h
+
+singleton AP_ForceSensor depends AP_FORCESENSOR_ENABLED
+singleton AP_ForceSensor rename force_sensor
+singleton AP_ForceSensor method num_sensors uint8_t
+singleton AP_ForceSensor method force_N float uint8_t'skip_check
+singleton AP_ForceSensor method healthy boolean uint8_t'skip_check
+singleton AP_ForceSensor method tare void uint8_t'skip_check
+
 include AP_Terrain/AP_Terrain.h
 
 singleton AP_Terrain depends defined(AP_TERRAIN_AVAILABLE) && AP_TERRAIN_AVAILABLE == 1
