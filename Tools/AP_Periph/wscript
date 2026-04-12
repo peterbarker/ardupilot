@@ -74,6 +74,7 @@ def build(bld):
                      'AP_EFI',
                      'AP_CheckFirmware',
                      'AP_RPM',
+                     'AP_ForceSensor',
                      'AP_Proximity',
                      'AP_RCProtocol',
                      'AP_AHRS',
