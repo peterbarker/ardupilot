@@ -48,6 +48,7 @@
 #include "SIM_TeraRangerI2C.h"
 #include "SIM_TFS20L.h"
 #include "SIM_ToshibaLED.h"
+#include "SIM_NAU7802.h"
 
 #include <signal.h>
 
@@ -136,6 +137,9 @@ static AS5600 as5600;  // AoA sensor
 #if AP_SIM_TFS20L_ENABLED
 static TFS20L tfs20l;  // Benewake TFS20L rangefinder
 #endif  // AP_SIM_TFS20L_ENABLED
+#if AP_SIM_NAU7802_ENABLED
+static NAU7802 nau7802;  // force sensor load cell ADC
+#endif  // AP_SIM_NAU7802_ENABLED
 
 #if AP_SIM_RF_TOFSENSEF_I2C_ENABLED
 static TOFSenseF_I2C tofsensef;
@@ -229,6 +233,9 @@ struct i2c_device_at_address {
 #if AP_SIM_RF_LIGHTWARE_GRF_I2C_ENABLED
     { 2, 0x66, lightware_grf_i2c },  // RNGFNDx_TYPE = 48, RNGFNDx_ADDR = 0x66
 #endif  // AP_SIM_RF_LIGHTWARE_GRF_I2C_ENABLED
+#if AP_SIM_NAU7802_ENABLED
+    { 0, 0x2A, nau7802 },            // FSCL1_TYPE=1, FSCL1_ADDR=0x2A, FSCL1_BUS=0
+#endif  // AP_SIM_NAU7802_ENABLED
 };
 
 void I2C::init()
