@@ -1969,6 +1969,9 @@ void AP_Periph_FW::can_update()
 #if AP_PERIPH_RANGEFINDER_ENABLED
         can_rangefinder_update();
 #endif
+#if AP_PERIPH_FORCE_SENSOR_ENABLED
+        can_force_sensor_update();
+#endif
 #if AP_PERIPH_PROXIMITY_ENABLED
         can_proximity_update();
 #endif
