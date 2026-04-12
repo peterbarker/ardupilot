@@ -266,6 +266,8 @@ public:
 
     AP_Float uart_byte_loss_pct;
 
+    AP_Float fscl_load;  // simulated force sensor load, Newtons
+
 #ifdef AP_DDS_ENABLED
     bool use_dds_sim_time = false; // use ROS2 simulation time for DDS topics
 #endif

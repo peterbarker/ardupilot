@@ -618,6 +618,13 @@ const AP_Param::GroupInfo SIM::var_info3[] = {
     // @User: Advanced
     AP_GROUPINFO("UART_LOSS", 42, SIM,  uart_byte_loss_pct, 0),
 
+    // @Param: FSCL_LOAD
+    // @DisplayName: Simulated force sensor load
+    // @Description: Simulated force sensor load in Newtons for AP_ForceSensor SITL testing
+    // @Units: N
+    // @User: Advanced
+    AP_GROUPINFO("FSCL_LOAD", 43, SIM,  fscl_load, 0.0f),
+
     // @Group: ARSPD_
     // @Path: ./SITL_Airspeed.cpp
     AP_SUBGROUPINFO(airspeed[0], "ARSPD_", 50, SIM, AirspeedParm),
