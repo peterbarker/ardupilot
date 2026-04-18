@@ -91,6 +91,10 @@ class HWDef:
         self.seen_BARO_lines = set()
         self.seen_COMPASS_lines = set()
 
+    def board_name(self):
+        '''retrieves board name - assumes there's a hwdef!'''
+        return os.path.split(os.path.dirname(self.hwdef[0]))[-1]
+
     def is_int(self, str):
         '''check if a string is an integer'''
         try:
@@ -187,6 +191,20 @@ class HWDef:
 ''')
 
         self.write_hwdef_header_content(f)
+
+        f.write(f'''/*
+ generated hardware definitions from hwdef.dat - DO NOT EDIT
+*/
+
+#ifndef HAL_BOARD_NAME
+#define HAL_BOARD_NAME "{self.board_name()}"
+#endif
+
+// allow for short names overridden in hwdef.dat
+#ifndef HAL_SHORT_BOARD_NAME
+#define HAL_SHORT_BOARD_NAME HAL_BOARD_NAME
+#endif
+''')
 
         f.close()
 
