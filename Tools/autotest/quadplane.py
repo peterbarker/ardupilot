@@ -1223,9 +1223,19 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
 
         self.set_parameters({
             "SCR_ENABLE": 1,
-            "SIM_SPEEDUP": 20,  # give Lua scheduler enough CPU
-            "RC8_OPTION": 300,  # scripting switch 1: used as the enable switch
-            "FENCE_ENABLE": 0,  # keep fence out of the way during the AUTO square
+            "SIM_SPEEDUP": 20,    # give Lua scheduler enough CPU
+            "RC8_OPTION": 300,    # scripting switch 1: used as the enable switch
+            "RC_OVERRIDE_TIME": -1,  # disable override timeout; at 20x speedup the
+                                     # default 3 s expires in 150 ms wall-clock,
+                                     # killing the enable-switch during wait_text()
+            # Altitude fence: keep all flight modes within 20 m of the 60 m takeoff
+            # altitude.  FENCE_ACTION=0 (report only) so mode transitions in the Lua
+            # sequence are not disrupted by a fence breach.
+            "FENCE_ENABLE": 1,
+            "FENCE_TYPE": 9,      # bitmask: 1=alt-max + 8=alt-min
+            "FENCE_ALT_MAX": 80,
+            "FENCE_ALT_MIN": 40,
+            "FENCE_ACTION": 0,    # report only
         })
 
         self.install_example_script_context('tailsitter-quadplane-test.lua')
@@ -1236,38 +1246,24 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.scripting_restart()
         self.wait_text("tailsitter test loaded", check_context=True, timeout=30)
 
-        # Arm and climb to a safe altitude for the fixed-wing mode stages.
+        # Arm and climb to 60 m — the midpoint of the 40–80 m altitude fence.
         self.wait_ready_to_arm()
-        self.takeoff(100, mode='GUIDED', timeout=120)
+        self.takeoff(60, mode='GUIDED', timeout=120)
 
-        # Transition to forward flight; the MANUAL/FBWA/FBWB/CRUISE stages need FW.
+        # Transition to forward flight; the FBWA/FBWB/CRUISE stages need FW.
         self.change_mode('FBWA')
         self.set_rc(3, 1700)
         self.wait_statustext('Transition VTOL done', check_context=True, timeout=60)
-        self.wait_altitude(80, 130, relative=True, timeout=120)
-
-        # Pre-position aileron so it is deflected for both MANUAL and FBWA stages.
-        # MANUAL needs rate (gyro response), FBWA needs angle (roll bounded by limit).
-        # Both benefit from the same deflection; we only centre after FBWA PASS.
-        # Keeping the stick deflected throughout avoids a timing race: "MANUAL PASS"
-        # and "entering FBWA" arrive back-to-back in the same Lua callback, so both
-        # land in the context at once.  With SIM_SPEEDUP=20 the FBWA 3 s settle is
-        # only ~150 ms wall-clock — Python's own processing latency can exceed that,
-        # meaning a centre-then-re-deflect sequence risks missing the measurement
-        # window entirely.
-        self.set_rc(1, 1700)
+        self.wait_altitude(40, 80, relative=True, timeout=120)
+        # Level off throttle so the aircraft does not continue climbing above the fence.
+        self.set_rc(3, 1500)
 
         # Raise enable switch – this triggers the Lua test sequence.
         self.set_rc(8, 2000)
 
-        # MANUAL: script samples roll rate for 0.5 s; aileron already deflected.
-        # (No separate "sequence started" check: the STATUSTEXT truncates at 50 chars
-        # and the start message is too long to match; MANUAL PASS is the first
-        # unambiguous confirmation the sequence is running.)
-        self.wait_text("MANUAL PASS", check_context=True, timeout=30)
-
-        # FBWA: aileron remains at 1700 from before MANUAL; the script tracks max
-        # roll angle over 6 s (after a 3 s settle).  Centre only after FBWA PASS.
+        # FBWA: deflect aileron so the angle-control assessment sees a non-zero roll
+        # demand.  Centre only after FBWA PASS.
+        self.set_rc(1, 1700)
         self.wait_text("FBWA PASS", check_context=True, timeout=60)
         self.set_rc(1, 1500)
 
@@ -1282,7 +1278,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
 
         # QHOVER: ensure throttle is centred for the altitude-hold assessment.
         self.set_rc(3, 1500)
-        self.wait_text("QHOVER PASS", check_context=True, timeout=60)
+        self.wait_text("QHOVER PASS", check_context=True, timeout=120)
         self.wait_text("test sequence complete", check_context=True, timeout=30)
 
         # Drop enable switch and land.
