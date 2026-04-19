@@ -9,6 +9,7 @@ import copy
 import math
 import operator
 import os
+import sys
 
 import numpy
 
@@ -1210,6 +1211,110 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.change_mode("QLAND")
         self.wait_statustext("Rangefinder engaged", check_context=True, timeout=60)
         self.wait_disarmed(timeout=100)
+
+    def TailsitterLuaTest(self):
+        '''run the tailsitter-quadplane-test.lua example script under SITL'''
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('quadplane-copter_tailsitter'),
+            model='quadplane-copter_tailsitter',
+            wipe=True,
+        )
+
+        self.set_parameters({
+            "SCR_ENABLE": 1,
+            "SIM_SPEEDUP": 20,  # give Lua scheduler enough CPU
+            "RC8_OPTION": 300,  # scripting switch 1: used as the enable switch
+            "FENCE_ENABLE": 0,  # keep fence out of the way during the AUTO square
+        })
+
+        self.install_example_script_context('tailsitter-quadplane-test.lua')
+        self.reboot_sitl()
+
+        # Start collecting before scripting_restart so we catch the load message.
+        self.context_collect('STATUSTEXT')
+        self.scripting_restart()
+        self.wait_text("tailsitter test loaded", check_context=True, timeout=30)
+
+        # Arm and climb to a safe altitude for the fixed-wing mode stages.
+        self.wait_ready_to_arm()
+        self.takeoff(100, mode='GUIDED', timeout=120)
+
+        # Transition to forward flight; the MANUAL/FBWA/FBWB/CRUISE stages need FW.
+        self.change_mode('FBWA')
+        self.set_rc(3, 1700)
+        self.wait_statustext('Transition VTOL done', check_context=True, timeout=60)
+        self.wait_altitude(80, 130, relative=True, timeout=120)
+
+        # Pre-position aileron so it is deflected for both MANUAL and FBWA stages.
+        # MANUAL needs rate (gyro response), FBWA needs angle (roll bounded by limit).
+        # Both benefit from the same deflection; we only centre after FBWA PASS.
+        # Keeping the stick deflected throughout avoids a timing race: "MANUAL PASS"
+        # and "entering FBWA" arrive back-to-back in the same Lua callback, so both
+        # land in the context at once.  With SIM_SPEEDUP=20 the FBWA 3 s settle is
+        # only ~150 ms wall-clock — Python's own processing latency can exceed that,
+        # meaning a centre-then-re-deflect sequence risks missing the measurement
+        # window entirely.
+        self.set_rc(1, 1700)
+
+        # Raise enable switch – this triggers the Lua test sequence.
+        self.set_rc(8, 2000)
+
+        # MANUAL: script samples roll rate for 0.5 s; aileron already deflected.
+        # (No separate "sequence started" check: the STATUSTEXT truncates at 50 chars
+        # and the start message is too long to match; MANUAL PASS is the first
+        # unambiguous confirmation the sequence is running.)
+        self.wait_text("MANUAL PASS", check_context=True, timeout=30)
+
+        # FBWA: aileron remains at 1700 from before MANUAL; the script tracks max
+        # roll angle over 6 s (after a 3 s settle).  Centre only after FBWA PASS.
+        self.wait_text("FBWA PASS", check_context=True, timeout=60)
+        self.set_rc(1, 1500)
+
+        # FBWB, CRUISE, LOITER, CIRCLE: all autonomous – no stick input required.
+        self.wait_text("FBWB PASS", check_context=True, timeout=60)
+        self.wait_text("CRUISE PASS", check_context=True, timeout=60)
+        self.wait_text("LOITER PASS", check_context=True, timeout=60)
+        self.wait_text("CIRCLE PASS", check_context=True, timeout=60)
+
+        # AUTO: the script builds and flies a 50 m square mission.
+        self.wait_text("AUTO PASS", check_context=True, timeout=300)
+
+        # QHOVER: ensure throttle is centred for the altitude-hold assessment.
+        self.set_rc(3, 1500)
+        self.wait_text("QHOVER PASS", check_context=True, timeout=60)
+        self.wait_text("test sequence complete", check_context=True, timeout=30)
+
+        # Drop enable switch and land.
+        self.set_rc(8, 1000)
+        self.change_mode('QLAND')
+        self.wait_disarmed(timeout=180)
+
+        # Post-flight: inspect the dataflash log to confirm every stage passed.
+        log_path = self.current_onboard_log_filepath()
+        self.progress("Inspecting dataflash log: %s" % log_path)
+        sys.path.insert(0, os.path.join(self.rootdir(), 'Tools', 'scripts'))
+        import check_tailsitter_lua_test
+        result = check_tailsitter_lua_test.check_log(log_path)
+        for name in result.stages_passed:
+            self.progress("log check PASS: %s" % name)
+        for name, msg in result.stages_failed:
+            self.progress("log check FAIL: %s — %s" % (name, msg))
+        for name in result.stages_not_reached:
+            self.progress("log check MISS: %s" % name)
+        for mode_name, mode_num in result.missing_modes:
+            self.progress("log check missing mode: %s (%d)" % (mode_name, mode_num))
+        if not result.ok():
+            raise NotAchievedException(
+                "tailsitter Lua test log check failed — "
+                "failed=%s not_reached=%s missing_modes=%s" % (
+                    [n for n, _ in result.stages_failed],
+                    result.stages_not_reached,
+                    result.missing_modes,
+                )
+            )
+        self.progress("Dataflash log check: all %d stages passed" %
+                      len(result.stages_passed))
 
     def setup_ICEngine_vehicle(self):
         '''restarts SITL with an IC Engine setup'''
@@ -3142,6 +3247,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.GyroFFT,
             self.Tailsitter,
             self.CopterTailsitter,
+            self.TailsitterLuaTest,
             self.ICEngine,
             self.ICEngineMission,
             self.ICEngineRPMGovernor,
