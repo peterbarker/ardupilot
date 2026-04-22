@@ -4,8 +4,10 @@
 
 #include "AP_Mission.h"
 
+#include <AP_AHRS/AP_AHRS.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Camera/AP_Camera.h>
+#include <AP_GPS/AP_GPS.h>
 #include <AP_Gripper/AP_Gripper.h>
 #include <AP_Parachute/AP_Parachute.h>
 #include <AP_ServoRelayEvents/AP_ServoRelayEvents.h>
@@ -35,6 +37,48 @@ bool AP_Mission::start_command_do_aux_function(const AP_Mission::Mission_Command
     return true;
 }
 #endif  // AP_RC_CHANNEL_ENABLED
+
+#if AP_HOME_ENABLED
+bool AP_Mission::start_command_do_set_home(const AP_Mission::Mission_Command& cmd)
+{
+    // 0 means "use supplied location"
+    // 1 means "use current location"
+    bool use_current_location = cmd.p1 ? true : false;
+    if (!cmd.content.location.initialised()) {
+        // this is not in the standard, but if the supplied location
+        // is 0,0 then we also use the current location (we should
+        // warn for a while then stop doing this?)
+        use_current_location = true;
+    }
+
+    Location location;
+    switch (use_current_location) {
+    case false:
+        location = cmd.content.location;
+        break;
+    case true: {
+        if (AP::ahrs().get_location(location)) {
+            // got canonical location
+            break;
+        }
+        // also fall back to just GPS for this:
+#if AP_GPS_ENABLED
+        const auto &gps = AP::gps();
+        if (gps.status() >= AP_GPS_FixType::FIX_3D) {
+            // got a rough location
+            location = gps.location();
+            break;
+        }
+#endif  // AP_GPS_ENABLED
+        // this should probably block navigation, really...
+        return false;
+    }
+    }
+
+    return AP::ahrs().set_home(location);
+}
+#endif  // AP_HOME_ENABLED
+
 
 #if AP_GRIPPER_ENABLED
 bool AP_Mission::start_command_do_gripper(const AP_Mission::Mission_Command& cmd)

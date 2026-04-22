@@ -86,10 +86,6 @@ bool Sub::start_command(const AP_Mission::Mission_Command& cmd)
         do_change_speed(cmd);
         break;
 
-    case MAV_CMD_DO_SET_HOME:             // 179
-        do_set_home(cmd);
-        break;
-
     case MAV_CMD_DO_SET_ROI_LOCATION:       // 195
     case MAV_CMD_DO_SET_ROI_NONE:           // 197
     case MAV_CMD_DO_SET_ROI:                // 201
@@ -188,7 +184,6 @@ bool Sub::verify_command(const AP_Mission::Mission_Command& cmd)
 
         // do commands (always return true)
     case MAV_CMD_DO_CHANGE_SPEED:
-    case MAV_CMD_DO_SET_HOME:
     case MAV_CMD_DO_SET_ROI_LOCATION:
     case MAV_CMD_DO_SET_ROI_NONE:
     case MAV_CMD_DO_SET_ROI:
@@ -619,19 +614,6 @@ void Sub::do_change_speed(const AP_Mission::Mission_Command& cmd)
 {
     if (cmd.content.speed.target_ms > 0) {
         wp_nav.set_speed_NE_cms(cmd.content.speed.target_ms * 100.0f);
-    }
-}
-
-void Sub::do_set_home(const AP_Mission::Mission_Command& cmd)
-{
-    if (cmd.p1 == 1 || !cmd.content.location.initialised()) {
-        if (!set_home_to_current_location(false)) {
-            // silently ignore this failure
-        }
-    } else {
-        if (!set_home(cmd.content.location, false)) {
-            // silently ignore this failure
-        }
     }
 }
 

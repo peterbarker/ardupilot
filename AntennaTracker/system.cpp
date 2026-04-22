@@ -118,12 +118,7 @@ bool Tracker::set_home_eeprom(const Location &temp)
 
 bool Tracker::set_home_to_current_location(bool lock)
 {
-    return set_home(AP::gps().location(), lock);
-}
-
-bool Tracker::set_home(const Location &temp, bool lock)
-{
-    return ahrs.set_home(temp, lock);
+    return ahrs.set_home(AP::gps().location(), lock);
 }
 
 void Tracker::home_was_set(const Location &temp)

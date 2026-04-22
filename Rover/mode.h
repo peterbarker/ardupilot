@@ -356,7 +356,6 @@ private:
     bool verify_wait_delay();
     bool verify_within_distance();
     void do_change_speed(const AP_Mission::Mission_Command& cmd);
-    void do_set_home(const AP_Mission::Mission_Command& cmd);
     void do_set_reverse(const AP_Mission::Mission_Command& cmd);
     void do_guided_limits(const AP_Mission::Mission_Command& cmd);
 #if AP_SCRIPTING_ENABLED

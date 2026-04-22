@@ -559,10 +559,6 @@ bool ModeAuto::start_command(const AP_Mission::Mission_Command& cmd)
         do_change_speed(cmd);
         break;
 
-    case MAV_CMD_DO_SET_HOME:
-        do_set_home(cmd);
-        break;
-
 #if HAL_MOUNT_ENABLED
     // Sets the region of interest (ROI) for a sensor set or the
     // vehicle itself. This can then be used by the vehicles control
@@ -697,7 +693,6 @@ bool ModeAuto::verify_command(const AP_Mission::Mission_Command& cmd)
 
     // do commands (always return true)
     case MAV_CMD_DO_CHANGE_SPEED:
-    case MAV_CMD_DO_SET_HOME:
     case MAV_CMD_DO_SET_CAM_TRIGG_DIST:
     case MAV_CMD_DO_SET_ROI_LOCATION:
     case MAV_CMD_DO_SET_ROI_NONE:
@@ -992,19 +987,6 @@ void ModeAuto::do_change_speed(const AP_Mission::Mission_Command& cmd)
     // set speed for active mode
     if (set_desired_speed(cmd.content.speed.target_ms)) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "speed: %.1f m/s", static_cast<double>(cmd.content.speed.target_ms));
-    }
-}
-
-void ModeAuto::do_set_home(const AP_Mission::Mission_Command& cmd)
-{
-    if (cmd.p1 == 1 && rover.have_position) {
-        if (!rover.set_home_to_current_location(false)) {
-            // ignored...
-        }
-    } else {
-        if (!rover.set_home(cmd.content.location, false)) {
-            // ignored...
-        }
     }
 }
 

@@ -5512,16 +5512,6 @@ bool GCS_MAVLINK::set_home_to_current_location(bool _lock)
 #endif
 }
 
-bool GCS_MAVLINK::set_home(const Location& loc, bool _lock) {
-#if AP_VEHICLE_ENABLED
-    return AP::vehicle()->set_home(loc, _lock);
-#else
-    return false;
-#endif
-}
-#endif  // AP_HOME_ENABLED
-
-#if AP_HOME_ENABLED
 MAV_RESULT GCS_MAVLINK::handle_command_do_set_home(const mavlink_command_int_t &packet)
 {
     if (is_equal(packet.param1, 1.0f) || (packet.x == 0 && packet.y == 0)) {
@@ -5539,7 +5529,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_set_home(const mavlink_command_int_t &
     if (!location_from_command_t(packet, new_home_loc)) {
         return MAV_RESULT_DENIED;
     }
-    if (!set_home(new_home_loc, true)) {
+    if (!AP::ahrs().set_home(new_home_loc, true)) {
         return MAV_RESULT_FAILED;
     }
     return MAV_RESULT_ACCEPTED;

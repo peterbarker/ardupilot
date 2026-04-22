@@ -130,10 +130,6 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         do_change_speed(cmd);
         break;
 
-    case MAV_CMD_DO_SET_HOME:
-        do_set_home(cmd);
-        break;
-
     case MAV_CMD_DO_INVERTED_FLIGHT:
         if (cmd.p1 == 0 || cmd.p1 == 1) {
             auto_state.inverted_flight = (bool)cmd.p1;
@@ -307,7 +303,6 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
 
     // do commands (always return true)
     case MAV_CMD_DO_CHANGE_SPEED:
-    case MAV_CMD_DO_SET_HOME:
     case MAV_CMD_DO_INVERTED_FLIGHT:
     case MAV_CMD_DO_RETURN_PATH_START:
     case MAV_CMD_DO_LAND_START:
@@ -1000,19 +995,6 @@ bool Plane::do_change_speed(SPEED_TYPE speedtype, float speed_target_ms, float t
     }
 
     return false;
-}
-
-void Plane::do_set_home(const AP_Mission::Mission_Command& cmd)
-{
-    if (cmd.p1 == 1 && gps.status() >= AP_GPS_FixType::FIX_3D) {
-        if (!set_home_persistently(gps.location())) {
-            // silently ignore error
-        }
-    } else {
-        if (!AP::ahrs().set_home(cmd.content.location)) {
-            // silently ignore failure
-        }
-    }
 }
 
 // start_command_callback - callback function called from ap-mission when it begins a new mission command

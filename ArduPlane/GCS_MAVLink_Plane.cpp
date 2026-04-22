@@ -527,10 +527,6 @@ bool Plane::set_home_to_current_location(bool _lock)
     }
     return true;
 }
-bool Plane::set_home(const Location& loc, bool _lock)
-{
-    return ahrs.set_home(loc, _lock);
-}
 
 void Plane::home_was_set(const Location& loc)
 {

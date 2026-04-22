@@ -5,19 +5,12 @@ bool Rover::set_home_to_current_location(bool lock)
 {
     Location temp_loc;
     if (ahrs.have_inertial_nav() && ahrs.get_location(temp_loc)) {
-        if (!set_home(temp_loc, lock)) {
+        if (!ahrs.set_home(temp_loc, lock)) {
             return false;
         }
         return true;
     }
     return false;
-}
-
-// sets ahrs home to specified location
-// returns true if home location set successfully
-bool Rover::set_home(const Location& loc, bool lock)
-{
-    return ahrs.set_home(loc, lock);
 }
 
 void Rover::home_was_set(const Location& loc)
