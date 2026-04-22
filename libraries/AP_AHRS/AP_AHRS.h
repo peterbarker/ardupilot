@@ -557,6 +557,7 @@ public:
         return get_gyro() * get_rotation_body_to_ned().c;
     }
 
+#if AP_HOME_ENABLED
     /*
      * home-related functionality
      */
@@ -585,6 +586,12 @@ public:
     // when the vehicle is at this position. It is assumed that the
     // current barometer and GPS altitudes correspond to this altitude
     bool set_home(const Location &loc, bool lock=false) WARN_IF_UNUSED;
+
+    // returns time home was last sent, in milliseconds
+    uint32_t last_home_set_time_ms() const {
+        return _home_last_set_time_ms;
+    }
+#endif  // AP_HOME_ENABLED
 
     /*
      * Attitude-related public methods and attributes:
@@ -828,6 +835,7 @@ private:
 
     void update_DCM();
 
+#if AP_HOME_ENABLED
     /*
      * home-related state
      */
@@ -836,6 +844,8 @@ private:
     Location _home;
     bool _home_is_set :1;
     bool _home_locked :1;
+    uint32_t _home_last_set_time_ms;
+#endif  // AP_HOME_ENABLED
 
     // avoid setting current state repeatedly across all cores on all EKFs:
     enum class TriState {

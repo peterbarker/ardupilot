@@ -3035,6 +3035,7 @@ bool AP_AHRS::_get_origin(Location &ret) const
     return false;
 }
 
+#if AP_HOME_ENABLED
 bool AP_AHRS::set_home(const Location &loc, bool lock)
 {
     WITH_SEMAPHORE(_rsem);
@@ -3062,6 +3063,7 @@ bool AP_AHRS::set_home(const Location &loc, bool lock)
 
     _home = tmp;
     _home_is_set = true;
+    _home_last_set_time_ms = AP_HAL::millis();
 
     // lock home position
     if (lock) {
@@ -3101,10 +3103,12 @@ void AP_AHRS::load_watchdog_home()
         _home.lng = pd.home_lon;
         _home.set_alt_cm(pd.home_alt_cm, Location::AltFrame::ABSOLUTE);
         _home_is_set = true;
+        _home_last_set_time_ms = AP_HAL::millis();
         _home_locked = true;
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Restored watchdog home");
     }
 }
+#endif  // AP_HOME_ENABLED
 
 // get_hgt_ctrl_limit - get maximum height to be observed by the control loops in metres and a validity flag
 // this is used to limit height during optical flow navigation
