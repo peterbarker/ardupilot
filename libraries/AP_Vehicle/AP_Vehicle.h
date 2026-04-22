@@ -566,6 +566,13 @@ protected:
 
 private:
 
+#if AP_HOME_ENABLED
+    //  calls home_was_set if the AHRS home location was changed
+    void poll_ahrs_for_home_changes();
+    uint32_t home_last_change_ms;
+    virtual void home_was_set(const Location &loc) {}
+#endif  // AP_HOME_ENABLED
+
 #if AP_SCHEDULER_ENABLED
     // delay() callback that processing MAVLink packets
     static void scheduler_delay_callback();

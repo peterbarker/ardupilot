@@ -796,6 +796,24 @@ bool AP_Vehicle::is_crashed() const
 #endif
 }
 
+#if AP_HOME_ENABLED
+//  calls home_was_set if the AHRS home location was changed
+void AP_Vehicle::poll_ahrs_for_home_changes()
+{
+    const uint32_t new_last_home_change_ms = AP::ahrs().last_home_set_time_ms();
+
+    if (new_last_home_change_ms == home_last_change_ms) {
+        return;
+    }
+    if (!AP::ahrs().home_is_set()) {
+        return;
+    }
+    home_was_set(AP::ahrs().get_home());
+    home_last_change_ms = new_last_home_change_ms;
+}
+#endif  // AP_HOME_ENABLED
+
+
 #if AP_INERTIALSENSOR_HARMONICNOTCH_ENABLED
 // update the harmonic notch filter for throttle based notch
 void AP_Vehicle::update_throttle_notch(AP_InertialSensor::HarmonicNotch &notch)
@@ -1070,6 +1088,10 @@ void AP_Vehicle::update_arming()
 void AP_Vehicle::one_Hz_update(void)
 {
     one_Hz_counter++;
+
+#if AP_HOME_ENABLED
+    poll_ahrs_for_home_changes();
+#endif  // AP_HOME_ENABLED
 
     /*
       every 10s check if using a 2M firmware on a 1M board
