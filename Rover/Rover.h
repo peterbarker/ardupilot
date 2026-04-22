@@ -289,6 +289,7 @@ private:
     // commands.cpp
     bool set_home_to_current_location(bool lock) override WARN_IF_UNUSED;
     bool set_home(const Location& loc, bool lock) override WARN_IF_UNUSED;
+    void home_was_set(const Location& loc) override;
     void update_home();
 
     // crash_check.cpp

@@ -8,8 +8,6 @@ bool Rover::set_home_to_current_location(bool lock)
         if (!set_home(temp_loc, lock)) {
             return false;
         }
-        // we have successfully set AHRS home, set it for SmartRTL
-        g2.smart_rtl.set_home(true);
         return true;
     }
     return false;
@@ -20,6 +18,12 @@ bool Rover::set_home_to_current_location(bool lock)
 bool Rover::set_home(const Location& loc, bool lock)
 {
     return ahrs.set_home(loc, lock);
+}
+
+void Rover::home_was_set(const Location& loc)
+{
+    // we have successfully set AHRS home, set it for SmartRTL
+    g2.smart_rtl.set_home(true);
 }
 
 // called periodically while disarmed to update our home position to

@@ -138,9 +138,6 @@ bool AP_Arming_Rover::arm(AP_Arming::Method method, const bool do_arming_checks)
         return false;
     }
 
-    // Set the SmartRTL home location. If activated, SmartRTL will ultimately try to land at this point
-    rover.g2.smart_rtl.set_home(true);
-
     // initialize simple mode heading
     rover.mode_simple.init_heading();
 
