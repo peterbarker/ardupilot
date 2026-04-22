@@ -123,17 +123,12 @@ bool Tracker::set_home_to_current_location(bool lock)
 
 bool Tracker::set_home(const Location &temp, bool lock)
 {
-    if (!ahrs.set_home(temp, lock)) {
-        return false;
-    }
+    return ahrs.set_home(temp, lock);
+}
 
-    if (!set_home_eeprom(temp)) {
-        return false;
-    }
-
+void Tracker::home_was_set(const Location &temp)
+{
     current_loc = temp;
-
-    return true;
 }
 
 void Tracker::arm_servos()
