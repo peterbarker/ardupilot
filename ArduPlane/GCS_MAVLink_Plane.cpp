@@ -525,21 +525,15 @@ bool Plane::set_home_to_current_location(bool _lock)
     if (_lock) {
         AP::ahrs().lock_home();
     }
-    if ((control_mode == &mode_rtl)
-#if HAL_QUADPLANE_ENABLED
-            || (control_mode == &mode_qrtl)
-#endif
-                                                        ) {
-        // if in RTL head to the updated home location
-        control_mode->enter();
-    }
     return true;
 }
 bool Plane::set_home(const Location& loc, bool _lock)
 {
-    if (!ahrs.set_home(loc, _lock)) {
-        return false;
-    }
+    return ahrs.set_home(loc, _lock);
+}
+
+void Plane::home_was_set(const Location& loc)
+{
     if ((control_mode == &mode_rtl)
 #if HAL_QUADPLANE_ENABLED
             || (control_mode == &mode_qrtl)
@@ -548,7 +542,6 @@ bool Plane::set_home(const Location& loc, bool _lock)
         // if in RTL head to the updated home location
         control_mode->enter();
     }
-    return true;
 }
 
 MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_do_reposition(const mavlink_command_int_t &packet)
