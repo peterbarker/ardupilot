@@ -739,11 +739,6 @@ bool AP_Arming_Copter::arm(const AP_Arming::Method method, const bool do_arming_
     }
     copter.update_super_simple_bearing(false);
 
-    // Reset SmartRTL return location. If activated, SmartRTL will ultimately try to land at this point
-#if MODE_SMARTRTL_ENABLED
-    copter.g2.smart_rtl.set_home(copter.position_ok());
-#endif
-
     hal.util->set_soft_armed(true);
 
 #if HAL_SPRAYER_ENABLED
