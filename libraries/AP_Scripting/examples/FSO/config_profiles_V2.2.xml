@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dynamically generated list of documented parameters for config_profiles_V2.0.lua -->
+<paramfile>
+  <vehicles>
+    <parameters name="config_profiles_V2.2">
+      <param humanName="Enable configuration script" name="CFG_ENABLE" documentation="Enable configuration script. Script immediately exits if this is zero." user="Standard">
+        <values>
+          <value code="0">Disabled</value>
+          <value code="1">Enabled</value>
+        </values>
+        <field name="Default">1</field>
+      </param>
+      <param humanName="Filter parameter setting" name="CFG_FLT_PM_SET" documentation="Filter parameter setting. When enabled, disallows setting of parameters outside an internal whitelist via MAVLink PARAM_SET." user="Standard">
+        <values>
+          <value code="0">Do not filter</value>
+          <value code="1">Filter</value>
+        </values>
+        <field name="Default">0</field>
+      </param>
+      <param humanName="Job profile selection" name="CFG_JOB_SEL" documentation="Selects the mission/job profile controlling flight behavior, failsafes, geofence, flight modes, navigation, logging, and terrain settings." user="Standard">
+        <values>
+          <value code="-1">Do nothing</value>
+          <value code="0">Apply defaults</value>
+          <value code="100">Testing</value>
+          <value code="101">FSO</value>
+          <value code="102">FSO BVLOS</value>
+          <value code="103">Battery Test</value>
+        </values>
+        <field name="Default">0</field>
+      </param>
+      <param humanName="Arms/airframe profile selection" name="CFG_ARMS_SEL" documentation="Selects the airframe tuning profile for different Callisto weight configurations. Controls attitude rate PIDs, notch filters, motor parameters, and position controller gains." user="Standard">
+        <values>
+          <value code="-1">Do nothing</value>
+          <value code="0">Apply defaults</value>
+          <value code="25">Callisto 25</value>
+          <value code="50">Callisto 50</value>
+          <value code="75">Callisto 75</value>
+        </values>
+        <field name="Default">50</field>
+      </param>
+      <param humanName="Battery profile selection" name="CFG_BAT_SEL" documentation="Selects the battery capacity and failsafe thresholds for the installed battery pack size." user="Standard">
+        <values>
+          <value code="-1">Do nothing</value>
+          <value code="16">16Ah</value>
+          <value code="22">22Ah</value>
+          <value code="30">30Ah</value>
+          <value code="40">40Ah</value>
+          <value code="80">80Ah</value>
+        </values>
+        <field name="Default">22</field>
+      </param>
+      <param humanName="Payload profile selection" name="CFG_PAY_SEL" documentation="Selects the payload and peripheral configuration. Controls ADSB, camera, gripper, gimbal, CAN peripherals, network, RC channels, serial ports, and servo outputs." user="Standard">
+        <values>
+          <value code="-1">Do nothing</value>
+          <value code="0">No payload (defaults)</value>
+          <value code="1">HookFixed</value>
+          <value code="2">HookSlung</value>
+          <value code="3">Gimbal - AVT_CM62</value>
+          <value code="4">Gimbal - HookFixed</value>
+          <value code="5">Gimbal - Hook Slung</value>
+          <value code="10">Silvus</value>
+          <value code="11">Skylink</value>
+          <value code="12">Silvus &amp; CM62 &amp; Kutta (flush hook)</value>
+          <value code="13">Silvus/CM62 - HookSlung</value>
+          <value code="14">ping1090i</value>
+          <value code="15">Gremsy Vio</value>
+          <value code="30">ZR30</value>
+          <value code="31">ZR30 - HookFixed</value>
+          <value code="32">ZR30 - Hook Slung</value>
+        </values>
+        <field name="Default">0</field>
+      </param>
+    </parameters>
+  </vehicles>
+</paramfile>
