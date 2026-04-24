@@ -1,0 +1,2 @@
+# Test board used to verify test_new_boards.py rejects SERIAL params in defaults.parm
+include ../CubeOrange/hwdef.dat
