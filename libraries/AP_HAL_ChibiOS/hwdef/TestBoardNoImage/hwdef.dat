@@ -1,0 +1,3 @@
+# hw definition file for TestBoardNoImage
+# This is a test fixture to verify that check_branch_conventions.py
+# rejects new board READMEs that contain no local image added in the PR.
