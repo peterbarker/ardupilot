@@ -1,0 +1,3 @@
+# hw definition file for TestBoardNoReadme
+# This is a test fixture to verify that check_branch_conventions.py
+# rejects new board directories that lack a README.md.
