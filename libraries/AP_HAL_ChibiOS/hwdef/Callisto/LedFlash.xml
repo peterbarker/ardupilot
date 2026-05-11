@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dynamically generated list of documented parameters for LedFlash.lua -->
+<paramfile>
+  <vehicles>
+    <parameters name="LedFlash">
+      <param humanName="Lights on" name="LIGHTS_ON" documentation="Controls the arm LEDs (relay) and status LED. When set to flashing, the arm LED flash duration scales with distance from home (1ms at home, up to 125ms at 124m or beyond) when armed." user="Standard">
+        <values>
+          <value code="-1">All LEDs off (status LED off, arm LEDs off)</value>
+          <value code="0">Status LED on, arm LEDs off</value>
+          <value code="1">Status LED on, arm LEDs flashing</value>
+        </values>
+        <field name="Default">1</field>
+      </param>
+    </parameters>
+  </vehicles>
+</paramfile>
