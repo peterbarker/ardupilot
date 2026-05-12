@@ -365,6 +365,8 @@ bool AP_CANManager::register_11bit_driver(AP_CAN::Protocol dtype, CANSensor *sen
 // The result of this method can be accessed via ftp get @SYS/can_log.txt
 void AP_CANManager::log_text(AP_CANManager::LogLevel loglevel, const char *tag, const char *fmt, ...)
 {
+    return;
+
     if (_log_buf == nullptr) {
         return;
     }
