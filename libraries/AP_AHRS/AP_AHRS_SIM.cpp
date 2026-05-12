@@ -200,7 +200,6 @@ void AP_AHRS_SIM::get_results(AP_AHRS_Backend::Estimates &results)
 
     // update derived attitude values:
     results.quaternion.rotation_matrix(results.dcm_matrix);
-    results.quaternion.to_euler(results.roll_rad, results.pitch_rad, results.yaw_rad);
 
     results.gyro_estimate = _ins.get_gyro();
     results.gyro_drift.zero();

@@ -16,11 +16,6 @@ void AP_AHRS_NavEKF2::get_results(AP_AHRS_Backend::Estimates &results)
      * attitude estimates:
      */
     EKF2.getRotationBodyToNED(results.dcm_matrix);
-    Vector3f eulers;
-    EKF2.getEulerAngles(eulers);
-    results.roll_rad  = eulers.x;
-    results.pitch_rad = eulers.y;
-    results.yaw_rad   = eulers.z;
 
     EKF2.getQuaternion(results.quaternion);
     results.quaternion.rotate(-AP::ahrs().get_trim());

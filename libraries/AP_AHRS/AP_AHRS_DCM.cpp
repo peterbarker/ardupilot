@@ -143,10 +143,6 @@ AP_AHRS_DCM::update()
 
 void AP_AHRS_DCM::get_results(AP_AHRS_Backend::Estimates &results)
 {
-    results.roll_rad = roll;
-    results.pitch_rad = pitch;
-    results.yaw_rad = yaw;
-
     results.dcm_matrix = _body_dcm_matrix;
 
     // quaternion is derived from transformation matrix:

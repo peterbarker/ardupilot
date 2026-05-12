@@ -17,12 +17,6 @@ void AP_AHRS_NavEKF3::get_results(AP_AHRS_Backend::Estimates &results)
      */
     EKF3.getRotationBodyToNED(results.dcm_matrix);
 
-    Vector3f eulers;
-    EKF3.getEulerAngles(eulers);
-    results.roll_rad  = eulers.x;
-    results.pitch_rad = eulers.y;
-    results.yaw_rad   = eulers.z;
-
     EKF3.getQuaternion(results.quaternion);
     results.quaternion.rotate(-AP::ahrs().get_trim());
 

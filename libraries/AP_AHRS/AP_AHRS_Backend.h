@@ -56,9 +56,6 @@ public:
         // if attitude_valid is true then all of the
         // eulers/quaternion/matrix must be valid:
         bool attitude_valid;
-        float roll_rad;
-        float pitch_rad;
-        float yaw_rad;
         Matrix3f dcm_matrix;
         Quaternion quaternion;
 

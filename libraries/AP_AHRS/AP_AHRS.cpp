@@ -613,10 +613,6 @@ void AP_AHRS::update(bool skip_ins_update)
  */
 void AP_AHRS::copy_estimates_from_backend_estimates(const AP_AHRS_Backend::Estimates &results)
 {
-    roll = results.roll_rad;
-    pitch = results.pitch_rad;
-    yaw = results.yaw_rad;
-
     state.quat_ok = results.attitude_valid;
     state.quat = results.quaternion;
     state.dcm_matrix = results.dcm_matrix;
@@ -626,6 +622,14 @@ void AP_AHRS::copy_estimates_from_backend_estimates(const AP_AHRS_Backend::Estim
 
     state.accel_ef = results.accel_ef;
     state.accel_bias = results.accel_bias;
+
+    //
+    // update derived values
+    //
+
+    // cache roll, pitch and yaw all in radians from the quaternion.
+    // note that there is no guarantee the quaternion is valid here!
+    state.quat.to_euler(roll, pitch, yaw);
 
     update_cd_values();
     update_trig();
@@ -1185,10 +1189,9 @@ bool AP_AHRS::_get_secondary_attitude(Vector3f &eulers) const
     if (estimates == nullptr) {
         return false;
     }
-    eulers[0] = estimates->roll_rad;
-    eulers[1] = estimates->pitch_rad;
-    eulers[2] = estimates->yaw_rad;
-    return estimates->attitude_valid;
+
+    estimates.quaternion.to_euler(eulers);
+    return estimates.attitude_valid;
 }
 
 // return secondary attitude solution if available, as quaternion
