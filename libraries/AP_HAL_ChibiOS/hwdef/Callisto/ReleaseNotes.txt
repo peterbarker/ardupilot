@@ -1,3 +1,6 @@
+May 12th, 2026 : Callisto: V4.5.7-C2.Xr14
+May 12th, 2026 : AP_CANManager: avoid buffer-overwrite-causing-code minimal fix for buffer overwrite from offset arithmetic.
+
 October 8th, 2025 : Callisto: V4.5.7-C2.Xr13
 December 18th, 2025 : Callisto: 2.4 Param: remove BATT_SERIAL_NUM
 December 18th, 2025 : LUA: config_profiles_FSO_1.5
