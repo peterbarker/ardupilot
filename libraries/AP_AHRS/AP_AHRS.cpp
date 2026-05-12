@@ -458,7 +458,6 @@ void AP_AHRS::update_state(void)
     state.airspeed_EAS_ok = _airspeed_EAS(state.airspeed_EAS, state.airspeed_estimate_type);
     state.airspeed_TAS_ok = _airspeed_TAS(state.airspeed_TAS);
     state.airspeed_TAS_vec_ok = _airspeed_TAS(state.airspeed_TAS_vec);
-    state.quat_ok = active_estimates->get_quaternion(state.quat);
     state.secondary_attitude_ok = _get_secondary_attitude(state.secondary_attitude);
     state.secondary_quat_ok = _get_secondary_quaternion(state.secondary_quat);
     state.location_ok = _get_location(state.location);
@@ -618,6 +617,8 @@ void AP_AHRS::copy_estimates_from_backend_estimates(const AP_AHRS_Backend::Estim
     pitch = results.pitch_rad;
     yaw = results.yaw_rad;
 
+    state.quat_ok = results.attitude_valid;
+    state.quat = results.quaternion;
     state.dcm_matrix = results.dcm_matrix;
 
     state.gyro_estimate = results.gyro_estimate;
