@@ -641,6 +641,8 @@ void AP_AHRS::update_DCM()
     // if (active_EKF_type() == EKFType::DCM) {
         copy_estimates_from_backend_estimates(dcm_estimates);
     // }
+
+        validate_quat_eulers_against_results_eulers("DCM", dcm_estimates);
 }
 #endif
 
@@ -653,6 +655,7 @@ void AP_AHRS::update_SITL(void)
     if (_active_EKF_type() == EKFType::SIM) {
         copy_estimates_from_backend_estimates(sim_estimates);
     }
+        validate_quat_eulers_against_results_eulers("SIM", sim_estimates);
 }
 #endif
 
@@ -661,6 +664,29 @@ void AP_AHRS::update_notify_from_filter_status(const nav_filter_status &status)
     AP_Notify::flags.gps_fusion = status.flags.using_gps; // Drives AP_Notify flag for usable GPS.
     AP_Notify::flags.gps_glitching = status.flags.gps_glitching;
     AP_Notify::flags.have_pos_abs = status.flags.horiz_pos_abs;
+}
+
+void AP_AHRS::validate_quat_eulers_against_results_eulers(const char *name, const AP_AHRS_Backend::Estimates &results)
+{
+    if (fabsf(results.pitch_rad) > radians(89.0f)) {
+        return;
+    }
+
+    float quat_roll_rad, quat_pitch_rad, quat_yaw_rad;
+    results.quaternion.to_euler(quat_roll_rad, quat_pitch_rad, quat_yaw_rad);
+
+    const float epsilon = 0.0001;
+    const float roll_delta  = fabsf(wrap_PI(quat_roll_rad  - results.roll_rad));
+    const float pitch_delta = fabsf(wrap_PI(quat_pitch_rad - results.pitch_rad));
+    const float yaw_delta   = fabsf(wrap_PI(quat_yaw_rad   - results.yaw_rad));
+
+    if (roll_delta > epsilon || pitch_delta > epsilon || yaw_delta > epsilon) {
+        GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "validate_quat_eulers %s err=%.4f", name,
+                      MAX(roll_delta, MAX(pitch_delta, yaw_delta)));
+        GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "  r=%.1f p=%.1f y=%.1f",
+                      degrees(results.roll_rad), degrees(results.pitch_rad), degrees(results.yaw_rad));
+        abort();
+    }
 }
 
 #if HAL_NAVEKF2_AVAILABLE
@@ -691,8 +717,10 @@ void AP_AHRS::update_EKF2(void)
         ekf2.update();
         ekf2_estimates = {};
         ekf2.get_results(ekf2_estimates);
+            validate_quat_eulers_against_results_eulers("EKF2", ekf2_estimates);
         if (_active_EKF_type() == EKFType::TWO) {
             copy_estimates_from_backend_estimates(ekf2_estimates);
+
 
             nav_filter_status filt_state;
             ekf2.get_filter_status(filt_state);
@@ -745,6 +773,7 @@ void AP_AHRS::update_EKF3(void)
         ekf3.update();
         ekf3_estimates = {};
         ekf3.get_results(ekf3_estimates);
+            validate_quat_eulers_against_results_eulers("EKF3", ekf3_estimates);
         if (_active_EKF_type() == EKFType::THREE) {
 
             copy_estimates_from_backend_estimates(ekf3_estimates);
@@ -777,6 +806,7 @@ void AP_AHRS::update_external(void)
 {
     external.update();
     external.get_results(external_estimates);
+    validate_quat_eulers_against_results_eulers("External", external_estimates);
 
     if (_active_EKF_type() == EKFType::EXTERNAL) {
         copy_estimates_from_backend_estimates(external_estimates);

@@ -930,6 +930,7 @@ private:
      * updating derived values like sin_roll and sin_pitch.
      */
     void copy_estimates_from_backend_estimates(const AP_AHRS_Backend::Estimates &results);
+    void validate_quat_eulers_against_results_eulers(const char *name, const AP_AHRS_Backend::Estimates &results);
 
     // write out secondary estimates:
     void Write_AHRS2(void) const;
