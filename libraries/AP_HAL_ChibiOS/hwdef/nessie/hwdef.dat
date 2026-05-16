@@ -1,0 +1,3 @@
+include ../MatekH743-bdshot/hwdef.dat
+
+USE_BOOTLOADER_FROM_BOARD MatekH743-bdshot
