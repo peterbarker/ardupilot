@@ -35,6 +35,8 @@ import quadplane
 import rover
 import sailboat
 
+# fnard
+
 from pysim import util
 from vehicle_test_suite import Test
 
