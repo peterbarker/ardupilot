@@ -29,6 +29,8 @@ public:
     // has_pan_control
     bool has_pan_control() const override { return yaw_range_valid(); }
 
+    bool take_picture() override { return true; }  // FIXME!  Do not merge!
+
     // handle GIMBAL_DEVICE_INFORMATION message
     void handle_gimbal_device_information(const mavlink_message_t &msg) override;
 
