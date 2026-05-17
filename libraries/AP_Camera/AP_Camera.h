@@ -105,6 +105,7 @@ public:
     // methods to handle mavlink-style instance-id (0 meaning all cameras)
     MAV_RESULT handle_mav_DO_SET_CAM_TRIGG_DISTANCE(uint8_t instance_id, bool trigger, float dist_m);
     MAV_RESULT handle_mav_SET_CAMERA_ZOOM(uint8_t instance_id, CAMERA_ZOOM_TYPE mav_zoom_type, float zoom_value);
+    MAV_RESULT handle_mav_IMG_START_CAPTURE(uint8_t instance_id, float interval, uint32_t total_num_images);
 #endif  // HAL_MAVLINK_BINDINGS_ENABLED
 
     // select which instance to send on the next deferred MSG_CAMERA_INFORMATION send
@@ -129,14 +130,6 @@ public:
     // returns true if at least one camera took a picture
     bool take_picture();
     bool take_picture(uint8_t instance);
-
-    // take multiple pictures, time_interval between two consecutive pictures is in miliseconds
-    // if instance is not provided, all available cameras affected
-    // time_interval_ms must be positive
-    // total_num is number of pictures to be taken, -1 means capture forever
-    // returns true if at least one camera is successful
-    bool take_multiple_pictures(uint32_t time_interval_ms, int16_t total_num);
-    bool take_multiple_pictures(uint8_t instance, uint32_t time_interval_ms, int16_t total_num);
 
     // stop capturing multiple image sequence
     void stop_capture();

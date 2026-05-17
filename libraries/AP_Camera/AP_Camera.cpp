@@ -109,50 +109,6 @@ bool AP_Camera::take_picture(uint8_t instance)
     return backend->take_picture();
 }
 
-// take multiple pictures, time_interval between two consecutive pictures is in miliseconds
-// if instance is not provided, all available cameras affected
-// time_interval_ms must be positive
-// total_num is number of pictures to be taken, -1 means capture forever
-// returns true if at least one camera is successful
-bool AP_Camera::take_multiple_pictures(uint32_t time_interval_ms, int16_t total_num)
-{
-    WITH_SEMAPHORE(_rsem);
-
-    // sanity check time interval
-    if (time_interval_ms == 0) {
-        return false;
-    }
-
-    // call for all instances
-    bool success = false;
-    for (uint8_t i = 0; i < AP_CAMERA_MAX_INSTANCES; i++) {
-        if (_backends[i] != nullptr) {
-            _backends[i]->take_multiple_pictures(time_interval_ms, total_num);
-            success = true;
-        }
-    }
-
-    // return true if at least once backend was successful
-    return success;
-}
-
-bool AP_Camera::take_multiple_pictures(uint8_t instance, uint32_t time_interval_ms, int16_t total_num)
-{
-    WITH_SEMAPHORE(_rsem);
-
-    // sanity check time interval
-    if (time_interval_ms == 0) {
-        return false;
-    }
-
-    auto *backend = get_instance(instance);
-    if (backend == nullptr) {
-        return false;
-    }
-    backend->take_multiple_pictures(time_interval_ms, total_num);
-    return true;
-}
-
 // stop capturing multiple image sequence
 void AP_Camera::stop_capture()
 {
@@ -351,6 +307,49 @@ MAV_RESULT AP_Camera::handle_mav_SET_CAMERA_ZOOM(uint8_t instance_id, CAMERA_ZOO
 
     return result;
 }
+
+MAV_RESULT AP_Camera::handle_mav_IMG_START_CAPTURE(uint8_t instance_id, float interval, uint32_t total_num_images)
+{
+    const uint32_t interval_ms = interval*1000;
+
+    MAV_RESULT result = MAV_RESULT_ACCEPTED;
+    for (uint8_t i=0; i<AP_CAMERA_MAX_INSTANCES; i++) {
+        if (_backends[i] == nullptr) {
+            continue;
+        }
+        // honour packet instance number:
+        if (instance_id != 0 && i+1 != instance_id) {
+            continue;
+        }
+
+        auto &backend = *_backends[i];
+
+        // check if this is a single picture request (e.g. total images is 1 or interval and total images are zero)
+        if (total_num_images == 1 ||
+            (interval_ms == 0 && total_num_images == 0)) {
+            if (!backend.take_picture()) {
+                result = MAV_RESULT_FAILED;
+            }
+            continue;
+        }
+        if (total_num_images == 0) {
+            // multiple picture request, take pictures forever
+            backend.take_multiple_pictures(interval_ms, -1);
+            continue;
+        }
+
+        if (interval_ms == 0) {
+            // multiple pictures with zero interval is not permitted
+            result = MAV_RESULT_FAILED;
+            continue;
+        }
+
+        // take multiple pictures equal to the number specified in param3
+        backend.take_multiple_pictures(interval_ms, total_num_images);
+    }
+    return result;
+}
+
 #endif  // HAL_MAVLINK_BINDINGS_ENABLED
 
 // handle command_long mavlink messages
@@ -419,37 +418,14 @@ MAV_RESULT AP_Camera::handle_command(const mavlink_command_int_t &packet)
 #endif
 
     case MAV_CMD_IMAGE_START_CAPTURE:
-        // param1 : camera id
-        // param2 : interval (in seconds)
-        // param3 : total num images
-        // sanity check instance
-        if (is_negative(packet.param1)) {
-            return MAV_RESULT_UNSUPPORTED;
+        if (packet.param1 < 0) {
+            return MAV_RESULT_DENIED;
         }
-        // check if this is a single picture request (e.g. total images is 1 or interval and total images are zero)
-        if (is_equal(packet.param3, 1.0f) ||
-            (is_zero(packet.param2) && is_zero(packet.param3))) {
-            if (is_zero(packet.param1)) {
-                // take pictures for every backend
-                return take_picture() ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-            }
-            // take picture for specified instance
-            return take_picture(packet.param1-1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-        } else if (is_zero(packet.param3)) {
-            // multiple picture request, take pictures forever
-            if (is_zero(packet.param1)) {
-                // take pictures for every backend
-                return take_multiple_pictures(packet.param2*1000, -1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-            }
-            return take_multiple_pictures(packet.param1-1, packet.param2*1000, -1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-        } else {
-            // take multiple pictures equal to the number specified in param3
-            if (is_zero(packet.param1)) {
-                // take pictures for every backend
-                return take_multiple_pictures(packet.param2*1000, packet.param3) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-            }
-            return take_multiple_pictures(packet.param1-1, packet.param2*1000, packet.param3) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-        }
+        return handle_mav_IMG_START_CAPTURE(
+            packet.param1,  // param1 : camera id
+            packet.param2,  // param2 : interval (in seconds)
+            packet.param3   // param3 : total num images
+        );
     case MAV_CMD_IMAGE_STOP_CAPTURE:
         // param1 : camera id
         if (is_negative(packet.param1)) {
