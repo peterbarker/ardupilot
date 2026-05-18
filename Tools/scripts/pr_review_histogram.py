@@ -13,9 +13,11 @@ Options:
   --table               Print a plain-text table instead of a chart
   --top N               Show top N authors in chart (default: 30)
   --refresh             Clear cached pages and re-fetch from GitHub
+  --no-self-review      Exclude comments where the commenter is the PR author
 
 By default, full pages (100 items) from a previous run are reused, and only
 the last (potentially incomplete) page and any new pages beyond it are fetched.
+PR authors are cached in ~/.cache/pr_review_histogram/ alongside comment pages.
 """
 
 import argparse
@@ -64,24 +66,27 @@ def _do_request(session, url, params, page):
     for attempt in range(5):
         try:
             resp = session.get(url, params=p, timeout=30)
-            if resp.status_code in (502, 503, 504):
+            if resp.status_code >= 500:
+                print(f"\n  HTTP {resp.status_code} {resp.reason}", file=sys.stderr)
+                for k, v in resp.headers.items():
+                    print(f"  {k}: {v}", file=sys.stderr)
+                print(f"  Body: {resp.text}", file=sys.stderr)
                 raise requests.exceptions.ConnectionError(f"HTTP {resp.status_code}")
             resp.raise_for_status()
             return resp.json()
         except (requests.exceptions.ChunkedEncodingError,
                 requests.exceptions.ConnectionError) as e:
             wait = 2 ** attempt
-            print(f"\n  {e}, retrying in {wait}s...", file=sys.stderr)
+            print(f"\n  {e}, retrying in {wait}s (attempt {attempt + 1}/5)...", file=sys.stderr)
             time.sleep(wait)
     raise RuntimeError(f"Failed to fetch page {page} after 5 attempts")
 
 
-def fetch_all_comments(repo, since_dt, refresh):
+def make_session():
     try:
         import requests
     except ImportError:
         sys.exit("The 'requests' package is required: pip install requests")
-
     token = get_token()
     session = requests.Session()
     session.headers.update({
@@ -89,7 +94,10 @@ def fetch_all_comments(repo, since_dt, refresh):
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     })
+    return session
 
+
+def fetch_all_comments(repo, since_dt, refresh, session):
     url = f"https://api.github.com/repos/{repo}/pulls/comments"
     since_str = since_dt.strftime("%Y-%m-%d")
     params = {
@@ -147,13 +155,66 @@ def fetch_all_comments(repo, since_dt, refresh):
     return comments
 
 
-def build_counts(comments, no_bots):
+def fetch_pr_authors(repo, pr_numbers, session):
+    """Return a {pr_number_str: author_login} dict, fetching any not already cached."""
+    import time
+    try:
+        import requests
+    except ImportError:
+        sys.exit("The 'requests' package is required: pip install requests")
+
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file = CACHE_DIR / f"{repo.replace('/', '_')}_pr_authors.json"
+
+    if cache_file.exists():
+        with open(cache_file) as f:
+            pr_authors = json.load(f)
+    else:
+        pr_authors = {}
+
+    to_fetch = sorted(n for n in pr_numbers if n not in pr_authors)
+    if to_fetch:
+        print(f"Fetching authors for {len(to_fetch)} PRs...", file=sys.stderr)
+        for i, pr_num in enumerate(to_fetch):
+            print(f"\r  {i}/{len(to_fetch)}...", end="", flush=True, file=sys.stderr)
+            url = f"https://api.github.com/repos/{repo}/pulls/{pr_num}"
+            for attempt in range(5):
+                try:
+                    resp = session.get(url, timeout=30)
+                    if resp.status_code >= 500:
+                        print(f"\n  HTTP {resp.status_code} {resp.reason}", file=sys.stderr)
+                        for k, v in resp.headers.items():
+                            print(f"  {k}: {v}", file=sys.stderr)
+                        print(f"  Body: {resp.text}", file=sys.stderr)
+                        raise requests.exceptions.ConnectionError(f"HTTP {resp.status_code}")
+                    resp.raise_for_status()
+                    pr_authors[pr_num] = resp.json()["user"]["login"]
+                    break
+                except (requests.exceptions.ChunkedEncodingError,
+                        requests.exceptions.ConnectionError) as e:
+                    wait = 2 ** attempt
+                    print(f"\n  {e}, retrying in {wait}s (attempt {attempt + 1}/5)...", file=sys.stderr)
+                    time.sleep(wait)
+            else:
+                raise RuntimeError(f"Failed to fetch PR {pr_num} after 5 attempts")
+        print(f"\r  Done ({len(to_fetch)} PRs fetched).          ", file=sys.stderr)
+        with open(cache_file, "w") as f:
+            json.dump(pr_authors, f)
+
+    return pr_authors
+
+
+def build_counts(comments, no_bots, pr_authors=None):
     counts = Counter()
     for c in comments:
         user = c.get("user") or {}
         login = user.get("login", "unknown")
         if no_bots and login.endswith("[bot]"):
             continue
+        if pr_authors is not None:
+            pr_num = (c.get("pull_request_url") or "").rsplit("/", 1)[-1]
+            if pr_authors.get(pr_num) == login:
+                continue
         counts[login] += 1
     return counts
 
@@ -203,12 +264,25 @@ def main():
     parser.add_argument("--table", action="store_true")
     parser.add_argument("--top", type=int, default=30, metavar="N")
     parser.add_argument("--refresh", action="store_true")
+    parser.add_argument("--no-self-review", action="store_true",
+                        help="Exclude comments where the commenter is also the PR author")
     args = parser.parse_args()
 
     since_dt = datetime.strptime(args.since, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
-    comments = fetch_all_comments(args.repo, since_dt, args.refresh)
-    counts = build_counts(comments, args.no_bots)
+    session = make_session()
+    comments = fetch_all_comments(args.repo, since_dt, args.refresh, session)
+
+    pr_authors = None
+    if args.no_self_review:
+        pr_numbers = {
+            (c.get("pull_request_url") or "").rsplit("/", 1)[-1]
+            for c in comments
+            if c.get("pull_request_url")
+        }
+        pr_authors = fetch_pr_authors(args.repo, pr_numbers, session)
+
+    counts = build_counts(comments, args.no_bots, pr_authors)
 
     if not counts:
         print("No comments found.", file=sys.stderr)
