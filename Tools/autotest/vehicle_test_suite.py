@@ -13047,6 +13047,54 @@ Also, ignores heartbeats not from our target system'''
             raise PreconditionFailedException("Receiving camera feedback")
         self.poll_message("CAMERA_FEEDBACK")
 
+    def BATTERY_STATUS_V2(self):
+        """Test BATTERY_STATUS_V2 request and streaming support"""
+        if not hasattr(mavutil.mavlink, "MAVLINK_MSG_ID_BATTERY_STATUS_V2"):
+            raise OldpymavlinkException("pymavlink too old; upgrade pymavlink to get BATTERY_STATUS_V2")
+
+        timeout_sec = 10.0
+
+        self.start_subtest("Request BATTERY_STATUS_V2")
+        self.get_sim_time(drain_mav=True) # required for timeout in run_cmd_get_ack to work
+        self.send_poll_message("BATTERY_STATUS_V2")
+        self.run_cmd_get_ack(
+            mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE,
+            mavutil.mavlink.MAV_RESULT_ACCEPTED,
+            timeout=timeout_sec,
+        )
+        status_v2 = self.assert_receive_message("BATTERY_STATUS_V2",
+                                                timeout=timeout_sec)
+        status_v1 = self.assert_receive_message("BATTERY_STATUS",
+                                                timeout=timeout_sec,
+                                                condition=f"BATTERY_STATUS.id=={status_v2.id}",
+        )
+
+        status_v1_voltage = status_v1.voltages[0] * 0.001
+        if abs(status_v2.voltage - status_v1_voltage) > 0.1:
+            raise NotAchievedException("BATTERY_STATUS_V2 voltage does not match BATTERY_STATUS")
+
+        if status_v1.current_battery != -1:
+            battery_status_current_a = status_v1.current_battery * 0.01
+            if abs(status_v2.current - battery_status_current_a) > 0.1:
+                raise NotAchievedException("BATTERY_STATUS_V2 current does not match BATTERY_STATUS")
+
+        if status_v1.current_consumed != -1:
+            status_v1_capacity_consumed_ah = status_v1.current_consumed * 0.001
+            if abs(status_v2.capacity_consumed - status_v1_capacity_consumed_ah) > 0.01:
+                raise NotAchievedException("BATTERY_STATUS_V2 consumed capacity does not match BATTERY_STATUS")
+
+        if status_v1.battery_remaining != -1:
+            if status_v2.state_of_charge != status_v1.state_of_charge:
+                raise NotAchievedException("BATTERY_STATUS_V2 state of charge does not match BATTERY_STATUS")
+
+        if (status_v2.status_flags &
+                mavutil.mavlink.MAV_BATTERY_STATUS_FLAGS_CAPACITY_RELATIVE_TO_FULL) != 0:
+            raise NotAchievedException("Power-monitor BATTERY_STATUS_V2 should not report capacity relative to full")
+
+        self.start_subtest("Set BATTERY_STATUS_V2 stream rate")
+        self.set_message_rate_hz("BATTERY_STATUS_V2", 2)
+        self.assert_message_rate_hz("BATTERY_STATUS_V2", 2, sample_period=10)
+
     def clear_mission(self, mission_type, target_system=1, target_component=1):
         '''clear mision_type from autopilot.  Note that this does NOT actually
         send a MISSION_CLEAR_ALL message

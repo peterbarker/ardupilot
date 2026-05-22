@@ -8575,6 +8575,7 @@ return update()
             self.SET_MESSAGE_INTERVAL,
             self.MESSAGE_INTERVAL_COMMAND_INT,
             self.REQUEST_MESSAGE,
+            self.BATTERY_STATUS_V2,
             self.MAV_GCS_ENFORCE,
             self.SET_ATTITUDE_TARGET,
             self.SET_ATTITUDE_TARGET_heading,
