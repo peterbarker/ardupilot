@@ -215,7 +215,7 @@ AP_GPS_UBLOX::_request_next_config(void)
         break;
     case STEP_POLL_GNSS:
         if (supports_F9_config()) {
-            if (last_configured_gnss != params.gnss_mode) {
+            if (last_configured_gnss != gps._gnss_mode[state.instance]) {
                 _unconfigured_messages |= CONFIG_F9;
             }
             break;
@@ -346,7 +346,7 @@ AP_GPS_UBLOX::_request_next_config(void)
             uint8_t cfg_count = populate_F9_gnss();
             // special handling of F9 config
             if (cfg_count > 0) {
-                CFG_Debug("Sending F9 settings, GNSS=%u", params.gnss_mode);
+                CFG_Debug("Sending F9 settings, GNSS=%u", gps._gnss_mode[state.instance]);
 
                 if (!_configure_list_valset(config_GNSS, cfg_count, UBX_VALSET_LAYER_RAM | UBX_VALSET_LAYER_BBR)) {
                     _next_message--;
@@ -369,7 +369,7 @@ AP_GPS_UBLOX::_request_next_config(void)
             uint8_t cfg_count = populate_F9_gnss();
             // special handling of F9 config
             if (cfg_count > 0) {
-                CFG_Debug("Validating F9 settings, GNSS=%u", params.gnss_mode);
+                CFG_Debug("Validating F9 settings, GNSS=%u", gps._gnss_mode[state.instance]);
                 // now validate all of the settings, this is a no-op if the first call succeeded
                 if (!_configure_config_set(config_GNSS, cfg_count, CONFIG_F9, UBX_VALSET_LAYER_RAM | UBX_VALSET_LAYER_BBR)) {
                     _next_message--;
@@ -2304,7 +2304,7 @@ bool AP_GPS_UBLOX::is_healthy(void) const
 uint8_t AP_GPS_UBLOX::populate_F9_gnss(void)
 {
     uint8_t cfg_count = 0;
-    if (params.gnss_mode != 0 && (_unconfigured_messages & CONFIG_F9)) {
+    if (gps._gnss_mode[state.instance] != 0 && (_unconfigured_messages & CONFIG_F9)) {
         // ZED-F9P defaults are
         // GPS L1C/A+L2C(ZED)
         // SBAS L1C/A
@@ -2324,11 +2324,11 @@ uint8_t AP_GPS_UBLOX::populate_F9_gnss(void)
             return 0;
         }
 
-        uint8_t gnss_mode = params.gnss_mode;
+        uint8_t gnss_mode = gps._gnss_mode[state.instance];
         gnss_mode |= 1U<<GNSS_GPS;
         gnss_mode |= 1U<<GNSS_QZSS;
         gnss_mode &= ~(1U<<GNSS_IMES);
-        params.gnss_mode.set_and_save(gnss_mode);
+        gps._gnss_mode[state.instance].set_and_save(gnss_mode);
 
         for(int i = 0; i < UBLOX_MAX_GNSS_CONFIG_BLOCKS; i++) {
             bool ena = gnss_mode & (1U<<i);
@@ -2371,7 +2371,7 @@ uint8_t AP_GPS_UBLOX::populate_F9_gnss(void)
         }
     }
 
-    last_configured_gnss = params.gnss_mode;
+    last_configured_gnss = gps._gnss_mode[state.instance];
 
     return cfg_count;
 }

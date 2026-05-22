@@ -737,7 +737,7 @@ void AP_GPS_UBLOX_CFGv2::_publish_supported_constellations()
 // returns true if a VALSET was sent, false if no changes needed
 bool AP_GPS_UBLOX_CFGv2::_send_gnss_cfg()
 {
-    const uint8_t desired_gnss = (uint8_t)ubx_backend.params.gnss_mode;
+    const uint8_t desired_gnss = (uint8_t)ubx_backend.gps._gnss_mode[ubx_backend.state.instance];
     if (desired_gnss == 0 || desired_gnss == enabled_gnss) {
         return false;
     }
@@ -1003,7 +1003,7 @@ bool AP_GPS_UBLOX_CFGv2::_init_common_cfg_list(bool check_only, uint32_t key_to_
     }
 
     // Runtime-value entries
-    PUSH_RUNTIME(CFG_RATE_MEAS, ubx_backend.params.rate_ms)
+    PUSH_RUNTIME(CFG_RATE_MEAS, ubx_backend.gps._rate_ms[ubx_backend.state.instance])
     PUSH_RUNTIME(CFG_NAVSPG_DYNMODEL, ubx_backend.gps._navfilter)
 
     if (ubx_backend.gps._min_elevation != -100) {
