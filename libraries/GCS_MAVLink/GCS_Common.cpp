@@ -451,6 +451,93 @@ bool GCS_MAVLINK::send_battery_status()
 }
 
 #if AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+static uint32_t battery_status_v2_fault_flags(const uint32_t fault_bitmask)
+{
+    uint32_t status_flags = 0;
+
+    if (fault_bitmask == 0) {
+        return status_flags;
+    }
+
+    status_flags |= MAV_BATTERY_STATUS_FLAGS_NOT_READY_TO_USE |
+                    MAV_BATTERY_STATUS_FLAGS_REQUIRES_SERVICE;
+
+    if ((fault_bitmask & static_cast<uint32_t>(MAV_BATTERY_FAULT_DEEP_DISCHARGE)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_FAULT_UNDER_VOLT |
+                        MAV_BATTERY_STATUS_FLAGS_BAD_BATTERY;
+    }
+    if ((fault_bitmask & static_cast<uint32_t>(MAV_BATTERY_FAULT_CELL_FAIL)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_BAD_BATTERY;
+    }
+    if ((fault_bitmask & static_cast<uint32_t>(MAV_BATTERY_FAULT_OVER_CURRENT)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_FAULT_OVER_CURRENT;
+    }
+    if ((fault_bitmask & static_cast<uint32_t>(MAV_BATTERY_FAULT_OVER_TEMPERATURE)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_FAULT_OVER_TEMPERATURE;
+    }
+    if ((fault_bitmask & static_cast<uint32_t>(MAV_BATTERY_FAULT_UNDER_TEMPERATURE)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_FAULT_UNDER_TEMPERATURE;
+    }
+    if ((fault_bitmask & static_cast<uint32_t>(MAV_BATTERY_FAULT_INCOMPATIBLE_VOLTAGE)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_FAULT_INCOMPATIBLE_VOLTAGE;
+    }
+    if ((fault_bitmask & static_cast<uint32_t>(MAV_BATTERY_FAULT_INCOMPATIBLE_FIRMWARE)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_FAULT_INCOMPATIBLE_FIRMWARE;
+    }
+    if ((fault_bitmask & static_cast<uint32_t>(BATTERY_FAULT_INCOMPATIBLE_CELLS_CONFIGURATION)) != 0) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_FAULT_INCOMPATIBLE_CELLS_CONFIGURATION;
+    }
+
+    return status_flags;
+}
+
+static uint32_t battery_status_v2_status_flags(const AP_BattMonitor &battery,
+                                               const uint8_t instance,
+                                               const bool have_capacity_values)
+{
+    uint32_t status_flags = battery_status_v2_fault_flags(battery.get_mavlink_fault_bitmask(instance));
+
+    if (!battery.healthy(instance)) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_NOT_READY_TO_USE |
+                        MAV_BATTERY_STATUS_FLAGS_REQUIRES_SERVICE;
+    }
+
+    switch (battery.get_mavlink_charge_state(instance)) {
+    case MAV_BATTERY_CHARGE_STATE_LOW:
+    case MAV_BATTERY_CHARGE_STATE_CRITICAL:
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_NOT_READY_TO_USE;
+        break;
+
+    case MAV_BATTERY_CHARGE_STATE_EMERGENCY:
+    case MAV_BATTERY_CHARGE_STATE_FAILED:
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_NOT_READY_TO_USE |
+                        MAV_BATTERY_STATUS_FLAGS_REQUIRES_SERVICE |
+                        MAV_BATTERY_STATUS_FLAGS_BAD_BATTERY;
+        break;
+
+    case MAV_BATTERY_CHARGE_STATE_UNHEALTHY:
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_NOT_READY_TO_USE |
+                        MAV_BATTERY_STATUS_FLAGS_REQUIRES_SERVICE;
+        break;
+
+    case MAV_BATTERY_CHARGE_STATE_UNDEFINED:
+    case MAV_BATTERY_CHARGE_STATE_OK:
+    case MAV_BATTERY_CHARGE_STATE_CHARGING:
+    case MAV_BATTERY_CHARGE_STATE_ENUM_END:
+        break;
+    }
+
+    if (battery.get_charging_state(instance) == AP_BattMonitor::ChargingState::CHARGING) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_CHARGING;
+    }
+
+    if (have_capacity_values && battery.capacity_is_relative_to_full(instance)) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_CAPACITY_RELATIVE_TO_FULL;
+    }
+
+    return status_flags;
+}
+
 void GCS_MAVLINK::send_battery_status_v2(const uint8_t instance) const
 {
     const AP_BattMonitor &battery = AP::battery();
@@ -482,12 +569,8 @@ void GCS_MAVLINK::send_battery_status_v2(const uint8_t instance) const
         static_cast<float>(MIN(percentage, 100.0f)) :
         nanf("");
 
-    uint32_t status_flags = 0;
-    if (!isnan(capacity_consumed_ah) &&
-        !isnan(capacity_remaining_ah) &&
-        battery.capacity_is_relative_to_full(instance)) {
-        status_flags |= MAV_BATTERY_STATUS_FLAGS_CAPACITY_RELATIVE_TO_FULL;
-    }
+    const bool have_capacity_values = !isnan(capacity_consumed_ah) && !isnan(capacity_remaining_ah);
+    const uint32_t status_flags = battery_status_v2_status_flags(battery, instance, have_capacity_values);
 
     mavlink_msg_battery_status_v2_send(chan,
                                        instance,
