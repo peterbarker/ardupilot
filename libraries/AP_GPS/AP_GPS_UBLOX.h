@@ -33,6 +33,9 @@
 #else
 #include "AP_GPS_UBLOX_CFG_List.h"
 #endif
+
+#include <AP_Logger/AP_Logger_config.h>
+
 /*
  *  try to put a UBlox into binary mode. This is in two parts. 
  *
