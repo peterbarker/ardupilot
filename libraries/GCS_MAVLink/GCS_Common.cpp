@@ -482,6 +482,13 @@ void GCS_MAVLINK::send_battery_status_v2(const uint8_t instance) const
         static_cast<float>(MIN(percentage, 100.0f)) :
         nanf("");
 
+    uint32_t status_flags = 0;
+    if (!isnan(capacity_consumed_ah) &&
+        !isnan(capacity_remaining_ah) &&
+        battery.capacity_is_relative_to_full(instance)) {
+        status_flags |= MAV_BATTERY_STATUS_FLAGS_CAPACITY_RELATIVE_TO_FULL;
+    }
+
     mavlink_msg_battery_status_v2_send(chan,
                                        instance,
                                        temperature_cdeg,
@@ -490,7 +497,7 @@ void GCS_MAVLINK::send_battery_status_v2(const uint8_t instance) const
                                        capacity_consumed_ah,
                                        capacity_remaining_ah,
                                        state_of_charge,
-                                       0);
+                                       status_flags);
 }
 
 // returns true if all battery instances were reported

@@ -327,6 +327,12 @@ bool AP_BattMonitor_DroneCAN::capacity_remaining_pct(uint8_t &percentage) const
     return true;
 }
 
+// return true if consumed and remaining capacities come from full-charge and remaining-capacity values
+bool AP_BattMonitor_DroneCAN::capacity_is_relative_to_full() const
+{
+    return use_CAN_SoC() && _has_battery_info_aux;
+}
+
 // reset remaining percentage to given value
 bool AP_BattMonitor_DroneCAN::reset_remaining(float percentage)
 {

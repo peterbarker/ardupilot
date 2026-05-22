@@ -31,6 +31,9 @@ public:
     /// capacity_remaining_pct - returns true if the percentage is valid and writes to percentage argument
     bool capacity_remaining_pct(uint8_t &percentage) const override;
 
+    // return true if consumed and remaining capacities come from full-charge and remaining-capacity values
+    bool capacity_is_relative_to_full() const override;
+
     bool has_temperature() const override { return _has_temperature; }
 
     bool has_current() const override { return true; }

@@ -191,7 +191,10 @@ public:
     /// pack_capacity_mah - returns the capacity of the battery pack in mAh when the pack is full
     int32_t pack_capacity_mah(uint8_t instance) const;
     int32_t pack_capacity_mah() const { return pack_capacity_mah(AP_BATT_PRIMARY_INSTANCE); }
- 
+
+    // return true if reported consumed and remaining capacities are relative to a full battery
+    bool capacity_is_relative_to_full(uint8_t instance) const;
+
     /// returns true if a battery failsafe has ever been triggered
     bool has_failsafed(void) const { return _has_triggered_failsafe; };
 

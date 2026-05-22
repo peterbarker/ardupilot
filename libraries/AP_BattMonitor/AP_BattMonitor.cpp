@@ -930,6 +930,15 @@ int32_t AP_BattMonitor::pack_capacity_mah(uint8_t instance) const
     }
 }
 
+// return true if reported consumed and remaining capacities are relative to a full battery
+bool AP_BattMonitor::capacity_is_relative_to_full(uint8_t instance) const
+{
+    if (instance < _num_instances && drivers[instance] != nullptr) {
+        return drivers[instance]->capacity_is_relative_to_full();
+    }
+    return false;
+}
+
 void AP_BattMonitor::check_failsafes(void)
 {
     if (hal.util->get_soft_armed()) {

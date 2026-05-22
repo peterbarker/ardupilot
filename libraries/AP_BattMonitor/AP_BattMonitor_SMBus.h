@@ -53,6 +53,9 @@ public:
     // don't allow reset of remaining capacity for SMBus
     bool reset_remaining(float percentage) override { return false; }
 
+    // SMBus capacity is reported relative to the battery's full charge capacity
+    bool capacity_is_relative_to_full() const override { return true; }
+
     // return true if cycle count can be provided and fills in cycles argument
     bool get_cycle_count(uint16_t &cycles) const override;
 

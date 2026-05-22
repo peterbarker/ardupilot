@@ -60,6 +60,9 @@ public:
     // returns false if the battery is unhealthy, does not have current monitoring, or the pack_capacity is too small
     virtual bool capacity_remaining_pct(uint8_t &percentage) const WARN_IF_UNUSED;
 
+    // return true if reported consumed and remaining capacities are relative to a full battery
+    virtual bool capacity_is_relative_to_full() const { return false; }
+
     // return true if cycle count can be provided and fills in cycles argument
     virtual bool get_cycle_count(uint16_t &cycles) const { return false; }
 
