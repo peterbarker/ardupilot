@@ -1243,6 +1243,9 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
 #endif
 #if AP_BATTERY_ENABLED
         { MAVLINK_MSG_ID_BATTERY_STATUS,        MSG_BATTERY_STATUS},
+#if AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+        { MAVLINK_MSG_ID_BATTERY_STATUS_V2,     MSG_BATTERY_STATUS_V2},
+#endif
 #endif
 #if APM_BUILD_TYPE(APM_BUILD_ArduPlane)
         { MAVLINK_MSG_ID_AOA_SSA,               MSG_AOA_SSA},
@@ -6816,6 +6819,11 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
     case MSG_BATTERY_STATUS:
         ret = send_battery_status();
         break;
+#if AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+    case MSG_BATTERY_STATUS_V2:
+        send_battery_status_v2();
+        break;
+#endif
 #endif // AP_BATTERY_ENABLED
 
 #if AP_AHRS_ENABLED
