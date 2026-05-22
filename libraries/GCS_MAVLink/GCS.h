@@ -29,6 +29,7 @@
 #include <AP_AHRS/AP_AHRS_config.h>
 #include <AP_Arming/AP_Arming_config.h>
 #include <AP_Airspeed/AP_Airspeed_config.h>
+#include <AP_BattMonitor/AP_BattMonitor_config.h>
 #include <AP_Follow/AP_Follow.h>
 
 #include "ap_message.h"
@@ -363,8 +364,14 @@ public:
 #if HAL_WITH_MCU_MONITORING
     void send_mcu_status(void);
 #endif
+#if AP_BATTERY_ENABLED
     void send_battery_status(const uint8_t instance) const;
     bool send_battery_status();
+#if AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+    void send_battery_status_v2(const uint8_t instance) const;
+    bool send_battery_status_v2();
+#endif // AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+#endif // AP_BATTERY_ENABLED
     void send_distance_sensor();
     // send_rangefinder sends only if a downward-facing instance is
     // found.  Rover overrides this!
@@ -428,7 +435,9 @@ public:
 #if AP_WINCH_ENABLED
     virtual void send_winch_status() const {};
 #endif
+#if AP_BATTERY_ENABLED
     int8_t battery_remaining_pct(const uint8_t instance) const;
+#endif
 
 #if HAL_HIGH_LATENCY2_ENABLED
     void send_high_latency2() const;
@@ -1138,7 +1147,12 @@ private:
 
     uint32_t last_mavlink_stats_logged;
 
+#if AP_BATTERY_ENABLED
     uint8_t last_battery_status_idx;
+#if AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+    uint8_t last_battery_status_v2_idx;
+#endif // AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+#endif // AP_BATTERY_ENABLED
 
     // if we've ever sent a DISTANCE_SENSOR message out of an
     // orientation we continue to send it out, even if it is not

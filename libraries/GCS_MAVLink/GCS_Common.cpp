@@ -449,6 +449,72 @@ bool GCS_MAVLINK::send_battery_status()
     }
     return true;
 }
+
+#if AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
+void GCS_MAVLINK::send_battery_status_v2(const uint8_t instance) const
+{
+    const AP_BattMonitor &battery = AP::battery();
+
+    float temperature;
+    const bool got_temperature = battery.get_temperature(temperature, instance);
+    const int16_t temperature_cdeg = got_temperature ?
+        static_cast<int16_t>(constrain_float(temperature * 100.0f, INT16_MIN, INT16_MAX - 1)) :
+        INT16_MAX;
+
+    float current_amps;
+    if (!battery.current_amps(current_amps, instance)) {
+        current_amps = nanf("");
+    }
+
+    float consumed_mah;
+    float capacity_consumed_ah = nanf("");
+    float capacity_remaining_ah = nanf("");
+    if (battery.consumed_mah(consumed_mah, instance)) {
+        capacity_consumed_ah = consumed_mah * 0.001f;
+        const int32_t pack_capacity_mah = battery.pack_capacity_mah(instance);
+        if (pack_capacity_mah > 10) {
+            capacity_remaining_ah = MAX(pack_capacity_mah - consumed_mah, 0.0f) * 0.001f;
+        }
+    }
+
+    uint8_t percentage;
+    const float state_of_charge = battery.capacity_remaining_pct(percentage, instance) ?
+        static_cast<float>(MIN(percentage, 100.0f)) :
+        nanf("");
+
+    mavlink_msg_battery_status_v2_send(chan,
+                                       instance,
+                                       temperature_cdeg,
+                                       battery.gcs_voltage(instance),
+                                       current_amps,
+                                       capacity_consumed_ah,
+                                       capacity_remaining_ah,
+                                       state_of_charge,
+                                       0);
+}
+
+// returns true if all battery instances were reported
+bool GCS_MAVLINK::send_battery_status_v2()
+{
+    const AP_BattMonitor &battery = AP::battery();
+
+    for(uint8_t i = 0; i < AP_BATT_MONITOR_MAX_INSTANCES; i++) {
+        const uint8_t battery_id = (last_battery_status_v2_idx + 1) % AP_BATT_MONITOR_MAX_INSTANCES;
+        const auto configured_type = battery.configured_type(battery_id);
+        if (configured_type != AP_BattMonitor::Type::NONE &&
+            configured_type == battery.allocated_type(battery_id) &&
+            !battery.option_is_set(battery_id, AP_BattMonitor_Params::Options::InternalUseOnly)) {
+            CHECK_PAYLOAD_SIZE(BATTERY_STATUS_V2);
+            send_battery_status_v2(battery_id);
+            last_battery_status_v2_idx = battery_id;
+            return true;
+        } else {
+            last_battery_status_v2_idx = battery_id;
+        }
+    }
+    return true;
+}
+#endif  // AP_MAVLINK_BATTERY_STATUS_V2_ENABLED
 #endif  // AP_BATTERY_ENABLED
 
 #if AP_RANGEFINDER_ENABLED
