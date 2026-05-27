@@ -7489,6 +7489,9 @@ class TestSuite(abc.ABC):
         divisor = 1000.0  # mm is pretty common in mavlink
         if altitude_source == "SIM_STATE.alt":
             divisor = 1.0
+        self.progress(f"{self.dump_message_verbose(msg)}")
+        self.progress(f"############ {altitude_source=} {field=}")
+
         return getattr(msg, field) / divisor
 
     def assert_altitude(self, alt, accuracy=1, **kwargs):
@@ -7610,14 +7613,17 @@ class TestSuite(abc.ABC):
 
         altitude_source = kwargs.get("altitude_source", None)
 
-        self.wait_and_maintain(
-            value_name="Altitude",
-            target=(altitude_min + altitude_max)*0.5,
-            current_value_getter=lambda: self.get_altitude(
+        def fn():
+            return self.get_altitude(
                 relative=relative,
                 timeout=timeout,
                 altitude_source=altitude_source,
-            ),
+            )
+
+        self.wait_and_maintain(
+            value_name="Altitude",
+            target=(altitude_min + altitude_max)*0.5,
+            current_value_getter=fn,
             accuracy=(altitude_max - altitude_min)*0.5,
             validator=lambda value2, target2: validator(value2, target2),
             timeout=timeout,
