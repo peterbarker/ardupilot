@@ -1052,6 +1052,18 @@ private:
         bool origin_ok;
         Vector3f velocity_NED;
         bool velocity_NED_ok;
+
+        // relative ground position from the origin in meters, down
+        postype_t relative_position_D_origin;
+        bool relative_position_D_origin_valid;
+
+        // position relative to origin in meters, North/East
+        Vector2p relative_position_NE_origin;
+        bool relative_position_NE_origin_valid;
+
+        // position relative to origin in meters, North/East/Down
+        Vector3p relative_position_NED_origin;
+        bool relative_position_NED_origin_valid;
     } state;
 
     /*

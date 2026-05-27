@@ -496,6 +496,10 @@ void AP_AHRS::update_state(void)
     }
 
     state.velocity_NED_ok = active_estimates->get_velocity_NED(state.velocity_NED);
+
+    state.relative_position_D_origin_valid = active_estimates->get_relative_position_D_origin(state.relative_position_D_origin);
+    state.relative_position_NE_origin_valid = active_estimates->get_relative_position_NE_origin(state.relative_position_NE_origin);
+    state.relative_position_NED_origin_valid = active_estimates->get_relative_position_NED_origin(state.relative_position_NED_origin);
 }
 
 // update run at loop rate
@@ -634,6 +638,7 @@ void AP_AHRS::copy_estimates_from_backend_estimates(const AP_AHRS_Backend::Estim
 void AP_AHRS::update_DCM()
 {
     dcm.update();
+    dcm_estimates = {};
     dcm.get_results(dcm_estimates);
 }
 #endif
@@ -642,6 +647,7 @@ void AP_AHRS::update_DCM()
 void AP_AHRS::update_SITL(void)
 {
     sim.update();
+    sim_estimates = {}
     sim.get_results(sim_estimates);
 }
 #endif
@@ -761,6 +767,7 @@ void AP_AHRS::update_EKF3(void)
 void AP_AHRS::update_external(void)
 {
     external.update();
+    external_estimates = {};
     external.get_results(external_estimates);
 
     /*
@@ -1425,58 +1432,10 @@ bool AP_AHRS::get_vert_pos_rate_D(float &velocity) const
     return active_estimates->get_vert_pos_rate_D(velocity);
 }
 
-/*
-  return a relative NED position from the origin in meters
-*/
 bool AP_AHRS::get_relative_position_NED_origin(Vector3p &vec) const
 {
-    switch (active_EKF_type()) {
-#if AP_AHRS_DCM_ENABLED
-    case EKFType::DCM:
-        return dcm.get_relative_position_NED_origin(vec);
-#endif
-#if HAL_NAVEKF2_AVAILABLE
-    case EKFType::TWO: {
-        Vector2p posNE;
-        postype_t posD;
-        if (ekf2.EKF2.getPosNE(posNE) && ekf2.EKF2.getPosD(posD)) {
-            // position is valid
-            vec.x = posNE.x;
-            vec.y = posNE.y;
-            vec.z = posD;
-            return true;
-        }
-        return false;
-    }
-#endif
-
-#if HAL_NAVEKF3_AVAILABLE
-    case EKFType::THREE: {
-            Vector2p posNE;
-            postype_t posD;
-            if (ekf3.EKF3.getPosNE(posNE) && ekf3.EKF3.getPosD(posD)) {
-                // position is valid
-                vec.x = posNE.x;
-                vec.y = posNE.y;
-                vec.z = posD;
-                return true;
-            }
-            return false;
-        }
-#endif
-
-#if AP_AHRS_SIM_ENABLED
-    case EKFType::SIM:
-        return sim.get_relative_position_NED_origin(vec);
-#endif
-#if AP_AHRS_EXTERNAL_ENABLED
-    case EKFType::EXTERNAL: {
-        return external.get_relative_position_NED_origin(vec);
-    }
-#endif
-    }
-    // since there is no default case above, this is unreachable
-    return false;
+    vec = state.relative_position_NED_origin;
+    return state.relative_position_NED_origin_valid;
 }
 
 bool AP_AHRS::get_relative_position_NED_origin_float(Vector3f &vec) const
@@ -1503,42 +1462,10 @@ bool AP_AHRS::get_relative_position_NED_home(Vector3f &vec) const
     return true;
 }
 
-/*
-  return a relative position estimate from the origin in meters
-*/
 bool AP_AHRS::get_relative_position_NE_origin(Vector2p &posNE) const
 {
-    switch (active_EKF_type()) {
-#if AP_AHRS_DCM_ENABLED
-    case EKFType::DCM:
-        return dcm.get_relative_position_NE_origin(posNE);
-#endif
-#if HAL_NAVEKF2_AVAILABLE
-    case EKFType::TWO: {
-        bool position_is_valid = ekf2.EKF2.getPosNE(posNE);
-        return position_is_valid;
-    }
-#endif
-
-#if HAL_NAVEKF3_AVAILABLE
-    case EKFType::THREE: {
-        bool position_is_valid = ekf3.EKF3.getPosNE(posNE);
-        return position_is_valid;
-    }
-#endif
-
-#if AP_AHRS_SIM_ENABLED
-    case EKFType::SIM: {
-        return sim.get_relative_position_NE_origin(posNE);
-    }
-#endif
-#if AP_AHRS_EXTERNAL_ENABLED
-    case EKFType::EXTERNAL:
-        return external.get_relative_position_NE_origin(posNE);
-#endif
-    }
-    // since there is no default case above, this is unreachable
-    return false;
+    posNE = state.relative_position_NE_origin;
+    return state.relative_position_NE_origin_valid;
 }
 
 bool AP_AHRS::get_relative_position_NE_origin_float(Vector2f &posNE) const
@@ -1566,44 +1493,10 @@ bool AP_AHRS::get_relative_position_NE_home(Vector2f &posNE) const
     return true;
 }
 
-// write a relative ground position estimate to the origin in meters, North/East order
-
-
-/*
-  return a relative ground position from the origin in meters, down
-*/
 bool AP_AHRS::get_relative_position_D_origin(postype_t &posD) const
 {
-    switch (active_EKF_type()) {
-#if AP_AHRS_DCM_ENABLED
-    case EKFType::DCM:
-        return dcm.get_relative_position_D_origin(posD);
-#endif
-#if HAL_NAVEKF2_AVAILABLE
-    case EKFType::TWO: {
-        bool position_is_valid = ekf2.EKF2.getPosD(posD);
-        return position_is_valid;
-    }
-#endif
-
-#if HAL_NAVEKF3_AVAILABLE
-    case EKFType::THREE: {
-        bool position_is_valid = ekf3.EKF3.getPosD(posD);
-        return position_is_valid;
-    }
-#endif
-
-#if AP_AHRS_SIM_ENABLED
-    case EKFType::SIM:
-        return sim.get_relative_position_D_origin(posD);
-#endif
-#if AP_AHRS_EXTERNAL_ENABLED
-    case EKFType::EXTERNAL:
-        return external.get_relative_position_D_origin(posD);
-#endif
-    }
-    // since there is no default case above, this is unreachable
-    return false;
+    posD = state.relative_position_D_origin;
+    return state.relative_position_D_origin_valid;
 }
 
 bool AP_AHRS::get_relative_position_D_origin_float(float &posD) const

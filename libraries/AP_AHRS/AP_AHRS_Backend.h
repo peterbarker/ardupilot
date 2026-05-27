@@ -122,6 +122,27 @@ public:
         /*
          * position estimates
          */
+        // relative_position_D_origin return a relative ground
+        // position from the origin in meters, down
+        bool get_relative_position_D_origin(postype_t &posD) const WARN_IF_UNUSED {
+            posD = relative_position_D_origin;
+            return relative_position_D_origin_valid;
+        }
+
+        // return a position relative to origin in meters, North/East
+        // order. Return true if estimate is valid
+        bool get_relative_position_NE_origin(Vector2p &vecNE) const WARN_IF_UNUSED {
+            vecNE = relative_position_NE_origin;
+            return relative_position_NE_origin_valid;
+        }
+
+        // relative-to-origin estimates:
+        // return a position relative to origin in meters, North/East/Down
+        bool get_relative_position_NED_origin(Vector3p &vec) const WARN_IF_UNUSED {
+            vec = relative_position_NED_origin;
+            return relative_position_NED_origin_valid;
+        }
+
         Location location;
         bool location_valid;
 
@@ -136,6 +157,19 @@ public:
         }
 
     private:
+
+        // relative ground position from the origin in meters, down
+        postype_t relative_position_D_origin;
+        bool relative_position_D_origin_valid;
+
+        // position relative to origin in meters, North/East
+        Vector2p relative_position_NE_origin;
+        bool relative_position_NE_origin_valid;
+
+        // position relative to origin in meters, North/East/Down
+        Vector3p relative_position_NED_origin;
+        bool relative_position_NED_origin_valid;
+
         bool hagl_valid;
         float hagl;
     };
@@ -225,25 +259,6 @@ public:
         return false;
     }
     virtual bool get_origin(Location &ret) const = 0;
-
-    // return a position relative to origin in meters, North/East/Down
-    // order. This will only be accurate if have_inertial_nav() is
-    // true
-    virtual bool get_relative_position_NED_origin(Vector3p &vec) const WARN_IF_UNUSED {
-        return false;
-    }
-
-    // return a position relative to origin in meters, North/East
-    // order. Return true if estimate is valid
-    virtual bool get_relative_position_NE_origin(Vector2p &vecNE) const WARN_IF_UNUSED {
-        return false;
-    }
-
-    // return a Down position relative to origin in meters
-    // Return true if estimate is valid
-    virtual bool get_relative_position_D_origin(postype_t &posD) const WARN_IF_UNUSED {
-        return false;
-    }
 
     // return true if we will use compass for yaw
     virtual bool use_compass(void) = 0;

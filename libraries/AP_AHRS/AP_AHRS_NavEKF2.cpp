@@ -70,6 +70,17 @@ void AP_AHRS_NavEKF2::get_results(AP_AHRS_Backend::Estimates &results)
     /*
      * position estimates
      */
+
+    // origin-relative positions:
+    results.relative_position_NE_origin_valid = EKF2.getPosNE(results.relative_position_NE_origin);
+    results.relative_position_D_origin_valid = EKF2.getPosD(results.relative_position_D_origin);
+    // NED is synthesised from NE and D:
+    results.relative_position_NED_origin.xy() = results.relative_position_NE_origin;
+    results.relative_position_NED_origin.z = results.relative_position_D_origin;
+    results.relative_position_NED_origin_valid =
+        results.relative_position_NE_origin_valid &&
+        results.relative_position_D_origin_valid;
+
     results.location_valid = EKF2.getLLH(results.location);
 
     results.hagl_valid = EKF2.getHAGL(results.hagl);

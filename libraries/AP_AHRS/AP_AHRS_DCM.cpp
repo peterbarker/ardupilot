@@ -170,6 +170,23 @@ void AP_AHRS_DCM::get_results(AP_AHRS_Backend::Estimates &results)
     /*
      * position estimates
      */
+    // origin-relative values:
+    Location origin;
+    Location loc;
+    if (AP_AHRS_DCM::get_origin(origin) &&
+        AP_AHRS_DCM::get_location(loc)) {
+        // all offsets-from origin are calculated from the difference
+        // between our current lat/lng/alt and origin:
+        results.relative_position_NED_origin = origin.get_distance_NED_postype(loc);
+        results.relative_position_NED_origin_valid = true;
+
+        results.relative_position_NE_origin = results.relative_position_NED_origin.xy();
+        results.relative_position_NE_origin_valid = true;
+
+        results.relative_position_D_origin = results.relative_position_NED_origin.z;
+        results.relative_position_D_origin_valid = true;
+    }
+
     results.location_valid = get_location(results.location);
 
     // hagl is not supplied:
@@ -1297,40 +1314,6 @@ bool AP_AHRS_DCM::get_origin(Location &ret) const
         ret = AP::ahrs().get_home();
     }
     return !ret.is_zero();
-}
-
-bool AP_AHRS_DCM::get_relative_position_NED_origin(Vector3p &posNED) const
-{
-    Location origin;
-    if (!AP_AHRS_DCM::get_origin(origin)) {
-        return false;
-    }
-    Location loc;
-    if (!AP_AHRS_DCM::get_location(loc)) {
-        return false;
-    }
-    posNED = origin.get_distance_NED_postype(loc);
-    return true;
-}
-
-bool AP_AHRS_DCM::get_relative_position_NE_origin(Vector2p &posNE) const
-{
-    Vector3p posNED;
-    if (!AP_AHRS_DCM::get_relative_position_NED_origin(posNED)) {
-        return false;
-    }
-    posNE = posNED.xy();
-    return true;
-}
-
-bool AP_AHRS_DCM::get_relative_position_D_origin(postype_t &posD) const
-{
-    Vector3p posNED;
-    if (!AP_AHRS_DCM::get_relative_position_NED_origin(posNED)) {
-        return false;
-    }
-    posD = posNED.z;
-    return true;
 }
 
 void AP_AHRS_DCM::send_ekf_status_report(GCS_MAVLINK &link) const
