@@ -2244,7 +2244,9 @@ void emit_index(struct userdata *head) {
     struct method_alias *alias = node->method_aliases;
     while(alias) {
       if (alias->type == ALIAS_TYPE_MANUAL) {
+        start_dependency(source, alias->dependency);
         fprintf(source, "    {\"%s\", %s},\n", alias->alias, alias->name);
+        end_dependency(source, alias->dependency);
       } else if (alias->type == ALIAS_TYPE_NONE) {
         fprintf(source, "    {\"%s\", %s_%s},\n", alias->alias, node->sanatized_name, alias->name);
       }
