@@ -91,6 +91,14 @@ jobs:
       - name: install python test deps
         shell: bash
         run: |
+          # mirror Tools/scripts/build_ci.sh: MAVProxy is imported at module
+          # load by the autotest framework, then install the repo's pymavlink
+          # (MAVProxy pulls its own, which we replace).
+          pushd /tmp
+            git clone https://github.com/ardupilot/MAVProxy --depth 1
+            (cd MAVProxy && python3 -m pip install --progress-bar off --user --force .)
+          popd
+          python3 -m pip uninstall -y pymavlink || true
           (cd modules/mavlink/pymavlink && python3 -m pip install --progress-bar off --user .)
       - name: run autotune ${{ env.RUNS_PER_SHARD }}x
         shell: bash
@@ -105,10 +113,12 @@ jobs:
             echo "::endgroup::"
           done
           echo "==== shard ${{ matrix.shard }} results ===="
-          cat "$CSV"
+          cat "$CSV" 2>/dev/null || echo "no CSV produced"
       - name: upload shard csv
+        if: always()
         uses: actions/upload-artifact@v7
         with:
+          if-no-files-found: warn
           name: autotune-csv-${{ matrix.shard }}
           path: autotune-shard-${{ matrix.shard }}.csv
           retention-days: 14
