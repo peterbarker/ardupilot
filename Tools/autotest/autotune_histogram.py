@@ -9,7 +9,8 @@ tooling -- do not merge.
 import csv
 import sys
 
-# buckets the current AUTOTUNE test accepts (param -> list of centres)
+# buckets the current AUTOTUNE test accepts (param -> list of centres) and the
+# per-parameter tolerance the test actually uses (see arduplane.py AUTOTUNE).
 KNOWN = {
     "PTCH_RATE_P": [1.746079683, 1.343138218, 2.26990366],
     "PTCH_RATE_D": [0.108, 0.141, 0.049, 0.0836, 0.0380],
@@ -18,15 +19,19 @@ KNOWN = {
     "RLL_RATE_FF": [0.229291457],
     "PTCH_RATE_FF": [0.503520715],
 }
-TOL = 0.02  # 2%
+KNOWN_TOL = {  # fraction; PTCH_RATE_FF is checked at 5%, everything else at 2%
+    "PTCH_RATE_FF": 0.05,
+}
+TOL = 0.02  # clustering tolerance (2%)
 
 
 def matches_known(param, v):
+    tol = KNOWN_TOL.get(param, 0.02)
     for c in KNOWN.get(param, []):
         if c == 0:
             if v == 0:
                 return c
-        elif abs(v - c) <= abs(c) * TOL:
+        elif abs(v - c) <= abs(c) * tol:
             return c
     return None
 
