@@ -1,0 +1,142 @@
+name: autotune repro
+
+# THROWAWAY workflow for investigating the intermittent ArduPlane AUTOTUNE
+# failure (autotune settles on a discrete PTCH_RATE_P bucket the test does not
+# enumerate, e.g. 1.589).  It runs ONLY the autotune recorder, many times,
+# across a matrix of shards, and aggregates the resulting tune-gain
+# distribution.  All other workflows are removed on this branch so CI does the
+# minimal work.  Do not merge.
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      runs_per_shard:
+        description: 'autotune runs per matrix shard'
+        required: false
+        default: '8'
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUNS_PER_SHARD: ${{ github.event.inputs.runs_per_shard || '8' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container:
+      image: ardupilot/ardupilot-dev-base:v0.1.3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Prepare ccache timestamp
+        id: ccache_cache_timestamp
+        run: |
+          NOW=$(date -u +"%F-%T")
+          echo "timestamp=${NOW}" >> $GITHUB_OUTPUT
+      - name: ccache cache files
+        uses: actions/cache@v5
+        with:
+          path: ~/.ccache
+          key: ${{ github.workflow }}-ccache-base-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+          restore-keys: ${{ github.workflow }}-ccache-base-
+      - name: setup ccache
+        run: . .github/workflows/ccache.env
+      - name: build plane
+        shell: bash
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          ./waf configure --board sitl --debug --num-aux-imus=2
+          ./waf build --target bin/arduplane
+          ccache -s
+
+  autotune:
+    needs: build
+    runs-on: ubuntu-22.04
+    container:
+      image: ardupilot/ardupilot-dev-base:v0.1.3
+      options: --privileged --cap-add=SYS_PTRACE --security-opt apparmor=unconfined --security-opt seccomp=unconfined
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Prepare ccache timestamp
+        id: ccache_cache_timestamp
+        run: |
+          NOW=$(date -u +"%F-%T")
+          echo "timestamp=${NOW}" >> $GITHUB_OUTPUT
+      - name: ccache cache files
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.ccache
+          key: ${{ github.workflow }}-ccache-base-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+          restore-keys: ${{ github.workflow }}-ccache-base-
+      - name: setup ccache
+        run: . .github/workflows/ccache.env
+      - name: build plane
+        shell: bash
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          ./waf configure --board sitl --debug --num-aux-imus=2
+          ./waf build --target bin/arduplane
+      - name: install python test deps
+        shell: bash
+        run: |
+          (cd modules/mavlink/pymavlink && python3 -m pip install --progress-bar off --user .)
+      - name: run autotune ${{ env.RUNS_PER_SHARD }}x
+        shell: bash
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          export CSV="autotune-shard-${{ matrix.shard }}.csv"
+          for i in $(seq 1 ${RUNS_PER_SHARD}); do
+            echo "::group::shard ${{ matrix.shard }} run $i"
+            AT_CSV="$CSV" AT_RUN_ID="${{ matrix.shard }}0$i" \
+              python3 Tools/autotest/autotune_repro.py || true
+            echo "::endgroup::"
+          done
+          echo "==== shard ${{ matrix.shard }} results ===="
+          cat "$CSV"
+      - name: upload shard csv
+        uses: actions/upload-artifact@v7
+        with:
+          name: autotune-csv-${{ matrix.shard }}
+          path: autotune-shard-${{ matrix.shard }}.csv
+          retention-days: 14
+
+  aggregate:
+    needs: autotune
+    if: always()
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: download all shard csvs
+        uses: actions/download-artifact@v5
+        with:
+          pattern: autotune-csv-*
+          merge-multiple: true
+          path: csvs
+      - name: merge + histogram
+        shell: bash
+        run: |
+          head -1 $(ls csvs/*.csv | head -1) > autotune-all.csv
+          for f in csvs/*.csv; do tail -n +2 "$f" >> autotune-all.csv; done
+          echo "==== combined samples ===="
+          cat autotune-all.csv
+          echo
+          python3 Tools/autotest/autotune_histogram.py autotune-all.csv
+      - name: upload combined csv
+        uses: actions/upload-artifact@v7
+        with:
+          name: autotune-all
+          path: autotune-all.csv
+          retention-days: 30
