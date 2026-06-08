@@ -1,31 +1,46 @@
 --[[
-   This script:
-   - reads the values of fixed list of parameters
-   - checksums them with SHA256
-   - compares them against a known-good checksum value
-   - emits a statustext message containing the checksum and the expected value
-   - appends a line to a file on SD card containing the results
-   - blocks arming if the checksums don't match
+   Power-On Self Test (POST) for firmware ("Code") and parameters ("Data").
 
-   It does this 10 seconds after boot.  And any time millis() wraps.
+   On boot this script:
+   - waits 10 seconds, then waits for a valid UTC time from the GPS
+   - SHA256-checksums a fixed list of parameters ("Data")
+   - SHA256-checksums the firmware in flash, skipping the bootloader ("Code")
+   - compares both against known-good checksums
+   - emits a grouped POST report over MAVLink (statustext)
+   - appends one timestamped POST line to a file on the SD card
+   - blocks arming (via aux authorisation) unless both checksums match
 
-   It only runs once.
+   It runs once.
+
+   NOTE: UTC time is derived from the GPS.  On a vehicle with no GPS (or
+   before a GPS time fix) the POST waits indefinitely and arming stays
+   blocked.  Adjust the "wait for valid time" handling in update() if a
+   bench / no-GPS fallback is required.
 --]]
 
-local required_parameters_checksum = "b43bf49dbfff1e46a675057fb532218e4d5cfa14a53b3c94aefb75983fd956ad"
+local required_parameters_checksum = "eaa29a6a1c10b457f16e10b380bb4846168e548bbe0ff006116fd472501feda1"
 local parameters_to_checksum = {
    "VISO_TYPE",  -- 0
    "TUNE",       -- 0
    "RELAY1_PIN"  -- 12
 }
 
-local required_firmware_checksum = "AD341DDC6A50B0C2D8CDABDC2D362D3AFC443776C99C5A90E0F9AFFAC47D2C5E"
+local required_firmware_checksum = "78FE958FD095EA2F06A10E59BC085C06CE385DBF997F03A3BC7E321E4C5A1B70"
 
 local flash_file_path = "@SYS/flash.bin"
 
+-- Bytes to skip at the start of @SYS/flash.bin before hashing the firmware:
+-- the bootloader occupies FLASH_RESERVE_START_KB at the base of flash.  This
+-- is board-specific (128 KB on most STM32H7 boards); see the board's hwdef.dat
+-- and Tools/scripts/sha256_padded_firmware.py.
+local bootloader_reserve_bytes = 128 * 1024
+
 local sdcard_file_name = "checksum_parameters.txt"
 
-local prefix = "cpaf: "
+-- UTC-from-GPS conversion constants (see AP_GPS.h)
+local GPS_UNIX_EPOCH_S = 315964800   -- 1980-01-06 00:00:00 UTC, in unix seconds
+local SECS_PER_WEEK    = 604800
+local GPS_LEAP_SECONDS = 18          -- GPS_LEAPSECONDS_MILLIS / 1000
 
 local MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7}
 
@@ -172,36 +187,80 @@ end
 -- state
 local param_sha256_ctx = sha256_init()
 local param_checksummed = false
-local param_start_ms = nil
-
 local fw_checksummed = false
 
-local param_checksum_match = false
-local firmware_checksum_match = false
+-- "Data" = parameter checksum results
+local data_match = false
+local data_digest = nil          -- computed digest (lowercase hex) or nil
+local data_invalid_param = nil   -- name of the first missing parameter, if any
+
+-- "Code" = firmware checksum results
+local code_match = false
+local code_digest = nil          -- computed digest (lowercase hex) or nil on read failure
 
 local CALC_RESULT_INCOMPLETE = 0
 local CALC_RESULT_DONE = 1
 
 local auth_id = arming:get_aux_auth_id()
 
-function append_to_sdcard_file(text)
+-- current UTC time from the GPS, in unix seconds, or nil if not yet known
+local function gps_utc_seconds()
+   local i = gps:primary_sensor()
+   local week = gps:time_week(i)
+   if week == nil or week == 0 then
+      return nil
+   end
+   local tow_ms = gps:time_week_ms(i):toint()
+   -- Computed in integer seconds: the result (~1.77e9) fits a 32-bit Lua
+   -- integer, whereas the equivalent in milliseconds would overflow.  This
+   -- overflows in 2038 (Y2038), in common with the rest of the firmware.
+   return GPS_UNIX_EPOCH_S + week * SECS_PER_WEEK + (tow_ms // 1000) - GPS_LEAP_SECONDS
+end
+
+-- "DD/MM/YYYY HH:MM:SS UTC" from the GPS, or nil if time is not yet known
+local function utc_timestamp()
+   local secs = gps_utc_seconds()
+   if secs == nil then
+      return nil
+   end
+   local year, month, day, hour, min, sec = rtc:clock_s_to_date_fields(uint32_t(secs))
+   if year == nil then
+      return nil
+   end
+   -- clock_s_to_date_fields returns month as 0-11
+   return string.format("%02d/%02d/%04d %02d:%02d:%02d UTC",
+                        day, month + 1, year, hour, min, sec)
+end
+
+-- send a full 64-char digest over MAVLink: statustext is capped at 50 bytes,
+-- so the label + first 32 hex go on one line and the last 32 hex on the next
+local function send_digest(severity, label, digest)
+   if digest == nil then
+      gcs:send_text(severity, label .. " unavailable")
+      return
+   end
+   local d = digest:lower()
+   gcs:send_text(severity, label .. " " .. d:sub(1, 32))
+   gcs:send_text(severity, d:sub(33, 64))
+end
+
+local function append_to_sdcard_file(text)
    local file = io.open(sdcard_file_name, 'a')
    if file ~= nil then
-      file.write(file, text .. "\n")
+      file:write(text .. "\n")
       io.close(file)
    end
 end
 
-function update_param_calculation()
-   if param_start_ms == nil then
-      param_start_ms = millis()
-   end
+-- compute the parameter ("Data") checksum, a few parameters per call
+local function update_param_calculation()
    local count = 0
    for i = #parameters_to_checksum, 1, -1 do
       local s = parameters_to_checksum[i]
       local parameter_value = param:get(s)
       if parameter_value == nil then
-         gcs:send_text(MAV_SEVERITY.ERROR, prefix .. "Invalid Parameter: " .. s)
+         data_invalid_param = s
+         data_match = false
          param_checksummed = true
          return CALC_RESULT_DONE
       end
@@ -217,62 +276,93 @@ function update_param_calculation()
       end
    end
 
-   local digest = sha256_final(param_sha256_ctx)
-   local elapsed = string.format("(%.1fs)", (millis() - param_start_ms):tofloat() / 1000.0)
-   local notification_severity = MAV_SEVERITY.NOTICE
-   local notification_string
-   if digest:lower() == required_parameters_checksum:lower() then
-      notification_string = prefix .. "params sha256 OK: " .. digest .. " " .. elapsed
-      param_checksum_match = true
-   else
-      notification_string = prefix .. "params sha256 BAD got=" .. digest .. " want=" .. required_parameters_checksum .. " " .. elapsed
-      notification_severity = MAV_SEVERITY.ERROR
-      if auth_id ~= nil then
-         arming:set_aux_auth_failed(auth_id, prefix .. "params sha256 BAD")
-      end
-   end
-   gcs:send_text(notification_severity, notification_string)
-   append_to_sdcard_file(notification_string)
-
+   data_digest = sha256_final(param_sha256_ctx)
+   data_match = data_digest:lower() == required_parameters_checksum:lower()
    param_checksummed = true
    return CALC_RESULT_DONE
 end
 
-function update_firmware_calculation()
-   local start_ms = millis()
-   local digest = fs:sha256(flash_file_path, 128*1024)
-   local notification_severity = MAV_SEVERITY.NOTICE
-   local notification_string
-   if digest == nil then
-      notification_string = prefix .. "firmware sha256 failed"
-      notification_severity = MAV_SEVERITY.ERROR
-      if auth_id ~= nil then
-         arming:set_aux_auth_failed(auth_id, notification_string)
-      end
+-- compute the firmware ("Code") checksum
+local function update_firmware_calculation()
+   code_digest = fs:sha256(flash_file_path, bootloader_reserve_bytes)
+   if code_digest ~= nil then
+      code_match = code_digest:lower() == required_firmware_checksum:lower()
    else
-      local elapsed = string.format("(%.1fs)", (millis() - start_ms):tofloat() / 1000.0)
-      if digest:lower() == required_firmware_checksum:lower() then
-         notification_string = prefix .. "firmware sha256 OK: " .. digest .. " " .. elapsed
-         firmware_checksum_match = true
-      else
-         notification_string = prefix .. "firmware sha256 BAD got=" .. digest .. " want=" .. required_firmware_checksum .. " " .. elapsed
-         notification_severity = MAV_SEVERITY.ERROR
-         if auth_id ~= nil then
-            arming:set_aux_auth_failed(auth_id, prefix .. "firmware sha256 BAD")
-         end
-      end
+      code_match = false
    end
-   gcs:send_text(notification_severity, notification_string)
-   append_to_sdcard_file(notification_string)
-
    fw_checksummed = true
-   return CALC_RESULT_DONE
 end
 
-function update()
+-- emit the MAVLink report, write the SD log line and set the arming result
+local function emit_report(timestamp)
+   local overall_ok = code_match and data_match
+
+   -- POST headline
+   local headline
+   if overall_ok then
+      headline = "POST: PASS"
+   else
+      local parts = {}
+      if not code_match then parts[#parts + 1] = "Code" end
+      if not data_match then parts[#parts + 1] = "Data" end
+      headline = "POST: FAIL (" .. table.concat(parts, ", ") .. ")"
+   end
+   gcs:send_text(overall_ok and MAV_SEVERITY.NOTICE or MAV_SEVERITY.ERROR, headline)
+
+   -- Code (firmware) checksum lines (full digest, split across two lines)
+   if code_match then
+      send_digest(MAV_SEVERITY.NOTICE, "Code Checksum:", code_digest)
+   elseif code_digest == nil then
+      gcs:send_text(MAV_SEVERITY.ERROR, "Code Checksum: read failed")
+   else
+      gcs:send_text(MAV_SEVERITY.ERROR, "Code Checksum:")
+      send_digest(MAV_SEVERITY.ERROR, "Received:", code_digest)
+      send_digest(MAV_SEVERITY.ERROR, "Expected:", required_firmware_checksum)
+   end
+
+   -- Data (parameter) checksum lines (full digest, split across two lines)
+   if data_match then
+      send_digest(MAV_SEVERITY.NOTICE, "Data Checksum:", data_digest)
+   elseif data_invalid_param ~= nil then
+      gcs:send_text(MAV_SEVERITY.ERROR, "Data Checksum: invalid param " .. data_invalid_param)
+   else
+      gcs:send_text(MAV_SEVERITY.ERROR, "Data Checksum:")
+      send_digest(MAV_SEVERITY.ERROR, "Received:", data_digest)
+      send_digest(MAV_SEVERITY.ERROR, "Expected:", required_parameters_checksum)
+   end
+
+   -- SD card log line
+   local log_line
+   if overall_ok then
+      log_line = string.format("%s POST: PASS (FW: %s (%s))",
+                               timestamp, FWVersion:string(), FWVersion:hash())
+   else
+      log_line = timestamp .. " " .. headline
+   end
+   append_to_sdcard_file(log_line)
+
+   -- arming aux authorisation
+   if auth_id ~= nil then
+      if overall_ok then
+         arming:set_aux_auth_passed(auth_id)
+      else
+         local parts = {}
+         if not code_match then parts[#parts + 1] = "Code" end
+         if not data_match then parts[#parts + 1] = "Data" end
+         arming:set_aux_auth_failed(auth_id, table.concat(parts, " & ") .. " Checksum FAIL")
+      end
+   end
+end
+
+local function update()
    -- wait until we've been booted 10 seconds before starting:
-   local now = millis()
-   if now < 10000 then
+   if millis() < 10000 then
+      return update, 100
+   end
+
+   -- wait for a valid UTC time from the GPS before running the POST
+   local timestamp = utc_timestamp()
+   if timestamp == nil then
       return update, 100
    end
 
@@ -286,17 +376,13 @@ function update()
       update_firmware_calculation()
    end
 
-   if param_checksum_match and firmware_checksum_match then
-      if auth_id ~= nil then
-         arming:set_aux_auth_passed(auth_id)
-      end
-   end
+   emit_report(timestamp)
 
    return -- one-shot script
 end
 
 if auth_id ~= nil then
-   arming:set_aux_auth_failed(auth_id, prefix .. "Checksums pending")
+   arming:set_aux_auth_failed(auth_id, "Checksum POST pending")
 end
 
 return update()
