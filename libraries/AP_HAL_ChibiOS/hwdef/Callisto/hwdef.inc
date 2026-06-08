@@ -325,6 +325,9 @@ define HAL_COMPASS_AUTO_ROT_DEFAULT 2
 # enable FAT filesystem support (needs a microSD defined via SDMMC)
 define HAL_OS_FATFS_IO 1
 
+# enable the Lua fs:sha256() binding (firmware/parameter integrity POST)
+define AP_LUA_SHA256_BINDING_ENABLED 1
+
 define HAL_BOARD_LOG_DIRECTORY "/APM/LOGS"
 define HAL_BOARD_TERRAIN_DIRECTORY "/APM/TERRAIN"
 
