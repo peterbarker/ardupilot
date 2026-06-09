@@ -733,11 +733,25 @@ void AP_Logger_File::PrepForArming_start_logging()
     }
 
     uint32_t start_ms = AP_HAL::millis();
-    const uint32_t open_limit_ms = 1000;
+    uint32_t open_limit_ms = 1000;
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL && !defined(HAL_BUILD_AP_PERIPH)
+    // the log open happens in the io_timer thread, which is writing to
+    // a physical disk.  Unfortunately that hardware does not obey our
+    // SITL speedup options, so the real time available to complete the
+    // open shrinks as speedup rises (1s of SIM time is only ~125ms real
+    // at the default speedup of 8).  Scale the budget by speedup as
+    // io_thread_alive() does, so a slow-but-healthy open is not
+    // mistaken for a failure to start logging during autotest.
+    SITL::SIM *sitl = AP::sitl();
+    if (sitl != nullptr && sitl->speedup > 0) {
+        open_limit_ms *= sitl->speedup;
+    }
+#endif
 
     /*
       log open happens in the io_timer thread. We allow for a maximum
-      of 1s to complete the open
+      of 1s (scaled by SITL speedup, see above) to complete the open
      */
     start_new_log_pending = true;
     EXPECT_DELAY_MS(1000);
