@@ -1185,12 +1185,11 @@ public:
     bool sysid_is_gcs(uint8_t sysid) const;
 
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
-    void set_operator_control(uint8_t sysid, uint8_t sysid_high, bool allow_takeover);
-    uint8_t get_operator_control_sysid() const { return _operator_control_sysid; }
+    void set_operator_control(uint8_t primary, uint8_t range_low, uint8_t range_high, bool allow_takeover);
+    uint8_t get_operator_control_sysid() const { return _operator_control_primary; }
     bool get_operator_control_allow_takeover() const { return _operator_control_allow_takeover; }
-    // true only when operator control is engaged and gcs_sysid is the primary (gcs_main)
     bool sysid_is_primary_operator(uint8_t gcs_sysid) const {
-        return _operator_control_sysid != 0 && gcs_sysid == _operator_control_sysid;
+        return _operator_control_primary != 0 && gcs_sysid == _operator_control_primary;
     }
     void note_secondary_gcs_seen(uint8_t gcs_sysid);
     void get_secondary_gcs(uint8_t (&out)[10]) const;
@@ -1389,6 +1388,7 @@ private:
     uint32_t _sysid_gcs_last_seen_time_ms;
 
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
+    uint8_t _operator_control_primary;
     uint8_t _operator_control_sysid;
     uint8_t _operator_control_sysid_high;
     bool _operator_control_allow_takeover;
