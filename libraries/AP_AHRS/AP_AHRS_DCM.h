@@ -141,7 +141,7 @@ private:
     void            drift_correction(float deltat);
     void            drift_correction_yaw(void);
     float           yaw_error_compass(class Compass &compass);
-    bool            have_gps(void) const;
+    bool            have_gps(void) const override;
     bool            use_fast_gains(void) const;
     void            backup_attitude(void);
 

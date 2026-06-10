@@ -307,3 +307,14 @@ void AP_AHRS::update_flags(void)
         touchdown_expected = false;
     }
 }
+
+// return true if this backend has a GPS-derived velocity to feed the
+// wind-triangle / synthetic-airspeed estimate.  By default a backend
+// has none; only backends whose navigation velocity comes from the
+// autopilot's GPS (DCM) override this.  In particular an ExternalAHRS
+// sources its velocity from its own device rather than AP::gps(), so
+// the autopilot GPS status is not the right question for it.
+bool AP_AHRS_Backend::have_gps(void) const
+{
+    return false;
+}

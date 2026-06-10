@@ -348,6 +348,9 @@ protected:
     // not normalised here.
     void estimate_wind(const Vector3f &velocity, const Vector3f &fuselageDirection);
 
+    // return true if we have and should use GPS
+    virtual bool have_gps(void) const;
+
     // estimated wind in m/s
     Vector3f _wind;
 
