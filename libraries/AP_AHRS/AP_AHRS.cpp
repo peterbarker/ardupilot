@@ -592,6 +592,9 @@ void AP_AHRS::update(bool skip_ins_update)
     // update published state, including copying state from the active backend:
     update_state();
 
+    // update wind estimates if a new GPS sample has arrived:
+    update_wind_estimates();
+
 #if AP_MODULE_SUPPORTED
     // call AHRS_update hook if any
     AP_Module::call_hook_AHRS_update(*this);
@@ -723,6 +726,40 @@ void AP_AHRS::update_external(void)
     }
 }
 #endif // AP_AHRS_EXTERNAL_ENABLED
+
+/*
+  drive backend wind estimation off receipt of new GPS samples.
+  Vehicles enable wind estimation with a call to
+  set_wind_estimation_enabled.  These gates - including the 10Hz
+  update limit - mirror those historically applied by Plane, which
+  used to call estimate_wind from its GPS update loop.
+ */
+void AP_AHRS::update_wind_estimates(void)
+{
+    if (!wind_estimation_enabled) {
+        return;
+    }
+
+    const auto &gps = AP::gps();
+    if (gps.status() < AP_GPS_FixType::FIX_3D) {
+        return;
+    }
+    const uint32_t last_message_time_ms = gps.last_message_time_ms();
+    if (last_message_time_ms == wind_estimate_last_gps_message_ms) {
+        // no new GPS sample
+        return;
+    }
+    const uint32_t now_ms = AP_HAL::millis();
+    if (now_ms - wind_estimate_last_update_ms < 100) {
+        return;
+    }
+    wind_estimate_last_gps_message_ms = last_message_time_ms;
+    wind_estimate_last_update_ms = now_ms;
+
+#if AP_AHRS_DCM_ENABLED
+    dcm.estimate_wind();
+#endif
+}
 
 void AP_AHRS::reset()
 {

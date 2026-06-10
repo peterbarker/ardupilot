@@ -921,6 +921,14 @@ private:
      */
     bool wind_estimation_enabled;
 
+    // update backend wind estimates on receipt of new GPS samples;
+    // called at loop rate from update()
+    void update_wind_estimates(void);
+
+    // timing support for update_wind_estimates:
+    uint32_t wind_estimate_last_gps_message_ms;
+    uint32_t wind_estimate_last_update_ms;
+
     /*
      * fly_forward is set by the vehicles to indicate the vehicle
      * should generally be moving in the direction of its heading.
