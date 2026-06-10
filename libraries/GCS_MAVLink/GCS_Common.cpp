@@ -2803,11 +2803,11 @@ void GCS::update_receive(void)
         const uint32_t now_ms = AP_HAL::millis();
         if (now_ms - _operator_control_last_hb_check_ms >= 1000) {
             _operator_control_last_hb_check_ms = now_ms;
-            if (_operator_control_sysid != 0) {
+            if (_operator_control_primary != 0) {
                 const uint32_t last_seen = sysid_mygcs_last_seen_time_ms();
                 if (last_seen != 0 &&
                     now_ms - last_seen > GCS_OPERATOR_HEARTBEAT_TIMEOUT_MS) {
-                    set_operator_control(0, 0, false);
+                    set_operator_control(0, 0, 0, false);
                 }
             }
         }
@@ -5713,20 +5713,20 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
         if (!gcs().sysid_is_gcs(msg.sysid)) {
             return MAV_RESULT_DENIED;
         }
-        gcs().set_operator_control(0, 0, false);
+        gcs().set_operator_control(0, 0, 0, false);
         return MAV_RESULT_ACCEPTED;
     }
 
     // no owner, or same GCS re-requesting: grant
     if (gcs().get_operator_control_sysid() == 0 ||
         gcs().sysid_is_gcs(req_sysid)) {
-        gcs().set_operator_control(req_sysid, req_sysid_high, allow_takeover);
+        gcs().set_operator_control(msg.sysid, req_sysid, req_sysid_high, allow_takeover);
         return MAV_RESULT_ACCEPTED;
     }
 
     // different GCS; automatic takeover allowed?
     if (gcs().get_operator_control_allow_takeover()) {
-        gcs().set_operator_control(req_sysid, req_sysid_high, allow_takeover);
+        gcs().set_operator_control(msg.sysid, req_sysid, req_sysid_high, allow_takeover);
         return MAV_RESULT_ACCEPTED;
     }
 
