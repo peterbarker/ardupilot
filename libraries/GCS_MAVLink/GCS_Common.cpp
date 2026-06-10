@@ -5717,9 +5717,9 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
         return MAV_RESULT_ACCEPTED;
     }
 
-    // no owner, or same GCS re-requesting: grant
+    // no owner, or same primary GCS re-requesting (e.g. updating range): grant
     if (gcs().get_operator_control_sysid() == 0 ||
-        gcs().sysid_is_gcs(req_sysid)) {
+        gcs().get_operator_control_sysid() == msg.sysid) {
         gcs().set_operator_control(msg.sysid, req_sysid, req_sysid_high, allow_takeover);
         return MAV_RESULT_ACCEPTED;
     }
