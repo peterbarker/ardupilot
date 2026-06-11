@@ -6686,6 +6686,10 @@ bool GCS_MAVLINK::send_available_mode_monitor()
 bool GCS_MAVLINK::send_operator_control_notification()
 {
     const GCS::OperatorControlNotification &notif = gcs().get_operator_control_notification();
+    if (!(notif.chan_pending_mask & (1U<<chan))) {
+        // nothing queued for this channel; never send stale notifications
+        return true;
+    }
     CHECK_PAYLOAD_SIZE2(COMMAND_LONG);
     mavlink_msg_command_long_send(
         chan,
@@ -6700,6 +6704,7 @@ bool GCS_MAVLINK::send_operator_control_notification()
         (float)notif.req_sysid_high,
         0.0f,
         0.0f);
+    gcs().clear_operator_control_notification(chan);
     return true;
 }
 
