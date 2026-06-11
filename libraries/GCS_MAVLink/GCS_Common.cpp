@@ -5738,8 +5738,10 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
     }
 
     // notify the current owner; defer through the queued send path so it
-    // goes out even when the TX buffer is momentarily full
-    gcs().queue_operator_control_notification(req_sysid, req_sysid_high, allow_takeover, packet.param3);
+    // goes out even when the TX buffer is momentarily full.  param3 is
+    // specified as 3 to 60 seconds
+    gcs().queue_operator_control_notification(req_sysid, req_sysid_high, allow_takeover,
+                                              constrain_float(packet.param3, 3.0f, 60.0f));
 
     return MAV_RESULT_FAILED;
 }
