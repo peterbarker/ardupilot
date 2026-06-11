@@ -635,11 +635,68 @@ void AP_AHRS::update(bool skip_ins_update)
 #endif
 }
 
+// DEBUG: measure divergence between the euler/matrix attitude
+// representations supplied by a backend and the same representations
+// derived from that backend's quaternion.  Logged so the differences
+// can be quantified before the derived forms replace the
+// backend-supplied ones.
+void AP_AHRS::measure_attitude_divergence_from_quaternion(uint8_t instance, const AP_AHRS_Backend::Estimates &results) const
+{
+#if HAL_LOGGING_ENABLED
+    if (!results.attitude_valid) {
+        return;
+    }
+    if (fabsf(results.pitch_rad) > radians(89.0f)) {
+        // euler angles are ill-conditioned near the pitch singularity
+        return;
+    }
+
+    float quat_roll_rad, quat_pitch_rad, quat_yaw_rad;
+    results.quaternion.to_euler(quat_roll_rad, quat_pitch_rad, quat_yaw_rad);
+
+    Matrix3f quat_matrix;
+    results.quaternion.rotation_matrix(quat_matrix);
+    const Matrix3f mat_err = results.dcm_matrix.transposed() * quat_matrix;
+    const float mat_err_trace = mat_err.a.x + mat_err.b.y + mat_err.c.z;
+    // rotation angle between the two matrices; sin from the
+    // skew-symmetric part and cos from the trace, as acos of the trace
+    // alone is ill-conditioned for small angles
+    const Vector3f mat_err_skew {
+        mat_err.c.y - mat_err.b.z,
+        mat_err.a.z - mat_err.c.x,
+        mat_err.b.x - mat_err.a.y,
+    };
+    const float matrix_delta = atan2f(0.5f * mat_err_skew.length(), (mat_err_trace - 1) * 0.5f);
+
+// @LoggerMessage: QVAL
+// @Description: backend attitude divergence from quaternion (debug)
+// @Field: TimeUS: Time since system startup
+// @Field: I: backend; 0:DCM 1:SIM 2:EKF2 3:EKF3 4:External
+// @Field: DR: backend roll minus quaternion-derived roll
+// @Field: DP: backend pitch minus quaternion-derived pitch
+// @Field: DY: backend yaw minus quaternion-derived yaw
+// @Field: DM: angle between backend rotation matrix and quaternion-derived matrix
+    AP::logger().WriteStreaming(
+        "QVAL",
+        "TimeUS,I,DR,DP,DY,DM",
+        "s#rrrr",
+        "F-0000",
+        "QBffff",
+        AP_HAL::micros64(),
+        instance,
+        wrap_PI(results.roll_rad - quat_roll_rad),
+        wrap_PI(results.pitch_rad - quat_pitch_rad),
+        wrap_PI(results.yaw_rad - quat_yaw_rad),
+        matrix_delta);
+#endif  // HAL_LOGGING_ENABLED
+}
+
 #if AP_AHRS_DCM_ENABLED
 void AP_AHRS::update_DCM()
 {
     dcm.update();
     dcm.get_results(dcm_estimates);
+    measure_attitude_divergence_from_quaternion(0, dcm_estimates);
 }
 #endif
 
@@ -648,6 +705,7 @@ void AP_AHRS::update_SITL(void)
 {
     sim.update();
     sim.get_results(sim_estimates);
+    measure_attitude_divergence_from_quaternion(1, sim_estimates);
 }
 #endif
 
@@ -686,6 +744,7 @@ void AP_AHRS::update_EKF2(void)
         ekf2.update();
         ekf2_estimates = {};
         ekf2.get_results(ekf2_estimates);
+        measure_attitude_divergence_from_quaternion(2, ekf2_estimates);
         if (_active_EKF_type() == EKFType::TWO) {
             update_notify_from_filter_status(ekf2_estimates.filter_status);
         }
@@ -736,6 +795,7 @@ void AP_AHRS::update_EKF3(void)
         ekf3.update();
         ekf3_estimates = {};
         ekf3.get_results(ekf3_estimates);
+        measure_attitude_divergence_from_quaternion(3, ekf3_estimates);
         if (_active_EKF_type() == EKFType::THREE) {
             update_notify_from_filter_status(ekf3_estimates.filter_status);
         }
@@ -763,6 +823,7 @@ void AP_AHRS::update_external(void)
 {
     external.update();
     external.get_results(external_estimates);
+    measure_attitude_divergence_from_quaternion(4, external_estimates);
 
     /*
       if we now have an origin then set in all backends
