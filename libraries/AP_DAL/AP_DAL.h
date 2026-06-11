@@ -211,9 +211,6 @@ public:
         return _RFRN.ahrs_trim;
     }
 
-    const Matrix3f &get_rotation_vehicle_body_to_autopilot_body(void) const {
-        return _rotation_vehicle_body_to_autopilot_body;
-    }
 
     const Quaternion &get_quat_vehicle_body_to_autopilot_body(void) const {
         return _quat_vehicle_body_to_autopilot_body;
@@ -397,7 +394,6 @@ private:
     uint32_t _micros;
     uint32_t _millis;
 
-    Matrix3f _rotation_vehicle_body_to_autopilot_body;
     Quaternion _quat_vehicle_body_to_autopilot_body;
     Location _home;
     uint32_t _last_imu_time_us;
