@@ -5710,7 +5710,14 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
     }
 
     if (!request_control) {
-        if (!gcs().sysid_is_gcs(msg.sysid)) {
+        // only the primary operator may release control; secondary GCS in
+        // the range must not be able to strip control from the primary
+        const uint8_t primary = gcs().get_operator_control_sysid();
+        if (primary != 0) {
+            if (msg.sysid != primary) {
+                return MAV_RESULT_DENIED;
+            }
+        } else if (!gcs().sysid_is_gcs(msg.sysid)) {
             return MAV_RESULT_DENIED;
         }
         gcs().set_operator_control(0, 0, 0, false);
