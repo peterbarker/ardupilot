@@ -186,7 +186,6 @@ public:
     // return the Euler roll, pitch and yaw angle in radians
 
     // return the transformation matrix from XYZ (body) to NED axes
-    void getRotationBodyToNED(Matrix3f &mat) const;
 
     // return the quaternions defining the rotation from NED to XYZ (body) axes
     void getQuaternion(Quaternion &quat) const;

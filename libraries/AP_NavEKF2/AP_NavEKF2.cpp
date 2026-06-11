@@ -1142,22 +1142,14 @@ bool NavEKF2::getHAGL(float &HAGL) const
 }
 
 
-// return the transformation matrix from XYZ (body) to NED axes
-void NavEKF2::getRotationBodyToNED(Matrix3f &mat) const
-{
-    if (core) {
-        core[primary].getRotationBodyToNED(mat);
-    }
-}
-
 // return the quaternions defining the rotation from NED to XYZ (body) axes
 void NavEKF2::getQuaternionBodyToNED(int8_t instance, Quaternion &quat) const
 {
     if (instance < 0 || instance >= num_cores) instance = primary;
     if (core) {
-        Matrix3f mat;
-        core[instance].getRotationBodyToNED(mat);
-        quat.from_rotation_matrix(mat);
+        core[instance].getQuaternion(quat);
+        // quaternion composition rotates the attitude into the vehicle body frame
+        quat *= AP::dal().get_quat_vehicle_body_to_autopilot_body();
     }
 }
 
@@ -1454,6 +1446,7 @@ void NavEKF2::updateLaneSwitchYawResetData(uint8_t new_primary, uint8_t old_prim
     quat *= AP::dal().get_quat_vehicle_body_to_autopilot_body();
     const float yaw_old_primary = quat.get_euler_yaw();
     core[new_primary].getQuaternion(quat);
+    // quaternion composition rotates the attitude into the vehicle body frame
     quat *= AP::dal().get_quat_vehicle_body_to_autopilot_body();
     const float yaw_new_primary = quat.get_euler_yaw();
     yaw_reset_data.core_delta = wrap_PI(yaw_new_primary - yaw_old_primary + yaw_reset_data.core_delta);

@@ -151,7 +151,6 @@ public:
     // An out of range instance (eg -1) returns data for the primary instance
 
     // return the transformation matrix from XYZ (body) to NED axes
-    void getRotationBodyToNED(Matrix3f &mat) const;
 
     // return the transformation matrix from XYZ (body) to NED axes
     void getQuaternionBodyToNED(int8_t instance, Quaternion &quat) const;
