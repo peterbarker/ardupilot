@@ -215,6 +215,10 @@ public:
         return _rotation_vehicle_body_to_autopilot_body;
     }
 
+    const Quaternion &get_quat_vehicle_body_to_autopilot_body(void) const {
+        return _quat_vehicle_body_to_autopilot_body;
+    }
+
     // get the home location. This is const to prevent any changes to
     // home without telling AHRS about the change
     const class Location &get_home(void) const {
@@ -261,6 +265,8 @@ public:
             msg.alt,
             Location::AltFrame::ABSOLUTE
         };
+        _quat_vehicle_body_to_autopilot_body.from_euler(msg.ahrs_trim);
+        _quat_vehicle_body_to_autopilot_body = _quat_vehicle_body_to_autopilot_body.inverse();
     }
     void handle_message(const log_RFRF &msg, NavEKF2 &ekf2, NavEKF3 &ekf3);
 
@@ -392,6 +398,7 @@ private:
     uint32_t _millis;
 
     Matrix3f _rotation_vehicle_body_to_autopilot_body;
+    Quaternion _quat_vehicle_body_to_autopilot_body;
     Location _home;
     uint32_t _last_imu_time_us;
 
