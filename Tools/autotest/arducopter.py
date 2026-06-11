@@ -18051,6 +18051,10 @@ return update, 1000
 
     def EulersFromQuat(self):
         '''DEBUG: gather QVAL attitude-divergence data with and without AHRS_TRIM'''
+        self.set_parameters({
+            "EK2_ENABLE": 1,
+        })
+        self.reboot_sitl()
         self.takeoff(10, mode='GUIDED')
 
         def exercise_attitude():
