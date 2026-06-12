@@ -153,7 +153,8 @@ static const struct {
     { "y6",                 MultiCopter::create },
     { "deca",               MultiCopter::create },
     { "deca-cwx",           MultiCopter::create },
-    // heli-quad must precede heli as matching is partial:
+    // heli-quad* must precede heli as matching is partial:
+    { "heli-quad-ddvp",     MultiCopter::create },
     { "heli-quad",          MultiCopter::create },
     { "heli",               Helicopter::create },
     { "heli-dual",          Helicopter::create },
