@@ -250,6 +250,15 @@
                     "default_params/copter-heliquad.parm"
                 ]
             },
+            "heli-quad-ddvp": {
+                "model": "heli-quad-ddvp:@ROMFS/models/heliquad.json",
+                "waf_target": "bin/arducopter-heli",
+                "default_params_filename": [
+                    "default_params/copter-heli.parm",
+                    "default_params/copter-heliquad.parm",
+                    "default_params/copter-heliquad-ddvp.parm"
+                ]
+            },
             "singlecopter": {
                 "waf_target": "bin/arducopter",
                 "default_params_filename": "default_params/copter-single.parm"
@@ -363,6 +372,15 @@
                 "default_params_filename": [
                     "default_params/copter-heli.parm",
                     "default_params/copter-heliquad.parm"
+                ]
+            },
+            "heli-quad-ddvp": {
+                "model": "heli-quad-ddvp:@ROMFS/models/heliquad.json",
+                "waf_target": "bin/arducopter-heli",
+                "default_params_filename": [
+                    "default_params/copter-heli.parm",
+                    "default_params/copter-heliquad.parm",
+                    "default_params/copter-heliquad-ddvp.parm"
                 ]
             }
         }
