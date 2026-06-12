@@ -478,6 +478,79 @@ class AutoTestHelicopter(AutoTestCopter):
             self.progress(f"RESULT {name}: roll peak {max_roll:.1f}deg settle {settled:.2f}s; "
                           f"altitude dip {max_dip:.2f}m recover {recovered:.2f}s")
 
+    def HeliQuadDRSCMotorFail(self):
+        '''survive a drive motor failure using variable pitch'''
+        drsc_parm = os.path.join(vehicle_test_suite.testdir, 'default_params', 'copter-heliquad-drsc.parm')
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('heli-quad-ddvp') + [drsc_parm],
+            model="heli-quad-ddvp:@ROMFS/models/heliquad-ddvp.json",
+            wipe=True,
+        )
+        self.change_mode('STABILIZE')
+        self.wait_ready_to_arm()
+        self.zero_throttle()
+        self.arm_vehicle()
+        self.set_rc(8, 2000)
+        self.delay_sim_time(25, reason="rotor runup")
+        self.set_rc(3, 1700)
+        self.wait_altitude(28, 34, relative=True, timeout=120)
+        self.set_rc(3, 1500)
+        self.change_mode('LOITER')
+        self.delay_sim_time(15, reason="settle into hover")
+        alt0 = self.get_altitude(relative=True)
+
+        self.progress("Failing front-right drive motor")
+        self.context_collect('STATUSTEXT')
+        self.set_parameters({
+            "SIM_ENGINE_MUL": 0,
+            "SIM_ENGINE_FAIL": 1 << 4,  # front-right rotor's drive motor, servo 5
+        })
+        # the controller must detect the failure from the drive
+        # motor's RPM telemetry
+        self.wait_statustext("DRSC: motor 1 failed", check_context=True, timeout=30)
+
+        # the vehicle must keep flying; the rear-left rotor (the
+        # failed rotor's opposite corner) swings to zero or negative
+        # blade pitch to rebalance the moments while the other
+        # diagonal carries the weight
+        max_att = 0
+        max_alt_err = 0
+        min_opposite_coll = 2000
+        tstart = self.get_sim_time()
+        while self.get_sim_time_cached() - tstart < 20:
+            m = self.assert_receive_message('ATTITUDE')
+            att = max(abs(math.degrees(m.roll)), abs(math.degrees(m.pitch)))
+            max_att = max(max_att, att)
+            if att > 60:
+                raise NotAchievedException(f"Lost attitude control after motor failure ({att:.0f}deg)")
+            alt_err = abs(self.get_altitude(relative=True) - alt0)
+            max_alt_err = max(max_alt_err, alt_err)
+            if alt_err > 15:
+                raise NotAchievedException(f"Lost altitude control after motor failure ({alt_err:.1f}m)")
+            servo = self.assert_receive_message('SERVO_OUTPUT_RAW')
+            min_opposite_coll = min(min_opposite_coll, servo.servo2_raw)
+        if min_opposite_coll >= 1520:
+            raise NotAchievedException(
+                f"Opposite rotor did not unload to zero blade pitch (min PWM {min_opposite_coll})")
+        # the working diagonal must be carrying the weight: the
+        # dynamic allocation moves the extra load into rotor speed,
+        # so it shows on the drive motor outputs, with the blade
+        # pitch re-centred
+        for chan in 7, 8:
+            esc = getattr(servo, f"servo{chan}_raw")
+            if esc < 1750:
+                raise NotAchievedException(
+                    f"Diagonal drive motor {chan} not carrying extra load (PWM {esc})")
+        self.progress(f"Survived motor failure: attitude peak {max_att:.1f}deg, "
+                      f"altitude error peak {max_alt_err:.1f}m, "
+                      f"opposite collective min PWM {min_opposite_coll}, "
+                      f"diagonal drive motors at {servo.servo7_raw}/{servo.servo8_raw}")
+
+        self.progress("Landing on three motors")
+        self.change_mode('LAND')
+        self.wait_disarmed(timeout=180)
+
     def HeliQuadFlip(self):
         '''fly Flip mode on collective-pitch quad frame'''
         self.customise_SITL_commandline(
@@ -1594,6 +1667,7 @@ class AutoTestHelicopter(AutoTestCopter):
             self.HeliQuadDDVP,
             self.HeliQuadDRSC,
             self.HeliQuadDisturbanceRejection,
+            self.HeliQuadDRSCMotorFail,
             self.HeliQuadFlip,
             self.HeliQuadInvertedFlight,
             self.HeliSingleInvertedFlight,
