@@ -62,6 +62,9 @@ public:
     // output_to_servo - outputs pwm onto output rsc channel.
     void        output_to_servo() { write_rsc(_control_output);}
 
+    // get_control_output - gets the current state-machine rotor speed output
+    float       get_control_output() const { return _control_output; }
+
     // get_rsc_control_mode - gets RSC control mode
     uint8_t     get_rsc_control_mode() const { return _rsc_control_mode; }
 
@@ -124,7 +127,6 @@ private:
     // functions for autothrottle, throttle curve, governor, idle speed, output to servo
     void            set_governor_output(float governor_output) {_governor_output = governor_output; }
     void            governor_reset();
-    float           get_control_output() const { return _control_output; }
     void            set_idle_output(float idle_output) { _idle_output.set(idle_output); }
     void            autothrottle_run();
     void            set_throttle_curve();
