@@ -36,11 +36,14 @@ protected:
 private:
 
     // the rotor speed each drive motor is commanded to, allowing for
-    // the rotor-speed-control state machine. The bound is the state
-    // machine's current output rather than its target, so the drive
-    // motors stay stopped while disarmed and follow the ramp through
-    // runup
+    // the rotor-speed-control state machine and failed motors. The
+    // bound is the state machine's current output rather than its
+    // target, so the drive motors stay stopped while disarmed and
+    // follow the ramp through runup
     float esc_output(uint8_t i) const {
+        if (_failed_mask & (1U<<i)) {
+            return 0.0f;
+        }
         return MIN(_speed_demand[i], _main_rotor.get_control_output());
     }
 
@@ -49,7 +52,11 @@ private:
     AP_Float _rotor_tc;     // modelled rotor speed response time constant
     AP_Float _coll_trim;    // steady-state blade pitch as a fraction of full travel
     AP_Float _speed_min;    // minimum in-flight rotor speed fraction
+    AP_Float _rpm_max;      // rotor speed at full drive motor output
 
-    float _speed_demand[AP_MOTORS_HELI_QUAD_NUM_MOTORS];    // filtered per-rotor speed demand, 0..1
-    float _rotor_speed_est[AP_MOTORS_HELI_QUAD_NUM_MOTORS]; // modelled rotor speed, 0..1
+    float _speed_demand[AP_MOTORS_HELI_QUAD_NUM_MOTORS];      // filtered per-rotor speed demand, 0..1
+    float _rotor_speed_model[AP_MOTORS_HELI_QUAD_NUM_MOTORS]; // open-loop expectation of rotor speed, 0..1
+    float _rotor_speed_est[AP_MOTORS_HELI_QUAD_NUM_MOTORS];   // best rotor speed estimate, 0..1
+    uint8_t _failed_mask;                                     // drive motors detected as failed
+    uint32_t _underspeed_ms[AP_MOTORS_HELI_QUAD_NUM_MOTORS];  // when a rotor was first seen underspeed
 };

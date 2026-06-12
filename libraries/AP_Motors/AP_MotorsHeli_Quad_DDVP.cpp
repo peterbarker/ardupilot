@@ -14,6 +14,8 @@
  */
 
 #include <AP_HAL/AP_HAL.h>
+#include <AP_ESC_Telem/AP_ESC_Telem.h>
+#include <GCS_MAVLink/GCS.h>
 #include "AP_MotorsHeli_Quad_DDVP.h"
 
 extern const AP_HAL::HAL& hal;
@@ -58,6 +60,14 @@ const AP_Param::GroupInfo AP_MotorsHeli_Quad_DDVP::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("DRSC_SPD_MIN", 53, AP_MotorsHeli_Quad_DDVP, _speed_min, 0.3f),
 
+    // @Param: DRSC_RPM_MAX
+    // @DisplayName: Dynamic rotor speed full-speed rotor RPM
+    // @Description: Rotor speed at full drive motor output, used to normalise measured rotor speed from drive motor telemetry for blade pitch feedforward and drive failure detection.
+    // @Range: 100 10000
+    // @Units: RPM
+    // @User: Advanced
+    AP_GROUPINFO("DRSC_RPM_MAX", 54, AP_MotorsHeli_Quad_DDVP, _rpm_max, 1500),
+
     AP_GROUPEND
 };
 
@@ -91,19 +101,44 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
     // pitch supplies the fast residual, feeding forward against the
     // modelled rotor speed
     const float zero_out = _collective_zero_thrust_pct * 2.0f - 1.0f;
+
+    // signed thrust demands in full-rotor-speed blade pitch units
+    float thrusts[AP_MOTORS_HELI_QUAD_NUM_MOTORS];
     for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
-        // signed thrust demand in full-rotor-speed blade pitch units
-        const float thrust = _out[i] - zero_out;
+        thrusts[i] = _out[i] - zero_out;
+    }
+
+    if (_failed_mask != 0) {
+        // a rotor with a failed drive motor produces no thrust.
+        // Transferring its demand to the opposite corner with
+        // inverted sign preserves the roll and pitch moments, with
+        // the lost collective lift made up by the altitude
+        // controller raising the demand on the working diagonal
+        static const uint8_t opposite[AP_MOTORS_HELI_QUAD_NUM_MOTORS] = {1, 0, 3, 2};
+        for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
+            if (_failed_mask & (1U<<i)) {
+                thrusts[opposite[i]] -= thrusts[i];
+                thrusts[i] = 0.0f;
+            }
+        }
+    }
+
+    for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
+        const float thrust = thrusts[i];
 
         // rotor speed which would centre the blade pitch at
-        // _coll_trim. Only positive thrust recruits rotor speed:
-        // sustained negative thrust (inverted flight) is not
-        // supported and runs at the minimum rotor speed, which also
-        // keeps the rotors slow while sitting on the ground at low
-        // collective
+        // _coll_trim. Negative thrust also recruits rotor speed, so
+        // that the corner opposite a failed drive motor can
+        // rebalance the moments with negative blade pitch - except
+        // while landed, where the low collective must not spool the
+        // rotors up
+        float sizing_thrust = fabsf(thrust);
+        if (_heliflags.land_complete && is_negative(thrust)) {
+            sizing_thrust = 0.0f;
+        }
         float speed_for_trim = 1.0f;
         if (is_positive(_coll_trim)) {
-            speed_for_trim = sqrtf(MAX(thrust, 0.0f) / _coll_trim);
+            speed_for_trim = sqrtf(sizing_thrust / _coll_trim);
         }
         speed_for_trim = constrain_float(speed_for_trim, _speed_min, 1.0f);
 
@@ -120,10 +155,44 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
         // model the rotor's lagging response to the commanded speed
         if (is_positive(_rotor_tc)) {
             const float alpha = constrain_float(_dt_s / _rotor_tc, 0.0f, 1.0f);
-            _rotor_speed_est[i] += (esc_output(i) - _rotor_speed_est[i]) * alpha;
+            _rotor_speed_model[i] += (esc_output(i) - _rotor_speed_model[i]) * alpha;
         } else {
-            _rotor_speed_est[i] = esc_output(i);
+            _rotor_speed_model[i] = esc_output(i);
         }
+
+        // prefer measured rotor speed from the drive motor's
+        // telemetry, falling back to the model. ESC telemetry is
+        // indexed by output channel, which need not equal the motor
+        // function number (on a quadplane the drive motors sit above
+        // the plane's control surfaces)
+        _rotor_speed_est[i] = _rotor_speed_model[i];
+#if HAL_WITH_ESC_TELEM
+        float rpm;
+        uint8_t telem_chan;
+        if (is_positive(_rpm_max) &&
+            SRV_Channels::find_channel(SRV_Channels::get_motor_function(AP_MOTORS_HELI_QUAD_DDVP_MOTOR_OFFSET+i), telem_chan) &&
+            AP::esc_telem().get_rpm(telem_chan, rpm)) {
+            const float measured = constrain_float(rpm / _rpm_max, 0.0f, 1.2f);
+            _rotor_speed_est[i] = measured;
+
+            // a rotor well below its expected speed has lost its
+            // drive motor
+            const uint32_t now_ms = AP_HAL::millis();
+            if (armed() &&
+                (_failed_mask & (1U<<i)) == 0 &&
+                _rotor_speed_model[i] > 0.25f &&
+                measured < 0.6f * _rotor_speed_model[i]) {
+                if (_underspeed_ms[i] == 0) {
+                    _underspeed_ms[i] = now_ms;
+                } else if (now_ms - _underspeed_ms[i] > 200) {
+                    _failed_mask |= 1U<<i;
+                    GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "DRSC: motor %u failed", unsigned(i+1));
+                }
+            } else {
+                _underspeed_ms[i] = 0;
+            }
+        }
+#endif  // HAL_WITH_ESC_TELEM
 
         // blade pitch supplies the demanded thrust at the modelled
         // rotor speed
@@ -139,6 +208,12 @@ void AP_MotorsHeli_Quad_DDVP::output_to_motors()
 
     if (!initialised_ok()) {
         return;
+    }
+
+    if (!armed() && _failed_mask != 0) {
+        // failures are reassessed on the next flight
+        _failed_mask = 0;
+        memset(_underspeed_ms, 0, sizeof(_underspeed_ms));
     }
 
     // output the per-rotor drive motor speeds
