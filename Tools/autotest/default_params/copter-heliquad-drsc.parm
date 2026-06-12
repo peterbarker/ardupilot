@@ -1,0 +1,8 @@
+FRAME_CLASS 18
+# per-rotor drive motors
+SERVO5_FUNCTION 37
+SERVO6_FUNCTION 38
+SERVO7_FUNCTION 39
+SERVO8_FUNCTION 40
+# the dynamic allocation owns rotor speed; give it the full range
+H_RSC_SETPOINT 100
