@@ -158,6 +158,16 @@ static Motor heliquad_motors[] =
     Motor(AP_MOTORS_MOT_4,  135, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  2, 7),
 };
 
+// direct-drive variable-pitch quad: as for heli-quad, but with each
+// rotor speed-controlled by its own motor, on channels 5-8
+static Motor heliquad_ddvp_motors[] =
+{
+    Motor(AP_MOTORS_MOT_1,   45, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 1, 4),
+    Motor(AP_MOTORS_MOT_2, -135, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 3, 5),
+    Motor(AP_MOTORS_MOT_3,  -45, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  4, 6),
+    Motor(AP_MOTORS_MOT_4,  135, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  2, 7),
+};
+
 static Motor hexa_motors[] =
 {
     Motor(AP_MOTORS_MOT_1,   0, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  1),
@@ -435,6 +445,7 @@ static const FrameTemplate supported_frame_templates[] =
     {"djix",      4, quad_dji_x_motors},
     {"cwx",       4, quad_cw_x_motors},
     {"tilthvec",  4, tiltquad_h_vectored_motors},
+    {"heli-quad-ddvp", 4, heliquad_ddvp_motors},
     {"heli-quad", 4, heliquad_motors},
     {"hexadeca-octa", 16, hexadeca_octa_motors},
     {"hexadeca-octa-cwx", 16, hexadeca_octa_cw_x_motors},
