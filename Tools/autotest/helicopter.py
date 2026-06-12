@@ -406,6 +406,78 @@ class AutoTestHelicopter(AutoTestCopter):
         self.progress("Collective re-centred with drive motors carrying load")
         self.do_RTL()
 
+    def HeliQuadDisturbanceRejection(self):
+        '''compare fixed and dynamic rotor speed control disturbance rejection'''
+        drsc_parm = os.path.join(vehicle_test_suite.testdir, 'default_params', 'copter-heliquad-drsc.parm')
+        results = {}
+        for name, extra_parms in (("fixed-RSC", []), ("DRSC", [drsc_parm])):
+            self.start_subtest(f"Disturbance rejection with {name}")
+            self.customise_SITL_commandline(
+                [],
+                defaults_filepath=self.model_defaults_filepath('heli-quad-ddvp') + extra_parms,
+                model="heli-quad-ddvp:@ROMFS/models/heliquad-ddvp.json",
+                wipe=True,
+            )
+            self.change_mode('STABILIZE')
+            self.wait_ready_to_arm()
+            self.zero_throttle()
+            self.arm_vehicle()
+            self.set_rc(8, 2000)
+            self.delay_sim_time(25, reason="rotor runup")
+            self.set_rc(3, 1700)
+            self.wait_altitude(18, 24, relative=True, timeout=120)
+            self.set_rc(3, 1500)
+            self.change_mode('LOITER')
+            self.delay_sim_time(15, reason="settle into hover")
+
+            self.progress(f"{name}: applying roll disturbance")
+            self.set_parameters({
+                "SIM_TWIST_X": 200,
+                "SIM_TWIST_TIME": 500,
+            })
+            tstart = self.get_sim_time()
+            max_roll = 0
+            settled = None
+            while self.get_sim_time_cached() - tstart < 10:
+                m = self.assert_receive_message('ATTITUDE')
+                roll = abs(math.degrees(m.roll))
+                max_roll = max(max_roll, roll)
+                if roll > 3:
+                    settled = None
+                elif settled is None:
+                    settled = self.get_sim_time_cached() - tstart
+            if settled is None:
+                raise NotAchievedException(f"{name}: did not recover from roll disturbance")
+            self.progress(f"{name}: roll peaked at {max_roll:.1f}deg, settled after {settled:.2f}s")
+
+            self.delay_sim_time(5, reason="re-settle")
+            alt0 = self.get_altitude(relative=True)
+            self.progress(f"{name}: applying thrust disturbance")
+            self.set_parameters({
+                "SIM_SHOVE_Z": 12,
+                "SIM_SHOVE_TIME": 3000,
+            })
+            tstart = self.get_sim_time()
+            max_dip = 0
+            recovered = None
+            while self.get_sim_time_cached() - tstart < 25:
+                dip = alt0 - self.get_altitude(relative=True)
+                max_dip = max(max_dip, dip)
+                if abs(dip) > 1:
+                    recovered = None
+                elif recovered is None:
+                    recovered = self.get_sim_time_cached() - tstart
+            if recovered is None:
+                raise NotAchievedException(f"{name}: did not recover from thrust disturbance")
+            self.progress(f"{name}: lost {max_dip:.2f}m altitude, recovered after {recovered:.2f}s")
+
+            results[name] = (max_roll, settled, max_dip, recovered)
+            self.do_RTL()
+
+        for name, (max_roll, settled, max_dip, recovered) in results.items():
+            self.progress(f"RESULT {name}: roll peak {max_roll:.1f}deg settle {settled:.2f}s; "
+                          f"altitude dip {max_dip:.2f}m recover {recovered:.2f}s")
+
     def HeliQuadFlip(self):
         '''fly Flip mode on collective-pitch quad frame'''
         self.customise_SITL_commandline(
@@ -1521,6 +1593,7 @@ class AutoTestHelicopter(AutoTestCopter):
             self.HeliQuad,
             self.HeliQuadDDVP,
             self.HeliQuadDRSC,
+            self.HeliQuadDisturbanceRejection,
             self.HeliQuadFlip,
             self.HeliQuadInvertedFlight,
             self.HeliSingleInvertedFlight,
