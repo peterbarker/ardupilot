@@ -6,3 +6,6 @@ SERVO7_FUNCTION 39
 SERVO8_FUNCTION 40
 # the dynamic allocation owns rotor speed; give it the full range
 H_RSC_SETPOINT 100
+# keep enough rotor speed in reserve that blade pitch retains
+# immediate authority, including surviving a drive motor failure
+H_DRSC_SPD_MIN 0.5
