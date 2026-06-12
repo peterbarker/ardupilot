@@ -677,6 +677,8 @@ void Frame::load_frame_params(const char *model_json)
         FRAME_VAR(disc_area),
         FRAME_VAR(mdrag_coef),
         FRAME_VAR(bbdrag_coef),
+        {"rotor_time_constant", &model.rotor_time_constant, VarType::FLOAT},
+        {"nominal_rpm", &model.nominal_rpm, VarType::FLOAT},
         {"moment_inertia", &model.moment_of_inertia, VarType::VECTOR3F},
         {"refTempC", &model.refTempC, VarType::FLOAT},
         {"num_motors", &model.num_motors, VarType::FLOAT},
@@ -827,6 +829,7 @@ void Frame::update_parameters(void)
                                model.diagonal_size, power_factor, model.maxVoltage, effective_prop_area, velocity_max,
                                model.motor_pos[i], model.motor_thrust_vec[i], model.yaw_factor[i], true_prop_area,
                                mdrag_coef);
+        motors[i].rotor_time_constant = model.rotor_time_constant;
     }
 
     if (is_zero(model.moment_of_inertia.x) || is_zero(model.moment_of_inertia.y) || is_zero(model.moment_of_inertia.z)) {
@@ -883,6 +886,21 @@ Frame *Frame::create_frame(const char *name)
     return nullptr;
 }
 
+/*
+  mask of output channels driving this frame's motors, including the
+  drive motors of variable-pitch rotors
+ */
+uint32_t Frame::motor_mask(void) const
+{
+    uint32_t mask = ((1U<<num_motors)-1U) << motor_offset;
+    for (uint8_t i=0; i<num_motors; i++) {
+        if (motors[i].rsc_servo >= 0) {
+            mask |= 1U<<(motor_offset+motors[i].rsc_servo);
+        }
+    }
+    return mask;
+}
+
 // calculate rotational and linear accelerations
 void Frame::calculate_forces(const Aircraft &aircraft,
                              const struct sitl_input &input,
@@ -910,6 +928,12 @@ void Frame::calculate_forces(const Aircraft &aircraft,
         // simulate motor rpm
         if (!is_zero(_sitl->vibe_motor)) {
             rpm[motor_offset+i] = motors[i].get_command() * AP::sitl()->vibe_motor * 60.0f;
+        }
+
+        // report a variable-pitch rotor's speed on its drive motor's
+        // channel, where ESC telemetry senses it
+        if (motors[i].rsc_servo >= 0) {
+            rpm[motor_offset+motors[i].rsc_servo] = motors[i].get_rotor_speed() * model.nominal_rpm;
         }
     }
 

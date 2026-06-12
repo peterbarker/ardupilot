@@ -34,16 +34,34 @@ void Motor::calculate_forces(const struct sitl_input &input,
 {
 
     const float pwm = input.servos[motor_offset+servo];
+    const uint64_t now_us = AP_HAL::micros64();
     float command;
     float thrust_sign = 1;
     if (rsc_servo >= 0) {
         // variable-pitch rotor; the motor's servo channel commands
         // blade pitch about mid-PWM and rotor speed comes from the
-        // shared rotor-speed-control servo. The governor is assumed
-        // to hold the rotor at nominal speed from half RSC output;
-        // thrust scales with blade pitch and the square of rotor
-        // speed
-        const float rotor_speed = constrain_float((input.servos[motor_offset+rsc_servo]-1000)*0.002, 0, 1);
+        // rotor-speed-control servo. Thrust scales with blade pitch
+        // and the square of rotor speed
+        const float rsc_pwm = input.servos[motor_offset+rsc_servo];
+        if (is_positive(rotor_time_constant)) {
+            // direct-drive rotor; speed demand maps linearly onto
+            // the servo range and the rotor spools with a
+            // first-order lag
+            const float rotor_speed_demand = constrain_float((rsc_pwm-1000)*0.001, 0, 1);
+            float alpha = 1;
+            if (last_calc_us != 0) {
+                alpha = constrain_float((now_us - last_calc_us)*1.0e-6 / rotor_time_constant, 0, 1);
+            }
+            rotor_speed += (rotor_speed_demand - rotor_speed) * alpha;
+        } else {
+            // an external speed governor (a governed engine, or an ESC
+            // in governor mode, idealised here as instantaneous) is
+            // assumed to hold the rotor at nominal speed from half RSC
+            // output. This models the simulated powerplant and is NOT
+            // ArduPilot's RSC governor, which runs in the flight code
+            // and merely produces the RSC servo output consumed here.
+            rotor_speed = constrain_float((rsc_pwm-1000)*0.002, 0, 1);
+        }
         const float collective = constrain_float((pwm-1500)*0.002, -1, 1);
         if (is_negative(collective)) {
             thrust_sign = -1;
@@ -63,7 +81,6 @@ void Motor::calculate_forces(const struct sitl_input &input,
     }
 
     // apply slew limiter to command
-    uint64_t now_us = AP_HAL::micros64();
     if (last_calc_us != 0 && slew_max > 0) {
         float dt = (now_us - last_calc_us)*1.0e-6;
         float slew_max_change = slew_max * dt;

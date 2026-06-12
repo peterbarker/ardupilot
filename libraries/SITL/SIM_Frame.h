@@ -64,6 +64,10 @@ public:
     float terminal_rotation_rate;
     uint8_t motor_offset;
 
+    // mask of output channels driving this frame's motors, including
+    // the drive motors of variable-pitch rotors
+    uint32_t motor_mask(void) const;
+
     float get_current_amp(void);
 
     // get mass in kg
@@ -146,6 +150,16 @@ private:
 
         // bluff body drag scaling
         AP_Float bbdrag_coef;
+
+        // rotor spool time constant in seconds for variable-pitch
+        // rotors; zero models a rotor held at nominal speed by an
+        // external governor (a governed engine or an ESC in governor
+        // mode), not by ArduPilot's RSC governor
+        float rotor_time_constant = 0;
+
+        // rotor speed at full rotor-speed-control output, for rpm
+        // reporting from variable-pitch rotors
+        float nominal_rpm = 1500;
 
         // if zero value will be estimated from mass
         Vector3f moment_of_inertia;

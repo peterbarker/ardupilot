@@ -44,6 +44,16 @@ public:
     // from a shared rotor-speed-control servo
     int8_t rsc_servo = -1;
 
+    // rotor spool time constant in seconds for variable-pitch
+    // rotors. When positive the rotor speed demand maps linearly
+    // onto the RSC servo range and the rotor speed lags the demand,
+    // modelling a direct-drive rotor with no external speed
+    // regulation; when zero an external governor (a governed engine
+    // or an ESC in governor mode, idealised) is assumed to hold the
+    // rotor at nominal speed from half RSC output. Either way this
+    // describes the simulated powerplant, not ArduPilot's RSC governor.
+    float rotor_time_constant;
+
     // support for servo slew rate
     enum {SERVO_NORMAL, SERVO_RETRACT} servo_type;
     float servo_rate = 0.24; // seconds per 60 degrees
@@ -144,6 +154,11 @@ public:
         return last_command;
     }
 
+    // current speed of a variable-pitch rotor, 0..1
+    float get_rotor_speed(void) const {
+        return rotor_speed;
+    }
+
     // calculate thrust of motor
     float calc_thrust(float command, float air_density, float velocity_in, float voltage_scale) const;
 
@@ -165,6 +180,7 @@ private:
 
     float last_command;
     uint64_t last_calc_us;
+    float rotor_speed;
 
     Vector3f position;
     Vector3f thrust_vector;

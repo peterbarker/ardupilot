@@ -47,7 +47,7 @@ MultiCopter::MultiCopter(const char *frame_str) :
 // calculate rotational and linear accelerations
 void MultiCopter::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel, Vector3f &body_accel)
 {
-    motor_mask |= ((1U<<frame->num_motors)-1U) << frame->motor_offset;
+    motor_mask |= frame->motor_mask();
     frame->calculate_forces(*this, input, rot_accel, body_accel, rpm);
 
     add_shove_forces(rot_accel, body_accel);
