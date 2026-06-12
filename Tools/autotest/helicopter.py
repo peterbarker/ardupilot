@@ -261,6 +261,20 @@ class AutoTestHelicopter(AutoTestCopter):
         self.takeoff(10)
         self.do_RTL()
 
+    def HeliQuadDDVP(self):
+        '''fly direct-drive variable-pitch quad frame'''
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('heli-quad-ddvp'),
+            model="heli-quad-ddvp:@ROMFS/models/heliquad.json",
+            wipe=True,
+        )
+        self.takeoff(10)
+        # all four rotor motors must carry the rotor-speed-control output
+        for chan in 5, 6, 7, 8:
+            self.wait_servo_channel_value(chan, 1659, timeout=10)
+        self.do_RTL()
+
     def HeliQuadFlip(self):
         '''fly Flip mode on collective-pitch quad frame'''
         self.customise_SITL_commandline(
@@ -1326,6 +1340,7 @@ class AutoTestHelicopter(AutoTestCopter):
             self.DDFPTail,
             self.DDVPTail,
             self.HeliQuad,
+            self.HeliQuadDDVP,
             self.HeliQuadFlip,
             self.HeliQuadInvertedFlight,
             self.MountFailsafeAction,
