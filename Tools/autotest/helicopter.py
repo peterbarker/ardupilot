@@ -7,6 +7,7 @@ AP_FLAKE8_CLEAN
 import copy
 import math
 import operator
+import os
 
 from pymavlink import mavutil
 
@@ -366,6 +367,43 @@ class AutoTestHelicopter(AutoTestCopter):
         # all four rotor motors must carry the rotor-speed-control output
         for chan in 5, 6, 7, 8:
             self.wait_servo_channel_value(chan, 1659, timeout=10)
+        self.do_RTL()
+
+    def HeliQuadDRSC(self):
+        '''fly dynamic rotor speed control on direct-drive variable-pitch quad'''
+        defaults = self.model_defaults_filepath('heli-quad-ddvp')
+        defaults.append(os.path.join(vehicle_test_suite.testdir, 'default_params', 'copter-heliquad-drsc.parm'))
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=defaults,
+            model="heli-quad-ddvp:@ROMFS/models/heliquad-ddvp.json",
+            wipe=True,
+        )
+        self.change_mode('STABILIZE')
+        self.wait_ready_to_arm()
+        self.zero_throttle()
+        self.arm_vehicle()
+        self.progress("Raising rotor speed")
+        self.set_rc(8, 2000)
+        self.delay_sim_time(25, reason="rotor runup and spool")
+        self.set_rc(3, 1700)
+        self.wait_altitude(9, 15, relative=True, timeout=120)
+        self.set_rc(3, 1500)
+        self.change_mode('LOITER')
+        self.delay_sim_time(15, reason="settle into hover")
+
+        # the drive motors must be carrying the hover thrust, with
+        # blade pitch re-centred near the collective trim point
+        servo = self.assert_receive_message('SERVO_OUTPUT_RAW')
+        for chan in 1, 2, 3, 4:
+            coll = getattr(servo, f"servo{chan}_raw")
+            if coll < 1550 or coll > 1850:
+                raise NotAchievedException(f"Collective {chan} not re-centred (PWM {coll})")
+        for chan in 5, 6, 7, 8:
+            esc = getattr(servo, f"servo{chan}_raw")
+            if esc < 1300 or esc > 1900:
+                raise NotAchievedException(f"Drive motor {chan} not carrying hover load (PWM {esc})")
+        self.progress("Collective re-centred with drive motors carrying load")
         self.do_RTL()
 
     def HeliQuadFlip(self):
@@ -1482,6 +1520,7 @@ class AutoTestHelicopter(AutoTestCopter):
             self.DDVPTail,
             self.HeliQuad,
             self.HeliQuadDDVP,
+            self.HeliQuadDRSC,
             self.HeliQuadFlip,
             self.HeliQuadInvertedFlight,
             self.HeliSingleInvertedFlight,
