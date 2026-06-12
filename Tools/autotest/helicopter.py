@@ -358,7 +358,7 @@ class AutoTestHelicopter(AutoTestCopter):
         self.customise_SITL_commandline(
             [],
             defaults_filepath=self.model_defaults_filepath('heli-quad-ddvp'),
-            model="heli-quad-ddvp:@ROMFS/models/heliquad.json",
+            model="heli-quad-ddvp:@ROMFS/models/heliquad-ddvp.json",
             wipe=True,
         )
         self.takeoff(10, mode='LOITER')

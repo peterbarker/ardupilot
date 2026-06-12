@@ -320,7 +320,7 @@
                 ]
             },
             "heli-quad-ddvp": {
-                "model": "heli-quad-ddvp:@ROMFS/models/heliquad.json",
+                "model": "heli-quad-ddvp:@ROMFS/models/heliquad-ddvp.json",
                 "waf_target": "bin/arducopter-heli",
                 "default_params_filename": [
                     "default_params/copter-heli.parm",
