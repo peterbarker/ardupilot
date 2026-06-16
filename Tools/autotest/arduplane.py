@@ -57,9 +57,6 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
     def log_name(self):
         return "ArduPlane"
 
-    def default_speedup(self):
-        return 100
-
     def test_filepath(self):
         return os.path.realpath(__file__)
 
@@ -210,7 +207,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.set_parameter("SIM_GPS1_ENABLE", 1)
         self.wait_ready_to_arm()
 
-    def fly_LOITER(self, num_circles=4):
+    def fly_LOITER(self, num_circles=4, timeout=60):
         """Loiter where we are."""
         self.progress("Testing LOITER for %u turns" % num_circles)
         self.change_mode('LOITER')
@@ -220,8 +217,8 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.progress("Initial altitude %u\n" % initial_alt)
 
         while num_circles > 0:
-            self.wait_heading(0, accuracy=10, timeout=60)
-            self.wait_heading(180, accuracy=10, timeout=60)
+            self.wait_heading(0, accuracy=10, timeout=timeout)
+            self.wait_heading(180, accuracy=10, timeout=timeout)
             num_circles -= 1
             self.progress("Loiter %u circles left" % num_circles)
 
@@ -2531,6 +2528,74 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.set_rc(2, 1500)
         self.fly_home_land_and_disarm()
 
+    def loiter_inside_circle(self):
+        ''' Test a edge case when loiter is started inside the circle '''
+
+        # Large radius triggers this issue
+        self.set_parameter("WP_LOITER_RAD", 300)
+
+        # Take off into straight and level FBWB flight
+        self.takeoff_in_TAKEOFF(timeout=60)
+        self.set_rc(3, 1500)
+
+        # Change to FBWB at a consistent heading
+        self.wait_heading(180, timeout=60)
+        self.change_mode("FBWB")
+
+        # A small amount of roll in the direction of the loiter makes the problem much worse
+        # Stick mixing must be enabled so this roll is carried over into loiter
+        self.set_rc(1, 1600)
+
+        # Wait a short time for vehicle to settle
+        self.delay_sim_time(10)
+
+        # Push context so we can remove the message hook
+        self.context_push()
+
+        # Try and detect steps in roll output
+        class DetectRollSteps(vehicle_test_suite.TestSuite.MessageHook):
+            '''Checks for steps in roll demand'''
+
+            def __init__(self, suite):
+                super(DetectRollSteps, self).__init__(suite)
+                self.nav_roll = None
+                self.max_step = 0
+                self.min_step = 0
+
+            def hook_removed(self):
+                if self.nav_roll is None:
+                    raise NotAchievedException("Did not get NAV_CONTROLLER_OUTPUT")
+
+            def process(self, mav, m):
+                if m.get_type() != 'NAV_CONTROLLER_OUTPUT':
+                    return
+
+                new_nav_roll = m.nav_roll
+                if self.nav_roll is None:
+                    self.nav_roll = new_nav_roll
+                    return
+
+                roll_diff = new_nav_roll - self.nav_roll
+                self.nav_roll = new_nav_roll
+
+                self.max_step = max(self.max_step, roll_diff)
+                self.min_step = min(self.min_step, roll_diff)
+
+                if self.max_step > 60 and self.min_step < -60:
+                    raise Exception("Large Roll step (%0.2f, %0.2f)" % (self.max_step, self.min_step))
+
+        # Install a hook to check for the steppy roll output
+        self.install_message_hook_context(DetectRollSteps(self))
+
+        # Fly one loiter circle
+        self.fly_LOITER(num_circles=1, timeout=120)
+
+        # Pop context to remove message hook
+        self.context_pop()
+
+        # Done
+        self.fly_home_land_and_disarm()
+
     def CPUFailsafe(self):
         '''In lockup Plane should copy RC inputs to RC outputs'''
         self.plane_CPUFailsafe()
@@ -3173,14 +3238,13 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         # The SIM AHRS backend returns actual 3D SITL wind, but the
         # fallback logic prevents it being used until in flight.
         self.takeoff(20, mode='TAKEOFF')
-        self.delay_sim_time(5, reason="wind estimate to establish")
 
         # Without the fix, speed == wind_spd (3D magnitude ~10 m/s).
         # With the fix, speed == horizontal component (~7.07 m/s).
         # A tolerance of 1 m/s distinguishes the two clearly.
-        self.assert_received_message_field_values("WIND", {
+        self.wait_message_field_values("WIND", {
             "speed": expected_horizontal,
-        }, epsilon=1)
+        }, epsilon=1, timeout=30, minimum_duration=10)
 
         self.disarm_vehicle(force=True)
         self.reboot_sitl()
@@ -3328,6 +3392,107 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.arm_vehicle()
         self.fly_mission("ap1.txt", mission_timeout=120)
         self.disarm_vehicle(force=True)
+
+    def check_ekf_status_report(self, ahrs_type, m):
+        '''return None if EKF_STATUS_REPORT m looks healthy, else a string
+        describing the problem'''
+        variances = {
+            "velocity_variance": m.velocity_variance,
+            "pos_horiz_variance": m.pos_horiz_variance,
+            "pos_vert_variance": m.pos_vert_variance,
+            "compass_variance": m.compass_variance,
+            "terrain_alt_variance": m.terrain_alt_variance,
+            "airspeed_variance": m.airspeed_variance,
+        }
+        # all variance fields must be finite and non-negative:
+        for name, value in variances.items():
+            if not math.isfinite(value):
+                return "%s not finite (%s)" % (name, value)
+            if value < 0:
+                return "%s negative (%f)" % (name, value)
+        # a generous sanity ceiling: these are normalised innovation
+        # variances, so anything in the hundreds indicates a garbage /
+        # mis-assembled field (e.g. uninitialised struct memory) rather
+        # than a merely poorly-converged filter:
+        for name, value in variances.items():
+            if value > 100:
+                return "%s implausibly high (%f)" % (name, value)
+        # the filter should be healthy and initialised:
+        required = (mavutil.mavlink.EKF_ATTITUDE |
+                    mavutil.mavlink.EKF_VELOCITY_HORIZ |
+                    mavutil.mavlink.EKF_POS_HORIZ_ABS)
+        if (m.flags & required) != required:
+            return "missing health flags (flags=0x%x)" % m.flags
+        if m.flags & mavutil.mavlink.EKF_UNINITIALIZED:
+            return "reports EKF_UNINITIALIZED (flags=0x%x)" % m.flags
+        return None
+
+    def wait_ekf_status_report_ok(self, ahrs_type, timeout=15):
+        '''wait for a fresh EKF_STATUS_REPORT which passes the sanity checks'''
+        tstart = self.get_sim_time()
+        problem = "no EKF_STATUS_REPORT received"
+        while self.get_sim_time_cached() - tstart < timeout:
+            m = self.assert_receive_message("EKF_STATUS_REPORT", timeout=5)
+            problem = self.check_ekf_status_report(ahrs_type, m)
+            if problem is None:
+                self.progress("AHRS_EKF_TYPE=%u: EKF_STATUS_REPORT OK (flags=0x%x)" %
+                              (ahrs_type, m.flags))
+                return
+        raise NotAchievedException(
+            "AHRS_EKF_TYPE=%u: EKF_STATUS_REPORT not OK: %s" % (ahrs_type, problem))
+
+    def EKF_STATUS_REPORT(self):
+        '''check EKF_STATUS_REPORT is assembled correctly for each AHRS_EKF_TYPE'''
+        # bring up a VectorNav external AHRS on serial4 so that
+        # AHRS_EKF_TYPE=11 (EXTERNAL) is a valid selection.  EK2/EK3 are
+        # enabled so that AHRS_EKF_TYPE=2 and =3 also have a running
+        # backend to report on:
+        self.customise_SITL_commandline(["--serial4=sim:VectorNav"])
+        self.set_parameters({
+            "EAHRS_TYPE": 1,            # VectorNav
+            "SERIAL4_PROTOCOL": 36,
+            "SERIAL4_BAUD": 230400,
+            "GPS1_TYPE": 21,           # GPS from the external AHRS
+            "EK2_ENABLE": 1,
+            "EK3_ENABLE": 1,
+            "AHRS_EKF_TYPE": 11,
+            "INS_GYR_CAL": 1,
+        })
+        self.reboot_sitl()
+        self.delay_sim_time(5, reason="external AHRS to initialise")
+
+        self.progress("Running accelcal")
+        self.run_cmd(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p5=4,
+            timeout=5,
+        )
+
+        # request EKF_STATUS_REPORT often enough to be responsive to
+        # AHRS_EKF_TYPE changes:
+        self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_EKF_STATUS_REPORT, 10)
+
+        self.wait_ready_to_arm()
+        self.takeoff(70, mode='TAKEOFF')
+        self.change_mode('LOITER')
+        self.delay_sim_time(10, reason="settle into loiter")
+
+        # 0=DCM (deliberately sends no report), 2=EKF2, 3=EKF3,
+        # 10=SIM, 11=EXTERNAL:
+        for ahrs_type in [0, 2, 3, 10, 11]:
+            self.start_subtest("Checking EKF_STATUS_REPORT for AHRS_EKF_TYPE=%u" % ahrs_type)
+            self.set_parameter("AHRS_EKF_TYPE", ahrs_type)
+            # allow the configured backend to switch over and produce a
+            # fresh report before we look at it:
+            self.delay_sim_time(3, reason="AHRS_EKF_TYPE change to take effect")
+            self.drain_mav()
+            if ahrs_type == 0:
+                # DCM does not emit an EKF_STATUS_REPORT
+                self.assert_not_receive_message("EKF_STATUS_REPORT", timeout=5)
+                continue
+            self.wait_ekf_status_report_ok(ahrs_type)
+
+        self.fly_home_land_and_disarm()
 
     def GpsSensorPreArmEAHRS(self):
         '''Test pre-arm checks related to EAHRS_SENSORS using the MicroStrain7 driver'''
@@ -6042,12 +6207,6 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             1, # altitude
             mavutil.mavlink.MAV_MISSION_TYPE_MISSION)
 
-    def renumber_mission_items(self, mission):
-        count = 0
-        for item in mission:
-            item.seq = count
-            count += 1
-
     def MissionJumpTags_missing_jump_target(self, target_system=1, target_component=1):
         self.start_subtest("Check missing-jump-tag behaviour")
         jump_target = 2
@@ -6700,7 +6859,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
 
         self.wait_current_waypoint(4)
 
-        self.set_parameter('SIM_SPEEDUP', 1)
+        self.context_set_speedup(1)
 
         self.mavproxy.interact()
 
@@ -6894,7 +7053,13 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             home = self.home_position_as_mav_location()
             target_alt = 20
             self.takeoff(target_alt, mode="TAKEOFF")
-            self.delay_sim_time(20, reason="altitude to stabilise")  # Give some time to altitude to stabilize.
+            self.wait_altitude(
+                home.alt+target_alt-5,
+                home.alt+target_alt+5,
+                relative=False,
+                minimum_duration=20,
+                timeout=60,
+            )
             self.set_rc(3, 1500)
             self.change_mode(mode)
             higher_home = copy.copy(home)
@@ -8119,6 +8284,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.DEVO,
             self.AdvancedFailsafe,
             self.LOITER,
+            self.loiter_inside_circle,
             self.MAV_CMD_NAV_LOITER_TURNS,
             self.MAV_CMD_NAV_LOITER_TO_ALT,
             self.DeepStall,
@@ -8143,6 +8309,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
             self.KebniSensAItionExternalINS,
             self.KebniSensAItionExternalIMU,
             self.GpsSensorPreArmEAHRS,
+            self.EKF_STATUS_REPORT,
             self.Deadreckoning,
             self.EKFlaneswitch,
             self.AirspeedDrivers,

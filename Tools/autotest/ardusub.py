@@ -8,8 +8,10 @@ AP_FLAKE8_CLEAN
 '''
 
 import os
+import re
 
 from math import degrees
+from math import radians
 
 from pymavlink import mavextra
 from pymavlink import mavutil
@@ -22,6 +24,9 @@ from vehicle_test_suite import NotAchievedException
 testdir = os.path.dirname(os.path.realpath(__file__))
 
 SITL_START_LOCATION = mavutil.location(33.810313, -118.393867, 0, 185)
+
+# Extract true range from STATUSTEXT messages sent by sub_test_synthetic_seafloor.lua
+RE_TR_SEARCH = re.compile(r'#TR#\s*([-+]?\d*\.?\d+)')
 
 
 class Joystick():
@@ -73,10 +78,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
     def log_name(self):
         return "ArduSub"
 
-    def default_speedup(self):
-        '''Sub seems to be race-free'''
-        return 100
-
     def test_filepath(self):
         return os.path.realpath(__file__)
 
@@ -94,8 +95,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
 
     def WaterDepth(self):
         """Check WATER_DEPTH MAVLink message support for ArduSub"""
-
-        self.context_push()
 
         # Setup rangefinders
         self.customise_SITL_commandline([
@@ -129,7 +128,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.assert_message_rate_hz('WATER_DEPTH', 2)
 
         self.disarm_vehicle()
-        self.context_pop()
 
     def is_sub(self):
         return True
@@ -273,7 +271,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.wait_ready_to_arm()
         self.arm_vehicle()
         self.set_parameter("MAV_GCS_SYSID", self.mav.source_system)
-        self.context_push()
         self.setGCSfailsafe(4)
         self.set_heartbeat_rate(0)
         self.wait_mode("SURFACE")
@@ -281,13 +278,11 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.wait_statustext("GCS Failsafe Cleared", timeout=60)
         self.progress("GSC Failsafe OK")
         self.disarm_vehicle()
-        self.context_pop()
 
     # Tests actions and logic behind the radio failsafe
     def ThrottleFailsafe(self):
         '''Test RC and RC Failsafe'''
         # disable GCS and enable RC
-        self.context_push()
         self.set_parameter('FS_GCS_ENABLE', 0)
         self.set_parameter('RC_PROTOCOLS', 1)
         self.set_heartbeat_rate(0)
@@ -299,7 +294,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         # Switch RC failsafe action to SURFACE, should take action since we are in RC failsafe
         self.set_parameter('FS_THR_ENABLE', 2)
         self.wait_mode("SURFACE")
-        self.context_pop()
         self.progress("Completed Radio failsafe disabled test")
 
     def Surftrak(self):
@@ -308,7 +302,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.assert_parameter_value('RNGFND1_MAX', 30)
 
         # Something closer to Bar30 noise
-        self.context_push()
         self.set_parameter("SIM_BARO_RND", 0.01)
 
         # Dive to -5m, outside of rangefinder range, will act like ALT_HOLD
@@ -345,7 +338,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.watch_distance_maintained()
 
         self.disarm_vehicle()
-        self.context_pop()
 
     def prepare_synthetic_seafloor_test(self, sea_floor_depth, rf_target):
         self.set_parameters({
@@ -372,13 +364,11 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
 
         def get_true_distance():
             """Return the True distance from the simulated range finder"""
-            m_true = self.mav.recv_match(type='STATUSTEXT', blocking=True, timeout=3.0)
-            if m_true is None:
-                return m_true
-            idx_tr = m_true.text.find('#TR#')
-            if idx_tr < 0:
+            m_true = self.assert_receive_message('STATUSTEXT', timeout=3.0)
+            match = RE_TR_SEARCH.search(m_true.text)
+            if not match:
                 return None
-            return float(m_true.text[(idx_tr+4):(idx_tr+12)])
+            return float(match.group(1))
 
         tstart = self.get_sim_time_cached()
         self.progress('Distance to be watched: %.2f (+/- %.2f)' % (match_distance, delta))
@@ -419,7 +409,7 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         end_altitude = start_altitude - 10
         validation_delta = 1.5  # Largest allowed distance between sub height and desired height
 
-        self.context_push()
+        # Load the synthetic seafloor, this will push a context and reboot
         self.prepare_synthetic_seafloor_test(sea_floor_depth, match_distance)
 
         # Dive to match_distance off the bottom in preparation for the mission
@@ -451,9 +441,8 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
 
         self.set_rc(Joystick.Forward, 1500)
 
+        # Disarm before context pop
         self.disarm_vehicle()
-        self.context_pop()
-        self.reboot_sitl()  # e.g. revert rangefinder configuration
 
     def SimTerrainMission(self):
         """Mission at a constant height above synthetic sea floor"""
@@ -464,7 +453,7 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         end_altitude = start_altitude - 10
         validation_delta = 1.5  # Largest allowed distance between sub height and desired height
 
-        self.context_push()
+        # Load the synthetic seafloor, this will push a context and reboot
         self.prepare_synthetic_seafloor_test(sea_floor_depth, match_distance)
 
         # The synthetic seafloor has an east-west ridge south of the sub.
@@ -483,9 +472,8 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.wait_altitude(altitude_min=end_altitude-validation_delta/2, altitude_max=end_altitude+validation_delta/2,
                            relative=False, timeout=1)
 
+        # Disarm before context pop
         self.disarm_vehicle()
-        self.context_pop()
-        self.reboot_sitl()  # e.g. revert rangefinder configuration
 
     def ModeChanges(self, delta=0.2):
         """Check if alternating between ALTHOLD, STABILIZE, POSHOLD and SURFTRAK (mode 21) affects altitude"""
@@ -934,7 +922,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
 
     def SetGlobalOrigin(self):
         """Test SET_GPS_GLOBAL_ORIGIN mav msg"""
-        self.context_push()
         self.set_parameters({
             'GPS1_TYPE': 0,             # Disable the GPS
             'EK3_SRC1_POSXY': 0,        # Make sure EK3_SRC parameters do not refer to a GPS
@@ -960,15 +947,9 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         if num_mavlink_origin_msgs != 1:
             raise NotAchievedException("Expected 1 GPS_GLOBAL_ORIGIN message, found %d" % num_mavlink_origin_msgs)
 
-        self.context_pop()
-
-        # restart GPS driver
-        self.reboot_sitl()
-
     def BackupOrigin(self):
         """Test AHRS_ORIGIN_LAT and AHRS_ORIGIN_LON parameters"""
 
-        self.context_push()
         self.set_parameters({
             'GPS1_TYPE': 0,             # Disable GPS
             'EK3_SRC1_POSXY': 0,        # Make sure EK3_SRC parameters do not refer to GPS
@@ -987,8 +968,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         # check that origin has been logged
         if not self.current_onboard_log_contains_message('ORGN'):
             raise NotAchievedException("Did not find expected ORGN message")
-
-        self.context_pop()
 
     def assert_mag_fusion_selection(self, expect_sel):
         """Get the most recent XKFS message and check the MAG_FUSION value"""
@@ -1273,7 +1252,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.wait_altitude(altitude_min=-10, altitude_max=-9, relative=False, timeout=60)
         self.set_rc(Joystick.Throttle, 1500)
 
-        self.context_push()
         self.setGCSfailsafe(4)
         self.set_parameter("SIM_BARO_DISABLE", 1)
         self.set_heartbeat_rate(0)
@@ -1285,7 +1263,6 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
         self.wait_statustext("GCS Failsafe Cleared", timeout=60)
         self.progress("Baro-less Surface mode OK")
         self.disarm_vehicle()
-        self.context_pop()
 
     def UTMGlobalPositionWaypoint(self):
         '''test UTM_GLOBAL_POSITION waypoint fields in AUTO'''
@@ -1321,6 +1298,56 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
             raise NotAchievedException("UAS ID is all zeros")
         if m.flags & mavutil.mavlink.UTM_DATA_AVAIL_FLAGS_UAS_ID_AVAILABLE == 0:
             raise NotAchievedException("UAS_ID_AVAILABLE flag not set")
+
+    def UpsideDown(self):
+        """Test roll authority and attitude control of vectored_6dof frame via SET_ATTITUDE_TARGET."""
+        model = "vectored_6dof"
+        self.customise_SITL_commandline(
+            [],
+            model=model,
+            defaults_filepath=self.model_defaults_filepath('vectored_6dof'),
+        )
+
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.change_mode('ALT_HOLD')
+
+        type_mask = (
+            mavutil.mavlink.ATTITUDE_TARGET_TYPEMASK_BODY_ROLL_RATE_IGNORE |
+            mavutil.mavlink.ATTITUDE_TARGET_TYPEMASK_BODY_PITCH_RATE_IGNORE |
+            mavutil.mavlink.ATTITUDE_TARGET_TYPEMASK_BODY_YAW_RATE_IGNORE |
+            mavutil.mavlink.ATTITUDE_TARGET_TYPEMASK_THROTTLE_IGNORE
+        )
+
+        def command_and_wait_roll(target_deg, timeout=30, hold_seconds=2):
+            target_quat = mavextra.euler_to_quat([radians(target_deg), 0, 0])
+
+            def cf(value, _target):
+                self.mav.mav.set_attitude_target_send(
+                    0,  # timestamp
+                    self.sysid_thismav(), 1,  # target IDs
+                    type_mask,
+                    target_quat,
+                    0, 0, 0,  # (ignored) attitude rate targets
+                    0.5  # thrust
+                )
+            self.wait_roll(
+                target_deg,
+                accuracy=5,
+                timeout=timeout,
+                absolute_value=True,
+                minimum_duration=hold_seconds,
+                called_function=cf,
+            )
+
+        for roll_deg in [45, 90, 120, 180]:
+            self.start_subtest(f"Roll {roll_deg} degrees")
+            command_and_wait_roll(roll_deg)
+
+            self.start_subtest(f"Return to level from {roll_deg} degrees")
+            command_and_wait_roll(0)
+
+        self.disarm_vehicle()
 
     def tests(self):
         '''return list of all tests'''
@@ -1365,6 +1392,7 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
             self.VisoForYaw,
             self.UTMGlobalPosition,
             self.UTMGlobalPositionWaypoint,
+            self.UpsideDown,
         ])
 
         return ret

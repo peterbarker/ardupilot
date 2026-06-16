@@ -109,7 +109,7 @@ public:
     bool get_location(Location &loc) const WARN_IF_UNUSED;
 
     // get latest altitude estimate above ground level in meters and validity flag
-    bool get_hagl(float &hagl) const WARN_IF_UNUSED;
+    bool get_hagl(float &hagl) const WARN_IF_UNUSED { return active_estimates->get_hagl(hagl); }
 
     // status reporting of estimated error
     float           get_error_rp() const;
@@ -251,9 +251,13 @@ public:
     }
 
     // Retrieves the corrected NED delta velocity in use by the inertial navigation
-    void getCorrectedDeltaVelocityNED(Vector3f& ret, float& dt) const {
+    bool getCorrectedDeltaVelocityNED(Vector3f& ret, float& dt) const {
+        if (!state.corrected_dv_valid) {
+            return false;
+        }
         ret = state.corrected_dv;
         dt = state.corrected_dv_dt;
+        return true;
     }
 
     // set the EKF's origin location in 10e7 degrees.  This should only
@@ -362,7 +366,10 @@ public:
 #endif
 
     // get_filter_status - returns filter status as a series of flags
-    bool get_filter_status(nav_filter_status &status) const;
+    bool get_filter_status(nav_filter_status &status) const {
+        status = configured_estimates->filter_status;
+        return configured_estimates->filter_status_valid;
+    }
 
     // get compass offset estimates
     // true if offsets are valid
@@ -411,7 +418,9 @@ public:
 
     // return the innovations for the specified instance
     // An out of range instance (eg -1) returns data for the primary instance
-    bool get_innovations(Vector3f &velInnov, Vector3f &posInnov, Vector3f &magInnov, float &tasInnov, float &yawInnov) const;
+    bool get_innovations(Vector3f &velInnov, Vector3f &posInnov, Vector3f &magInnov, float &tasInnov, float &yawInnov) const {
+        return configured_backend->get_innovations(velInnov, posInnov, magInnov, tasInnov, yawInnov);
+    }
 
     // returns true when the state estimates are significantly degraded by vibration
     bool is_vibration_affected() const;
@@ -420,7 +429,14 @@ public:
     // indicates perfect consistency between the measurement and the EKF solution and a value of 1 is the maximum
     // inconsistency that will be accepted by the filter
     // boolean false is returned if variances are not available
-    bool get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const;
+    bool get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const {
+        velVar = configured_estimates->velVar;
+        posVar = configured_estimates->posVar;
+        hgtVar = configured_estimates->hgtVar;
+        magVar = configured_estimates->magVar;
+        tasVar = configured_estimates->tasVar;
+        return configured_estimates->variances_valid;
+    }
 
     // get 1-sigma position and velocity uncertainty derived from the EKF state error covariance matrix P
     // pos_horiz_m: 2D RMS horizontal position uncertainty (m)
@@ -456,10 +472,14 @@ public:
     uint8_t get_primary_gyro_index(void) const { return state.primary_gyro; }
 
     // see if EKF lane switching is possible to avoid EKF failsafe
-    void check_lane_switch(void);
+    void check_lane_switch(void) {
+        active_backend->check_lane_switch();
+    }
 
     // request EKF yaw reset to try and avoid the need for an EKF lane switch or failsafe
-    void request_yaw_reset(void);
+    void request_yaw_reset(void) {
+        active_backend->request_yaw_reset();
+    }
 
 #if AP_AHRS_EKF_RESET_ENABLED
     // request full backend reset, currently only implemented for EKF3
@@ -481,14 +501,10 @@ public:
     // check if external nav is providing yaw
     bool using_extnav_for_yaw(void) const;
 
-    // check if GPS is being used to estimate position or velocity
-    // always returns true for External and SIM EKF types
-    bool using_gps(void) const;
-
-    // check if GPS is configured as the horizontal position source
-    // for the configured EKF type. Used to decide whether GPS will
-    // set the EKF origin (which is immutable once set).
-    bool using_gps_for_pos(void) const;
+    // active_backend_configured_to_use_gps will be true if the
+    // estimator will use GPS data in creating its estimate when the
+    // data is good
+    bool active_backend_configured_to_use_gps() const { return active_estimates->configured_to_use_gps; }
 
     // set and save the ALT_M_NSE parameter value
     void set_alt_measurement_noise(float noise);
@@ -513,7 +529,9 @@ public:
 
     // returns a canonicalised and valid EKFType, as opposed to the raw
     // parameter value which may be any value the user has set
-    EKFType configured_ekf_type(void) const;
+    EKFType configured_ekf_type(void) const {
+        return state.configured_ekf_type;
+    }
 
     // set the selected ekf type, for RC aux control
     void set_ekf_type(EKFType ahrs_type) {
@@ -688,7 +706,7 @@ public:
 
     // return primary accels
     const Vector3f &get_accel(void) const {
-        return AP::ins().get_accel(_get_primary_accel_index());
+        return AP::ins().get_accel(get_primary_accel_index());
     }
 
     // return primary accel bias. This should be subtracted from
@@ -924,13 +942,6 @@ private:
     // poke AP_Notify based on values from status
     void update_notify_from_filter_status(const nav_filter_status &status);
 
-    /*
-     * copy results from a backend over AP_AHRS canonical results.
-     * This updates member variables like roll and pitch, as well as
-     * updating derived values like sin_roll and sin_pitch.
-     */
-    void copy_estimates_from_backend_estimates(const AP_AHRS_Backend::Estimates &results);
-
     // write out secondary estimates:
     void Write_AHRS2(void) const;
     // write POS (canonical vehicle position) message out:
@@ -946,11 +957,17 @@ private:
     // return secondary attitude solution if available, as quaternion
     bool _get_secondary_quaternion(Quaternion &quat) const;
 
+    // set state.configured_ekf_type and the pointer to the configured backend
+    void update_configured_ekf_type();
+
     // set state.active_EKF_type and the pointer to the active backend
     void update_active_EKF_type();
 
     // get active EKF type
     EKFType _active_EKF_type(void) const;
+
+    // get configured EKF type:
+    EKFType _configured_ekf_type(void) const;
 
     // return a true airspeed estimate (navigation airspeed) if
     // available. return true if we have an estimate
@@ -964,7 +981,7 @@ private:
     bool _get_secondary_position(Location &loc) const;
 
     // Retrieves the corrected NED delta velocity in use by the inertial navigation
-    void _getCorrectedDeltaVelocityNED(Vector3f& ret, float& dt) const;
+    bool _getCorrectedDeltaVelocityNED(Vector3f& ret, float& dt) const WARN_IF_UNUSED;
 
     // returns the inertial navigation origin in lat/lon/alt
     bool _get_origin(Location &ret) const WARN_IF_UNUSED;
@@ -981,15 +998,6 @@ private:
 
     // return the index of the primary core or -1 if no primary core selected
     int8_t _get_primary_core_index() const;
-
-    // get the index of the current primary accelerometer sensor
-    uint8_t _get_primary_accel_index(void) const;
-
-    // get the index of the current primary gyro sensor
-    uint8_t _get_primary_gyro_index(void) const;
-
-    // get the index of the current primary IMU
-    uint8_t _get_primary_IMU_index(void) const;
 
     // get current location estimate
     bool _get_location(Location &loc) const;
@@ -1014,8 +1022,8 @@ private:
       state updated at the end of each update() call
      */
     struct {
-        EKFType active_EKF_type;
-        uint8_t primary_IMU;
+        EKFType active_EKF_type;  // EKFType of backend these results are for
+        EKFType configured_ekf_type;  // vetted parameter-configured EKFType
         uint8_t primary_gyro;
         uint8_t primary_accel;
         uint8_t primary_core;
@@ -1046,6 +1054,7 @@ private:
         bool secondary_pos_ok;
         Vector2f ground_speed_vec;
         float ground_speed;
+        bool corrected_dv_valid;
         Vector3f corrected_dv;
         float corrected_dv_dt;
         Location origin;
@@ -1081,6 +1090,36 @@ private:
     struct AP_AHRS_Backend::Estimates external_estimates;
 #endif
 
+// FIXME: C++-17 will let us do away with this construct:
+#define AP_AHRS_BACKEND_COUNT                   \
+    (!!(AP_AHRS_DCM_ENABLED) +                  \
+     !!(AP_AHRS_NAVEKF2_ENABLED) +              \
+     !!(AP_AHRS_NAVEKF3_ENABLED) +              \
+     !!(AP_AHRS_SIM_ENABLED) +                  \
+     !!(AP_AHRS_EXTERNAL_ENABLED))
+
+    struct {
+        AP_AHRS_Backend &backend;
+        AP_AHRS_Backend::Estimates &estimates;
+    } backends_and_estimates[AP_AHRS_BACKEND_COUNT] {
+#if AP_AHRS_DCM_ENABLED
+        { dcm, dcm_estimates },
+#endif  // AP_AHRS_DCM_ENABLED
+#if AP_AHRS_NAVEKF2_ENABLED
+        { ekf2, ekf2_estimates },
+#endif  // AP_AHRS_NAVEKF2_ENABLED
+#if AP_AHRS_NAVEKF3_ENABLED
+        { ekf3, ekf3_estimates },
+#endif  // AP_AHRS_NAVEKF3_ENABLED
+#if AP_AHRS_SIM_ENABLED
+        { sim, sim_estimates },
+#endif  // AP_AHRS_SIM_ENABLED
+#if AP_AHRS_EXTERNAL_ENABLED
+        { external, external_estimates },
+#endif  // AP_AHRS_EXTERNAL_ENABLED
+    };
+
+
     enum class Options : uint16_t {
         DISABLE_DCM_FALLBACK_FW=(1U<<0),
         DISABLE_DCM_FALLBACK_VTOL=(1U<<1),
@@ -1107,6 +1146,14 @@ private:
         return const_cast<AP_AHRS*>(this)->estimates_for_type(type);
     }
 
+    // configured_backend is the backend the user wants to use as
+    // indicated by parameter values
+    AP_AHRS_Backend *configured_backend;
+    AP_AHRS_Backend::Estimates *configured_estimates;
+
+    // active_backend is the backend which is currently providing
+    // results (e.g. this may be a fallback estimator if the
+    // configured_backend is unhealthy)
     AP_AHRS_Backend *active_backend;
     AP_AHRS_Backend::Estimates *active_estimates;
 

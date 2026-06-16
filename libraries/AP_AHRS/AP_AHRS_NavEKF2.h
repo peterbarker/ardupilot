@@ -96,34 +96,17 @@ public:
         return EKF2.getEkfControlLimits(ekfGndSpdLimit, controlScaleXY);
     }
 
-    void send_ekf_status_report(class GCS_MAVLINK &link) const override {
-        EKF2.send_status_report(link);
-    }
-
-    // // get_filter_status - returns filter status as a series of flags
-    bool get_filter_status(nav_filter_status &status) const override {
-        EKF2.getFilterStatus(status);
-        return true;
-    }
-
     // // return the innovations for the specified instance
     // // An out of range instance (eg -1) returns data for the primary instance
     bool get_innovations(Vector3f &velInnov, Vector3f &posInnov, Vector3f &magInnov, float &tasInnov, float &yawInnov) const override {
         return EKF2.getInnovations(velInnov, posInnov, magInnov, tasInnov, yawInnov);
     }
 
-    bool get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const override {
-        Vector2f offset;
-        return EKF2.getVariances(velVar, posVar, hgtVar, magVar, tasVar, offset);
-    }
-
     void request_yaw_reset(void) override {
         EKF2.requestYawReset();
     }
-
-    // get latest altitude estimate above ground level in meters and validity flag
-    bool get_hagl(float &hagl) const override WARN_IF_UNUSED {
-        return EKF2.getHAGL(hagl);
+    void check_lane_switch() override {
+        EKF2.checkLaneSwitch();
     }
 
     // this is out here so parameters can be poked into it
