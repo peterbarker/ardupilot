@@ -63,6 +63,12 @@ public:
     bool get_relative_position_D_origin(postype_t &posD) const override;
 
     void get_control_limits(float &ekfGndSpdLimit, float &controlScaleXY) const override;
+
+private:
+
+    // ExternalAHRS sample time of the last sample fed to the wind
+    // estimator, used to feed it once per new sample:
+    uint32_t _last_wind_sample_us;
 };
 
 #endif

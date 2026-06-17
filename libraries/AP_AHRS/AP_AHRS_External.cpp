@@ -7,7 +7,24 @@
 
 void AP_AHRS_External::update()
 {
-    AP::externalAHRS().update();
+    auto &extahrs = AP::externalAHRS();
+    extahrs.update();
+
+    // feed the wind-triangle estimator once per new external sample.
+    // The position-solution update carries a fresh velocity and
+    // attitude together; ExternalAHRS can produce these faster than the
+    // estimator's safe rate, but estimate_wind rate-limits internally.
+    const uint32_t last_sample_us = extahrs.state.last_location_update_us;
+    if (last_sample_us != _last_wind_sample_us) {
+        _last_wind_sample_us = last_sample_us;
+        Vector3f velocity;
+        Quaternion quat;
+        if (extahrs.get_velocity_NED(velocity) && extahrs.get_quaternion(quat)) {
+            // estimate_wind wants the fuselage forward direction: the
+            // body forward axis as a unit vector in NED.
+            estimate_wind(velocity, quat.xaxis());
+        }
+    }
 }
 
 void AP_AHRS_External::get_results(AP_AHRS_Backend::Estimates &results)
@@ -74,9 +91,10 @@ void AP_AHRS_External::get_results(AP_AHRS_Backend::Estimates &results)
     /*
      * air data estimates
      */
-    // wind estimate is not supplied:
-    // results.wind = {};
-    // results.wind_valid = false;
+    // wind is estimated by the wind triangle (see update()), and is
+    // only meaningful while wind estimation is enabled:
+    results.wind = _wind;
+    results.wind_valid = AP::ahrs().get_wind_estimation_enabled();
 
     /*
      * Sensor-related information
