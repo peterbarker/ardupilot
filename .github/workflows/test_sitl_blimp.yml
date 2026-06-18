@@ -72,7 +72,7 @@ jobs:
         config: [
             sitltest-blimp,
         ]
-        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        run: [1]
 
     name: autotest ${{matrix.config}} run-${{matrix.run}}
 
@@ -105,7 +105,7 @@ jobs:
           BLIMP_STATS_FILE: /tmp/blimp_epsilon_stats.csv
           # DEBUG: run the whole Blimp suite this many times inside the single
           # test.Blimp step (build once, no per-iteration rebuild).
-          BLIMP_SUITE_REPEAT: "50"
+          BLIMP_SUITE_REPEAT: "2"
         shell: bash
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
