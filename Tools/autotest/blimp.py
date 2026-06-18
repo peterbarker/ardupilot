@@ -105,8 +105,47 @@ class AutoTestBlimp(TestSuite):
 
     def FlyManualFinned(self):
         '''test manual mode on the finned blimp frame'''
-        speed_accuracy = 0.05
-        heading_accuracy = 10
+        # DEBUG: instrumented to gather statistics on how close the blimp
+        # actually gets to each commanded speed/yaw so we can pick an epsilon
+        # that never flakes.  The asserting waits have been replaced with
+        # measurement windows that record the *closest* the vehicle gets on
+        # its worst axis -- exactly the quantity wait_and_maintain checks
+        # (minimum_duration defaults to 0, so a single in-tolerance sample
+        # passes).  Nothing asserts here, so every iteration yields data.
+        measure_time = 20
+
+        statsfile = os.environ.get("BLIMP_STATS_FILE")
+
+        def record(kind, label, ex, ey, ez, worst):
+            self.progress("DEBUGSTAT,%s,%s,%.5f,%.5f,%.5f,%.5f" %
+                          (kind, label, ex, ey, ez, worst))
+            if statsfile is not None:
+                with open(statsfile, "a") as f:
+                    f.write("%s,%s,%.5f,%.5f,%.5f,%.5f\n" %
+                            (kind, label, ex, ey, ez, worst))
+
+        def measure_speed(label, target):
+            tstart = self.get_sim_time()
+            best = (0.0, 0.0, 0.0)
+            best_worst = None
+            while self.get_sim_time_cached() - tstart < measure_time:
+                v = self.get_speed_vector(timeout=10)
+                e = (abs(v.x - target.x), abs(v.y - target.y), abs(v.z - target.z))
+                worst = max(e)
+                if best_worst is None or worst < best_worst:
+                    best_worst = worst
+                    best = e
+            record("speed", label, best[0], best[1], best[2], best_worst)
+
+        def measure_yaw(label, target):
+            tstart = self.get_sim_time()
+            best = None
+            while self.get_sim_time_cached() - tstart < measure_time:
+                msg = self.assert_receive_message('ATTITUDE', timeout=10)
+                e = abs(msg.yawspeed - target)
+                if best is None or e < best:
+                    best = e
+            record("yaw", label, best, 0.0, 0.0, best)
 
         def stop_blimp():
             self.progress("Stopping.")
@@ -114,12 +153,7 @@ class AutoTestBlimp(TestSuite):
             self.set_rc(2, 1500)
             self.set_rc(3, 1500)
             self.set_rc(4, 1500)
-            self.wait_speed_vector(Vector3(0, 0, 0), accuracy=speed_accuracy, timeout=30)
-            self.wait_yaw_speed(0, 0.2, 10)
-
-        def stop_blimp_wait_heading():
-            stop_blimp()
-            self.wait_heading(0, accuracy=heading_accuracy, timeout=2)
+            measure_speed("stop", Vector3(0, 0, 0))
 
         self.change_mode('MANUAL')
         self.wait_ready_to_arm()
@@ -129,42 +163,42 @@ class AutoTestBlimp(TestSuite):
 
         self.progress("Moving forward.")
         self.set_rc(2, 2000)
-        self.wait_speed_vector(Vector3(0.33, 0, 0), accuracy=speed_accuracy, timeout=15)
-        stop_blimp_wait_heading()
+        measure_speed("forward", Vector3(0.33, 0, 0))
+        stop_blimp()
 
         self.progress("Moving right.")
         self.set_rc(1, 2000)
-        self.wait_speed_vector(Vector3(0, 0.33, 0), accuracy=speed_accuracy, timeout=15)
-        stop_blimp_wait_heading()
+        measure_speed("right", Vector3(0, 0.33, 0))
+        stop_blimp()
 
         self.progress("Moving backward.")
         self.set_rc(2, 1000)
-        self.wait_speed_vector(Vector3(-0.33, 0, 0), accuracy=speed_accuracy, timeout=15)
-        stop_blimp_wait_heading()
+        measure_speed("backward", Vector3(-0.33, 0, 0))
+        stop_blimp()
 
         self.progress("Moving left.")
         self.set_rc(1, 1000)
-        self.wait_speed_vector(Vector3(0, -0.33, 0), accuracy=speed_accuracy, timeout=15)
-        stop_blimp_wait_heading()
+        measure_speed("left", Vector3(0, -0.33, 0))
+        stop_blimp()
 
         self.progress("Moving up.")
         self.set_rc(3, 2000)
-        self.wait_speed_vector(Vector3(0, 0, -0.40), accuracy=speed_accuracy, timeout=15)
-        stop_blimp_wait_heading()
+        measure_speed("up", Vector3(0, 0, -0.40))
+        stop_blimp()
 
         self.progress("Moving down.")
         self.set_rc(3, 1000)
-        self.wait_speed_vector(Vector3(0, 0, 0.40), accuracy=speed_accuracy, timeout=15)
-        stop_blimp_wait_heading()
+        measure_speed("down", Vector3(0, 0, 0.40))
+        stop_blimp()
 
         self.progress("Yawing right.")
         self.set_rc(4, 2000)
-        self.wait_yaw_speed(0.40, accuracy=speed_accuracy, timeout=15)
+        measure_yaw("yaw_right", 0.40)
         stop_blimp()
 
         self.progress("Yawing left.")
         self.set_rc(4, 1000)
-        self.wait_yaw_speed(-0.40, accuracy=speed_accuracy, timeout=15)
+        measure_yaw("yaw_left", -0.40)
         stop_blimp()
 
         self.disarm_vehicle()

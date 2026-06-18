@@ -99,11 +99,41 @@ jobs:
       - name: test ${{matrix.config}}
         env:
           CI_BUILD_TARGET: ${{matrix.config}}
+          # DEBUG: FlyManualFinned appends one row per maneuver here so we can
+          # build a distribution of achieved errors and choose a non-flaky
+          # epsilon.
+          BLIMP_STATS_FILE: /tmp/blimp_epsilon_stats.csv
         shell: bash
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           PATH="/github/home/.local/bin:$PATH"
+          # DEBUG: torture-test.  First pass goes through build_ci.sh so the
+          # MAVProxy/pymavlink deps get installed and the binary is built and
+          # the suite runs once.  This first pass is unstressed so the build
+          # is fast.
           Tools/scripts/build_ci.sh
+          # DEBUG: now saturate every core with background CPU hogs to starve
+          # SITL of CPU and provoke timing-dependent race conditions, then
+          # hammer the full suite many more times reusing the warm build.
+          for i in $(seq 1 "$(nproc)"); do
+            yes > /dev/null &
+          done
+          echo "DEBUG: started $(nproc) CPU stressors"
+          for iter in $(seq 2 20); do
+            echo "::group::DEBUG blimp suite iteration ${iter}/20"
+            Tools/autotest/autotest.py --show-test-timings build.Blimp test.Blimp
+            echo "::endgroup::"
+          done
+          # DEBUG: stop the CPU stressors
+          kill $(jobs -p) 2>/dev/null || true
+
+      - name: Archive blimp epsilon stats
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+           name: stats-${{matrix.config}}-run-${{matrix.run}}
+           path: /tmp/blimp_epsilon_stats.csv
+           retention-days: 14
 
       - name: Archive buildlog artifacts
         uses: actions/upload-artifact@v7
