@@ -20,6 +20,8 @@
  *
  */
 
+#include "AP_AHRS_config.h"
+
 #include <AP_Math/AP_Math.h>
 #include <inttypes.h>
 #include <AP_Airspeed/AP_Airspeed.h>
@@ -226,6 +228,10 @@ public:
     // reset the current attitude, used on new IMU calibration
     virtual void reset() = 0;
 
+#if AP_AHRS_EXTERNAL_WIND_ESTIMATE_ENABLED
+    void set_external_wind_estimate(float speed, float direction);
+#endif
+
     // return an airspeed estimate if available. return true
     // if we have an estimate
     virtual bool airspeed_EAS(float &airspeed_ret) const WARN_IF_UNUSED { return false; }
@@ -330,4 +336,28 @@ public:
     }
 
     virtual void get_control_limits(float &ekfGndSpdLimit, float &controlScaleXY) const = 0;
+
+protected:
+
+    // update our wind speed estimate.  velocity is a current velocity
+    // estimate in m/s in NED frame.  fuselageDirection is the vehicle's
+    // forward (fuselage) direction as a UNIT vector in the earth NED
+    // frame - i.e. the first column of the body-to-NED rotation
+    // (dcm_matrix.colx()): for level flight it is the heading direction,
+    // tilted by pitch and unaffected by roll.  Must be a unit vector;
+    // not normalised here.
+    void estimate_wind(const Vector3f &velocity, const Vector3f &fuselageDirection);
+
+    // estimated wind in m/s
+    Vector3f _wind;
+
+private:
+
+    // support for wind estimation
+    Vector3f _last_fuse;
+    Vector3f _last_vel;
+    uint32_t _last_wind_time;
+
+    // time of last wind estimate update, used to rate-limit estimation:
+    uint32_t _last_wind_estimate_ms;
 };
