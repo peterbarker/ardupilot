@@ -11,6 +11,7 @@ from pymavlink import mavutil
 from pymavlink.rotmat import Vector3
 
 from vehicle_test_suite import NotAchievedException
+from vehicle_test_suite import Test
 from vehicle_test_suite import TestSuite
 
 # get location of scripts
@@ -147,13 +148,41 @@ class AutoTestBlimp(TestSuite):
                     best = e
             record("yaw", label, best, 0.0, 0.0, best)
 
-        def stop_blimp():
+        def stop_blimp(label, check_heading):
+            # DEBUG: in addition to the translational speed, record the two
+            # other quantities the original test checked at every stop: the
+            # yaw *rate* settling back to zero (wait_yaw_speed(0, 0.2)) and --
+            # for translation maneuvers only -- the achieved *heading* settling
+            # back to 0 (wait_heading(0, accuracy=10)).  As elsewhere we track
+            # the closest the vehicle gets (best single sample) since
+            # wait_and_maintain passes on a single in-tolerance sample.
             self.progress("Stopping.")
             self.set_rc(1, 1500)
             self.set_rc(2, 1500)
             self.set_rc(3, 1500)
             self.set_rc(4, 1500)
-            measure_speed("stop", Vector3(0, 0, 0))
+            tstart = self.get_sim_time()
+            best_spd = (0.0, 0.0, 0.0)
+            best_spd_worst = None
+            best_rate = None
+            best_hdg = None
+            while self.get_sim_time_cached() - tstart < measure_time:
+                v = self.get_speed_vector(timeout=10)
+                e = (abs(v.x), abs(v.y), abs(v.z))
+                worst = max(e)
+                if best_spd_worst is None or worst < best_spd_worst:
+                    best_spd_worst = worst
+                    best_spd = e
+                rate = abs(self.assert_receive_message('ATTITUDE', timeout=10).yawspeed)
+                if best_rate is None or rate < best_rate:
+                    best_rate = rate
+                hdg = self.heading_delta(self.get_heading(timeout=10), 0)
+                if best_hdg is None or hdg < best_hdg:
+                    best_hdg = hdg
+            record("speed", "stop", best_spd[0], best_spd[1], best_spd[2], best_spd_worst)
+            record("yawrate_stop", label, best_rate, 0.0, 0.0, best_rate)
+            if check_heading:
+                record("heading", label, best_hdg, 0.0, 0.0, best_hdg)
 
         self.change_mode('MANUAL')
         self.wait_ready_to_arm()
@@ -164,42 +193,42 @@ class AutoTestBlimp(TestSuite):
         self.progress("Moving forward.")
         self.set_rc(2, 2000)
         measure_speed("forward", Vector3(0.33, 0, 0))
-        stop_blimp()
+        stop_blimp("forward", check_heading=True)
 
         self.progress("Moving right.")
         self.set_rc(1, 2000)
         measure_speed("right", Vector3(0, 0.33, 0))
-        stop_blimp()
+        stop_blimp("right", check_heading=True)
 
         self.progress("Moving backward.")
         self.set_rc(2, 1000)
         measure_speed("backward", Vector3(-0.33, 0, 0))
-        stop_blimp()
+        stop_blimp("backward", check_heading=True)
 
         self.progress("Moving left.")
         self.set_rc(1, 1000)
         measure_speed("left", Vector3(0, -0.33, 0))
-        stop_blimp()
+        stop_blimp("left", check_heading=True)
 
         self.progress("Moving up.")
         self.set_rc(3, 2000)
         measure_speed("up", Vector3(0, 0, -0.40))
-        stop_blimp()
+        stop_blimp("up", check_heading=True)
 
         self.progress("Moving down.")
         self.set_rc(3, 1000)
         measure_speed("down", Vector3(0, 0, 0.40))
-        stop_blimp()
+        stop_blimp("down", check_heading=True)
 
         self.progress("Yawing right.")
         self.set_rc(4, 2000)
         measure_yaw("yaw_right", 0.40)
-        stop_blimp()
+        stop_blimp("yaw_right", check_heading=False)
 
         self.progress("Yawing left.")
         self.set_rc(4, 1000)
         measure_yaw("yaw_left", -0.40)
-        stop_blimp()
+        stop_blimp("yaw_left", check_heading=False)
 
         self.disarm_vehicle()
 
@@ -299,7 +328,20 @@ class AutoTestBlimp(TestSuite):
             self.PREFLIGHT_Pressure,
             self.UTMGlobalPosition,
         ])
-        return ret
+        # DEBUG: run the whole suite BLIMP_SUITE_REPEAT times in a single
+        # test.Blimp step (build once, no per-iteration rebuild).  The
+        # autotest runner rejects duplicate test names, so each repeat is
+        # wrapped in a Test with a unique suffixed name.
+        repeat = int(os.environ.get("BLIMP_SUITE_REPEAT", "1"))
+        if repeat <= 1:
+            return ret
+        repeated = []
+        for i in range(repeat):
+            for fn in ret:
+                t = Test(fn)
+                t.name = "%s_%03u" % (t.name, i + 1)
+                repeated.append(t)
+        return repeated
 
     def disabled_tests(self):
         return {

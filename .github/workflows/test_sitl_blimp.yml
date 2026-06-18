@@ -103,27 +103,24 @@ jobs:
           # build a distribution of achieved errors and choose a non-flaky
           # epsilon.
           BLIMP_STATS_FILE: /tmp/blimp_epsilon_stats.csv
+          # DEBUG: run the whole Blimp suite this many times inside the single
+          # test.Blimp step (build once, no per-iteration rebuild).
+          BLIMP_SUITE_REPEAT: "50"
         shell: bash
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           PATH="/github/home/.local/bin:$PATH"
-          # DEBUG: torture-test.  First pass goes through build_ci.sh so the
-          # MAVProxy/pymavlink deps get installed and the binary is built and
-          # the suite runs once.  This first pass is unstressed so the build
-          # is fast.
-          Tools/scripts/build_ci.sh
-          # DEBUG: now saturate every core with background CPU hogs to starve
-          # SITL of CPU and provoke timing-dependent race conditions, then
-          # hammer the full suite many more times reusing the warm build.
+          # DEBUG: saturate every core with background CPU hogs to starve SITL
+          # of CPU and provoke timing-dependent race conditions for the whole
+          # torture run.
           for i in $(seq 1 "$(nproc)"); do
             yes > /dev/null &
           done
           echo "DEBUG: started $(nproc) CPU stressors"
-          for iter in $(seq 2 20); do
-            echo "::group::DEBUG blimp suite iteration ${iter}/20"
-            Tools/autotest/autotest.py --show-test-timings build.Blimp test.Blimp
-            echo "::endgroup::"
-          done
+          # build_ci.sh runs `autotest.py build.Blimp test.Blimp` -- one build,
+          # and BLIMP_SUITE_REPEAT makes the single test.Blimp step run the
+          # whole Blimp suite 50 times in-process.
+          Tools/scripts/build_ci.sh
           # DEBUG: stop the CPU stressors
           kill $(jobs -p) 2>/dev/null || true
 
