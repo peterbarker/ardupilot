@@ -60,6 +60,12 @@ public:
     void        rotation_matrix(Matrix3f &m) const;
     void        rotation_matrix(Matrix3d &m) const;
 
+    // return the body x-axis (forward direction) expressed in the earth
+    // frame, i.e. the first column of rotation_matrix().  For a unit
+    // quaternion this is a unit vector; cheaper than building the whole
+    // matrix when only the forward axis is needed.
+    Vector3<T>  xaxis(void) const;
+
     // make this quaternion equivalent to the supplied matrix
     void		from_rotation_matrix(const Matrix3<T> &m);
 

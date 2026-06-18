@@ -79,6 +79,19 @@ void QuaternionT<T>::rotation_matrix(Matrix3f &m) const
     m.c.z = 1.0f-2.0f*(q2q2 + q3q3);
 }
 
+// return the body x-axis (forward direction) expressed in the earth
+// frame.  This is the first column of rotation_matrix() computed
+// directly, without forming the whole matrix.
+template <typename T>
+Vector3<T> QuaternionT<T>::xaxis(void) const
+{
+    return Vector3<T>{
+        1.0f - 2.0f*(q3*q3 + q4*q4),
+        2.0f*(q2*q3 + q1*q4),
+        2.0f*(q2*q4 - q1*q3)
+    };
+}
+
 // make this quaternion equivalent to the supplied matrix
 // Thanks to Martin John Baker
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm

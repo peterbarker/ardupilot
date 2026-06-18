@@ -60,6 +60,37 @@ TEST(QuaternionTest, QuaternionToRotationMatrix) {
     EXPECT_NEAR(res.c.z, 1.0f, 1e-6f);
 }
 
+// xaxis() must return the body x-axis in the earth frame, which is the
+// first column of rotation_matrix().  Same 90-degree-yaw example as
+// above: the body forward axis points East.
+TEST(QuaternionTest, QuaternionXAxisValue) {
+    const Vector3f x = Quaternion(0.5f * sqrtf(2.0f), 0.0f, 0.0f, 0.5f * sqrtf(2.0f)).xaxis();
+    EXPECT_NEAR(x.x, 0.0f, 1e-6f);
+    EXPECT_NEAR(x.y, 1.0f, 1e-6f);
+    EXPECT_NEAR(x.z, 0.0f, 1e-6f);
+}
+
+// xaxis() must agree with rotation_matrix().colx() over a range of
+// attitudes, and stay a unit vector for unit quaternions.
+TEST(QuaternionTest, QuaternionXAxisMatchesRotationMatrix) {
+    const float angles[] = { -2.0f, -0.7f, 0.0f, 0.3f, 1.2f, 3.0f };
+    for (const float r : angles) {
+        for (const float p : angles) {
+            for (const float y : angles) {
+                Quaternion q;
+                q.from_euler(r, p, y);
+                Matrix3f m;
+                q.rotation_matrix(m);
+                const Vector3f x = q.xaxis();
+                EXPECT_NEAR(x.x, m.colx().x, 1e-6f);
+                EXPECT_NEAR(x.y, m.colx().y, 1e-6f);
+                EXPECT_NEAR(x.z, m.colx().z, 1e-6f);
+                EXPECT_NEAR(x.length(), 1.0f, 1e-6f);
+            }
+        }
+    }
+}
+
 // Tests that quaternion multiplication is homomorphic with rotation matrix
 // multiplication, or C(q0 * q1) = C(q0) * C(q1)
 TEST(QuaternionTest, QuaternionMultiplicationIsHomomorphism) {
