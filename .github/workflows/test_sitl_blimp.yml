@@ -105,7 +105,7 @@ jobs:
           BLIMP_STATS_FILE: /tmp/blimp_epsilon_stats.csv
           # DEBUG: run the whole Blimp suite this many times inside the single
           # test.Blimp step (build once, no per-iteration rebuild).
-          BLIMP_SUITE_REPEAT: "2"
+          BLIMP_SUITE_REPEAT: "50"
         shell: bash
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}

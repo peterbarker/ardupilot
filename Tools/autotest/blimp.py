@@ -184,6 +184,14 @@ class AutoTestBlimp(TestSuite):
             if check_heading:
                 record("heading", label, best_hdg, 0.0, 0.0, best_hdg)
 
+        # FlyManualFinned compares NED velocities and absolute heading against
+        # body-frame stick inputs, so it assumes it starts from a fresh home
+        # (heading 0, at the home location).  That only holds when it is the
+        # first test in the process; earlier tests (e.g. FlyLoiter) leave the
+        # blimp yawed and displaced, and the harness does not reboot SITL
+        # between passing tests.  Restart SITL so every run starts clean.
+        self.reset_SITL_commandline()
+
         self.change_mode('MANUAL')
         self.wait_ready_to_arm()
         self.arm_vehicle()
