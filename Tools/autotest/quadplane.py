@@ -750,7 +750,6 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         return {
             "FRSkyPassThrough": "Currently failing",
             "CPUFailsafe": "servo channel values not scaled like ArduPlane",
-            "GyroFFT": "flapping test",
             "ConfigErrorLoop": "failing because RC values not settable",
         }
 
