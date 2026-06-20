@@ -16297,7 +16297,7 @@ SERIAL5_BAUD 128
             print("Had to force-reset SITL %u times" %
                   (self.forced_post_test_sitl_reboots,))
 
-    def autotest(self, tests=None, allow_skips=True, step_name=None):
+    def autotest(self, tests=None, allow_skips=True, step_name=None, repeat=1):
         """Autotest used by ArduPilot autotest CI."""
         if tests is None:
             tests = self.tests()
@@ -16322,6 +16322,12 @@ SERIAL5_BAUD 128
                 skip_list.append((test, disabled[test.name]))
                 continue
             tests.append(test)
+
+        # the duplicate-name check above guards against accidental
+        # double-listing; expand the de-duplicated list afterwards so an
+        # explicit --repeat re-runs each test without tripping that check
+        if repeat > 1:
+            tests = tests * repeat
 
         results = self.run_tests(tests)
 

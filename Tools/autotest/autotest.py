@@ -376,7 +376,7 @@ supplementary_test_binary_map = {
 }
 
 
-def run_specific_test(step, *args, **kwargs):
+def run_specific_test(step, *args, repeat=1, **kwargs):
     """Run a specific test."""
     t = split_specific_test_step(step)
     if t is None:
@@ -401,7 +401,7 @@ def run_specific_test(step, *args, **kwargs):
     if len(tests):
         print(f"Failed to find tests {tests}")
         sys.exit(1)
-    return tester.autotest(tests=run, allow_skips=False, step_name=step), tester
+    return tester.autotest(tests=run, allow_skips=False, step_name=step, repeat=repeat), tester
 
 
 def run_step(step):
@@ -545,7 +545,7 @@ def run_step(step):
     # handle "test.Copter.CPUFailsafe" etc:
     specific_test_to_run = find_specific_test_to_run(step)
     if specific_test_to_run is not None:
-        return run_specific_test(specific_test_to_run, binary, **fly_opts)
+        return run_specific_test(specific_test_to_run, binary, repeat=opts.repeat, **fly_opts)
 
     if step == 'build.All':
         return build_all()
@@ -895,6 +895,10 @@ if __name__ == "__main__":
                       action="store_true",
                       default=False,
                       help="show how long each test took to run")
+    parser.add_option("--repeat",
+                      type='int',
+                      default=1,
+                      help="run each specified individual test this many times")
     parser.add_option("--validate-parameters",
                       action="store_true",
                       default=False,
