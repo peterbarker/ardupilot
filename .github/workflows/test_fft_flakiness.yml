@@ -1,0 +1,135 @@
+name: test fft flakiness
+
+# Temporary throwaway workflow: run ONLY the FFT/notch autotests affected by
+# the settle + longer-hover change and the QuadPlane GyroFFT mission fix, each
+# repeated many times off a single build (--repeat, no rebuild between runs),
+# to confirm they are solidly de-flaked.  Delete before merging.
+
+on:
+  push:
+    branches:
+      - 'pr-claude/autotest-dynamic-notches-then-gyrofft-enabled'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REPEAT: 20
+
+jobs:
+  copter-fft:
+    runs-on: ubuntu-22.04
+    container:
+      image: ardupilot/ardupilot-dev-base:v0.1.3
+      options: --privileged --cap-add=SYS_PTRACE --security-opt apparmor=unconfined --security-opt seccomp=unconfined
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - DynamicNotches
+          - DynamicRpmNotches
+          - DynamicRpmNotchesRateThread
+          - PIDNotches
+          - StaticNotches
+          - MotorVibration
+          - GyroFFT
+          - GyroFFTHarmonic
+          - GyroFFTContinuousAveraging
+          - GyroFFTAverage
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Register autotest fail matcher
+        run: echo "::add-matcher::.github/problem-matchers/autotestfail.json"
+      - name: Prepare ccache timestamp
+        id: ccache_cache_timestamp
+        run: echo "timestamp=$(date -u +"%F-%T")" >> $GITHUB_OUTPUT
+      - name: ccache cache files
+        uses: actions/cache@v5
+        with:
+          path: ~/.ccache
+          key: ${{ github.workflow }}-ccache-copter-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+          restore-keys: ${{ github.workflow }}-ccache-copter-
+      - name: setup ccache
+        run: . .github/workflows/ccache.env
+      - name: install autotest dependencies
+        shell: bash
+        run: |
+          PATH="/github/home/.local/bin:$PATH"
+          # mirror Tools/scripts/build_ci.sh: MAVProxy first, then force the
+          # in-tree pymavlink (MAVProxy pulls its own pymavlink as a dep)
+          python3 -m pip install --progress-bar off --cache-dir /tmp/pip-cache --user MAVProxy
+          python3 -m pip uninstall -y pymavlink || true
+          (cd modules/mavlink/pymavlink && python3 -m pip install --progress-bar off --cache-dir /tmp/pip-cache --user .)
+      - name: ${{ matrix.test }} x${{ env.REPEAT }}
+        shell: bash
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          Tools/autotest/autotest.py --debug --no-clean --repeat ${REPEAT} \
+            build.Copter test.Copter.${{ matrix.test }}
+      - name: Archive buildlog artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: fail-copter-${{ matrix.test }}
+          path: |
+            /tmp/buildlogs
+            /__w/ardupilot/ardupilot/logs
+          retention-days: 14
+
+  quadplane-fft:
+    runs-on: ubuntu-22.04
+    container:
+      image: ardupilot/ardupilot-dev-base:v0.1.3
+      options: --privileged --cap-add=SYS_PTRACE --security-opt apparmor=unconfined --security-opt seccomp=unconfined
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - GyroFFT
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Register autotest fail matcher
+        run: echo "::add-matcher::.github/problem-matchers/autotestfail.json"
+      - name: Prepare ccache timestamp
+        id: ccache_cache_timestamp
+        run: echo "timestamp=$(date -u +"%F-%T")" >> $GITHUB_OUTPUT
+      - name: ccache cache files
+        uses: actions/cache@v5
+        with:
+          path: ~/.ccache
+          key: ${{ github.workflow }}-ccache-plane-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+          restore-keys: ${{ github.workflow }}-ccache-plane-
+      - name: setup ccache
+        run: . .github/workflows/ccache.env
+      - name: install autotest dependencies
+        shell: bash
+        run: |
+          PATH="/github/home/.local/bin:$PATH"
+          # mirror Tools/scripts/build_ci.sh: MAVProxy first, then force the
+          # in-tree pymavlink (MAVProxy pulls its own pymavlink as a dep)
+          python3 -m pip install --progress-bar off --cache-dir /tmp/pip-cache --user MAVProxy
+          python3 -m pip uninstall -y pymavlink || true
+          (cd modules/mavlink/pymavlink && python3 -m pip install --progress-bar off --cache-dir /tmp/pip-cache --user .)
+      - name: QuadPlane.${{ matrix.test }} x${{ env.REPEAT }}
+        shell: bash
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          Tools/autotest/autotest.py --debug --no-clean --repeat ${REPEAT} \
+            build.Plane test.QuadPlane.${{ matrix.test }}
+      - name: Archive buildlog artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: fail-quadplane-${{ matrix.test }}
+          path: |
+            /tmp/buildlogs
+            /__w/ardupilot/ardupilot/logs
+          retention-days: 14
