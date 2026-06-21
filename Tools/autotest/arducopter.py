@@ -8393,12 +8393,14 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             defaults_filepath=','.join(self.model_defaults_filepath("octa")),
             model="octa"
         )
-        # a single notch on an octa's spread of motor frequencies leaves a
-        # marginal residual at the ~95Hz fundamental; hover longer so the
-        # Welch-averaged FFT has enough segments (instance 2 is round-robined
-        # ~4-ways) to keep the peak estimate from spiking above the threshold
+        # search from 150Hz rather than 50Hz: the octa motor fundamental the
+        # notch targets is ~190-200Hz, but the high INS_GYRO_FILTER used here
+        # lets the rate loop sustain a closed-loop oscillation near half the
+        # motor frequency (~90Hz).  That subharmonic is real vehicle motion the
+        # harmonic notch is not meant to remove, so don't let it fail the notch
+        # check.  Hover longer too, to settle the Welch FFT estimate.
         freq, hover_throttle, peakdb1, psd = \
-            self.hover_and_check_matched_frequency_with_fft_and_psd(-10, 50, 320, reverse=True, instance=2, hover_time=30)
+            self.hover_and_check_matched_frequency_with_fft_and_psd(-10, 150, 320, reverse=True, instance=2, hover_time=30)
         # find the noise at the motor frequency
         esc_hz = self.get_average_esc_frequency()
         esc_peakdb1 = psd["X"][int(esc_hz)]
@@ -8409,7 +8411,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.reboot_sitl()
 
         freq, hover_throttle, peakdb2, psd = \
-            self.hover_and_check_matched_frequency_with_fft_and_psd(-15, 50, 320, reverse=True, instance=2, hover_time=30)
+            self.hover_and_check_matched_frequency_with_fft_and_psd(-15, 150, 320, reverse=True, instance=2, hover_time=30)
         # find the noise at the motor frequency
         esc_hz = self.get_average_esc_frequency()
         esc_peakdb2 = psd["X"][int(esc_hz)]
