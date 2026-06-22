@@ -1,0 +1,14 @@
+# Test board exercising the ODID exemption in test_new_boards.py.
+#
+# It includes an existing board that is known to build with OpenDroneID and
+# enables AP_OPENDRONEID_ENABLED, so is_odid_board() treats it as an ODID
+# variant.  ODID boards are exempt from the new-board README requirement, so
+# test_new_boards.py is expected to accept this board despite having no README.
+include ../CUAV-V6X-v2/hwdef.dat
+
+# enable OpenDroneID
+define AP_OPENDRONEID_ENABLED 1
+
+# this throwaway test board has no committed prebuilt bootloader binary, so
+# disable the bootloader-flashing requirement to let ./waf configure succeed
+define AP_BOOTLOADER_FLASHING_ENABLED 0
