@@ -50,6 +50,7 @@ class AP_Mount_Viewpro;
 class AP_Mount_Topotek;
 class AP_Mount_CADDX;
 class AP_Mount_XFRobot;
+class AP_Mount_GimbalAI;
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -72,6 +73,7 @@ class AP_Mount
     friend class AP_Mount_Viewpro;
     friend class AP_Mount_Topotek;
     friend class AP_Mount_CADDX;
+    friend class AP_Mount_GimbalAI;
 
 public:
     AP_Mount();
@@ -128,6 +130,9 @@ public:
 #endif
 #if HAL_MOUNT_XFROBOT_ENABLED
         XFRobot = 14,        /// XFRobot gimbal using a custom serial protocol
+#endif
+#if HAL_MOUNT_GIMBALAI_ENABLED
+        GimbalAI = 15,       /// GimbalAI (GIMBAL-AI ISR pod) gimbal using a custom serial protocol
 #endif
     };
 

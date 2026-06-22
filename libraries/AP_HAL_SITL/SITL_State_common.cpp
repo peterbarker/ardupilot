@@ -241,6 +241,12 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         sitl_model->add_gimbal_sim(*viewpro);
         return viewpro;
 #endif  // AP_SIM_VIEWPRO_ENABLED
+#if AP_SIM_GIMBALAI_ENABLED
+    } else if (streq(name, "gimbalai")) {
+        const auto gimbalai = NEW_NOTHROW SITL::GimbalAI();
+        sitl_model->add_gimbal_sim(*gimbalai);
+        return gimbalai;
+#endif  // AP_SIM_GIMBALAI_ENABLED
 #if AP_SIM_AVT_CM62_ENABLED
     } else if (streq(name, "avt_cm62_gimbal")) {
         static uint8_t mavlink_gimbal_count;

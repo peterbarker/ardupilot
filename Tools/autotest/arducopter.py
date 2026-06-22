@@ -7743,6 +7743,36 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.mount_test_body(pitch_rc_neutral=1818, neutral_tol_deg=0.05,
                              do_rate_tests=False, constrain_sysid_target=False)
 
+    def MountGimbalAI(self):
+        '''test GimbalAI gimbal using SIM_GimbalAI simulator'''
+        self.set_parameters({
+            "MNT1_TYPE": 15,      # GimbalAI
+            "CAM1_TYPE": 4,       # Mount
+            "SERIAL5_PROTOCOL": 8,  # gimbal
+            "RC6_OPTION": 213,    # MOUNT1_PITCH
+        })
+        self.customise_SITL_commandline(["--serial5=sim:gimbalai:"])
+        # QS0 software version "SV1.2.3" from SIM_GimbalAI: major=1, minor=2, patch=3
+        # firmware_version = major | (minor<<8) | (patch<<16) = 0x030201
+        # cap flags: CAPTURE_VIDEO | CAPTURE_IMAGE | HAS_BASIC_ZOOM | HAS_BASIC_FOCUS |
+        #            HAS_TRACKING_POINT | HAS_TRACKING_RECTANGLE
+        self.mount_check_camera_information(
+            "GimbalAI", "SIM_GA",
+            expected_fw_version=0x030201,
+            expected_cap_flags=0x6C3,
+        )
+        # GimbalAI pod angles use a clean INT16 encoding (LSB=360/65536 deg) so
+        # neutral 0 deg is represented within ~0.006 deg.  Pitch is clamped to
+        # +-16380 (+-89.978 deg) in the simulator to avoid pymavlink gimbal-lock
+        # detection at exactly +-90 deg.
+        # pitch_rc_neutral=1818: with RC6 min=1000 max=2000 trim=1500 and
+        # default MNT1_PITCH_MIN=-90 / MNT1_PITCH_MAX=20, norm_input=0.636
+        # maps to exactly 0 deg pitch.
+        # constrain_sysid_target=False: the driver does not yet clamp pitch to
+        # MNT1_PITCH_MAX before sending, so the 68-deg sysid test is skipped.
+        self.mount_test_body(pitch_rc_neutral=1818, neutral_tol_deg=0.05,
+                             do_rate_tests=False, constrain_sysid_target=False)
+
     def MountAVTCM62(self):
         '''test MAVLink (Gimbal Protocol v2) gimbal using SIM_AVT_CM62 simulator'''
         self.set_parameters({
@@ -17749,6 +17779,7 @@ return update, 1000
             self.TakeoffWithLocation,
             self.MountTopotek,
             self.MountViewPro,
+            self.MountGimbalAI,
             self.MountAVTCM62,
             self.MountAVTCM62Dual,
             self.MountRCFailAngle,
