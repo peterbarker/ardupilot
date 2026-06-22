@@ -1,0 +1,7 @@
+# Test board exercising the AP_Periph README rule in test_new_boards.py.
+#
+# It includes an existing AP_Periph board so it is buildable and is flagged
+# is_ap_periph via the inherited "env AP_PERIPH 1".  AP_Periph boards must
+# ship a README.md but are NOT required to embed an image, so this board has
+# a README with no image and test_new_boards.py is expected to accept it.
+include ../MatekL431-Serial/hwdef.dat
