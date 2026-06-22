@@ -162,10 +162,8 @@ public:
     bool getHAGL(float &HAGL) const;
 
     // return the Euler roll, pitch and yaw angle in radians
-    void getEulerAngles(Vector3f &eulers) const;
 
     // return the transformation matrix from XYZ (body) to NED axes
-    void getRotationBodyToNED(Matrix3f &mat) const;
 
     // return the quaternions defining the rotation from XYZ (body) to NED axes
     void getQuaternionBodyToNED(int8_t instance, Quaternion &quat) const;

@@ -1141,30 +1141,15 @@ bool NavEKF2::getHAGL(float &HAGL) const
     return core[primary].getHAGL(HAGL);
 }
 
-// return the Euler roll, pitch and yaw angle in radians for the specified instance
-void NavEKF2::getEulerAngles(Vector3f &eulers) const
-{
-    if (core) {
-        core[primary].getEulerAngles(eulers);
-    }
-}
-
-// return the transformation matrix from XYZ (body) to NED axes
-void NavEKF2::getRotationBodyToNED(Matrix3f &mat) const
-{
-    if (core) {
-        core[primary].getRotationBodyToNED(mat);
-    }
-}
 
 // return the quaternions defining the rotation from NED to XYZ (body) axes
 void NavEKF2::getQuaternionBodyToNED(int8_t instance, Quaternion &quat) const
 {
     if (instance < 0 || instance >= num_cores) instance = primary;
     if (core) {
-        Matrix3f mat;
-        core[instance].getRotationBodyToNED(mat);
-        quat.from_rotation_matrix(mat);
+        core[instance].getQuaternion(quat);
+        // quaternion composition rotates the attitude into the vehicle body frame
+        quat *= AP::dal().get_quat_vehicle_body_to_autopilot_body();
     }
 }
 
@@ -1441,7 +1426,6 @@ uint32_t NavEKF2::getLastPosDownReset(float &posDelta)
 // update the yaw reset data to capture changes due to a lane switch
 void NavEKF2::updateLaneSwitchYawResetData(uint8_t new_primary, uint8_t old_primary)
 {
-    Vector3f eulers_old_primary, eulers_new_primary;
     float old_yaw_delta;
 
     // If core yaw reset data has been consumed reset delta to zero
@@ -1456,9 +1440,16 @@ void NavEKF2::updateLaneSwitchYawResetData(uint8_t new_primary, uint8_t old_prim
 
     // Record the yaw delta between current core and new primary core and the timestamp of the core change
     // Add current delta in case it hasn't been consumed yet
-    core[old_primary].getEulerAngles(eulers_old_primary);
-    core[new_primary].getEulerAngles(eulers_new_primary);
-    yaw_reset_data.core_delta = wrap_PI(eulers_new_primary.z - eulers_old_primary.z + yaw_reset_data.core_delta);
+    Quaternion quat;
+    core[old_primary].getQuaternion(quat);
+    // quaternion composition rotates the attitude into the vehicle body frame
+    quat *= AP::dal().get_quat_vehicle_body_to_autopilot_body();
+    const float yaw_old_primary = quat.get_euler_yaw();
+    core[new_primary].getQuaternion(quat);
+    // quaternion composition rotates the attitude into the vehicle body frame
+    quat *= AP::dal().get_quat_vehicle_body_to_autopilot_body();
+    const float yaw_new_primary = quat.get_euler_yaw();
+    yaw_reset_data.core_delta = wrap_PI(yaw_new_primary - yaw_old_primary + yaw_reset_data.core_delta);
     yaw_reset_data.last_primary_change = imuSampleTime_us / 1000;
     yaw_reset_data.core_changed = true;
 

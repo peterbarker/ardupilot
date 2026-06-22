@@ -157,11 +157,9 @@ void AP_AHRS_SIM::get_results(AP_AHRS_Backend::Estimates &results)
 
     // populate vehicle body attitude:
     results.quaternion = fdm.quaternion;
-    results.quaternion.rotate(-AP::ahrs().get_trim());
-
-    // update derived attitude values:
-    results.quaternion.rotation_matrix(results.dcm_matrix);
-    results.quaternion.to_euler(results.roll_rad, results.pitch_rad, results.yaw_rad);
+    // quaternion composition rotates the attitude into the vehicle body frame
+    results.quaternion *= AP::ahrs().get_quat_vehicle_body_to_autopilot_body();
+    results.derive_attitude_from_quaternion();
 
     results.gyro_estimate = _ins.get_gyro();
     results.gyro_drift.zero();
