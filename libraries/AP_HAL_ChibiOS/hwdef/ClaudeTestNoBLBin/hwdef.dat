@@ -1,0 +1,11 @@
+# Test board exercising the new-bootloader-binary check in test_new_boards.py.
+#
+# It includes an existing board and enables OpenDroneID, so it is treated as an
+# ODID variant and is exempt from the README requirement.  It adds a new
+# bootloader hwdef (hwdef-bl.dat) but deliberately omits the matching prebuilt
+# binary Tools/bootloaders/ClaudeTestNoBLBin_bl.bin, so the new check is
+# expected to reject this branch.
+include ../CUAV-V6X-v2/hwdef.dat
+
+# enable OpenDroneID (so README is not required; isolates the bootloader check)
+define AP_OPENDRONEID_ENABLED 1

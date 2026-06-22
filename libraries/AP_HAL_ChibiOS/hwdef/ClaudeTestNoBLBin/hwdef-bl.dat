@@ -1,0 +1,2 @@
+# New bootloader hwdef with no committed Tools/bootloaders/*_bl.bin counterpart.
+include ../CUAV-V6X-v2/hwdef-bl.dat
