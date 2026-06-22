@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<!--
+  helitiltquadplane-nice: presentation-quality rendering of the tilting
+  variable-pitch quadplane, sharing the schematic helitiltquadplane
+  model's animations (its model XML is generated from that aircraft's -
+  see generate_heliquad_models.py).  Launch with
+  HELITILT_AIRCRAFT=helitiltquadplane-nice fg_helitiltquadplane_view.sh
+-->
+<PropertyList>
+  <sim>
+    <description>ArduPilot helitiltquadplane tilting variable-pitch quadplane (presentation rendering)</description>
+    <author>ArduPilot project</author>
+    <status>experimental</status>
+    <flight-model>external</flight-model>
+    <model-hz>50</model-hz>
+    <panel>
+      <visibility archive="n">false</visibility>
+    </panel>
+    <model>
+      <path archive="y">Aircraft/helitiltquadplane-nice/Models/helitiltquadplane-nice.xml</path>
+    </model>
+    <view>
+      <internal archive="y">true</internal>
+      <config>
+        <x-offset-m archive="y">0.0</x-offset-m>
+        <y-offset-m archive="y">0.15</y-offset-m>
+        <z-offset-m archive="y">0.90</z-offset-m>
+        <pitch-offset-deg>0</pitch-offset-deg>
+      </config>
+    </view>
+    <chase-distance-m archive="y" type="double">-4.0</chase-distance-m>
+    <!-- raise the external view's orbit point (and so the camera) -->
+    <view n="1">
+      <config>
+        <target-y-offset-m archive="y" type="double">1.0</target-y-offset-m>
+      </config>
+    </view>
+    <startup>
+      <splash-title>ArduPilot helitiltquadplane</splash-title>
+    </startup>
+  </sim>
+  <engines>
+    <engine n="0">
+      <rpm>0</rpm>
+    </engine>
+    <engine n="1">
+      <rpm>0</rpm>
+    </engine>
+    <engine n="2">
+      <rpm>0</rpm>
+    </engine>
+    <engine n="3">
+      <rpm>0</rpm>
+    </engine>
+  </engines>
+</PropertyList>
