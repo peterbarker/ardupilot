@@ -194,34 +194,62 @@ void SITL_State::_output_to_flightgear(void)
     fdm.theta = radians(sfdm.pitchDeg);
     fdm.psi   = radians(sfdm.yawDeg);
     fdm.vcas  = sfdm.velocity_air_bf.length()/0.3048;
-    if (_vehicle == ArduCopter) {
+    if (_model_str != nullptr && strstr(_model_str, "heliquad") != nullptr) {
+        // variable-pitch quad frames (copter heliquad, plane-heliquad*).
+        // The packet has no fields for blade collective or nacelle tilt,
+        // so they ride in unused per-engine fields which only the
+        // heliquad aircraft model XML reads:
+        //   rpm[i]       - rotor speed, from the shared RSC (governed
+        //                  copter) or the corner's own drive motor
+        //                  (heli-quad-ddvp copter, and the quadplane)
+        //   fuel_flow[i] - blade collective, -1..1 about trim
+        //   egt[i]       - nacelle tilt in degrees, 10 (hover) .. -90 (forward)
+        const bool copter = (_vehicle == ArduCopter);
+        // collective servos: SERVO1-4 on copter, SERVO5-8 on quadplane
+        const uint8_t motor0 = copter? 0 : 4;
+        // rotor speed: the governed copter heli-quad runs a single shared
+        // RSC on SERVO8 (copter-heli convention) so every rotor shows the
+        // same speed; the direct-drive variable-pitch copter
+        // (heli-quad-ddvp) has an independent drive ESC per corner on
+        // SERVO5-8, and the quadplane frames have one per corner on
+        // SERVO9-12, so each rotor shows its own speed.
+        const bool ddvp = copter && strstr(_model_str, "ddvp") != nullptr;
+        // tilt servos for plane-heliquad-hvec: motor N's nacelle is
+        // on SERVO(12+N), matching heliquad_hvec_motors in
+        // SIM_Frame.cpp
+        static const uint8_t tilt_chan[4] = {12, 13, 14, 15};
         fdm.num_engines = 4;
-        if (_model_str != nullptr && strstr(_model_str, "heliquad") != nullptr) {
-            // copter variable-pitch quad (heli-quad). The packet has no
-            // field for blade collective, so it rides in an unused
-            // per-engine field which only the heliquad aircraft model XML
-            // reads:
-            //   rpm[i]       - rotor speed
-            //   fuel_flow[i] - blade collective, -1..1 about trim
-            // collective servos are SERVO1-4. The governed heli-quad
-            // runs a single shared RSC on SERVO8, so every rotor shows
-            // the same speed; the direct-drive variable-pitch frame
-            // (heli-quad-ddvp) has an independent drive ESC per corner on
-            // SERVO5-8, so each rotor shows its own speed. Reading the
-            // per-corner channels covers both: on the shared frame all
-            // four carry the same RSC output.
-            const bool ddvp = strstr(_model_str, "ddvp") != nullptr;
-            for (uint8_t i=0; i<4; i++) {
-                const uint8_t rsc_chan = ddvp ? 4+i : 7;
-                const float rsc = constrain_float((pwm_output[rsc_chan]-1000)*0.001f, 0, 1);
-                fdm.rpm[i] = rsc * 1500;  // nominal head speed, rev/min
-                fdm.fuel_flow[i] = constrain_float((pwm_output[i]-1500)*0.002f, -1, 1);
+        for (uint8_t i=0; i<4; i++) {
+            uint8_t rsc_chan;
+            if (!copter) {
+                rsc_chan = 8 + i;
+            } else if (ddvp) {
+                rsc_chan = 4 + i;
+            } else {
+                rsc_chan = 7;
             }
-        } else {
-            // normal direct-drive fixed-pitch quadcopter
-            for (uint8_t i=0; i<4; i++) {
-                fdm.rpm[i] = constrain_float((pwm_output[i]-1000), 0, 1000);
+            const float rsc = constrain_float((pwm_output[rsc_chan]-1000)*0.001f, 0, 1);
+            fdm.rpm[i] = rsc * 1500;  // nominal head speed, rev/min
+            fdm.fuel_flow[i] = constrain_float((pwm_output[motor0+i]-1500)*0.002f, -1, 1);
+            if (!copter && pwm_output[tilt_chan[i]] >= 900) {
+                // tilt servo sweeps 10..-90 degrees over 1000..2000us;
+                // unconfigured channels output 0 and leave the nacelle
+                // vertical (non-tilting plane-heliquad)
+                fdm.egt[i] = 10 - constrain_float((pwm_output[tilt_chan[i]]-1000)*0.001f, 0, 1) * 100;
             }
+        }
+        if (!copter) {
+            // plane control surfaces, normalized
+            const float aileron = constrain_float((pwm_output[0]-1500)*0.002f, -1, 1);
+            fdm.left_aileron = aileron;
+            fdm.right_aileron = -aileron;
+            fdm.elevator = constrain_float((pwm_output[1]-1500)*0.002f, -1, 1);
+            fdm.rudder = constrain_float((pwm_output[3]-1500)*0.002f, -1, 1);
+        }
+    } else if (_vehicle == ArduCopter) {
+        fdm.num_engines = 4;
+        for (uint8_t i=0; i<4; i++) {
+            fdm.rpm[i] = constrain_float((pwm_output[i]-1000), 0, 1000);
         }
     } else {
         fdm.num_engines = 4;
