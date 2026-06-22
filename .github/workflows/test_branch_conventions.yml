@@ -1,6 +1,7 @@
 name: Test for Malformed Commits in PR Branch
 
 on:
+  push:
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -10,36 +11,24 @@ concurrency:
 
 jobs:
   check-merge-commits:
-    if: github.repository == 'ArduPilot/ardupilot'
     runs-on: ubuntu-latest
     container: ardupilot/ardupilot-dev-chibios:v0.1.3
 
     steps:
-      - name: Checkout PR branch
+      - name: Checkout branch
         uses: actions/checkout@v6
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
           submodules: 'false'
           fetch-depth: 0
 
-      - name: Fetch base branch
-        run: |
-          git remote -v
-          git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
-          git fetch upstream ${{ github.event.pull_request.base.ref }}
-          git show upstream/${{ github.event.pull_request.base.ref }}
-
-      - name: Install markdownlint-cli2
+      - name: Fetch base branch (ArduPilot master)
         shell: bash
         run: |
-          apt-get update && apt-get install -y npm
-          npm install -g markdownlint-cli2@0.4.0
-
-      - name: Check branch conventions
-        shell: bash
-        run: |
-          Tools/scripts/check_branch_conventions.py --base-branch "upstream/${{ github.event.pull_request.base.ref }}"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git remote add upstream https://github.com/ArduPilot/ardupilot 2>/dev/null || \
+            git remote set-url upstream https://github.com/ArduPilot/ardupilot
+          git fetch --no-tags upstream master
+          git log -1 upstream/master --oneline
 
       - name: Update submodules
         run: |
@@ -51,7 +40,19 @@ jobs:
           apt-get update
           apt-get install -y g++-aarch64-linux-gnu
 
-      - name: Test new boards compile
+      - name: Install markdownlint-cli2
         shell: bash
         run: |
-          Tools/scripts/test_new_boards.py --master-branch "upstream/${{ github.event.pull_request.base.ref }}"
+          apt-get update && apt-get install -y npm
+          npm install -g markdownlint-cli2@0.4.0
+
+      - name: Check branch conventions
+        shell: bash
+        run: |
+          Tools/scripts/check_branch_conventions.py --base-branch "upstream/master"
+
+      - name: Test new boards compile
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          Tools/scripts/test_new_boards.py --master-branch "upstream/master"
