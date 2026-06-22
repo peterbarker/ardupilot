@@ -1,0 +1,7 @@
+# Test board exercising the new-board README image check in test_new_boards.py.
+#
+# It includes an existing flight board so it is buildable, and it is neither an
+# AP_Periph nor an ODID board, so it MUST ship a README.md that references an
+# image added in the same branch.  Its README intentionally has no image, so
+# test_new_boards.py is expected to reject this board.
+include ../CubeOrange/hwdef.dat
