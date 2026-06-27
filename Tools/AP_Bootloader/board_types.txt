@@ -65,6 +65,9 @@ Reserved "GUMSTIX [BL] FMU v6"         54
 Reserved "ARK CAN FLOW"                80
 Reserved "NXP ucans32k146"             34
 
+# IDs 110-119 reserved for Syro
+TARGET_HW_SYRO_V6X                     110
+
 # values from external vendors
 EXT_HW_RADIOLINK_MINI_PIX               3
 
@@ -504,6 +507,8 @@ AP_HW_TBS_LUCID_PRO                  5251
 AP_HW_TBS_L431_PERIPH                5252
 AP_HW_TBS_LUCID_H7_WING              5253
 AP_HW_TBS_LUCID_H7_WING_AIO          5254
+AP_HW_TBS_LUCID_H7_OEM               5255
+AP_HW_TBS_LUCID_H7V3                 5256
 
 # IDs 5270-5279 reserved for SpeedyBee
 AP_HW_SpeedyBeeF405WINGV2            5270
