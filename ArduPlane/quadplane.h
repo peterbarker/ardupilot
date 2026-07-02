@@ -416,8 +416,8 @@ private:
     // return which vfwd method to use
     ActiveFwdThr get_vfwd_method(void) const;
 
-    // time we last got an EKF yaw reset
-    uint32_t ekfYawReset_ms;
+    // number of times the ahrs yaw has reset:
+    uint16_t ahrs_yaw_reset_count;
 
     struct {
         AP_Float gain;
@@ -528,7 +528,7 @@ private:
         uint32_t last_velocity_match_ms;
         float target_speed_ms;
         float target_accel_mss;
-        uint32_t last_pos_reset_ms;
+        uint16_t ahrs_position_NE_reset_count;
         bool overshoot;
 
         float override_descent_rate_ms;
