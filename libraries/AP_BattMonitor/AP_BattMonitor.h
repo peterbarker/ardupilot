@@ -284,7 +284,7 @@ public:
     bool handle_scripting(uint8_t idx, const struct BattMonitorScript_State &state);
 #endif
 
-#if AP_PERIPH_BATTERY_BMS_ENABLED
+#if AP_BATTERY_SLEEP_INTERFACE_ENABLED
     // set battery BMS sleep timeout in seconds
     // set to zero to disable sleep
     void set_sleep_timeout(uint16_t timeout_sec) { return set_sleep_timeout(AP_BATT_PRIMARY_INSTANCE, timeout_sec); }

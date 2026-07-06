@@ -108,11 +108,11 @@ public:
     virtual bool handle_scripting(const BattMonitorScript_State &battmon_state) { return false; }
 #endif
 
-#if AP_PERIPH_BATTERY_BMS_ENABLED
+#if AP_BATTERY_SLEEP_INTERFACE_ENABLED
     // set battery BMS sleep timeout in seconds
     // set to zero to disable sleep
     virtual void set_sleep_timeout(uint16_t timeout_sec) {}
-#endif
+#endif  // AP_BATTERY_SLEEP_INTERFACE_ENABLED
 
 protected:
     AP_BattMonitor                      &_mon;      // reference to front-end
