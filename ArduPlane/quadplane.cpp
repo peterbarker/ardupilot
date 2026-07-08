@@ -713,6 +713,10 @@ bool QuadPlane::setup(void)
         AP_BoardConfig::allocation_error("motors");
     }
 
+    // all of the frame classes above are multicopter-derived; a heli
+    // frame class would leave this null
+    motors_mc = static_cast<AP_MotorsMulticopter *>(motors);
+
     AP_Param::load_object_from_eeprom(motors, motors_var_info);
 
     // create the attitude view used by the VTOL code
@@ -721,12 +725,13 @@ bool QuadPlane::setup(void)
         AP_BoardConfig::allocation_error("ahrs_view");
     }
 
-    attitude_control = NEW_NOTHROW AC_AttitudeControl_TS(*ahrs_view, *motors);
+    attitude_control = NEW_NOTHROW AC_AttitudeControl_TS(*ahrs_view, *motors_mc);
+    attitude_control_var_info = AC_AttitudeControl_Multi::var_info;
     if (!attitude_control) {
         AP_BoardConfig::allocation_error("attitude_control");
     }
 
-    AP_Param::load_object_from_eeprom(attitude_control, attitude_control->var_info);
+    AP_Param::load_object_from_eeprom(attitude_control, attitude_control_var_info);
     pos_control = NEW_NOTHROW AC_PosControl(*ahrs_view, *motors, *attitude_control);
     if (!pos_control) {
         AP_BoardConfig::allocation_error("pos_control");
@@ -751,14 +756,17 @@ bool QuadPlane::setup(void)
     AP_Param::load_object_from_eeprom(weathervane, weathervane->var_info);
 
     motors->init(frame_class, frame_type);
-    motors->update_throttle_range();
     motors->set_update_rate(rc_speed);
     attitude_control->parameter_sanity_check();
 
-    // setup the trim of any motors used by AP_Motors so I/O board
-    // failsafe will disable motors
-    uint32_t mask = plane.quadplane.motors->get_motor_mask();
-    hal.rcout->set_failsafe_pwm(mask, plane.quadplane.motors->get_pwm_output_min());
+    if (motors_mc != nullptr) {
+        motors_mc->update_throttle_range();
+
+        // setup the trim of any motors used by AP_Motors so I/O board
+        // failsafe will disable motors
+        uint32_t mask = motors_mc->get_motor_mask();
+        hal.rcout->set_failsafe_pwm(mask, motors_mc->get_pwm_output_min());
+    }
 
     // default QAssist state as set with Q_OPTIONS
     if (option_is_set(QuadPlane::Option::Q_ASSIST_FORCE_ENABLE)) {
@@ -794,7 +802,7 @@ bool QuadPlane::setup(void)
     tiltrotor.setup();
 
     if (!transition) {
-        transition = NEW_NOTHROW SLT_Transition(*this, motors);
+        transition = NEW_NOTHROW SLT_Transition(*this, motors_mc);
     }
     if (!transition) {
         AP_BoardConfig::allocation_error("transition");
@@ -835,8 +843,12 @@ void QuadPlane::setup_defaults(void)
 // run ESC calibration
 void QuadPlane::run_esc_calibration(void)
 {
+    if (motors_mc == nullptr) {
+        // only multicopter motor classes support ESC calibration
+        return;
+    }
     if (!motors->armed()) {
-        motors->set_throttle_passthrough_for_esc_calibration(0);
+        motors_mc->set_throttle_passthrough_for_esc_calibration(0);
         AP_Notify::flags.esc_calibration = false;
         return;
     }
@@ -847,11 +859,11 @@ void QuadPlane::run_esc_calibration(void)
     switch (esc_calibration) {
     case 1:
         // throttle based calibration
-        motors->set_throttle_passthrough_for_esc_calibration(plane.get_throttle_input() * 0.01f);
+        motors_mc->set_throttle_passthrough_for_esc_calibration(plane.get_throttle_input() * 0.01f);
         break;
     case 2:
         // full range calibration
-        motors->set_throttle_passthrough_for_esc_calibration(1);
+        motors_mc->set_throttle_passthrough_for_esc_calibration(1);
         break;
     }
 }
@@ -1541,7 +1553,7 @@ void SLT_Transition::update()
             plane.TECS_controller.reset_throttle_I();
         }
 
-        last_throttle = motors->get_throttle();
+        last_throttle = quadplane.motors->get_throttle();
 
         // reset integrators while we are below target airspeed as we
         // may build up too much while still primarily under
@@ -1613,7 +1625,7 @@ void SLT_Transition::update()
 
     case State::DONE:
         quadplane.set_desired_spool_state(AP_Motors::DesiredSpoolState::SHUT_DOWN);
-        motors->output();
+        quadplane.motors->output();
         set_last_fw_pitch();
         in_forced_transition = false;
         return;
@@ -1640,7 +1652,7 @@ void SLT_Transition::VTOL_update()
         */
         transition_state = State::AIRSPEED_WAIT;
     }
-    last_throttle = motors->get_throttle();
+    last_throttle = quadplane.motors->get_throttle();
 
     // Keep assistance reset while not checking
     quadplane.assist.reset();
@@ -1855,7 +1867,12 @@ void QuadPlane::update_throttle_hover()
     if (!available()) {
         return;
     }
-    
+
+    if (motors_mc == nullptr) {
+        // heli motor classes learn their hover collective themselves
+        return;
+    }
+
     // if not armed or landed exit
     if (!motors->armed() || !is_flying_vtol()) {
         return;
@@ -1887,7 +1904,7 @@ void QuadPlane::update_throttle_hover()
         labs(ahrs_view->roll_sensor) < 500 && labs(ahrs_view->pitch_sensor) < 500 &&
         ahrs.airspeed_EAS(aspeed) && aspeed < plane.aparm.airspeed_min * 0.3) {
         // Can we set the time constant automatically
-        motors->update_throttle_hover(0.01f);
+        motors_mc->update_throttle_hover(0.01f);
 #if HAL_GYROFFT_ENABLED
         plane.gyro_fft.update_freq_hover(0.01f, motors->get_throttle_out());
 #endif

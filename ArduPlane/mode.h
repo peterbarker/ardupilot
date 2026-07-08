@@ -203,7 +203,7 @@ protected:
 #if HAL_QUADPLANE_ENABLED
     // References for convenience, used by QModes
     AC_PosControl*& pos_control;
-    AC_AttitudeControl_Multi*& attitude_control;
+    AC_AttitudeControl*& attitude_control;
     AC_Loiter*& loiter_nav;
     QuadPlane& quadplane;
     QuadPlane::PosControlState &poscontrol;

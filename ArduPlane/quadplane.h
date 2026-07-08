@@ -207,10 +207,15 @@ private:
     ThrustType thrust_type;
 
     // Initialise motors to allow passing it to tailsitter in its constructor
-    AP_MotorsMulticopter *motors = nullptr;
+    AP_Motors *motors = nullptr;
+    // multicopter-typed alias of motors, used to guard interfaces
+    // which only multicopter motor classes have; nullptr when the
+    // frame class is not multicopter-derived
+    AP_MotorsMulticopter *motors_mc = nullptr;
     const struct AP_Param::GroupInfo *motors_var_info;
 
-    AC_AttitudeControl_Multi *attitude_control;
+    AC_AttitudeControl *attitude_control;
+    const struct AP_Param::GroupInfo *attitude_control_var_info;
     AC_PosControl *pos_control;
     AC_WPNav *wp_nav;
     AC_Loiter *loiter_nav;
@@ -549,10 +554,10 @@ private:
     uint32_t last_qtun_log_ms;
 
     // Tiltrotor control
-    Tiltrotor tiltrotor{*this, motors};
+    Tiltrotor tiltrotor{*this, motors_mc};
 
     // tailsitter control
-    Tailsitter tailsitter{*this, motors};
+    Tailsitter tailsitter{*this, motors_mc};
 
     // the attitude view of the VTOL attitude controller
     AP_AHRS_View *ahrs_view;

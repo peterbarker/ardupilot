@@ -82,10 +82,10 @@ void AP_AdvancedFailsafe_Plane::setup_IO_failsafe(void)
     SRV_Channels::set_failsafe_limit(SRV_Channel::k_none, SRV_Channel::Limit::TRIM);
 
 #if HAL_QUADPLANE_ENABLED
-    if (plane.quadplane.available()) {
+    if (plane.quadplane.available() && plane.quadplane.motors_mc != nullptr) {
         // setup AP_Motors outputs for failsafe
-        uint32_t mask = plane.quadplane.motors->get_motor_mask();
-        hal.rcout->set_failsafe_pwm(mask, plane.quadplane.motors->get_pwm_output_min());
+        uint32_t mask = plane.quadplane.motors_mc->get_motor_mask();
+        hal.rcout->set_failsafe_pwm(mask, plane.quadplane.motors_mc->get_pwm_output_min());
     }
 #endif
 }

@@ -817,7 +817,7 @@ const AP_Param::Info Plane::var_info[] = {
     // @Group: Q_A_
     // @Path: ../libraries/AC_AttitudeControl/AC_AttitudeControl.cpp,../libraries/AC_AttitudeControl/AC_AttitudeControl_Multi.cpp
     { "Q_A_", (const void *)&plane.quadplane.attitude_control,
-      {group_info : AC_AttitudeControl_Multi::var_info}, AP_PARAM_FLAG_POINTER,
+      {group_info_ptr : &plane.quadplane.attitude_control_var_info}, AP_PARAM_FLAG_POINTER | AP_PARAM_FLAG_INFO_POINTER,
       Parameters::k_param_q_attitude_control, AP_PARAM_GROUP },
 #endif
 
