@@ -52,6 +52,7 @@ public:
     friend class Tiltrotor;
     friend class SLT_Transition;
     friend class Tailsitter_Transition;
+    friend class Tiltrotor_Transition;
     friend class VTOL_Assist;
 
     friend class Mode;
@@ -563,7 +564,7 @@ private:
     uint32_t last_qtun_log_ms;
 
     // Tiltrotor control
-    Tiltrotor tiltrotor{*this, motors_mc};
+    Tiltrotor tiltrotor{*this, motors};
 
     // tailsitter control
     Tailsitter tailsitter{*this, motors_mc};

@@ -19,6 +19,7 @@
 #include <AP_Logger/LogStructure.h>
 
 class QuadPlane;
+class AP_Motors;
 class AP_MotorsMulticopter;
 class Tiltrotor_Transition;
 class Tiltrotor
@@ -28,7 +29,7 @@ friend class Plane;
 friend class Tiltrotor_Transition;
 public:
 
-    Tiltrotor(QuadPlane& _quadplane, AP_MotorsMulticopter*& _motors);
+    Tiltrotor(QuadPlane& _quadplane, AP_Motors*& _motors);
 
     bool enabled() const { return (enable > 0) && setup_complete;}
 
@@ -128,7 +129,7 @@ private:
 
     // references for convenience
     QuadPlane& quadplane;
-    AP_MotorsMulticopter*& motors;
+    AP_Motors*& motors;
 
     Tiltrotor_Transition* transition;
 

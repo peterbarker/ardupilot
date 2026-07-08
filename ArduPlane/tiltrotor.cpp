@@ -90,7 +90,7 @@ const AP_Param::GroupInfo Tiltrotor::var_info[] = {
   Q_TILT_MASK to a non-zero value
  */
 
-Tiltrotor::Tiltrotor(QuadPlane& _quadplane, AP_MotorsMulticopter*& _motors):quadplane(_quadplane),motors(_motors)
+Tiltrotor::Tiltrotor(QuadPlane& _quadplane, AP_Motors*& _motors):quadplane(_quadplane),motors(_motors)
 {
     AP_Param::setup_object_defaults(this, var_info);
 }
@@ -126,14 +126,18 @@ void Tiltrotor::setup()
         }
     }
 
-    if (_is_vectored) {
-        // we will be using vectoring for yaw
-        motors->disable_yaw_torque();
+    if (_is_vectored && quadplane.motors_mc != nullptr) {
+        // we will be using vectoring for yaw. Heli motor classes
+        // keep their collective yaw mixing
+        quadplane.motors_mc->disable_yaw_torque();
     }
 
     if (tilt_mask != 0) {
-        // setup tilt compensation
-        motors->set_thrust_compensation_callback(FUNCTOR_BIND_MEMBER(&Tiltrotor::tilt_compensate, void, float *, uint8_t));
+        if (quadplane.motors_mc != nullptr) {
+            // setup tilt compensation; heli motor classes have no
+            // thrust linearisation to compensate through
+            quadplane.motors_mc->set_thrust_compensation_callback(FUNCTOR_BIND_MEMBER(&Tiltrotor::tilt_compensate, void, float *, uint8_t));
+        }
         if (type == TILT_TYPE_VECTORED_YAW) {
             // setup tilt servos for vectored yaw
             SRV_Channels::set_range(SRV_Channel::k_tiltMotorLeft,  1000);
@@ -144,7 +148,7 @@ void Tiltrotor::setup()
         }
     }
 
-    transition = NEW_NOTHROW Tiltrotor_Transition(quadplane, motors, *this);
+    transition = NEW_NOTHROW Tiltrotor_Transition(quadplane, quadplane.motors_mc, *this);
     if (!transition) {
         AP_BoardConfig::allocation_error("tiltrotor transition");
     }
@@ -795,12 +799,12 @@ bool Tiltrotor_Transition::allow_vfwd() const
     }
 
     // No failed motor
-    if (!motors->get_thrust_boost()) {
+    if (!quadplane.motors->get_thrust_boost()) {
         return true;
     }
 
     // Get index of failed motor
-    const uint8_t lost_motor = motors->get_lost_motor();
+    const uint8_t lost_motor = quadplane.motors->get_lost_motor();
 
     // Failed motor is not tilting
     if (!tiltrotor.is_motor_tilting(lost_motor)) {
@@ -808,7 +812,7 @@ bool Tiltrotor_Transition::allow_vfwd() const
     }
 
     // Failed tilting motor is on the center line, so will not cause a yaw imbalance
-    if (is_zero(motors->get_roll_factor(lost_motor))) {
+    if (is_zero(quadplane.motors->get_roll_factor(lost_motor))) {
         return true;
     }
 
@@ -829,7 +833,11 @@ bool Tiltrotor::get_forward_throttle(float &throttle) const
     if (!enabled() || !_is_vectored) {
         return false;
     }
-    const float throttle_range = motors->thr_lin.get_spin_max() - motors->thr_lin.get_spin_min();
+    if (quadplane.motors_mc == nullptr) {
+        // no thrust linearisation on heli motor classes
+        return false;
+    }
+    const float throttle_range = quadplane.motors_mc->thr_lin.get_spin_max() - quadplane.motors_mc->thr_lin.get_spin_min();
     if (!is_positive(throttle_range)) {
         return false;
     }
@@ -839,7 +847,7 @@ bool Tiltrotor::get_forward_throttle(float &throttle) const
         if (is_motor_tilting(i)) {
             float thrust;
             if (motors->get_thrust(i, thrust)) {
-                throttle_sum += (motors->thr_lin.thrust_to_actuator(thrust) - motors->thr_lin.get_spin_min()) / throttle_range;
+                throttle_sum += (quadplane.motors_mc->thr_lin.thrust_to_actuator(thrust) - quadplane.motors_mc->thr_lin.get_spin_min()) / throttle_range;
                 num_vectored_motors ++;
             }
         }
