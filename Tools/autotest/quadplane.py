@@ -1418,6 +1418,79 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.wait_statustext("Rangefinder engaged", check_context=True, timeout=60)
         self.wait_disarmed(timeout=100)
 
+    def assert_hover_attitude_stable(self, duration=10, span_max=8,
+                                     rate_span_max=60):
+        '''require a steady hover: roll and pitch within span_max degrees
+        peak-to-peak AND their rates within rate_span_max deg/s peak-to-peak
+        over duration seconds. The angle check catches a slow limit cycle;
+        the rate check catches a fast, low-amplitude one that keeps the
+        angle span small (e.g. the pitch rate-D oscillation) which an
+        altitude or angle-only check would miss'''
+        rolls = []
+        pitches = []
+        roll_rates = []
+        pitch_rates = []
+        tstart = self.get_sim_time()
+        while self.get_sim_time_cached() - tstart < duration:
+            m = self.assert_receive_message('ATTITUDE', timeout=5)
+            rolls.append(math.degrees(m.roll))
+            pitches.append(math.degrees(m.pitch))
+            roll_rates.append(math.degrees(m.rollspeed))
+            pitch_rates.append(math.degrees(m.pitchspeed))
+        roll_span = max(rolls) - min(rolls)
+        pitch_span = max(pitches) - min(pitches)
+        roll_rate_span = max(roll_rates) - min(roll_rates)
+        pitch_rate_span = max(pitch_rates) - min(pitch_rates)
+        self.progress(
+            "Hover stability: angle span roll=%.1f pitch=%.1f deg (limit %.1f), "
+            "rate span roll=%.0f pitch=%.0f deg/s (limit %.0f)" %
+            (roll_span, pitch_span, span_max,
+             roll_rate_span, pitch_rate_span, rate_span_max))
+        if roll_span > span_max or pitch_span > span_max:
+            raise NotAchievedException(
+                "Hover attitude limit cycle: roll span %.1f pitch span %.1f > %.1f deg" %
+                (roll_span, pitch_span, span_max))
+        if roll_rate_span > rate_span_max or pitch_rate_span > rate_span_max:
+            raise NotAchievedException(
+                "Hover rate limit cycle: roll rate span %.0f pitch rate span %.0f > %.0f deg/s" %
+                (roll_rate_span, pitch_rate_span, rate_span_max))
+
+    def PlaneHeliQuad(self):
+        '''fly the direct-drive variable-pitch quad VTOL'''
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('plane-heliquad'),
+            model="quadplane-heliquad:@ROMFS/models/heliquad-ddvp.json",
+            wipe=True,
+        )
+        # cruise airspeed only just clears the frame's assist
+        # threshold; keep assistance clear of the transition check
+        self.set_parameter('Q_ASSIST_SPEED', 5)
+
+        self.change_mode('QLOITER')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.delay_sim_time(15, reason="rotor runup")
+        self.set_rc(3, 1800)
+        self.wait_altitude(20, 25, relative=True, timeout=60)
+        self.set_rc(3, 1500)
+
+        self.wait_altitude(15, 30, relative=True, minimum_duration=5, timeout=30)
+        self.assert_hover_attitude_stable(duration=10, span_max=8)
+
+        self.progress("Transition to fixed-wing")
+        self.change_mode('FBWA')
+        self.set_rc(3, 1800)
+        self.wait_statustext('Transition done', timeout=60)
+
+        self.progress("Back-transition and land")
+        self.change_mode('QRTL')
+        self.set_rc(3, 1500)
+        # the return distance depends on how long the transition took
+        self.wait_altitude(-5, 1, relative=True, timeout=300)
+        self.wait_disarmed(timeout=120)
+        self.zero_throttle()
+
     def setup_ICEngine_vehicle(self):
         '''restarts SITL with an IC Engine setup'''
         model = "quadplane-ice"
@@ -3828,6 +3901,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.QRTLGradualAltDescent,
             self.QRTLGradualAltDescentTerrain,
             self.Mission,
+            self.PlaneHeliQuad,
             self.Weathervane,
             self.QAssist,
             self.GyroFFT,
