@@ -289,6 +289,12 @@ public:
     // return whether a motor is enabled or not
     virtual bool        is_motor_enabled(uint8_t i) { return false; }
 
+    // output a thrust to all motors that match a given motor mask,
+    // bypassing the attitude mixing. This is used by tilt quadplanes
+    // to run the tilted motors as forward thrust in fixed-wing
+    // flight. rudder_dt applies differential thrust for yaw
+    virtual void        output_motor_mask(float thrust, uint32_t mask, float rudder_dt) {}
+
     // This function required for tradheli. Tradheli initializes targets when going from unarmed to armed state.
     // This function is overriden in motors_heli class.   Always true for multicopters.
     virtual bool init_targets_on_arming() const { return true; }
