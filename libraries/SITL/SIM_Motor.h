@@ -121,6 +121,34 @@ public:
         thrust_vector.z = -1;
     }
 
+    /*
+      alternative constructor for tiltable variable-pitch rotors
+     */
+    Motor(uint8_t _servo, float _angle, float _yaw_factor, uint8_t _display_order,
+          int8_t _rsc_servo,
+          int8_t _roll_servo, float _roll_min, float _roll_max,
+          int8_t _pitch_servo, float _pitch_min, float _pitch_max) :
+        angle(_angle), // angle in degrees from front
+        yaw_factor(_yaw_factor), // positive is clockwise
+        servo(_servo), // what servo output drives this motor's blade pitch
+        display_order(_display_order), // order for clockwise display
+        roll_servo(_roll_servo),
+        roll_min(_roll_min),
+        roll_max(_roll_max),
+        pitch_servo(_pitch_servo),
+        pitch_min(_pitch_min),
+        pitch_max(_pitch_max),
+        rsc_servo(_rsc_servo) // what servo output drives the rotor speed
+    {
+        position.x = cosf(radians(angle));
+        position.y =  sinf(radians(angle));
+        position.z = 0;
+
+        thrust_vector.x = 0;
+        thrust_vector.y = 0;
+        thrust_vector.z = -1;
+    }
+
     void calculate_forces(const struct sitl_input &input,
                           uint8_t motor_offset,
                           Vector3f &torque, // Newton meters

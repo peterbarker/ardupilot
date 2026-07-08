@@ -57,6 +57,16 @@ QuadPlane::QuadPlane(const char *frame_str) :
         thrust_scale = 0;
     } else if (strstr(frame_str, "-tilthvec")) {
         frame_type = "tilthvec";
+    } else if (strstr(frame_str, "-heliquad-hvec")) {
+        // tilting variable-pitch rotors; fwd thrust comes from the
+        // tilted rotors, not a fwd motor
+        frame_type = "heliquad-hvec";
+        thrust_scale = 0;
+    } else if (strstr(frame_str, "-heliquad")) {
+        // variable-pitch rotors with per-corner drive motors; the
+        // channel layout of the copter frame lands on SERVO5-12 with
+        // the quadplane motor offset applied
+        frame_type = "heli-quad-ddvp";
     } else if (strstr(frame_str, "-tilttri")) {
         frame_type = "tilttri";
         // fwd motor gives zero thrust
@@ -133,7 +143,7 @@ void QuadPlane::update(const struct sitl_input &input)
     Vector3f quad_rot_accel;
     Vector3f quad_accel_body;
 
-    motor_mask |= ((1U<<frame->num_motors)-1U) << frame->motor_offset;
+    motor_mask |= frame->motor_mask();
     frame->calculate_forces(*this, input, quad_rot_accel, quad_accel_body, rpm);
 
     // rotate frames for copter tailsitters

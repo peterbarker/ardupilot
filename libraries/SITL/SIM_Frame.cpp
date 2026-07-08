@@ -310,6 +310,21 @@ static Motor heliquad_ddvp_motors[] =
     Motor(AP_MOTORS_MOT_4,  135, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  2, 7),
 };
 
+// tilting direct-drive variable-pitch quad for quadplanes
+// (plane-heliquad-hvec): as heli-quad-ddvp, with each nacelle
+// tilting independently on the four channels after the drive
+// motors. Tilt sweeps 10 (hover) to -90 (forward) degrees
+// Run in a shell: ./Tools/autotest/fg_helitiltquadplane_view.sh
+// then Tools/autotest/sim_vehicle.py -v ArduPlane -f plane-heliquad-hvec --enable-fgview
+// (or -f plane-heliquad for the non-tilting variant)
+static Motor heliquad_hvec_motors[] =
+{
+    Motor(AP_MOTORS_MOT_1,   45, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 1, 4, -1, 0, 0, 8, 10, -90),
+    Motor(AP_MOTORS_MOT_2, -135, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 3, 5, -1, 0, 0, 9, 10, -90),
+    Motor(AP_MOTORS_MOT_3,  -45, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  4, 6, -1, 0, 0, 10, 10, -90),
+    Motor(AP_MOTORS_MOT_4,  135, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  2, 7, -1, 0, 0, 11, 10, -90),
+};
+
 static Motor hexa_motors[] =
 {
     Motor(AP_MOTORS_MOT_1,   0, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  1),
@@ -587,6 +602,7 @@ static const FrameTemplate supported_frame_templates[] =
     {"djix",      4, quad_dji_x_motors},
     {"cwx",       4, quad_cw_x_motors},
     {"tilthvec",  4, tiltquad_h_vectored_motors},
+    {"heliquad-hvec", 4, heliquad_hvec_motors},
     {"heli-quad-ddvp", 4, heliquad_ddvp_motors},
     {"heli-quad", 4, heliquad_motors},
     {"hexadeca-octa", 16, hexadeca_octa_motors},
@@ -902,7 +918,7 @@ uint32_t Frame::motor_mask(void) const
 }
 
 // calculate rotational and linear accelerations
-void Frame::calculate_forces(const Aircraft &aircraft,
+void Frame::calculate_forces(Aircraft &aircraft,
                              const struct sitl_input &input,
                              Vector3f &rot_accel,
                              Vector3f &body_accel,
@@ -912,6 +928,26 @@ void Frame::calculate_forces(const Aircraft &aircraft,
     Vector3f torque;
 
     update_parameters();
+
+    // keep the aircraft's servo filters tracking the tilt channels
+    // and variable-pitch collective channels so feedback-capable
+    // simulated servos report true positions. The deflection matches
+    // the Volz protocol's default half-range so command and feedback
+    // share a scale
+    for (uint8_t i=0; i<num_motors; i++) {
+        const int8_t coll_servo = motors[i].rsc_servo >= 0 ? (int8_t)motors[i].servo : (int8_t)-1;
+        for (const int8_t servo : {motors[i].roll_servo, motors[i].pitch_servo, coll_servo}) {
+            if (servo < 0) {
+                continue;
+            }
+            const uint8_t chan = motor_offset + servo;
+            if (!tilt_filters_setup) {
+                aircraft.filtered_servo_setup(chan, 1000, 2000, 100);
+            }
+            aircraft.filtered_servo_angle(input, chan);
+        }
+    }
+    tilt_filters_setup = true;
 
     const float air_density = get_air_density(aircraft.get_location().alt*0.01);
     const Vector3f gyro = aircraft.get_gyro();

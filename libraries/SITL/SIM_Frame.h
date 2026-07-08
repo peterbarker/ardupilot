@@ -53,7 +53,7 @@ public:
     void init(const char *frame_str);
 
     // calculate rotational and linear accelerations
-    void calculate_forces(const Aircraft &aircraft,
+    void calculate_forces(Aircraft &aircraft,
                           const struct sitl_input &input,
                           Vector3f &rot_accel, Vector3f &body_accel, float* rpm);
 #endif // AP_SIM_ENABLED
@@ -206,6 +206,9 @@ private:
     float last_batt_voltage;
     float last_batt_cap;
     float last_batt_res;
+
+    // one-time setup of the aircraft servo filters for tilt channels
+    bool tilt_filters_setup;
 
     // json parsing helpers
     void parse_float(AP_JSON::value val, const char* label, float &param);
