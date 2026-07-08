@@ -367,6 +367,23 @@
                     "default_params/quadplane-tilthvec.parm"
                 ]
             },
+            "plane-heliquad": {
+                "model": "quadplane-heliquad:@ROMFS/models/heliquad-ddvp.json",
+                "waf_target": "bin/arduplane",
+                "default_params_filename": [
+                    "default_params/quadplane.parm",
+                    "default_params/quadplane-heliquad.parm"
+                ]
+            },
+            "plane-heliquad-hvec": {
+                "model": "quadplane-heliquad-hvec:@ROMFS/models/heliquad-ddvp.json",
+                "waf_target": "bin/arduplane",
+                "default_params_filename": [
+                    "default_params/quadplane.parm",
+                    "default_params/quadplane-heliquad.parm",
+                    "default_params/quadplane-heliquad-hvec.parm"
+                ]
+            },
             "quadplane-tri": {
                 "waf_target": "bin/arduplane",
                 "default_params_filename": [

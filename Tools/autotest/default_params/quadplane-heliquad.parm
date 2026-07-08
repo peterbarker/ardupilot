@@ -1,0 +1,96 @@
+Q_ENABLE 1
+# direct-drive variable-pitch quad VTOL motors (heliquad DRSC)
+Q_FRAME_CLASS 18
+# the airframe is heavier than the stock quadplane and cruises more
+# slowly; keep assistance well below achievable airspeed
+AIRSPEED_MIN 12
+AIRSPEED_CRUISE 17
+Q_ASSIST_SPEED 11
+# collective servos, full range so blade pitch reaches the H_COL angles
+SERVO5_FUNCTION 33
+SERVO5_MIN 1000
+SERVO5_MAX 2000
+SERVO6_FUNCTION 34
+SERVO6_MIN 1000
+SERVO6_MAX 2000
+SERVO7_FUNCTION 35
+SERVO7_MIN 1000
+SERVO7_MAX 2000
+SERVO8_FUNCTION 36
+SERVO8_MIN 1000
+SERVO8_MAX 2000
+# per-corner drive motors; one-way ESC channels rest at minimum so
+# the startup trim pass cannot spin the rotors while disarmed
+SERVO9_FUNCTION 37
+SERVO9_MIN 1000
+SERVO9_MAX 2000
+SERVO9_TRIM 1000
+SERVO10_FUNCTION 38
+SERVO10_MIN 1000
+SERVO10_MAX 2000
+SERVO10_TRIM 1000
+SERVO11_FUNCTION 39
+SERVO11_MIN 1000
+SERVO11_MAX 2000
+SERVO11_TRIM 1000
+SERVO12_FUNCTION 40
+SERVO12_MIN 1000
+SERVO12_MAX 2000
+SERVO12_TRIM 1000
+# symmetric collective so the zero-thrust point lands on mid-PWM
+# (1500), matching the SITL variable-pitch rotor model
+H_COL_MIN 1000
+H_COL_MAX 2000
+H_COL_ANG_MIN -10
+H_COL_ANG_MAX 10
+H_COL_ZERO_THRST 0
+H_COL_LAND_MIN -2
+# setpoint rotor speed control: the plane has no pilot rotor-speed
+# input for the default passthrough mode, and the dynamic rotor speed
+# allocation owns the true speed anyway
+H_RSC_MODE 2
+H_RSC_SETPOINT 100
+H_DRSC_SPD_MIN 0.5
+# feedforward-based attitude tune, ported from copter-heli.parm; the
+# multicopter Q_A_ defaults are far too hot for a flybarless
+# variable-pitch head
+Q_A_INPUT_TC 0.20
+Q_A_ANG_PIT_P 6
+Q_A_ANG_RLL_P 4
+Q_A_ANG_YAW_P 5.8
+# the copter-heli pitch rate-D (0.002), unfiltered (FLTD 0), amplifies
+# high-frequency blade-pitch demand into a ~1.6Hz hover pitch limit
+# cycle (pitch rate to 200 deg/s); the stable band is ~0.0006..0.0016,
+# so run at 0.001 (centre of that band; D is still needed, zero D diverges)
+Q_A_RAT_PIT_D 0.001
+Q_A_RAT_PIT_FLTD 0
+Q_A_RAT_PIT_FLTE 20
+Q_A_RAT_PIT_FLTT 20
+Q_A_RAT_PIT_I 0.095
+Q_A_RAT_PIT_ILMI 0.1
+Q_A_RAT_PIT_IMAX 0.4
+Q_A_RAT_PIT_P 0.024
+Q_A_RAT_PIT_FF 0.19
+Q_A_RAT_RLL_D 0.0001
+Q_A_RAT_RLL_FLTD 0
+Q_A_RAT_RLL_FLTE 20
+Q_A_RAT_RLL_FLTT 20
+Q_A_RAT_RLL_I 0.105
+Q_A_RAT_RLL_ILMI 0.1
+Q_A_RAT_RLL_IMAX 0.4
+# the copter-heli roll rate-P (0.06) over-drives this airframe's blade
+# pitch into a ~1Hz hover limit cycle (roll rate to 600+ deg/s); the
+# knee is near 0.043, so run at half that value for margin (matches the
+# stable pitch axis at 0.024) while the feedforward carries command
+# tracking
+Q_A_RAT_RLL_P 0.03
+Q_A_RAT_RLL_FF 0.21
+Q_A_RAT_YAW_D 0.0039
+Q_A_RAT_YAW_FLTD 0
+Q_A_RAT_YAW_FLTE 0
+Q_A_RAT_YAW_FLTT 20
+Q_A_RAT_YAW_I 0.0245
+Q_A_RAT_YAW_ILMI 0
+Q_A_RAT_YAW_IMAX 1
+Q_A_RAT_YAW_P 0.24685
+Q_A_RAT_YAW_FF 0

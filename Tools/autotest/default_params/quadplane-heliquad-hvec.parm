@@ -1,0 +1,23 @@
+# tilting nacelles: all four rotors tilt independently, vectored yaw
+# (front and rear pairs deflect oppositely). Tilt for motor N is on
+# SERVO(12+N): front-right, rear-left, front-left, rear-right
+Q_TILT_ENABLE 1
+Q_TILT_MASK 15
+Q_TILT_TYPE 2
+# tilt servos rest at the hover position until the tilt code drives them
+SERVO13_FUNCTION 76
+SERVO13_MIN 1000
+SERVO13_MAX 2000
+SERVO13_TRIM 1000
+SERVO14_FUNCTION 46
+SERVO14_MIN 1000
+SERVO14_MAX 2000
+SERVO14_TRIM 1000
+SERVO15_FUNCTION 75
+SERVO15_MIN 1000
+SERVO15_MAX 2000
+SERVO15_TRIM 1000
+SERVO16_FUNCTION 47
+SERVO16_MIN 1000
+SERVO16_MAX 2000
+SERVO16_TRIM 1000
