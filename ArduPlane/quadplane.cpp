@@ -3,6 +3,9 @@
 #if HAL_QUADPLANE_ENABLED
 
 #include "AC_AttitudeControl/AC_AttitudeControl_TS.h"
+#if AP_QUADPLANE_HELI_ENABLED
+#include <AC_AttitudeControl/AC_AttitudeControl_Heli.h>
+#endif
 
 const AP_Param::GroupInfo QuadPlane::var_info[] = {
 
@@ -16,7 +19,7 @@ const AP_Param::GroupInfo QuadPlane::var_info[] = {
 
     // @Group: M_
     // @Path: ../libraries/AP_Motors/AP_MotorsMulticopter.cpp
-    AP_SUBGROUPVARPTR(motors, "M_", 2, QuadPlane, plane.quadplane.motors_var_info),
+    AP_SUBGROUPVARPTR(motors_mc, "M_", 2, QuadPlane, plane.quadplane.motors_var_info),
 
     // 3 ~ 8 were used by quadplane attitude control PIDs
 
@@ -591,7 +594,6 @@ static const struct AP_Param::defaults_table_struct defaults_table[] = {
     { "Q_A_RATE_R_MAX",   75.0 },
     { "Q_A_RATE_P_MAX",   75.0 },
     { "Q_A_RATE_Y_MAX",   75.0 },
-    { "Q_M_SPOOL_TIME",   0.25 },
     { "Q_LOIT_ANG_MAX",   15.0 },
     { "Q_LOIT_ACC_MAX_M", 2.50 },
     { "Q_LOIT_BRK_ACC_M", 0.5 },
@@ -675,6 +677,13 @@ bool QuadPlane::setup(void)
     case AP_Motors::MOTOR_FRAME_SCRIPTING_MATRIX:
     case AP_Motors::MOTOR_FRAME_DYNAMIC_SCRIPTING_MATRIX:
         break;
+#if AP_QUADPLANE_HELI_ENABLED
+    case AP_Motors::MOTOR_FRAME_HELI_QUAD_DDVP:
+        // the collective servos and drive motors have no useful
+        // channel defaults on a plane; they are assigned by parameters
+        AP_Param::set_frame_type_flags(AP_PARAM_FRAME_HELI);
+        break;
+#endif
     default:
         AP_BoardConfig::config_error("Unsupported Q_FRAME_CLASS %u", (unsigned int)(frame_class.get()));
     }
@@ -683,6 +692,14 @@ bool QuadPlane::setup(void)
     if ((tailsitter.enable > 0) && (tiltrotor.enable > 0)) {
         AP_BoardConfig::config_error("set TAILSIT_ENABLE 0 or TILT_ENABLE 0");
     }
+
+#if AP_QUADPLANE_HELI_ENABLED
+    // tailsitters need multicopter motor classes
+    if ((AP_Motors::motor_frame_class)frame_class == AP_Motors::MOTOR_FRAME_HELI_QUAD_DDVP &&
+        tailsitter.enable > 0) {
+        AP_BoardConfig::config_error("tailsitter needs multicopter Q_FRAME_CLASS");
+    }
+#endif
 
     switch ((AP_Motors::motor_frame_class)frame_class) {
 #if AP_MOTORS_TRI_ENABLED
@@ -703,6 +720,13 @@ bool QuadPlane::setup(void)
             motors_var_info = AP_MotorsMatrix_Scripting_Dynamic::var_info;
 #endif // AP_SCRIPTING_ENABLED
             break;
+#if AP_QUADPLANE_HELI_ENABLED
+    case AP_Motors::MOTOR_FRAME_HELI_QUAD_DDVP:
+        motors = NEW_NOTHROW AP_MotorsHeli_Quad_DDVP(rc_speed);
+        motors_heli = static_cast<AP_MotorsHeli *>(motors);
+        motors_var_info = AP_MotorsHeli_Quad_DDVP::var_info;
+        break;
+#endif
     default:
         motors = NEW_NOTHROW AP_MotorsMatrix(rc_speed);
         motors_var_info = AP_MotorsMatrix::var_info;
@@ -713,9 +737,10 @@ bool QuadPlane::setup(void)
         AP_BoardConfig::allocation_error("motors");
     }
 
-    // all of the frame classes above are multicopter-derived; a heli
-    // frame class would leave this null
-    motors_mc = static_cast<AP_MotorsMulticopter *>(motors);
+    // heli frame classes leave the multicopter alias null
+    if ((AP_Motors::motor_frame_class)frame_class != AP_Motors::MOTOR_FRAME_HELI_QUAD_DDVP) {
+        motors_mc = static_cast<AP_MotorsMulticopter *>(motors);
+    }
 
     AP_Param::load_object_from_eeprom(motors, motors_var_info);
 
@@ -725,8 +750,15 @@ bool QuadPlane::setup(void)
         AP_BoardConfig::allocation_error("ahrs_view");
     }
 
-    attitude_control = NEW_NOTHROW AC_AttitudeControl_TS(*ahrs_view, *motors_mc);
-    attitude_control_var_info = AC_AttitudeControl_Multi::var_info;
+    if (motors_mc != nullptr) {
+        attitude_control = NEW_NOTHROW AC_AttitudeControl_TS(*ahrs_view, *motors_mc);
+        attitude_control_var_info = AC_AttitudeControl_Multi::var_info;
+    } else {
+#if AP_QUADPLANE_HELI_ENABLED
+        attitude_control = NEW_NOTHROW AC_AttitudeControl_Heli(*ahrs_view, *static_cast<AP_MotorsHeli *>(motors));
+        attitude_control_var_info = AC_AttitudeControl_Heli::var_info;
+#endif
+    }
     if (!attitude_control) {
         AP_BoardConfig::allocation_error("attitude_control");
     }
@@ -829,6 +861,14 @@ bool QuadPlane::setup(void)
 void QuadPlane::setup_defaults(void)
 {
     AP_Param::set_defaults_from_table(defaults_table, ARRAY_SIZE(defaults_table));
+
+    if (motors_mc != nullptr) {
+        // parameters only multicopter motor classes have
+        static const struct AP_Param::defaults_table_struct mc_defaults_table[] = {
+            { "Q_M_SPOOL_TIME",   0.25 },
+        };
+        AP_Param::set_defaults_from_table(mc_defaults_table, ARRAY_SIZE(mc_defaults_table));
+    }
 
     // reset ESC calibration
     if (esc_calibration != 0) {

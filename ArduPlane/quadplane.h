@@ -6,6 +6,12 @@
 #define HAL_QUADPLANE_ENABLED 1
 #endif
 
+// support for helicopter (variable-pitch) VTOL motor classes.
+// Experimental; SITL-only for now to protect flash on small boards
+#ifndef AP_QUADPLANE_HELI_ENABLED
+#define AP_QUADPLANE_HELI_ENABLED (CONFIG_HAL_BOARD == HAL_BOARD_SITL)
+#endif
+
 #if HAL_QUADPLANE_ENABLED
 
 #include <AP_Motors/AP_Motors.h>
@@ -212,6 +218,9 @@ private:
     // which only multicopter motor classes have; nullptr when the
     // frame class is not multicopter-derived
     AP_MotorsMulticopter *motors_mc = nullptr;
+    // heli-typed alias of motors; keys the top-level H_ parameter
+    // group, so exactly one of the Q_M_ and H_ groups is live
+    AP_MotorsHeli *motors_heli = nullptr;
     const struct AP_Param::GroupInfo *motors_var_info;
 
     AC_AttitudeControl *attitude_control;

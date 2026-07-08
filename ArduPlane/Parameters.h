@@ -160,6 +160,7 @@ public:
         k_param_fence_ret_rally,
         k_param_q_attitude_control,
         k_param_takeoff_pitch_limit_reduction_sec,
+        k_param_q_motors_heli,
 
         // 110: Telemetry control
         //

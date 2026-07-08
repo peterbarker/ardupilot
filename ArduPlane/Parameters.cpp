@@ -815,10 +815,20 @@ const AP_Param::Info Plane::var_info[] = {
 
 #if HAL_QUADPLANE_ENABLED
     // @Group: Q_A_
-    // @Path: ../libraries/AC_AttitudeControl/AC_AttitudeControl.cpp,../libraries/AC_AttitudeControl/AC_AttitudeControl_Multi.cpp
+    // @Path: ../libraries/AC_AttitudeControl/AC_AttitudeControl.cpp,../libraries/AC_AttitudeControl/AC_AttitudeControl_Multi.cpp,../libraries/AC_AttitudeControl/AC_AttitudeControl_Heli.cpp
     { "Q_A_", (const void *)&plane.quadplane.attitude_control,
       {group_info_ptr : &plane.quadplane.attitude_control_var_info}, AP_PARAM_FLAG_POINTER | AP_PARAM_FLAG_INFO_POINTER,
       Parameters::k_param_q_attitude_control, AP_PARAM_GROUP },
+
+#if AP_QUADPLANE_HELI_ENABLED
+    // @Group: H_
+    // @Path: ../libraries/AP_Motors/AP_MotorsHeli_Quad_DDVP.cpp
+    // heli motor classes mount at top level: their parameter tree is
+    // too deep and its names too long to fit under the Q_M_ prefix
+    { "H_", (const void *)&plane.quadplane.motors_heli,
+      {group_info_ptr : &plane.quadplane.motors_var_info}, AP_PARAM_FLAG_POINTER | AP_PARAM_FLAG_INFO_POINTER,
+      Parameters::k_param_q_motors_heli, AP_PARAM_GROUP },
+#endif
 #endif
 
     // @Group: RLL
