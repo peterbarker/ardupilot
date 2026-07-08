@@ -125,6 +125,18 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
         thrusts[i] = _out[i] - zero_out;
     }
 
+    // rotors under Tiltrotor forward-thrust control ignore the
+    // attitude mix; the plane's control surfaces stabilize the
+    // vehicle
+    if (_fwd_mask != 0 && AP_HAL::millis() - _fwd_mask_ms < 100) {
+        const float fwd_thrust = (armed() && get_interlock()) ? _fwd_thrust * (1.0f - zero_out) : 0.0f;
+        for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
+            if (_fwd_mask & (1U<<i)) {
+                thrusts[i] = fwd_thrust;
+            }
+        }
+    }
+
     if (_failed_mask != 0) {
         // a rotor with a failed drive motor produces no thrust.
         // Transferring its demand to the opposite corner with
@@ -217,6 +229,17 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
         const float blade_pitch = thrust / speed_sq;
         _out[i] = constrain_float(zero_out + blade_pitch, -1.0f, 1.0f);
     }
+}
+
+// forward-thrust control of tilted rotors in fixed-wing flight,
+// replacing their attitude-mixed demands in move_actuators. The
+// rudder differential is not applied: vectored yaw acts through the
+// tilt servos rather than differential rotor thrust
+void AP_MotorsHeli_Quad_DDVP::output_motor_mask(float thrust, uint32_t mask, float rudder_dt)
+{
+    _fwd_mask = mask;
+    _fwd_thrust = constrain_float(thrust, 0.0f, 1.0f);
+    _fwd_mask_ms = AP_HAL::millis();
 }
 
 void AP_MotorsHeli_Quad_DDVP::output_to_motors()

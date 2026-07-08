@@ -20,6 +20,9 @@ public:
     // output_to_motors - sends values out to the motors
     void output_to_motors() override;
 
+    // forward-thrust control of tilted rotors in fixed-wing flight
+    void output_motor_mask(float thrust, uint32_t mask, float rudder_dt) override;
+
     const char* _get_frame_string() const override { return "HELI_QUAD_DDVP"; }
 
     // var_info for holding Parameter information
@@ -39,12 +42,19 @@ private:
     // the rotor-speed-control state machine and failed motors. The
     // bound is the state machine's current output rather than its
     // target, so the drive motors stay stopped while disarmed and
-    // follow the ramp through runup
+    // follow the ramp through runup. Rotors under Tiltrotor
+    // forward-thrust control run regardless: the quadplane shuts the
+    // VTOL state machine down in fixed-wing flight, and that path is
+    // already gated on arming and interlock
     float esc_output(uint8_t i) const {
         if (_failed_mask & (1U<<i)) {
             return 0.0f;
         }
-        return MIN(_speed_demand[i], _main_rotor.get_control_output());
+        float bound = _main_rotor.get_control_output();
+        if ((_fwd_mask & (1U<<i)) != 0 && AP_HAL::millis() - _fwd_mask_ms < 100) {
+            bound = 1.0f;
+        }
+        return MIN(_speed_demand[i], bound);
     }
 
     // parameters
@@ -59,4 +69,11 @@ private:
     float _rotor_speed_est[AP_MOTORS_HELI_QUAD_NUM_MOTORS];   // best rotor speed estimate, 0..1
     uint8_t _failed_mask;                                     // drive motors detected as failed
     uint32_t _underspeed_ms[AP_MOTORS_HELI_QUAD_NUM_MOTORS];  // when a rotor was first seen underspeed
+
+    // rotors under Tiltrotor forward-thrust control, replacing their
+    // attitude-mixed demands. Cleared by staleness so a stale mask
+    // cannot outlive fixed-wing flight
+    uint32_t _fwd_mask;
+    float _fwd_thrust;
+    uint32_t _fwd_mask_ms;
 };
