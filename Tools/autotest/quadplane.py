@@ -1532,6 +1532,91 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.wait_disarmed(timeout=180)
         self.zero_throttle()
 
+    def PlaneHeliQuadTiltGovernor(self):
+        '''compare governed and thrust-tracking rotor speed in fixed-wing flight'''
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('plane-heliquad-hvec'),
+            model="quadplane-heliquad-hvec:@ROMFS/models/heliquad-ddvp.json",
+            wipe=True,
+        )
+        # keep assistance clear of the low-power cruise window; both
+        # configurations fly the same profile
+        self.set_parameter('Q_ASSIST_SPEED', 5)
+
+        results = {}
+        for spd_fw in 0, 0.9:
+            self.progress("Flying with H_DRSC_SPD_FW=%.1f" % spd_fw)
+            self.set_parameter('H_DRSC_SPD_FW', spd_fw)
+            self.change_mode('QLOITER')
+            self.wait_ready_to_arm()
+            self.arm_vehicle()
+            self.delay_sim_time(15, reason="rotor runup")
+            self.set_rc(3, 1800)
+            self.wait_altitude(38, 45, relative=True, timeout=90)
+            self.set_rc(3, 1500)
+            self.change_mode('FBWA')
+            self.set_rc(3, 1800)
+            self.wait_statustext('Transition FW done', timeout=90)
+            self.delay_sim_time(4, reason="build airspeed")
+
+            self.set_rc(3, 1200)
+            self.delay_sim_time(4, reason="rotor speed settling in low-power cruise")
+            drive = []
+            collective = []
+            tstart = self.get_sim_time()
+            while self.get_sim_time_cached() - tstart < 5:
+                m = self.assert_receive_message('SERVO_OUTPUT_RAW', timeout=5)
+                drive.append(m.servo9_raw)
+                collective.append(m.servo5_raw)
+
+            self.progress("Back-transition catch")
+            self.change_mode('QLOITER')
+            self.set_rc(3, 1500)
+            start_alt = None
+            min_alt = None
+            max_alt = None
+            tstart = self.get_sim_time()
+            while self.get_sim_time_cached() - tstart < 15:
+                m = self.assert_receive_message('GLOBAL_POSITION_INT', timeout=5)
+                alt = m.relative_alt * 0.001
+                if start_alt is None:
+                    start_alt = alt
+                min_alt = alt if min_alt is None else min(min_alt, alt)
+                max_alt = alt if max_alt is None else max(max_alt, alt)
+
+            mean_drive = sum(drive) / len(drive)
+            mean_coll = sum(collective) / len(collective)
+            sag = start_alt - min_alt
+            rise = max_alt - start_alt
+            results[spd_fw] = (mean_drive, mean_coll, sag)
+            self.progress(
+                "DRSC_SPD_FW=%.1f: cruise drive=%.0fus collective=%.0fus catch-sag=%.1fm catch-rise=%.1fm" %
+                (spd_fw, mean_drive, mean_coll, sag, rise))
+
+            self.change_mode('QLAND')
+            # the fixed-wing leg can end high; the descent takes a while
+            self.wait_disarmed(timeout=400)
+            self.zero_throttle()
+
+        # the governed rotors must sit on the raised floor in cruise,
+        # with the blade pitch flattened towards zero-thrust to
+        # compensate; the thrust-tracking baseline runs well slower
+        # with coarser pitch
+        governed_drive = results[0.9][0]
+        baseline_drive = results[0][0]
+        if governed_drive < 1860:
+            raise NotAchievedException(
+                "Governed rotors not held at floor (%.0f < 1860)" % governed_drive)
+        if baseline_drive > governed_drive - 60:
+            raise NotAchievedException(
+                "Baseline rotor speed did not track thrust below the governed floor (%.0f vs %.0f)" %
+                (baseline_drive, governed_drive))
+        if results[0.9][1] > results[0][1] - 10:
+            raise NotAchievedException(
+                "Governed blade pitch did not flatten relative to baseline (%.0f vs %.0f)" %
+                (results[0.9][1], results[0][1]))
+
     def setup_ICEngine_vehicle(self):
         '''restarts SITL with an IC Engine setup'''
         model = "quadplane-ice"
@@ -3944,6 +4029,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.Mission,
             self.PlaneHeliQuad,
             self.PlaneHeliQuadTilt,
+            self.PlaneHeliQuadTiltGovernor,
             self.Weathervane,
             self.QAssist,
             self.GyroFFT,
