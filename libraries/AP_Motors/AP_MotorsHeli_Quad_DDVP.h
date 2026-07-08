@@ -63,6 +63,7 @@ private:
     AP_Float _coll_trim;    // steady-state blade pitch as a fraction of full travel
     AP_Float _speed_min;    // minimum in-flight rotor speed fraction
     AP_Float _rpm_max;      // rotor speed at full drive motor output
+    AP_Float _speed_min_fw; // minimum rotor speed under forward-thrust control; zero uses _speed_min
 
     float _speed_demand[AP_MOTORS_HELI_QUAD_NUM_MOTORS];      // filtered per-rotor speed demand, 0..1
     float _rotor_speed_model[AP_MOTORS_HELI_QUAD_NUM_MOTORS]; // open-loop expectation of rotor speed, 0..1

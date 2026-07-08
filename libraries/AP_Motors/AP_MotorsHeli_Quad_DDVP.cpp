@@ -68,6 +68,13 @@ const AP_Param::GroupInfo AP_MotorsHeli_Quad_DDVP::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("DRSC_RPM_MAX", 54, AP_MotorsHeli_Quad_DDVP, _rpm_max, 1500),
 
+    // @Param: DRSC_SPD_FW
+    // @DisplayName: Fixed-wing minimum rotor speed
+    // @Description: Minimum per-rotor speed demand while the rotor is providing forward thrust in fixed-wing flight. Raising this above DRSC_SPD_MIN acts as a cruise governor: blade pitch flattens to hold the demanded thrust at the higher speed, keeping pitch authority (thrust scales with speed squared) in reserve for gusts and the back-transition, at the cost of profile drag. Zero uses DRSC_SPD_MIN.
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("DRSC_SPD_FW", 55, AP_MotorsHeli_Quad_DDVP, _speed_min_fw, 0),
+
     AP_GROUPEND
 };
 
@@ -128,7 +135,8 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
     // rotors under Tiltrotor forward-thrust control ignore the
     // attitude mix; the plane's control surfaces stabilize the
     // vehicle
-    if (_fwd_mask != 0 && AP_HAL::millis() - _fwd_mask_ms < 100) {
+    const bool fwd_active = _fwd_mask != 0 && AP_HAL::millis() - _fwd_mask_ms < 100;
+    if (fwd_active) {
         const float fwd_thrust = (armed() && get_interlock()) ? _fwd_thrust * (1.0f - zero_out) : 0.0f;
         for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
             if (_fwd_mask & (1U<<i)) {
@@ -169,7 +177,14 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
         if (is_positive(_coll_trim)) {
             speed_for_trim = sqrtf(sizing_thrust / _coll_trim);
         }
-        speed_for_trim = constrain_float(speed_for_trim, _speed_min, 1.0f);
+
+        // in fixed-wing flight a raised floor acts as a cruise
+        // governor, holding blade-pitch authority in reserve
+        float speed_min = _speed_min;
+        if (fwd_active && (_fwd_mask & (1U<<i)) && is_positive(_speed_min_fw)) {
+            speed_min = _speed_min_fw;
+        }
+        speed_for_trim = constrain_float(speed_for_trim, speed_min, 1.0f);
 
         // the speed demand follows slowly; the drive motors only see
         // the macro-level changes in thrust
@@ -179,7 +194,7 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
         } else {
             _speed_demand[i] = speed_for_trim;
         }
-        _speed_demand[i] = constrain_float(_speed_demand[i], _speed_min, 1.0f);
+        _speed_demand[i] = constrain_float(_speed_demand[i], speed_min, 1.0f);
 
         // model the rotor's lagging response to the commanded speed
         if (is_positive(_rotor_tc)) {
