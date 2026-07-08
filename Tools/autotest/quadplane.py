@@ -1491,6 +1491,47 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
         self.wait_disarmed(timeout=120)
         self.zero_throttle()
 
+    def PlaneHeliQuadTilt(self):
+        '''fly the tilting variable-pitch quad VTOL'''
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('plane-heliquad-hvec'),
+            model="quadplane-heliquad-hvec:@ROMFS/models/heliquad-ddvp.json",
+            wipe=True,
+        )
+
+        self.change_mode('QLOITER')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.delay_sim_time(15, reason="rotor runup")
+        self.set_rc(3, 1800)
+        self.wait_altitude(20, 25, relative=True, timeout=60)
+        self.set_rc(3, 1500)
+
+        self.wait_altitude(15, 30, relative=True, minimum_duration=5, timeout=30)
+        # the blade-pitch attitude loop must hold a steady hover, not
+        # limit-cycle: sample roll/pitch and require a tight span. The
+        # copter-heli roll rate-P once drove a ~19deg 1Hz roll oscillation
+        # here, which the altitude check alone did not catch
+        self.assert_hover_attitude_stable(duration=10, span_max=8)
+
+        self.progress("Transition to tilted forward flight")
+        self.change_mode('FBWA')
+        self.set_rc(3, 1800)
+        # tiltrotors complete their transition when the rotors reach
+        # full forward tilt
+        self.wait_statustext('Transition FW done', timeout=90)
+
+        self.progress("Back-transition and land")
+        # the QRTL fixed-wing approach is not yet tuned for this
+        # airframe; back-transition in place and land vertically
+        self.change_mode('QLOITER')
+        self.set_rc(3, 1500)
+        self.delay_sim_time(15, reason="back-transition and brake")
+        self.change_mode('QLAND')
+        self.wait_disarmed(timeout=180)
+        self.zero_throttle()
+
     def setup_ICEngine_vehicle(self):
         '''restarts SITL with an IC Engine setup'''
         model = "quadplane-ice"
@@ -3902,6 +3943,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.QRTLGradualAltDescentTerrain,
             self.Mission,
             self.PlaneHeliQuad,
+            self.PlaneHeliQuadTilt,
             self.Weathervane,
             self.QAssist,
             self.GyroFFT,
