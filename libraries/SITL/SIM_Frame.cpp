@@ -695,6 +695,8 @@ void Frame::load_frame_params(const char *model_json)
         FRAME_VAR(bbdrag_coef),
         {"rotor_time_constant", &model.rotor_time_constant, VarType::FLOAT},
         {"nominal_rpm", &model.nominal_rpm, VarType::FLOAT},
+        {"rotor_profile_power", &model.rotor_profile_power, VarType::FLOAT},
+        {"rotor_copper_power", &model.rotor_copper_power, VarType::FLOAT},
         {"moment_inertia", &model.moment_of_inertia, VarType::VECTOR3F},
         {"refTempC", &model.refTempC, VarType::FLOAT},
         {"num_motors", &model.num_motors, VarType::FLOAT},
@@ -846,6 +848,8 @@ void Frame::update_parameters(void)
                                model.motor_pos[i], model.motor_thrust_vec[i], model.yaw_factor[i], true_prop_area,
                                mdrag_coef);
         motors[i].rotor_time_constant = model.rotor_time_constant;
+        motors[i].rotor_profile_power = model.rotor_profile_power;
+        motors[i].rotor_copper_power = model.rotor_copper_power;
     }
 
     if (is_zero(model.moment_of_inertia.x) || is_zero(model.moment_of_inertia.y) || is_zero(model.moment_of_inertia.z)) {

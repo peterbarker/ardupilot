@@ -161,6 +161,16 @@ private:
         // reporting from variable-pitch rotors
         float nominal_rpm = 1500;
 
+        // per-rotor electrical power at zero thrust and full rotor
+        // speed in watts (blade profile drag and motor iron losses,
+        // scaling with rotor speed cubed); variable-pitch rotors only
+        float rotor_profile_power = 0;
+
+        // per-rotor resistive motor loss in watts at one Newton of
+        // thrust and full rotor speed (scaling with the square of
+        // thrust over rotor speed); variable-pitch rotors only
+        float rotor_copper_power = 0;
+
         // if zero value will be estimated from mass
         Vector3f moment_of_inertia;
 

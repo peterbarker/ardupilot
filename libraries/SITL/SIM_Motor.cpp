@@ -161,6 +161,15 @@ void Motor::calculate_forces(const struct sitl_input &input,
 
     // calculate current
     float power = power_factor * fabsf(motor_thrust);
+    if (rsc_servo >= 0) {
+        // losses a thrust-proportional model misses on a
+        // variable-pitch rotor: profile drag and iron losses paid
+        // for spinning regardless of thrust, and resistive motor
+        // loss which grows as the rotor slows and torque rises.
+        // Both are zero unless the model provides the coefficients
+        power += rotor_profile_power * rotor_speed * sq(rotor_speed);
+        power += rotor_copper_power * sq(motor_thrust / MAX(rotor_speed, 0.1));
+    }
     current = power / MAX(voltage, 0.1);
 }
 

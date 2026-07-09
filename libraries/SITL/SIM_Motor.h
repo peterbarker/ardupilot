@@ -54,6 +54,17 @@ public:
     // describes the simulated powerplant, not ArduPilot's RSC governor.
     float rotor_time_constant;
 
+    // electrical power drawn by a variable-pitch rotor even at zero
+    // thrust, in watts at full rotor speed: blade profile drag and
+    // motor iron losses, scaling with the cube of rotor speed
+    float rotor_profile_power;
+
+    // resistive motor loss for a variable-pitch rotor, in watts at
+    // one Newton of thrust and full rotor speed. Torque per unit
+    // thrust rises as the rotor slows, so the loss scales with the
+    // square of thrust over rotor speed
+    float rotor_copper_power;
+
     // support for servo slew rate
     enum {SERVO_NORMAL, SERVO_RETRACT} servo_type;
     float servo_rate = 0.24; // seconds per 60 degrees
