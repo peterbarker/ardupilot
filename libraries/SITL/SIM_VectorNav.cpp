@@ -111,7 +111,7 @@ void VectorNav::send_imu_packet(void)
     pkt.timeStartup = AP_HAL::micros() * 1e3;
     
     
-    const float gyro_noise = 0.05;
+    const auto gyro_noise = 0.05;
 
     pkt.gyro[0] = radians(fdm.rollRate + rand_float() * gyro_noise);
     pkt.gyro[1] = radians(fdm.pitchRate + rand_float() * gyro_noise);
@@ -135,7 +135,7 @@ void VectorNav::send_imu_packet(void)
 
     pkt.temp = AP_Baro::get_temperatureC_for_alt_amsl(fdm.altitude);
 
-    const float pressure_Pa = AP_Baro::get_pressure_for_alt_amsl(fdm.altitude);
+    const auto pressure_Pa = AP_Baro::get_pressure_for_alt_amsl(fdm.altitude);
     pkt.pressure = pressure_Pa*0.001 + rand_float() * 0.01;
 
     const uint8_t sync_byte = 0xFA;

@@ -240,7 +240,7 @@ void Aircraft::update_mag_field_bf()
     mag_ef = R * mag_ef;
 
     // calculate frame height above ground
-    const float frame_height_agl = fmaxf((-position.z) + home.alt * 0.01f - ground_level, 0.0f);
+    const auto frame_height_agl = fmaxf((-position.z) + home.alt * 0.01f - ground_level, 0.0f);
 
     if (!sitl) {
         // running example program
@@ -1098,7 +1098,7 @@ bool Aircraft::Clamp::clamped(Aircraft &aircraft, const struct sitl_input &input
         // re-clamp if < 10cm from home
         if (servo_pos > 1800 && !grab_attempted) {
             const Vector3d pos = aircraft.get_position_relhome();
-            const float distance_from_home = pos.length();
+            const auto distance_from_home = pos.length();
             // GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SITL: Clamp: dist=%f", distance_from_home);
             if (distance_from_home < 0.5) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "SITL: Clamp: grabbed vehicle");

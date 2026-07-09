@@ -103,7 +103,7 @@ void MicroStrain::send_imu_packet(void)
     packet.payload[packet.payload_size++] = 0x06; // Ambient Pressure Field Size
     packet.payload[packet.payload_size++] = 0x17; // Descriptor
 
-    float pressure_Pa = AP_Baro::get_pressure_for_alt_amsl(fdm.altitude);
+    auto pressure_Pa = AP_Baro::get_pressure_for_alt_amsl(fdm.altitude);
     put_float(packet, pressure_Pa*0.001 + rand_float() * 0.1);
 
     // Add scaled magnetometer field
@@ -121,7 +121,7 @@ void MicroStrain::send_imu_packet(void)
     put_float(packet, fdm.zAccel / GRAVITY_MSS);
 
     // Add scaled gyro field
-    const float gyro_noise = 0.05;
+    const auto gyro_noise = 0.05;
     packet.payload[packet.payload_size++] = 0x0E; // Scaled Gyro Field Size
     packet.payload[packet.payload_size++] = 0x05; // Descriptor
     put_float(packet, radians(fdm.rollRate + rand_float() * gyro_noise));

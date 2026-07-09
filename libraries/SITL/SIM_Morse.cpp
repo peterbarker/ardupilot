@@ -389,7 +389,7 @@ void Morse::output_rover_skid(const struct sitl_input &input)
     const float max_speed = 2;
 
     const float steering_rps = (motor1 - motor2) * radians(steer_rate_max_dps);
-    const float speed_ms = 0.5*(motor1 + motor2) * max_speed;
+    const auto speed_ms = 0.5*(motor1 + motor2) * max_speed;
 
     // construct a JSON packet for v and w
     char buf[60];

@@ -84,7 +84,7 @@ int SITL::INA3221::rdwr(I2C::i2c_rdwr_ioctl_data *&data)
 
 static uint16_t convert_voltage(float voltage_v) {
     // 8mV per count, register value is x8 (3 lowest bits not used)
-    float volt_counts = (voltage_v/8e-3)*8;
+    auto volt_counts = (voltage_v/8e-3)*8;
     if (volt_counts < INT16_MIN) {
         volt_counts = INT16_MIN;
     } else if (volt_counts > INT16_MAX) {
@@ -101,7 +101,7 @@ static uint16_t convert_current(float current_a) {
     const float shunt_voltage = current_a*shunt_resistance_ohms;
 
     // 40uV per count, register value is x8 (3 lowest bits not used)
-    float shunt_counts = (shunt_voltage/40e-6)*8;
+    auto shunt_counts = (shunt_voltage/40e-6)*8;
     if (shunt_counts < INT16_MIN) {
         shunt_counts = INT16_MIN;
     } else if (shunt_counts > INT16_MAX) {

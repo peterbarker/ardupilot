@@ -167,7 +167,7 @@ void SensAItion::send_packet_0_imu(const struct sitl_fdm &fdm)
     int16_t mag_z = (int16_t)(fdm.bodyMagField.z * 1000);
 
     // Barometer: Calculate pressure from altitude (Pa to 0.1 Pa units)
-    const float pressure_pa = AP_Baro::get_pressure_for_alt_amsl(fdm.altitude);
+    const auto pressure_pa = AP_Baro::get_pressure_for_alt_amsl(fdm.altitude);
     int32_t baro = (int32_t)(pressure_pa * 10.0f + rand_float_noise() * BARO_NOISE_MHPA);
 
     // Periodic status output to verify simulator operation

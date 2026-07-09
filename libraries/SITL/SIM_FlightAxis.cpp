@@ -412,7 +412,7 @@ void FlightAxis::send_request_message(const struct sitl_input &input)
 
         float roll_rate = swash1 - swash2;
         float pitch_rate = ((swash1+swash2) / 2.0f - swash3);
-        float col = (swash1 + swash2 + swash3) / 3.0;
+        auto col = (swash1 + swash2 + swash3) / 3.0;
 
         scaled_servos[0] = constrain_float(roll_rate + 0.5, 0, 1);
         scaled_servos[1] = constrain_float(pitch_rate + 0.5, 0, 1);
@@ -686,7 +686,7 @@ void FlightAxis::update(const struct sitl_input &input)
         const uint64_t glitch_max_us = 2000000;
         if (dt_us > glitch_threshold_us && dt_us < glitch_max_us) {
             // we've had a network glitch, compensate by advancing initial time
-            float adjustment_s = (dt_us-glitch_threshold_us)*1.0e-6;
+            auto adjustment_s = (dt_us-glitch_threshold_us)*1.0e-6;
             initial_time_s += adjustment_s;
             printf("glitch %.2fs\n", adjustment_s);
             dt_us = glitch_threshold_us;

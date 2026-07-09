@@ -95,7 +95,7 @@ float ServoModel::apply_filter(float v, float dt)
     // apply slew limit
     if (sitl->servo.servo_speed > 0) {
         // assume SIM_SERVO_SPEED is time for 60 degrees
-        float time_per_degree = sitl->servo.servo_speed / 60.0;
+        auto time_per_degree = sitl->servo.servo_speed / 60.0;
         float proportion_per_second = 1.0 / (angle_deg * time_per_degree);
         delta_max = proportion_per_second * dt;
         v = constrain_float(v, last_v-delta_max, last_v+delta_max);

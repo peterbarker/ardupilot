@@ -287,7 +287,7 @@ void Glider::calculate_forces(const struct sitl_input &input, Vector3f &rot_acce
     if (carriage_state == carriageState::WAITING_FOR_RELEASE) {
         balloon_velocity = Vector3f(-wind_ef.x, -wind_ef.y, -wind_ef.z -balloon_rate * balloon);
         balloon_position += balloon_velocity * (1.0e-6 * (float)frame_time_us);
-        const float height_AMSL = 0.01f * (float)home.alt - position.z;
+        const auto height_AMSL = 0.01f * (float)home.alt - position.z;
         // release at burst height or when balloon cut output goes high
         if (hal.scheduler->is_system_initialized() &&
             (height_AMSL > balloon_burst_amsl || balloon_cut > 0.8)) {

@@ -298,8 +298,8 @@ void GPS::simulate_jamming(struct GPS_Data &d)
 
     // how often each of the key state variables change during jamming
     const float vz_change_hz = 0.5;
-    const float vel_change_hz = 0.8;
-    const float pos_change_hz = 1.1;
+    const auto vel_change_hz = 0.8;
+    const auto pos_change_hz = 1.1;
     const float sats_change_hz = 3;
     const float acc_change_hz = 3;
 

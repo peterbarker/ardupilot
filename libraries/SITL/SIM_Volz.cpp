@@ -99,7 +99,7 @@ void Volz::update_servos(const class Aircraft &aircraft)
         return;
     }
     last_servo_update_us = now_us;
-    const float dt = delta_t_us / 1000000.0;
+    const auto dt = delta_t_us / 1000000.0;
 
     for (auto  &servo : servos) {
         const uint8_t idx = servo.id - 1;

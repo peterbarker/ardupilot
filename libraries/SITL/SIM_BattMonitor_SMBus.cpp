@@ -76,7 +76,7 @@ void SITL::SIM_BattMonitor_SMBus::update(const class Aircraft &aircraft)
 {
     const uint32_t now = AP_HAL::millis();
     if (now - last_update_ms > 100) {
-        const float millivolts = AP::sitl()->state.battery_voltage * 1000.0f;
+        const auto millivolts = AP::sitl()->state.battery_voltage * 1000.0f;
         set_register(SMBusBattDevReg::VOLTAGE, uint16_t(millivolts));
         // FIXME: is this REALLY what the hardware will do?
         const int16_t current = constrain_int32(AP::sitl()->state.battery_current*-1000, INT16_MIN, INT16_MAX);

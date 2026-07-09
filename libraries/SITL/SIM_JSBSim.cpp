@@ -361,7 +361,7 @@ void JSBSim::send_servos(const struct sitl_input &input)
         elevator = (ch2-ch1)/2.0f;
         rudder   = (ch2+ch1)/2.0f;
     }
-    float wind_speed_fps = input.wind.speed / FEET_TO_METERS;
+    auto wind_speed_fps = input.wind.speed / FEET_TO_METERS;
     asprintf(&buf,
              "set fcs/aileron-cmd-norm %f\n"
              "set fcs/elevator-cmd-norm %f\n"

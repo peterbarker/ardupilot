@@ -986,7 +986,7 @@ void NavEKF3_core::FuseVelPosNED()
 
             for (uint8_t i = 0; i<=imax; i++) {
                 stateIndex   = i + 4;
-                const float innovation = stateStruct.velocity[i] - velPosObs[i];
+                const auto innovation = stateStruct.velocity[i] - velPosObs[i];
                 innovVelSumSq += sq(innovation);
                 varInnovVelPos[i] = P[stateIndex][stateIndex] + R_OBS_DATA_CHECKS[i];
                 varVelSum += varInnovVelPos[i];

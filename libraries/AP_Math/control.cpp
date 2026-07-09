@@ -288,10 +288,10 @@ void shape_pos_vel_accel(postype_t pos_desired, float vel_desired, float accel_d
     const float vel_corr = vel - vel_desired;
 
     // Velocity correction command derived from position error (second-order limited).
-    float vel_corr_cmd = sqrt_controller(pos_error, k_v, accel_lim, dt);
+    auto vel_corr_cmd = sqrt_controller(pos_error, k_v, accel_lim, dt);
 
     // Rate-of-change implied by the shaped velocity correction, using correction-frame closing rate.
-    const float accel_corr_cmd = sqrt_controller_accel(pos_error, vel_corr_cmd, vel_corr, k_v, accel_lim);
+    const auto accel_corr_cmd = sqrt_controller_accel(pos_error, vel_corr_cmd, vel_corr, k_v, accel_lim);
 
     // Convert the implied rate-of-change term into an equivalent velocity correction bias.
     vel_corr_cmd += accel_corr_cmd / k_v;

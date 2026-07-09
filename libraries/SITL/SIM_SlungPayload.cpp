@@ -379,8 +379,8 @@ void SlungPayloadSim::update_payload(const Vector3p& veh_pos, const Vector3f& ve
         velocity_air_NED -= wind_ef;
     }
     if (drag_coef > 0 && !velocity_air_NED.is_zero()) {
-        const float air_density = 1.225;    // 1.225 kg/m^3 (standard sea-level density)
-        const float surface_area_m2 = 0.07; // 30cm diameter sphere
+        const auto air_density = 1.225;    // 1.225 kg/m^3 (standard sea-level density)
+        const auto surface_area_m2 = 0.07; // 30cm diameter sphere
         const float drag_force = 0.5 * drag_coef * air_density * velocity_air_NED.length_squared() * surface_area_m2;
         force_drag_NED = -velocity_air_NED.normalized() * drag_force;
     }

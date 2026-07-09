@@ -79,7 +79,7 @@ void Ship::update(float delta_t)
     speed = constrain_float(sim->speed.get(), speed-dspeed_max, speed+dspeed_max);
 
     // calculate how far around the circle we go
-    float circumference = M_PI * sim->path_size.get();
+    auto circumference = M_PI * sim->path_size.get();
     float dist = delta_t * speed;
     float dangle = (dist / circumference) * 360.0;
 
@@ -130,7 +130,7 @@ Vector2f ShipSim::get_ground_speed_adjustment(const Location &loc, float &yaw_ra
 
     // find center of the circle that the ship is on
     Location center = shiploc;
-    const float path_radius = path_size.get()*0.5;
+    const auto path_radius = path_size.get()*0.5;
     center.offset_bearing(ship.heading_deg+(ship.yaw_rate>0?90:-90), path_radius);
 
     // scale speed for ratio of distances
