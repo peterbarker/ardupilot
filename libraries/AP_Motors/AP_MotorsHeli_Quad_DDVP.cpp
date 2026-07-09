@@ -164,14 +164,16 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
         const float thrust = thrusts[i];
 
         // rotor speed which would centre the blade pitch at
-        // _coll_trim. Negative thrust also recruits rotor speed, so
-        // that the corner opposite a failed drive motor can
-        // rebalance the moments with negative blade pitch - except
-        // while landed, where the low collective must not spool the
-        // rotors up
-        float sizing_thrust = fabsf(thrust);
-        if (_heliflags.land_complete && is_negative(thrust)) {
-            sizing_thrust = 0.0f;
+        // _coll_trim. Negative thrust recruits rotor speed only when
+        // rebalancing the moments of a failed drive motor - that is
+        // its purpose, and a railed descent demand in normal flight
+        // must not spool the rotors to full speed at full negative
+        // pitch, where a winged airframe can settle into a powered
+        // climb it never descends from. While landed the low
+        // collective must not spool the rotors up at all
+        float sizing_thrust = MAX(thrust, 0.0f);
+        if (_failed_mask != 0 && !_heliflags.land_complete) {
+            sizing_thrust = fabsf(thrust);
         }
         float speed_for_trim = 1.0f;
         if (is_positive(_coll_trim)) {
@@ -239,10 +241,15 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
 #endif  // HAL_WITH_ESC_TELEM
 
         // blade pitch supplies the demanded thrust at the modelled
-        // rotor speed
+        // rotor speed. Without a failed rotor to rebalance, negative
+        // blade pitch is only useful for attitude moments: deep
+        // negative collective can sail a winged airframe into a
+        // powered glide that a railed descent demand never breaks
+        // out of
         const float speed_sq = sq(MAX(_rotor_speed_est[i], 0.1f));
         const float blade_pitch = thrust / speed_sq;
-        _out[i] = constrain_float(zero_out + blade_pitch, -1.0f, 1.0f);
+        const float pitch_floor = (_failed_mask != 0) ? -1.0f : MAX(zero_out - 0.2f, -1.0f);
+        _out[i] = constrain_float(zero_out + blade_pitch, pitch_floor, 1.0f);
     }
 }
 
