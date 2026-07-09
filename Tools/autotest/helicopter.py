@@ -369,6 +369,65 @@ class AutoTestHelicopter(AutoTestCopter):
             self.wait_servo_channel_value(chan, 1659, timeout=10)
         self.do_RTL()
 
+    def HeliQuadDRSCCurrentSweep(self):
+        '''check modelled rotor losses across a hover rotor-speed sweep'''
+        defaults = self.model_defaults_filepath('heli-quad-ddvp')
+        defaults.append(os.path.join(vehicle_test_suite.testdir, 'default_params', 'copter-heliquad-drsc.parm'))
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=defaults,
+            model="heli-quad-ddvp:@ROMFS/models/heliquad-ddvp-losses.json",
+            wipe=True,
+        )
+        self.set_parameter('BATT_MONITOR', 4)
+        self.reboot_sitl()
+        self.change_mode('STABILIZE')
+        self.wait_ready_to_arm()
+        self.zero_throttle()
+        self.arm_vehicle()
+        self.set_rc(8, 2000)
+        self.delay_sim_time(25, reason="rotor runup and spool")
+        self.set_rc(3, 1700)
+        self.wait_altitude(9, 15, relative=True, timeout=120)
+        self.set_rc(3, 1500)
+        self.change_mode('LOITER')
+        self.delay_sim_time(10, reason="settle into hover")
+
+        # hover at the same thrust across a range of rotor-speed
+        # floors.  The two floors below the thrust-tracking speed are
+        # inactive and must draw the same current; above it the
+        # rising profile power outgrows the falling resistive loss
+        currents = {}
+        for spd_min in 0.5, 0.65, 0.8, 0.95:
+            self.set_parameter('H_DRSC_SPD_MIN', spd_min)
+            self.delay_sim_time(10, reason="rotor speed settling")
+            drive = []
+            curr = []
+            tstart = self.get_sim_time()
+            while self.get_sim_time_cached() - tstart < 5:
+                m = self.assert_receive_message('SERVO_OUTPUT_RAW', timeout=5)
+                drive.append(m.servo5_raw)
+                b = self.assert_receive_message('BATTERY_STATUS', timeout=5)
+                curr.append(b.current_battery * 0.01)
+            currents[spd_min] = sum(curr) / len(curr)
+            self.progress("spd_min=%.2f drive=%.0fus current=%.1fA" %
+                          (spd_min, sum(drive)/len(drive), currents[spd_min]))
+        self.set_parameter('H_DRSC_SPD_MIN', 0.5)
+        self.do_RTL()
+
+        if abs(currents[0.5] - currents[0.65]) > 1.0:
+            raise NotAchievedException(
+                "Inactive rotor-speed floors changed hover current (%.1fA vs %.1fA)" %
+                (currents[0.5], currents[0.65]))
+        if currents[0.8] - currents[0.65] < 0.3:
+            raise NotAchievedException(
+                "No loss increase hovering above the thrust-tracking speed (%.1fA vs %.1fA)" %
+                (currents[0.8], currents[0.65]))
+        if currents[0.95] - currents[0.65] < 2.0:
+            raise NotAchievedException(
+                "Profile power did not dominate at high rotor speed (%.1fA vs %.1fA)" %
+                (currents[0.95], currents[0.65]))
+
     def HeliQuadDRSC(self):
         '''fly dynamic rotor speed control on direct-drive variable-pitch quad'''
         defaults = self.model_defaults_filepath('heli-quad-ddvp')
@@ -1666,6 +1725,7 @@ class AutoTestHelicopter(AutoTestCopter):
             self.HeliQuad,
             self.HeliQuadDDVP,
             self.HeliQuadDRSC,
+            self.HeliQuadDRSCCurrentSweep,
             self.HeliQuadDisturbanceRejection,
             self.HeliQuadDRSCMotorFail,
             self.HeliQuadFlip,
