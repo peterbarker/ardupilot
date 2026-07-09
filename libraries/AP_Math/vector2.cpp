@@ -334,7 +334,7 @@ Vector2<T> Vector2<T>::closest_point(const Vector2<T> &p, const Vector2<T> &v, c
 {
     // length squared of line segment
     const T l2 = (v - w).length_squared();
-    if (l2 < FLT_EPSILON) {
+    if (l2 < T(FLT_EPSILON)) {
         // v == w case
         return v;
     }
@@ -362,7 +362,7 @@ Vector2<T> Vector2<T>::closest_point(const Vector2<T> &p, const Vector2<T> &w)
 {
     // length squared of line segment
     const T l2 = w.length_squared();
-    if (l2 < FLT_EPSILON) {
+    if (l2 < T(FLT_EPSILON)) {
         // v == w case
         return w;
     }

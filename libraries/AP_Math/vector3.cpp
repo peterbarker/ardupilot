@@ -218,9 +218,9 @@ void Vector3<T>::rotate(enum Rotation rotation)
         T tmpx = x;
         T tmpy = y;
         T tmpz = z;
-        x =  0.14303897231223747232853327204793 * tmpx +  0.36877648650320382639478111741482 * tmpy + -0.91844638134308709265241077446262 * tmpz;
-        y = -0.33213277779664740485543461545603 * tmpx + -0.85628942146641884303193137384369 * tmpy + -0.39554550256296522325882847326284 * tmpz;
-        z = -0.93232380121551217122544130688766 * tmpx +  0.36162457008209242248497616856184 * tmpy +  0.00000000000000002214311861220361 * tmpz;
+        x =  T(0.14303897231223747232853327204793) * tmpx +  T(0.36877648650320382639478111741482) * tmpy + T(-0.91844638134308709265241077446262) * tmpz;
+        y = T(-0.33213277779664740485543461545603) * tmpx + T(-0.85628942146641884303193137384369) * tmpy + T(-0.39554550256296522325882847326284) * tmpz;
+        z = T(-0.93232380121551217122544130688766) * tmpx +  T(0.36162457008209242248497616856184) * tmpy +  T(0.00000000000000002214311861220361) * tmpz;
         return;
     }
     case ROTATION_PITCH_315: {
@@ -478,15 +478,15 @@ T Vector3<T>::distance_to_segment(const Vector3<T> &seg_start, const Vector3<T> 
     }
 
     // semiperimeter of triangle
-    const T s = (a+b+c) * 0.5f;
+    const T s = (a+b+c) * T(0.5);
 
     T area_squared = s*(s-a)*(s-b)*(s-c);
     // area must be constrained above 0 because a triangle could have 3 points could be on a line and float rounding could push this under 0
-    if (area_squared < 0.0f) {
+    if (area_squared < T(0.0)) {
         area_squared = 0.0f;
     }
     const T area = safe_sqrt(area_squared);
-    return 2.0f*area/b;
+    return T(2.0)*area/b;
 }
 
 // Shortest distance between point(p) to a point contained in the line segment defined by w1,w2
@@ -517,7 +517,7 @@ Vector3<T> Vector3<T>::point_on_line_closest_to_other_point(const Vector3<T> &w1
     const Vector3<T> scaled_p_vec = p_vec * scale;
 
     T dot_product = unit_vec * scaled_p_vec;
-    dot_product = constrain_ftype(dot_product,0.0f,1.0f);
+    dot_product = constrain_ftype(dot_product,T(0.0),T(1.0));
  
     const Vector3<T> closest_point = line_vec * dot_product;
     return (closest_point + w1);
@@ -546,7 +546,7 @@ void Vector3<T>::segment_to_segment_closest_point(const Vector3<T>& seg1_start, 
     T sN, sD = discriminant;           // default sD = D >= 0
     T tc, tN, tD = discriminant;       // tc = tN / tD, default tD = D >= 0
 
-    if (discriminant < FLT_EPSILON) {
+    if (discriminant < T(FLT_EPSILON)) {
         sN = 0.0;         // force using point seg1_start on line 1
         sD = 1.0;         // to prevent possible division by 0.0 later
         tN = e;
@@ -555,7 +555,7 @@ void Vector3<T>::segment_to_segment_closest_point(const Vector3<T>& seg1_start, 
         // get the closest points on the infinite lines
         sN = (b*e - c*d);
         tN = (a*e - b*d);
-        if (sN < 0.0) {
+        if (sN < T(0.0)) {
             // sc < 0 => the s=0 edge is visible
             sN = 0.0;
             tN = e;
@@ -568,11 +568,11 @@ void Vector3<T>::segment_to_segment_closest_point(const Vector3<T>& seg1_start, 
         }
     }
 
-    if (tN < 0.0) {
+    if (tN < T(0.0)) {
         // tc < 0 => the t=0 edge is visible
         tN = 0.0;
         // recompute sc for this edge
-        if (-d < 0.0) {
+        if (-d < T(0.0)) {
             sN = 0.0;
         } else if (-d > a) {
             sN = sD;
@@ -584,7 +584,7 @@ void Vector3<T>::segment_to_segment_closest_point(const Vector3<T>& seg1_start, 
         // tc > 1  => the t=1 edge is visible
         tN = tD;
         // recompute sc for this edge
-        if ((-d + b) < 0.0) {
+        if ((-d + b) < T(0.0)) {
             sN = 0;
         } else if ((-d + b) > a) {
             sN = sD;
@@ -594,7 +594,7 @@ void Vector3<T>::segment_to_segment_closest_point(const Vector3<T>& seg1_start, 
         }
     }
     // finally do the division to get tc
-    tc = (::is_zero(tN) ? 0.0 : tN / tD);
+    tc = (::is_zero(tN) ? T(0.0) : tN / tD);
 
     // closest point on seg2
     closest_point = seg2_start + line2*tc;

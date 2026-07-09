@@ -195,7 +195,7 @@ double wrap_360(const double angle)
 {
     double res = fmod(angle, 360.0);
     if (res < 0) {
-        res += 360.0;
+        res += double(360.0);
     }
     return res;
 }
@@ -224,7 +224,7 @@ double wrap_360_cd(const double angle)
 {
     double res = fmod(angle, 36000.0);
     if (res < 0) {
-        res += 36000.0;
+        res += double(36000.0);
     }
     return res;
 }
@@ -261,7 +261,7 @@ double wrap_2PI(const double radian)
 {
     double res = fmod(radian, M_2PI);
     if (res < 0) {
-        res += M_2PI;
+        res += ftype(M_2PI);
     }
     return res;
 }

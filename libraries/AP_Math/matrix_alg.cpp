@@ -406,7 +406,7 @@ static bool inverse4x4(const T m[],T invOut[])
         return false;
     }
 
-    det = 1.0f / det;
+    det = T(1.0) / det;
 
     for (i = 0; i < 16; i++)
         invOut[i] = inv[i] * det;

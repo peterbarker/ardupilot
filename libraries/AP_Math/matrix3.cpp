@@ -128,12 +128,12 @@ template <typename T>
 void Matrix3<T>::normalize(void)
 {
     const T error = a * b;
-    const Vector3<T> t0 = a - (b * (0.5f * error));
-    const Vector3<T> t1 = b - (a * (0.5f * error));
+    const Vector3<T> t0 = a - (b * (T(0.5) * error));
+    const Vector3<T> t1 = b - (a * (T(0.5) * error));
     const Vector3<T> t2 = t0 % t1;
-    a = t0 * (1.0f / t0.length());
-    b = t1 * (1.0f / t1.length());
-    c = t2 * (1.0f / t2.length());
+    a = t0 * (T(1.0) / t0.length());
+    b = t1 * (T(1.0) / t1.length());
+    c = t2 * (T(1.0) / t2.length());
 }
 
 // multiplication by a vector
@@ -234,7 +234,7 @@ void Matrix3<T>::from_axis_angle(const Vector3<T> &v, T theta)
 {
     const T C = cosF(theta);
     const T S = sinF(theta);
-    const T t = 1.0f - C;
+    const T t = T(1.0) - C;
     const Vector3<T> normv = v.normalized();
     const T x = normv.x;
     const T y = normv.y;
