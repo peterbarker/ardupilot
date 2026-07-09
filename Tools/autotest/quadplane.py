@@ -1617,6 +1617,80 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
                 "Governed blade pitch did not flatten relative to baseline (%.0f vs %.0f)" %
                 (results[0.9][1], results[0][1]))
 
+    def PlaneHeliQuadTiltEfficiencySweep(self):
+        '''show cruise efficiency varying with the pitch/rotor-speed split'''
+        self.customise_SITL_commandline(
+            [],
+            defaults_filepath=self.model_defaults_filepath('plane-heliquad-hvec'),
+            model="quadplane-heliquad-hvec:@ROMFS/models/heliquad-ddvp-losses.json",
+            wipe=True,
+        )
+        # keep assistance clear of the low-power cruise windows
+        self.set_parameter('Q_ASSIST_SPEED', 5)
+        self.set_parameter('BATT_MONITOR', 4)
+        self.reboot_sitl()
+
+        self.change_mode('QLOITER')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.delay_sim_time(15, reason="rotor runup")
+        self.set_rc(3, 1800)
+        self.wait_altitude(38, 45, relative=True, timeout=90)
+        self.set_rc(3, 1500)
+        self.change_mode('FBWA')
+        self.set_rc(3, 1800)
+        self.wait_statustext('Transition FW done', timeout=90)
+        self.delay_sim_time(4, reason="build airspeed")
+
+        # measure cruise current at the same low thrust with the
+        # rotors held at a range of speeds, blade pitch making up the
+        # difference.  Zero floor lets the speed track the thrust
+        # demand (about 0.72 of full speed here); higher floors trade
+        # coarser pitch at low speed for finer pitch at high speed
+        results = {}
+        for spd_fw in 0, 0.8, 0.9, 1.0:
+            self.set_parameter('H_DRSC_SPD_FW', spd_fw)
+            self.set_rc(3, 1700)
+            self.delay_sim_time(8, reason="regain energy between windows")
+            self.set_rc(3, 1200)
+            self.delay_sim_time(6, reason="rotor speed settling")
+            drive = []
+            curr = []
+            tstart = self.get_sim_time()
+            while self.get_sim_time_cached() - tstart < 5:
+                m = self.assert_receive_message('SERVO_OUTPUT_RAW', timeout=5)
+                drive.append(m.servo9_raw)
+                b = self.assert_receive_message('BATTERY_STATUS', timeout=5)
+                curr.append(b.current_battery * 0.01)
+            results[spd_fw] = (sum(drive)/len(drive), sum(curr)/len(curr))
+            self.progress("SPD_FW=%.1f drive=%.0fus current=%.1fA" %
+                          (spd_fw, results[spd_fw][0], results[spd_fw][1]))
+
+        self.progress("Back-transition and land")
+        self.set_parameter('H_DRSC_SPD_FW', 0)
+        self.change_mode('QLOITER')
+        self.set_rc(3, 1500)
+        self.delay_sim_time(30, reason="back-transition and brake")
+        self.change_mode('QLAND')
+        # the sweep ends the cruise fast and high; bleeding the
+        # energy and descending takes a while
+        self.wait_disarmed(timeout=600)
+        self.zero_throttle()
+
+        # full speed with near-flat pitch must pay measurably more
+        # profile power than the near-optimal middle of the sweep
+        if results[1.0][1] - results[0.8][1] < 1.0:
+            raise NotAchievedException(
+                "Profile power not visible at full rotor speed (%.1fA vs %.1fA)" %
+                (results[1.0][1], results[0.8][1]))
+        # the thrust-tracking allocation is also more expensive than
+        # the optimum when the resistive loss is significant, but the
+        # margin is small; just require full speed to beat it too
+        if results[1.0][1] - results[0][1] < 0.5:
+            raise NotAchievedException(
+                "Full-speed cruise not more expensive than thrust-tracking (%.1fA vs %.1fA)" %
+                (results[1.0][1], results[0][1]))
+
     def setup_ICEngine_vehicle(self):
         '''restarts SITL with an IC Engine setup'''
         model = "quadplane-ice"
@@ -4030,6 +4104,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.PlaneHeliQuad,
             self.PlaneHeliQuadTilt,
             self.PlaneHeliQuadTiltGovernor,
+            self.PlaneHeliQuadTiltEfficiencySweep,
             self.Weathervane,
             self.QAssist,
             self.GyroFFT,
