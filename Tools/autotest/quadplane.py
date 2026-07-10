@@ -1691,6 +1691,147 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
                 "Full-speed cruise not more expensive than thrust-tracking (%.1fA vs %.1fA)" %
                 (results[1.0][1], results[0][1]))
 
+    def PlaneHeliQuadTiltSensors(self):
+        '''check rotor RPM and servo feedback plumbing on the tilting heliquad'''
+        # feedback-capable servos on the control surfaces, the tilt
+        # motors and ONE collective servo; the collective is the fast
+        # attitude-control path and the round-robin serial bus is too
+        # slow to carry all four, so one corner represents the
+        # collective plumbing while the others stay direct PWM. The
+        # drive motors report RPM via ESC telemetry
+        volz_mask = ((1 << 0) | (1 << 1) | (1 << 3) |
+                     (1 << 4) |
+                     (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15))
+        self.customise_SITL_commandline(
+            ["--serial5=sim:volz"],
+            defaults_filepath=self.model_defaults_filepath('plane-heliquad-hvec'),
+            model="quadplane-heliquad-hvec:@ROMFS/models/heliquad-ddvp.json",
+            wipe=True,
+        )
+        self.set_parameters({
+            'Q_ASSIST_SPEED': 5,
+            'SERIAL5_PROTOCOL': 14,
+            'SERVO_VOLZ_MASK': volz_mask,
+            'SIM_VOLZ_ENA': 1,
+            'SIM_VOLZ_MASK': volz_mask,
+            # rotor speed monitoring from two corners' ESC telemetry
+            'RPM1_TYPE': 5,
+            'RPM1_ESC_MASK': 1 << 8,   # drive motor 1 on SERVO9
+            'RPM2_TYPE': 5,
+            'RPM2_ESC_MASK': 1 << 11,  # drive motor 4 on SERVO12
+        })
+        self.reboot_sitl()
+        # requesting the first bank streams all ESC telemetry banks
+        self.set_message_rate_hz('ESC_TELEMETRY_1_TO_4', 10)
+        self.set_message_rate_hz('RPM', 10)
+
+        def drive_rpms():
+            m = self.assert_receive_message('ESC_TELEMETRY_9_TO_12', timeout=5, verbose=True)
+            return list(m.rpm)
+
+        def sensor_rpm(index):
+            m = self.assert_receive_message('RPM', timeout=5)
+            return m.rpm1 if index == 0 else m.rpm2
+
+        self.progress("Rotors must be stopped while disarmed")
+        self.delay_sim_time(5, reason="everything running disarmed")
+        for i, rpm in enumerate(drive_rpms()):
+            if rpm > 10:
+                raise NotAchievedException("Rotor %u spinning while disarmed (%.0frpm)" % (i+1, rpm))
+
+        self.change_mode('QLOITER')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.delay_sim_time(10, reason="armed at zero throttle")
+        self.progress("Rotors stay stopped until climb is demanded")
+        for i, rpm in enumerate(drive_rpms()):
+            if rpm > 10:
+                raise NotAchievedException("Rotor %u spinning at ground idle (%.0frpm)" % (i+1, rpm))
+
+        self.set_rc(3, 1800)
+        self.wait_altitude(18, 25, relative=True, timeout=60)
+        self.set_rc(3, 1500)
+        self.delay_sim_time(10, reason="settle into hover")
+        self.progress("Rotors at hover speed, sensors agreeing")
+        hover = drive_rpms()
+        for i, rpm in enumerate(hover):
+            if not 700 < rpm < 1500:
+                raise NotAchievedException("Rotor %u not at hover speed (%.0frpm)" % (i+1, rpm))
+        for index, esc_chan in (0, 0), (1, 3):
+            rpm = sensor_rpm(index)
+            if abs(rpm - hover[esc_chan]) > 150:
+                raise NotAchievedException(
+                    "RPM%u sensor disagrees with ESC telemetry (%.0f vs %.0f)" %
+                    (index+1, rpm, hover[esc_chan]))
+
+        self.change_mode('FBWA')
+        self.set_rc(3, 1800)
+        self.wait_statustext('Transition FW done', timeout=90)
+        self.delay_sim_time(4, reason="fixed-wing cruise")
+        self.progress("Rotors at forward-flight speed")
+        for i, rpm in enumerate(drive_rpms()):
+            if rpm < 1200:
+                raise NotAchievedException("Rotor %u slow in forward flight (%.0frpm)" % (i+1, rpm))
+
+        self.progress("Back-transition and land")
+        self.change_mode('QLOITER')
+        self.set_rc(3, 1500)
+        self.delay_sim_time(15, reason="back-transition and brake")
+        self.change_mode('QLAND')
+        log_filepath = self.current_onboard_log_filepath()
+        self.wait_disarmed(timeout=400)
+        self.zero_throttle()
+        self.set_message_rate_hz('ESC_TELEMETRY_1_TO_4', 0)
+        self.set_message_rate_hz('RPM', 0)
+
+        self.progress("Checking servo feedback in the log")
+        dfreader = self.dfreader_for_path(log_filepath)
+        watched = (0, 1, 3, 4, 12, 13, 14, 15)
+        pos = {}
+        buckets = {}
+        while True:
+            m = dfreader.recv_match(type='CSRV')
+            if m is None:
+                break
+            if m.Id not in watched:
+                continue
+            pos.setdefault(m.Id, []).append(m.Pos)
+            # feedback lags command by the servo transport delay, so
+            # fast channels (the collective carries the attitude
+            # loop) cannot be compared instant-by-instant: compare
+            # one-second averages of feedback and command instead
+            sec = int(m.TimeUS // 1000000)
+            b = buckets.setdefault(m.Id, {}).setdefault(sec, [0.0, 0.0, 0])
+            b[0] += m.Pos
+            b[1] += m.PosCmd
+            b[2] += 1
+        for chan in watched:
+            if chan not in pos:
+                raise NotAchievedException("No servo feedback for channel %u" % (chan+1,))
+            # range-output channels report a constant angle offset
+            # between the command and feedback conventions; the
+            # plumbing check is that feedback TRACKS the command, so
+            # compare about the median offset
+            errs = sorted(p/n - c/n for p, c, n in buckets[chan].values())
+            median = errs[len(errs) // 2]
+            tracking = sorted(abs(e - median) for e in errs)
+            p95 = tracking[int(len(tracking) * 0.95)]
+            if p95 > 20:
+                raise NotAchievedException(
+                    "Channel %u feedback diverges from command (p95 %.1fdeg about offset %.1fdeg)" %
+                    (chan+1, p95, median))
+        for chan in 12, 13, 14, 15:
+            span = max(pos[chan]) - min(pos[chan])
+            if span < 45:
+                raise NotAchievedException(
+                    "Tilt servo %u did not sweep hover to forward (%.1fdeg)" % (chan+1, span))
+        for chan in (4,):
+            span = max(pos[chan]) - min(pos[chan])
+            if span < 10:
+                raise NotAchievedException(
+                    "Collective servo %u did not move between landed and flight (%.1fdeg)" % (chan+1, span))
+        self.progress("Servo feedback tracks commands; tilt and collective sweeps seen")
+
     def setup_ICEngine_vehicle(self):
         '''restarts SITL with an IC Engine setup'''
         model = "quadplane-ice"
@@ -4105,6 +4246,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.PlaneHeliQuadTilt,
             self.PlaneHeliQuadTiltGovernor,
             self.PlaneHeliQuadTiltEfficiencySweep,
+            self.PlaneHeliQuadTiltSensors,
             self.Weathervane,
             self.QAssist,
             self.GyroFFT,
