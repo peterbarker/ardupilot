@@ -18932,9 +18932,10 @@ return update, 1000
             self.customise_SITL_commandline([])
 
     def NexusIMUs(self):
-        '''check the SITL_Nexus board's two simulated SPI IMUs report through
+        '''check the SITL_Nexus board's three simulated SPI IMUs report through
         the expected MAVLink messages: the InvensenseV3 ICM40609 (instance 0)
-        via RAW_IMU, and the ADIS16470 (instance 1) via SCALED_IMU2'''
+        via RAW_IMU, the ADIS16470 (instance 1) via SCALED_IMU2, and the
+        ADIS16547 (instance 2) via SCALED_IMU3'''
 
         # rebuild + restart on the SITL_Nexus board, which replaces the
         # pure-maths SITL IMU with the real InvensenseV3 / ADIS drivers running
@@ -18946,6 +18947,7 @@ return update, 1000
         # match the DEVTYPE_INS_* enum in AP_InertialSensor_Backend.h
         DEVTYPE_INS_ADIS1647X = 0x31
         DEVTYPE_INS_ICM40609 = 0x33
+        DEVTYPE_INS_ADIS1654X = 0x44
         BUS_TYPE_SPI = 2  # AP_HAL::Device::BUS_TYPE_SPI
 
         def devtype(devid):
@@ -18957,37 +18959,31 @@ return update, 1000
         ids = self.get_parameters([
             "INS_ACC_ID", "INS_GYR_ID",
             "INS_ACC2_ID", "INS_GYR2_ID",
+            "INS_ACC3_ID", "INS_GYR3_ID",
         ])
 
-        # instance 0 (RAW_IMU) must be the InvensenseV3 ICM40609 on SPI
-        for name in ("INS_ACC_ID", "INS_GYR_ID"):
-            if bustype(ids[name]) != BUS_TYPE_SPI:
-                raise NotAchievedException("%s not on SPI (id=%d)" % (name, ids[name]))
-            if devtype(ids[name]) != DEVTYPE_INS_ICM40609:
-                raise NotAchievedException(
-                    "%s devtype=0x%02x, expected ICM40609 (0x%02x)" %
-                    (name, devtype(ids[name]), DEVTYPE_INS_ICM40609))
+        # (instance, accel-param, gyro-param, expected devtype, name)
+        expected = [
+            (0, "INS_ACC_ID", "INS_GYR_ID", DEVTYPE_INS_ICM40609, "ICM40609"),
+            (1, "INS_ACC2_ID", "INS_GYR2_ID", DEVTYPE_INS_ADIS1647X, "ADIS16470"),
+            (2, "INS_ACC3_ID", "INS_GYR3_ID", DEVTYPE_INS_ADIS1654X, "ADIS16547"),
+        ]
+        for (instance, accname, gyrname, want, name) in expected:
+            for pname in (accname, gyrname):
+                if bustype(ids[pname]) != BUS_TYPE_SPI:
+                    raise NotAchievedException("%s not on SPI (id=%d)" % (pname, ids[pname]))
+                if devtype(ids[pname]) != want:
+                    raise NotAchievedException(
+                        "%s devtype=0x%02x, expected %s (0x%02x)" %
+                        (pname, devtype(ids[pname]), name, want))
+            self.progress("instance %u = %s (by device ID)" % (instance, name))
 
-        # instance 1 (SCALED_IMU2) must be the ADIS16470 on SPI
-        for name in ("INS_ACC2_ID", "INS_GYR2_ID"):
-            if bustype(ids[name]) != BUS_TYPE_SPI:
-                raise NotAchievedException("%s not on SPI (id=%d)" % (name, ids[name]))
-            if devtype(ids[name]) != DEVTYPE_INS_ADIS1647X:
-                raise NotAchievedException(
-                    "%s devtype=0x%02x, expected ADIS1647X (0x%02x)" %
-                    (name, devtype(ids[name]), DEVTYPE_INS_ADIS1647X))
-
-        # there must be exactly two IMU instances - no phantom third backend
-        if "INS_ACC3_ID" in ids and ids["INS_ACC3_ID"] != 0:
-            raise NotAchievedException("unexpected third IMU instance")
-
-        self.progress("instance 0 = ICM40609, instance 1 = ADIS16470 (by device ID)")
-
-        # make sure both messages are flowing
+        # make sure the per-instance IMU messages are flowing
         self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_RAW_IMU, 10)
         self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_SCALED_IMU2, 10)
+        self.set_message_rate_hz(mavutil.mavlink.MAVLINK_MSG_ID_SCALED_IMU3, 10)
 
-        # both sensors must deliver live, physically-plausible data.  With the
+        # each sensor must deliver live, physically-plausible data.  With the
         # vehicle level and stationary each reads ~1g down the z axis and
         # near-zero rotation.  Accelerations are in mG, rotations in mrad/s.
         def check_stationary(m, name):
@@ -19005,23 +19001,28 @@ return update, 1000
 
         raw = self.assert_receive_message("RAW_IMU", timeout=5)
         imu2 = self.assert_receive_message("SCALED_IMU2", timeout=5)
+        imu3 = self.assert_receive_message("SCALED_IMU3", timeout=5)
         check_stationary(raw, "RAW_IMU")
         check_stationary(imu2, "SCALED_IMU2")
+        check_stationary(imu3, "SCALED_IMU3")
 
-        # the two streams are fed by two distinct simulated devices, so their
-        # reported temperatures differ: the ADIS sim hard-codes 25.00 degC,
-        # while the ICM40609's temperature tracks the SITL thermal model.  This
-        # proves SCALED_IMU2 is a separate sensor and not an echo of instance 0.
-        if imu2.temperature != 2500:
-            raise NotAchievedException(
-                "SCALED_IMU2 (ADIS16470) temperature %d != 2500 (25 degC)" %
-                imu2.temperature)
+        # the streams are fed by distinct simulated devices, which report
+        # different temperatures: both ADIS sims hard-code 25.00 degC, while
+        # the ICM40609's temperature tracks the SITL thermal model.  This
+        # proves the ADIS streams are not merely an echo of the ICM's data.
+        for (m, name) in ((imu2, "SCALED_IMU2 (ADIS16470)"),
+                          (imu3, "SCALED_IMU3 (ADIS16547)")):
+            if m.temperature != 2500:
+                raise NotAchievedException(
+                    "%s temperature %d != 2500 (25 degC)" % (name, m.temperature))
         if raw.temperature == 2500:
             raise NotAchievedException(
-                "RAW_IMU (ICM40609) temperature unexpectedly matches the ADIS sim")
+                "RAW_IMU (ICM40609) temperature unexpectedly matches the ADIS sims")
 
-        self.progress("RAW_IMU %.2fC (ICM40609), SCALED_IMU2 %.2fC (ADIS16470)" %
-                      (raw.temperature * 0.01, imu2.temperature * 0.01))
+        self.progress("RAW_IMU %.2fC (ICM40609), SCALED_IMU2 %.2fC (ADIS16470), "
+                      "SCALED_IMU3 %.2fC (ADIS16547)" %
+                      (raw.temperature * 0.01, imu2.temperature * 0.01,
+                       imu3.temperature * 0.01))
 
         # finally, fly a short guided hop to prove the real IMU drivers feed a
         # flyable estimate.  The board arms through the normal prearm path: its
