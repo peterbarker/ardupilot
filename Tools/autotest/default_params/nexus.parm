@@ -9,3 +9,15 @@
 # simulation can actually hold so the vehicle is not permanently "Main loop
 # slow".
 SCHED_LOOP_RATE  200
+
+# The ADIS16547 is a real, used third accel on this board.  copter.parm zeroes
+# INS_ACC3* because the normal SITL board's third accel is unused and must have
+# no calibration; give this one a non-zero calibration like the other two, or
+# accel_calibrated_ok_all() reports it uncalibrated ("PreArm: 3D Accel
+# calibration needed").
+INS_ACC3OFFS_X   0.001
+INS_ACC3OFFS_Y   0.001
+INS_ACC3OFFS_Z   0.001
+INS_ACC3SCAL_X   1.001
+INS_ACC3SCAL_Y   1.001
+INS_ACC3SCAL_Z   1.001

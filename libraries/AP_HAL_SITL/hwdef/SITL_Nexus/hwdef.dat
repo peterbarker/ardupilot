@@ -1,10 +1,12 @@
 # SITL analogue of the mRoNexus flight controller.
 #
 # Instead of the pure-maths SITL IMU, this board exercises the real
-# InvensenseV3 and ADIS1647x drivers against their simulated devices, giving
-# the same inertial sensor complement as the real mRoNexus:
-#   - InvensenseV3 ICM40609   (SPI, simulated by SITL::ICM40609)
-#   - ADIS1647x    ADIS16470  (SPI, simulated by SITL::ADIS16470)
+# InvensenseV3 and ADIS drivers against their simulated devices.  It carries
+# the mRoNexus inertial complement plus an ADIS16547 to exercise the paged /
+# CRC-32 ADIS1654x driver:
+#   - InvensenseV3 ICM40609   (SPI, simulated by SITL::ICM40609)  -> instance 0
+#   - ADIS1647x    ADIS16470  (SPI, simulated by SITL::ADIS16470) -> instance 1
+#   - ADIS1654x    ADIS16547  (SPI, simulated by SITL::ADIS16547) -> instance 2
 
 include ../sitl/hwdef.dat
 
@@ -15,3 +17,4 @@ define AP_SIM_INS_ENABLED 0
 # names resolve against the SITL SPI device table (AP_HAL_SITL/SPIDevice.cpp).
 IMU Invensensev3 SPI:icm40609 ROTATION_NONE
 IMU ADIS1647x SPI:adis16470 ROTATION_NONE 0
+IMU ADIS1654x SPI:adis16547 ROTATION_NONE 0
