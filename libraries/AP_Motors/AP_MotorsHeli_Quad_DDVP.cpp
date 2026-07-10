@@ -93,6 +93,23 @@ void AP_MotorsHeli_Quad_DDVP::move_actuators(float roll_out, float pitch_out, fl
 {
     AP_MotorsHeli_Quad::move_actuators(roll_out, pitch_out, coll_in, yaw_out);
 
+    // With the rotors stopped there is no rotor speed to reallocate the
+    // thrust demand against, and the reallocation below (which assumes
+    // spinning rotors) would pin the blade pitch at the zero-thrust
+    // point. Leave the base collective in place so the blade pitch
+    // tracks the commanded collective and the head can be exercised on
+    // the ground for setup (H_SV_MAN, H_SV_TEST). The drive motors are
+    // held at zero by esc_output() while disarmed regardless, so only
+    // the blade-pitch servos are affected.
+    if (!armed()) {
+        for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
+            _speed_demand[i] = _speed_min;
+            _rotor_speed_model[i] = 0.0f;
+            _rotor_speed_est[i] = 0.0f;
+        }
+        return;
+    }
+
     // _out[] now holds per-rotor blade pitch in -1..1 about the
     // zero-thrust point, computed assuming full rotor speed.
     // Reallocate between the two actuators: the slow per-rotor speed
