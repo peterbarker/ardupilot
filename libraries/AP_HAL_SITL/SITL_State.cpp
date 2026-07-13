@@ -201,11 +201,19 @@ void SITL_State::_output_to_flightgear(void)
             // field for blade collective, so it rides in an unused
             // per-engine field which only the heliquad aircraft model XML
             // reads:
-            //   rpm[i]       - rotor speed, from the shared RSC output
+            //   rpm[i]       - rotor speed
             //   fuel_flow[i] - blade collective, -1..1 about trim
-            // collective servos are SERVO1-4, RSC is SERVO8 (copter-heli convention)
-            const float rsc = constrain_float((pwm_output[7]-1000)*0.001f, 0, 1);
+            // collective servos are SERVO1-4. The governed heli-quad
+            // runs a single shared RSC on SERVO8, so every rotor shows
+            // the same speed; the direct-drive variable-pitch frame
+            // (heli-quad-ddvp) has an independent drive ESC per corner on
+            // SERVO5-8, so each rotor shows its own speed. Reading the
+            // per-corner channels covers both: on the shared frame all
+            // four carry the same RSC output.
+            const bool ddvp = strstr(_model_str, "ddvp") != nullptr;
             for (uint8_t i=0; i<4; i++) {
+                const uint8_t rsc_chan = ddvp ? 4+i : 7;
+                const float rsc = constrain_float((pwm_output[rsc_chan]-1000)*0.001f, 0, 1);
                 fdm.rpm[i] = rsc * 1500;  // nominal head speed, rev/min
                 fdm.fuel_flow[i] = constrain_float((pwm_output[i]-1500)*0.002f, -1, 1);
             }
