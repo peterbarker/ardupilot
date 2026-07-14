@@ -14542,11 +14542,27 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         if m.gcs_main != 7:
             raise NotAchievedException("Expected gcs_main=7 before disconnect test")
         mav2.close()
-        self.delay_sim_time(7)  # > GCS_OPERATOR_HEARTBEAT_TIMEOUT_MS (5 s)
+        # keep the secondary heartbeating through the wait: the timeout
+        # must track the primary specifically -- under the old
+        # any-in-range-GCS liveness these heartbeats would mask the
+        # primary's disconnect and control would never release
+        tstart = self.get_sim_time()
+        while self.get_sim_time_cached() - tstart < 7:  # > GCS_OPERATOR_HEARTBEAT_TIMEOUT_MS (5 s)
+            mav3.mav.heartbeat_send(
+                mavutil.mavlink.MAV_TYPE_GCS,
+                mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                0, 0, 0,
+            )
+            self.delay_sim_time(0.5)
         m = self.poll_message("CONTROL_STATUS")
         if m.gcs_main != 0:
             raise NotAchievedException(
                 "Expected gcs_main=0 after operator disconnect timeout, got %u" % m.gcs_main)
+        # the secondary was unaffected by the primary's timeout
+        if 9 not in m.gcs_secondary:
+            raise NotAchievedException(
+                "Expected sysid 9 still in gcs_secondary after primary timeout, got %s" %
+                str(m.gcs_secondary))
         # reopen mav2 for the enforcement test
         mav2 = self.context_create_mavlink_connection(
             "tcp:localhost:%u" % self.adjust_ardupilot_port(5762),
