@@ -14323,16 +14323,18 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # notification is forwarded to the current owner (mav2) on their channel
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
-            p1=1, p2=0, p4=9, x=0,
+            p1=1, p2=0, p3=120, p4=9, x=0,
             mav=mav3,
             want_result=mavutil.mavlink.MAV_RESULT_FAILED,
         )
-        # notification is broadcast on all channels; self.mav is always connected.
+        # the notification is addressed to the current owner (mav2), so
+        # listen on their connection.  self.mav is no good here: waiting for
+        # mav3's ACK above drains (discards) everything arriving on self.mav.
         # recv_match loops until it finds a COMMAND_LONG(REQUEST_OPERATOR_CONTROL).
         tstart = time.time()
         notification = None
         while time.time() - tstart < 5:
-            m = self.mav.recv_match(blocking=True, timeout=0.5)
+            m = mav2.recv_match(blocking=True, timeout=0.5)
             if m is None:
                 continue
             if m.get_type() == "COMMAND_LONG" and m.command == mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL:
@@ -14341,10 +14343,19 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         if notification is None:
             raise NotAchievedException(
                 "Did not receive REQUEST_OPERATOR_CONTROL notification")
+        if notification.target_system != 7:
+            raise NotAchievedException(
+                "Expected notification addressed to owner sysid 7, got %u" %
+                notification.target_system)
         if int(notification.param4) != 9:
             raise NotAchievedException(
                 "Expected notification param4=9 (requester sysid), got %u" %
                 int(notification.param4))
+        # the request timeout is specified as 3 to 60 seconds; 120 must be clamped
+        if int(notification.param3) != 60:
+            raise NotAchievedException(
+                "Expected notification param3 clamped to 60, got %u" %
+                int(notification.param3))
 
         # mav2 sets allow_takeover=1; CONTROL_STATUS should reflect the new flag
         self.run_cmd_int(
@@ -14416,11 +14427,19 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException(
                 "Expected sysid 9 in gcs_secondary, got %s" % str(m.gcs_secondary))
 
-        # mav3 (sysid=9) is within the range and can release
+        # mav3 (sysid=9) is a secondary within the range; only the primary
+        # may release, so this must be DENIED
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
             p1=0, p4=9,
             mav=mav3,
+            want_result=mavutil.mavlink.MAV_RESULT_DENIED,
+        )
+        # the primary (mav2, sysid=7) releases
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=0, p4=7,
+            mav=mav2,
         )
         m = self.assert_receive_message("CONTROL_STATUS", timeout=3)
         if m.gcs_main != 0:
@@ -17974,7 +17993,10 @@ return update, 1000
             self.UTMGlobalPosition,
             self.UTMGlobalPositionWaypoint,
             self.HomeAltResetTest,
-            self.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            # run at low speedup: the operator-control heartbeat timeout is
+            # 5s of sim-time, and the framework's wall-clock-paced heartbeats
+            # would exceed that between drains at high speedup
+            Test(self.MAV_CMD_REQUEST_OPERATOR_CONTROL, speedup=4),
         ])
         return ret
 
