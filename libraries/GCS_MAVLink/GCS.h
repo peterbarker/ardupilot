@@ -1184,29 +1184,37 @@ public:
      */
     bool sysid_is_gcs(uint8_t sysid) const;
 
+    // configured GCS sysid range (MAV_GCS_SYSID / MAV_GCS_SYSID_HI);
+    // a high value greater than the low value configures multiple
+    // owner GCS
+    uint8_t sysid_gcs() const { return mav_gcs_sysid; }
+    uint8_t sysid_gcs_high() const { return mav_gcs_sysid_high; }
+
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
-    void set_operator_control(uint8_t sysid, uint8_t sysid_high, bool allow_takeover);
-    uint8_t get_operator_control_sysid() const { return _operator_control_sysid; }
+    void set_operator_control(uint8_t primary, bool allow_takeover);
+    uint8_t get_operator_control_sysid() const { return _operator_control_primary; }
     bool get_operator_control_allow_takeover() const { return _operator_control_allow_takeover; }
-    // true only when operator control is engaged and gcs_sysid is the primary (gcs_main)
     bool sysid_is_primary_operator(uint8_t gcs_sysid) const {
-        return _operator_control_sysid != 0 && gcs_sysid == _operator_control_sysid;
+        return _operator_control_primary != 0 && gcs_sysid == _operator_control_primary;
     }
     void note_secondary_gcs_seen(uint8_t gcs_sysid);
+    void note_primary_gcs_seen();
     void get_secondary_gcs(uint8_t (&out)[10]) const;
-    void queue_operator_control_notification(uint8_t req_sysid, uint8_t req_sysid_high,
+    void queue_operator_control_notification(uint8_t req_sysid,
                                              bool allow_takeover, float timeout);
     struct OperatorControlNotification {
-        bool pending;
+        // channels which still have to send the notification
+        mavlink_channel_mask_t chan_pending_mask;
         uint8_t req_sysid;
-        uint8_t req_sysid_high;
         bool allow_takeover;
         float timeout;
     };
     const OperatorControlNotification &get_operator_control_notification() const {
         return _oc_notification;
     }
-    void clear_operator_control_notification() { _oc_notification.pending = false; }
+    void clear_operator_control_notification(mavlink_channel_t chan) {
+        _oc_notification.chan_pending_mask &= ~(1U<<chan);
+    }
 #endif
 
     // last time traffic was seen from my designated GCS.  traffic
@@ -1389,10 +1397,13 @@ private:
     uint32_t _sysid_gcs_last_seen_time_ms;
 
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
-    uint8_t _operator_control_sysid;
-    uint8_t _operator_control_sysid_high;
+    uint8_t _operator_control_primary;
     bool _operator_control_allow_takeover;
     uint32_t _operator_control_last_hb_check_ms;
+    // last time traffic was seen from the primary operator; the
+    // primary may lie outside the MAV_GCS_SYSID range in single-GCS
+    // mode, so it cannot rely on _sysid_gcs_last_seen_time_ms
+    uint32_t _operator_control_primary_last_seen_ms;
     OperatorControlNotification _oc_notification;
     struct SecondaryGCS {
         uint8_t gcs_sysid;

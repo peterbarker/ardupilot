@@ -264,8 +264,7 @@ void GCS::init()
     mavlink_system.sysid = sysid_this_mav();
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
     if (option_is_enabled(Option::GCS_SYSID_ENFORCE)) {
-        _operator_control_sysid = mav_gcs_sysid;
-        _operator_control_sysid_high = mav_gcs_sysid_high;
+        _operator_control_primary = mav_gcs_sysid;
     }
 #endif
 }
@@ -705,11 +704,13 @@ MAV_RESULT GCS::lua_command_int_packet(const mavlink_command_int_t &packet)
 bool GCS::sysid_is_gcs(uint8_t _sysid) const
 {
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
-    if (_operator_control_sysid != 0) {
-        if (_operator_control_sysid_high <= _operator_control_sysid) {
-            return _operator_control_sysid == _sysid;
-        }
-        return _sysid >= _operator_control_sysid && _sysid <= _operator_control_sysid_high;
+    // the primary operator need not be within the configured range
+    // (any GCS may be granted control in single-GCS mode) but must be
+    // accepted as our GCS while it holds control, or its manual
+    // control, its commands (under GCS_SYSID_ENFORCE) and the traffic
+    // holding off the GCS failsafe would all be ignored
+    if (sysid_is_primary_operator(_sysid)) {
+        return true;
     }
 #endif
     if (mav_gcs_sysid_high <= mav_gcs_sysid) {
@@ -719,25 +720,35 @@ bool GCS::sysid_is_gcs(uint8_t _sysid) const
 }
 
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
-void GCS::set_operator_control(uint8_t oc_sysid, uint8_t oc_sysid_high, bool allow_takeover)
+void GCS::set_operator_control(uint8_t primary, bool allow_takeover)
 {
-    _operator_control_sysid = oc_sysid;
-    _operator_control_sysid_high = oc_sysid_high;
+    _operator_control_primary = primary;
     _operator_control_allow_takeover = allow_takeover;
+    if (primary != 0) {
+        // start the operator timeout from the grant; the new owner may
+        // not have sent a heartbeat yet
+        _operator_control_primary_last_seen_ms = AP_HAL::millis();
+    }
     // clear secondary cache on any ownership change
     memset(_secondary_gcs, 0, sizeof(_secondary_gcs));
+    // an ownership change makes any queued takeover notification stale
+    _oc_notification.chan_pending_mask = 0;
     send_message(MSG_CONTROL_STATUS);
 }
 
-void GCS::queue_operator_control_notification(uint8_t req_sysid, uint8_t req_sysid_high,
+void GCS::queue_operator_control_notification(uint8_t req_sysid,
                                                bool allow_takeover, float timeout)
 {
-    _oc_notification.pending       = true;
+    _oc_notification.chan_pending_mask = GCS_MAVLINK::active_channel_mask();
     _oc_notification.req_sysid     = req_sysid;
-    _oc_notification.req_sysid_high = req_sysid_high;
     _oc_notification.allow_takeover = allow_takeover;
     _oc_notification.timeout       = timeout;
     send_message(MSG_OPERATOR_CONTROL_NOTIFICATION);
+}
+
+void GCS::note_primary_gcs_seen()
+{
+    _operator_control_primary_last_seen_ms = AP_HAL::millis();
 }
 
 void GCS::note_secondary_gcs_seen(uint8_t gcs_sysid)

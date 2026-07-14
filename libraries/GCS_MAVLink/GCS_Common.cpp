@@ -2803,11 +2803,11 @@ void GCS::update_receive(void)
         const uint32_t now_ms = AP_HAL::millis();
         if (now_ms - _operator_control_last_hb_check_ms >= 1000) {
             _operator_control_last_hb_check_ms = now_ms;
-            if (_operator_control_sysid != 0) {
-                const uint32_t last_seen = sysid_mygcs_last_seen_time_ms();
+            if (_operator_control_primary != 0) {
+                const uint32_t last_seen = _operator_control_primary_last_seen_ms;
                 if (last_seen != 0 &&
                     now_ms - last_seen > GCS_OPERATOR_HEARTBEAT_TIMEOUT_MS) {
-                    set_operator_control(0, 0, false);
+                    set_operator_control(0, false);
                 }
             }
         }
@@ -4379,12 +4379,24 @@ void GCS_MAVLINK::handle_heartbeat(const mavlink_message_t &msg)
     if (gcs().sysid_is_gcs(msg.sysid)) {
         sysid_mygcs_seen(AP_HAL::millis());
 #if AP_MAVLINK_GCS_CONTROL_ENABLED
-        // track secondary operators (sysids in the operator range that are not gcs_main)
-        if (msg.sysid != gcs().get_operator_control_sysid()) {
+        // track secondary operators (sysids in the operator range that
+        // are not gcs_main).  With a single configured GCS there are no
+        // secondaries; gcs_secondary must stay all-zero in single-owner
+        // mode per the CONTROL_STATUS spec
+        if (gcs().sysid_gcs_high() > gcs().sysid_gcs() &&
+            msg.sysid != gcs().get_operator_control_sysid()) {
             gcs().note_secondary_gcs_seen(msg.sysid);
         }
 #endif
     }
+#if AP_MAVLINK_GCS_CONTROL_ENABLED
+    // the primary operator need not be within the configured GCS sysid
+    // range (any GCS may be granted control in single-GCS mode), so its
+    // heartbeats are tracked separately for the operator timeout
+    if (gcs().sysid_is_primary_operator(msg.sysid)) {
+        gcs().note_primary_gcs_seen();
+    }
+#endif
 }
 
 /*
@@ -5697,42 +5709,66 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
 {
     const bool request_control = is_equal(packet.param1, 1.0f);
     const bool allow_takeover = is_equal(packet.param2, 1.0f);
-    const uint8_t req_sysid = (uint8_t)packet.param4;
-    const uint8_t req_sysid_high = (uint8_t)packet.x;
 
-    // sender must fall within the requested sysid range
-    const bool sender_in_range = (req_sysid_high == 0)
-        ? (msg.sysid == req_sysid)
-        : (req_sysid_high >= req_sysid &&
-           msg.sysid >= req_sysid && msg.sysid <= req_sysid_high);
-    if (!sender_in_range) {
+    // the requester is identified by the command's sender.  param4
+    // (requester sysid) is only meaningful on the notification the
+    // vehicle forwards to the current owner, and param5 has been
+    // removed from the spec, so neither is read here.
+    const uint8_t gcs_sysid = gcs().sysid_gcs();
+    const uint8_t gcs_sysid_high = gcs().sysid_gcs_high();
+
+    // MAV_GCS_SYSID_HI above MAV_GCS_SYSID configures multiple owner
+    // GCS; only a GCS within that range may use this command.  With a
+    // single configured GCS there is no owner set to validate against,
+    // so any GCS may request control, subject to the takeover rules.
+    // The current primary always passes: it must be able to release or
+    // adjust allow-takeover even if the configured range was changed
+    // while it held control, or it can neither release nor be released
+    // for as long as it keeps heartbeating.
+    if (gcs_sysid_high > gcs_sysid &&
+        !gcs().sysid_is_primary_operator(msg.sysid) &&
+        (msg.sysid < gcs_sysid || msg.sysid > gcs_sysid_high)) {
         return MAV_RESULT_DENIED;
     }
 
     if (!request_control) {
-        if (!gcs().sysid_is_gcs(msg.sysid)) {
+        // only the primary operator may release control; secondary GCS in
+        // the range must not be able to strip control from the primary
+        const uint8_t primary = gcs().get_operator_control_sysid();
+        if (primary != 0) {
+            if (msg.sysid != primary) {
+                return MAV_RESULT_DENIED;
+            }
+        } else if (!gcs().sysid_is_gcs(msg.sysid)) {
             return MAV_RESULT_DENIED;
         }
-        gcs().set_operator_control(0, 0, false);
+        gcs().set_operator_control(0, false);
         return MAV_RESULT_ACCEPTED;
     }
 
-    // no owner, or same GCS re-requesting: grant
+    // owner/secondary membership always comes from the MAV_GCS_SYSID
+    // parameters; a control request only ever transfers gcs_main and
+    // can never redefine membership
+
+    // no owner, or same primary GCS re-requesting (e.g. updating
+    // allow_takeover): grant
     if (gcs().get_operator_control_sysid() == 0 ||
-        gcs().sysid_is_gcs(req_sysid)) {
-        gcs().set_operator_control(req_sysid, req_sysid_high, allow_takeover);
+        gcs().get_operator_control_sysid() == msg.sysid) {
+        gcs().set_operator_control(msg.sysid, allow_takeover);
         return MAV_RESULT_ACCEPTED;
     }
 
     // different GCS; automatic takeover allowed?
     if (gcs().get_operator_control_allow_takeover()) {
-        gcs().set_operator_control(req_sysid, req_sysid_high, allow_takeover);
+        gcs().set_operator_control(msg.sysid, allow_takeover);
         return MAV_RESULT_ACCEPTED;
     }
 
     // notify the current owner; defer through the queued send path so it
-    // goes out even when the TX buffer is momentarily full
-    gcs().queue_operator_control_notification(req_sysid, req_sysid_high, allow_takeover, packet.param3);
+    // goes out even when the TX buffer is momentarily full.  param3 is
+    // specified as 3 to 60 seconds
+    gcs().queue_operator_control_notification(msg.sysid, allow_takeover,
+                                              constrain_float(packet.param3, 3.0f, 60.0f));
 
     return MAV_RESULT_FAILED;
 }
@@ -6686,6 +6722,10 @@ bool GCS_MAVLINK::send_available_mode_monitor()
 bool GCS_MAVLINK::send_operator_control_notification()
 {
     const GCS::OperatorControlNotification &notif = gcs().get_operator_control_notification();
+    if (!(notif.chan_pending_mask & (1U<<chan))) {
+        // nothing queued for this channel; never send stale notifications
+        return true;
+    }
     CHECK_PAYLOAD_SIZE2(COMMAND_LONG);
     mavlink_msg_command_long_send(
         chan,
@@ -6697,9 +6737,10 @@ bool GCS_MAVLINK::send_operator_control_notification()
         notif.allow_takeover ? 1.0f : 0.0f,
         notif.timeout,
         (float)notif.req_sysid,
-        (float)notif.req_sysid_high,
+        0.0f,  // param5 removed from the spec
         0.0f,
         0.0f);
+    gcs().clear_operator_control_notification(chan);
     return true;
 }
 
