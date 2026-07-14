@@ -5710,16 +5710,23 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
     }
 
     if (!request_control) {
-        if (!gcs().sysid_is_gcs(msg.sysid)) {
+        // only the primary operator may release control; secondary GCS in
+        // the range must not be able to strip control from the primary
+        const uint8_t primary = gcs().get_operator_control_sysid();
+        if (primary != 0) {
+            if (msg.sysid != primary) {
+                return MAV_RESULT_DENIED;
+            }
+        } else if (!gcs().sysid_is_gcs(msg.sysid)) {
             return MAV_RESULT_DENIED;
         }
         gcs().set_operator_control(0, 0, 0, false);
         return MAV_RESULT_ACCEPTED;
     }
 
-    // no owner, or same GCS re-requesting: grant
+    // no owner, or same primary GCS re-requesting (e.g. updating range): grant
     if (gcs().get_operator_control_sysid() == 0 ||
-        gcs().sysid_is_gcs(req_sysid)) {
+        gcs().get_operator_control_sysid() == msg.sysid) {
         gcs().set_operator_control(msg.sysid, req_sysid, req_sysid_high, allow_takeover);
         return MAV_RESULT_ACCEPTED;
     }
@@ -5731,8 +5738,10 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
     }
 
     // notify the current owner; defer through the queued send path so it
-    // goes out even when the TX buffer is momentarily full
-    gcs().queue_operator_control_notification(req_sysid, req_sysid_high, allow_takeover, packet.param3);
+    // goes out even when the TX buffer is momentarily full.  param3 is
+    // specified as 3 to 60 seconds
+    gcs().queue_operator_control_notification(req_sysid, req_sysid_high, allow_takeover,
+                                              constrain_float(packet.param3, 3.0f, 60.0f));
 
     return MAV_RESULT_FAILED;
 }
@@ -6686,6 +6695,10 @@ bool GCS_MAVLINK::send_available_mode_monitor()
 bool GCS_MAVLINK::send_operator_control_notification()
 {
     const GCS::OperatorControlNotification &notif = gcs().get_operator_control_notification();
+    if (!(notif.chan_pending_mask & (1U<<chan))) {
+        // nothing queued for this channel; never send stale notifications
+        return true;
+    }
     CHECK_PAYLOAD_SIZE2(COMMAND_LONG);
     mavlink_msg_command_long_send(
         chan,
@@ -6700,6 +6713,7 @@ bool GCS_MAVLINK::send_operator_control_notification()
         (float)notif.req_sysid_high,
         0.0f,
         0.0f);
+    gcs().clear_operator_control_notification(chan);
     return true;
 }
 

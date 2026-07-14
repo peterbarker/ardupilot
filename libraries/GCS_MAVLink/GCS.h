@@ -1196,7 +1196,8 @@ public:
     void queue_operator_control_notification(uint8_t req_sysid, uint8_t req_sysid_high,
                                              bool allow_takeover, float timeout);
     struct OperatorControlNotification {
-        bool pending;
+        // channels which still have to send the notification
+        mavlink_channel_mask_t chan_pending_mask;
         uint8_t req_sysid;
         uint8_t req_sysid_high;
         bool allow_takeover;
@@ -1205,7 +1206,9 @@ public:
     const OperatorControlNotification &get_operator_control_notification() const {
         return _oc_notification;
     }
-    void clear_operator_control_notification() { _oc_notification.pending = false; }
+    void clear_operator_control_notification(mavlink_channel_t chan) {
+        _oc_notification.chan_pending_mask &= ~(1U<<chan);
+    }
 #endif
 
     // last time traffic was seen from my designated GCS.  traffic
