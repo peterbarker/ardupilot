@@ -14470,6 +14470,41 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             mav=mav3,
             want_result=mavutil.mavlink.MAV_RESULT_DENIED,
         )
+
+        # changing the configured range so the current primary falls
+        # outside it must not deadlock: the primary can still adjust
+        # allow-takeover and release (its heartbeats keep the operator
+        # timeout alive, so nothing else could ever free the vehicle)
+        self.set_parameter("MAV_GCS_SYSID", 8)  # range now [8, 9], primary is 7
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=1, p2=0, p4=7, x=0,
+            mav=mav2,
+        )
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=0, p4=7,
+            mav=mav2,
+        )
+        m = self.assert_receive_message("CONTROL_STATUS", timeout=3)
+        if m.gcs_main != 0:
+            raise NotAchievedException(
+                "Expected gcs_main=0 after out-of-range primary release, got %u" % m.gcs_main)
+        # ...but now that it is out of range and no longer primary, a
+        # fresh request must be DENIED
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=1, p2=0, p4=7, x=0,
+            mav=mav2,
+            want_result=mavutil.mavlink.MAV_RESULT_DENIED,
+        )
+        self.set_parameter("MAV_GCS_SYSID", 7)
+        # restore mav2 as primary for the release-behaviour checks below
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=1, p2=0, p4=7, x=0,
+            mav=mav2,
+        )
         # the primary (mav2, sysid=7) releases
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
