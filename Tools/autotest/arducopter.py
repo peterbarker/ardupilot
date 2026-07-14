@@ -14289,14 +14289,25 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Expected gcs_main=0 initially, got %u" % m.gcs_main)
         if not (m.flags & mavutil.mavlink.GCS_CONTROL_STATUS_FLAGS_SYSTEM_MANAGER):
             raise NotAchievedException("Expected SYSTEM_MANAGER flag set")
+        # single-owner mode (MAV_GCS_SYSID_HI <= MAV_GCS_SYSID): there are
+        # no secondaries, so gcs_secondary must be all-zero per the
+        # CONTROL_STATUS spec -- even though our own GCS (inside the
+        # configured range) has been heartbeating all along
+        if any(m.gcs_secondary):
+            raise NotAchievedException(
+                "Expected all-zero gcs_secondary in single-owner mode, got %s" %
+                str(m.gcs_secondary))
 
-        # mav2 (sysid=7) requests single-GCS control
+        # mav2 (sysid=7) requests control.  param4 is informational
+        # (requester sysid, only meaningful on the forwarded
+        # notification) and param5 was removed from the spec; the
+        # requester is identified by the sender sysid
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
             p1=1,  # request
             p2=0,  # no auto-takeover
-            p4=7,  # req_sysid
-            x=0,   # req_sysid_high=0 (single GCS)
+            p4=7,  # requester sysid (informational)
+            x=0,
             mav=mav2,
         )
         m = self.assert_receive_message("CONTROL_STATUS", timeout=3)
@@ -14356,6 +14367,11 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException(
                 "Expected notification param3 clamped to 60, got %u" %
                 int(notification.param3))
+        # param5 was removed from the spec and must not be populated
+        if int(notification.param5) != 0:
+            raise NotAchievedException(
+                "Expected notification param5=0 (removed from spec), got %u" %
+                int(notification.param5))
 
         # mav2 sets allow_takeover=1; CONTROL_STATUS should reflect the new flag
         self.run_cmd_int(
@@ -14395,28 +14411,33 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         if m.gcs_main != 0:
             raise NotAchievedException("Expected gcs_main=0 after release, got %u" % m.gcs_main)
 
-        # sender sysid out of range: mav3 (sysid=9) requests for sysid=5 only -> DENIED
+        # -- multi-owner mode: MAV_GCS_SYSID_HI > MAV_GCS_SYSID --
+        # membership comes from the parameters; the request no longer
+        # carries a range (param5 was removed from the spec)
+        self.set_parameter("MAV_GCS_SYSID", 7)
+        self.set_parameter("MAV_GCS_SYSID_HI", 9)
+
+        # out-of-range requester (self.mav, outside [7, 9]) -> DENIED
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
-            p1=1, p4=5, x=0,
-            mav=mav3,
+            p1=1, p2=0, p4=self.mav.source_system,
             want_result=mavutil.mavlink.MAV_RESULT_DENIED,
         )
 
-        # range control: mav2 requests [7, 9] so both mav2 and mav3 are in control
+        # in-range mav2 (sysid=7) becomes gcs_main
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
-            p1=1, p2=0,
-            p4=7,  # lower bound
-            x=9,   # upper bound: sysids 7–9 are all operators
+            p1=1, p2=0, p4=7,
             mav=mav2,
         )
         m = self.assert_receive_message("CONTROL_STATUS", timeout=3)
         if m.gcs_main != 7:
             raise NotAchievedException(
-                "Expected gcs_main=7 (lower bound of range), got %u" % m.gcs_main)
+                "Expected gcs_main=7 in multi-owner mode, got %u" % m.gcs_main)
 
-        # heartbeats from mav3 (sysid=9, within range) should populate gcs_secondary
+        # the grant must not have changed membership: mav3 (sysid=9, in
+        # the param range) still shows up in gcs_secondary even though
+        # the request carried no range
         mav3.mav.heartbeat_send(
             mavutil.mavlink.MAV_TYPE_GCS,
             mavutil.mavlink.MAV_AUTOPILOT_INVALID,
@@ -14425,7 +14446,21 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         m = self.poll_message("CONTROL_STATUS")
         if 9 not in m.gcs_secondary:
             raise NotAchievedException(
-                "Expected sysid 9 in gcs_secondary, got %s" % str(m.gcs_secondary))
+                "Expected sysid 9 in gcs_secondary while controlled, got %s" %
+                str(m.gcs_secondary))
+        # ...and out-of-range sysids must not (membership is the params,
+        # not whoever heartbeats)
+        if self.mav.source_system in m.gcs_secondary:
+            raise NotAchievedException(
+                "Out-of-range sysid %u must not appear in gcs_secondary" %
+                self.mav.source_system)
+
+        # out-of-range GCS cannot release either
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=0, p4=self.mav.source_system,
+            want_result=mavutil.mavlink.MAV_RESULT_DENIED,
+        )
 
         # mav3 (sysid=9) is a secondary within the range; only the primary
         # may release, so this must be DENIED
@@ -14444,9 +14479,25 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         m = self.assert_receive_message("CONTROL_STATUS", timeout=3)
         if m.gcs_main != 0:
             raise NotAchievedException(
-                "Expected gcs_main=0 after range release, got %u" % m.gcs_main)
+                "Expected gcs_main=0 after release, got %u" % m.gcs_main)
 
-        # heartbeat disconnect: when all operators stop heartbeating, control releases
+        # release must not revert/clear membership: the param range is
+        # still in force, so in-range heartbeats keep populating
+        # gcs_secondary
+        mav3.mav.heartbeat_send(
+            mavutil.mavlink.MAV_TYPE_GCS,
+            mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+            0, 0, 0,
+        )
+        m = self.poll_message("CONTROL_STATUS")
+        if 9 not in m.gcs_secondary:
+            raise NotAchievedException(
+                "Expected sysid 9 in gcs_secondary after release, got %s" %
+                str(m.gcs_secondary))
+
+        # heartbeat disconnect: when the primary stops heartbeating,
+        # control releases -- even though mav3 (a secondary in the
+        # param range) keeps heartbeating
         self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
             p1=1, p2=0, p4=7, x=0,
@@ -14473,6 +14524,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         mav2.close()
         mav3.close()
         self.set_parameter("MAV_GCS_SYSID", self.mav.source_system)
+        self.set_parameter("MAV_GCS_SYSID_HI", 0)  # back to single-GCS mode
         self.set_parameter("MAV_OPTIONS", 1)  # GCS_SYSID_ENFORCE bit
         self.reboot_sitl()
 
@@ -14520,6 +14572,95 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             mav=mav3,
             want_result=mavutil.mavlink.MAV_RESULT_FAILED,
         )
+
+        def mav3_heartbeat():
+            mav3.mav.heartbeat_send(
+                mavutil.mavlink.MAV_TYPE_GCS,
+                mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                0, 0, 0)
+
+        def send_rc6_override(conn, pwm):
+            channels = [65535] * 18
+            channels[5] = pwm
+            conn.mav.rc_channels_override_send(self.mav.target_system, 1, *channels)
+
+        # single-owner handover to an out-of-range GCS: the granted primary
+        # need not be within MAV_GCS_SYSID; once granted it must be usable
+        # (packets accepted under GCS_SYSID_ENFORCE, manual control honored,
+        # heartbeats keeping ownership alive)
+        # mav3 must heartbeat continuously: once an out-of-range primary
+        # lapses past the 5s sim-time operator timeout its heartbeats are
+        # (correctly) dropped again and it cannot recover.  Individual
+        # sends between steps are not enough on a slow machine, so send
+        # from a message hook -- like the framework's own do_heartbeats()
+        # -- which runs whenever messages are being processed
+        mav3_last_hb = [0.0]
+
+        def mav3_heartbeat_hook(mav, msg):
+            now = time.time()
+            if now - mav3_last_hb[0] > 0.5:
+                mav3_last_hb[0] = now
+                mav3_heartbeat()
+        self.install_message_hook_context(mav3_heartbeat_hook)
+        self.set_parameter("SIM_SPEEDUP", 1)
+        # current owner (self.mav) re-requests with allow-takeover
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=1, p2=1, p4=self.mav.source_system, x=0,
+        )
+        # mav3 (out of range) takes over
+        mav3_heartbeat()
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=1, p2=0, p4=9, x=0,
+            mav=mav3,
+        )
+        m = self.poll_message("CONTROL_STATUS")
+        if m.gcs_main != 9:
+            raise NotAchievedException("out-of-range GCS was not granted takeover")
+        # commands from the out-of-range primary must be accepted (they used to
+        # be silently dropped by accept_packet)
+        mav3_heartbeat()
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_DO_SET_MODE,
+            p1=mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            p2=4,  # GUIDED
+            mav=mav3,
+        )
+        # manual control (RC override) is honored from the primary
+        mav3_heartbeat()
+        send_rc6_override(mav3, 1700)
+        self.wait_rc_channel_value(6, 1700, timeout=3)
+        # but a non-primary in-range GCS must not be able to override
+        # (RC overrides expire after 3s, so do not re-send mav3's override here)
+        mav3_heartbeat()
+        send_rc6_override(self.mav, 1800)
+        self.delay_sim_time(1)
+        self.assert_rc_channel_value(6, 1700)
+        # the out-of-range primary keeps ownership across the 5s operator
+        # timeout by heartbeating (pre-fix, enforce dropped its heartbeats and
+        # the grant silently reverted)
+        tstart = self.get_sim_time()
+        while self.get_sim_time_cached() - tstart < 7:
+            mav3_heartbeat()
+            self.delay_sim_time(0.5)
+        m = self.poll_message("CONTROL_STATUS")
+        if m.gcs_main != 9:
+            raise NotAchievedException("out-of-range primary timed out despite heartbeating")
+        if any(m.gcs_secondary):
+            raise NotAchievedException("gcs_secondary populated in single-owner mode")
+        # mav3 releases to restore a sane state
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_REQUEST_OPERATOR_CONTROL,
+            p1=0, p4=9,
+            mav=mav3,
+        )
+
+        # drop enforcement before context_pop restores parameters: the
+        # restore is unordered, and once MAV_GCS_SYSID flips away from
+        # our sysid with enforce still on our own PARAM_SETs are
+        # dropped and the restore times out
+        self.set_parameter("MAV_OPTIONS", 0)
 
         self.context_pop()
         self.reboot_sitl()
