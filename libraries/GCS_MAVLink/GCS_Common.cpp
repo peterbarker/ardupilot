@@ -5721,7 +5721,12 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_operator_control(const mavlink_co
     // GCS; only a GCS within that range may use this command.  With a
     // single configured GCS there is no owner set to validate against,
     // so any GCS may request control, subject to the takeover rules.
+    // The current primary always passes: it must be able to release or
+    // adjust allow-takeover even if the configured range was changed
+    // while it held control, or it can neither release nor be released
+    // for as long as it keeps heartbeating.
     if (gcs_sysid_high > gcs_sysid &&
+        !gcs().sysid_is_primary_operator(msg.sysid) &&
         (msg.sysid < gcs_sysid || msg.sysid > gcs_sysid_high)) {
         return MAV_RESULT_DENIED;
     }
