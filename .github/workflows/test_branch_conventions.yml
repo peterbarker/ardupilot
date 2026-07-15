@@ -3,6 +3,9 @@ name: Test for Malformed Commits in PR Branch
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - 'pr-claude/trailing-newline-demo'
 
 concurrency:
   group: ci-${{github.workflow}}-${{ github.ref }}
@@ -16,17 +19,17 @@ jobs:
       - name: Checkout PR branch
         uses: actions/checkout@v7
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
           submodules: 'false'
           fetch-depth: 0
 
       - name: Fetch base branch
         run: |
-          git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
-          git fetch upstream ${{ github.event.pull_request.base.ref }}
+          git remote add upstream ${{ github.event.pull_request.base.repo.clone_url || github.event.repository.clone_url }}
+          git fetch upstream ${{ github.event.pull_request.base.ref || 'pr-claude/trailing-newline-base' }}
 
       - name: Check branch conventions
         shell: bash
         run: |
-          Tools/scripts/check_branch_conventions.py --base-branch "upstream/${{ github.event.pull_request.base.ref }}"
+          Tools/scripts/check_branch_conventions.py --base-branch "upstream/${{ github.event.pull_request.base.ref || 'pr-claude/trailing-newline-base' }}"
