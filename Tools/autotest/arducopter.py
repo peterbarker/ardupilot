@@ -15185,6 +15185,74 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         ])
         return ret
 
+    def drag_estimation_statustext_value(self, name, timeout=1000):
+        '''wait for a DRGE: name=value statustext, return value as float'''
+        pattern = r"DRGE: %s=([-\d.]+)" % name
+        m = self.wait_statustext(pattern, check_context=True, regex=True, timeout=timeout)
+        return float(re.match(pattern, m.text).group(1))
+
+    def DragEstimation(self):
+        '''fly drag-estimation pattern, check computed EK3 drag coefficients'''
+        self.set_parameters({
+            "SCR_ENABLE": 1,
+            "SCR_HEAP_SIZE": 128 * 1024,
+            "RC10_OPTION": 300,  # Scripting1
+            "SIM_WIND_SPD": 8,
+            "SIM_WIND_DIR": 240,  # non-cardinal to exercise the trig
+            "SIM_WIND_T": 1,  # full wind at all altitudes
+            "WP_YAW_BEHAVIOR": 0,  # no yaw during repositioning legs
+        })
+        self.install_applet_script_context('copter-drag-estimation-flight.lua')
+        self.reboot_sitl()
+        self.context_collect('STATUSTEXT')
+        self.takeoff(50, mode='GUIDED')
+        self.set_rc(10, 2000)
+        self.wait_statustext('DRGE: wind', check_context=True, timeout=120)
+        bcoef_x = self.drag_estimation_statustext_value("BCOEF_X")
+        bcoef_y = self.drag_estimation_statustext_value("BCOEF_Y", timeout=30)
+        mcoef = self.drag_estimation_statustext_value("MCOEF", timeout=30)
+        self.wait_statustext('DRGE: params saved', check_context=True, timeout=30)
+        self.wait_statustext('DRGE: done', check_context=True, timeout=300)
+        self.set_rc(10, 1000)
+        # measurements are complete; remove the wind so the landing
+        # detector is not fighting it on touchdown
+        self.set_parameter("SIM_WIND_SPD", 0)
+        self.do_RTL()
+
+        # BCOEF ground truth is printed by SITL at startup, derived
+        # from the frame model's reference flight test; see
+        # SIM_Frame.cpp "Suggested EK3_DRAG_BCOEF_*" (17.209 for the
+        # default frame).  The suggested MCOEF (0.209) is calibrated
+        # at that reference test's 45deg tilt; SITL's momentum drag
+        # (SIM_Motor.cpp) scales with sqrt(per-motor thrust), so at
+        # the hover thrust of the level drifts this script measures
+        # from, the effective linear coefficient is
+        #   4 * mdrag_coef * sqrt(rho*disc_area/4) * sqrt(m*g/4)
+        #        / m * (1.225/rho)
+        # ~= 0.26 for the default frame at the test altitude.
+        for name, got, want, tol in [
+                ("BCOEF_X", bcoef_x, 17.2, 0.20),
+                ("BCOEF_Y", bcoef_y, 17.2, 0.20),
+                ("MCOEF", mcoef, 0.26, 0.20),
+        ]:
+            if abs(got - want) > tol * want:
+                raise NotAchievedException(
+                    "%s incorrect: want %f +/-%.0f%% got %f" %
+                    (name, want, tol*100, got))
+            self.progress("%s %f within %.0f%% of %f" % (name, got, tol*100, want))
+
+        # the script must also have saved the values it reported
+        for pname, value in [
+                ("EK3_DRAG_BCOEF_X", bcoef_x),
+                ("EK3_DRAG_BCOEF_Y", bcoef_y),
+                ("EK3_DRAG_MCOEF", mcoef),
+        ]:
+            saved = self.get_parameter(pname)
+            if abs(saved - value) > 0.01:
+                raise NotAchievedException(
+                    "%s not saved: reported %f param %f" %
+                    (pname, value, saved))
+
     def ScriptMountPOI(self):
         '''test the MountPOI example script'''
         self.context_push()
@@ -18578,6 +18646,7 @@ return update, 1000
             self.RCOverridesClearByPilotInput,
             self.TerrainDBPreArm,
             self.ThrottleGainBoost,
+            self.DragEstimation,
             self.ScriptMountPOI,
             self.ScriptMountAllModes,
             self.ScriptMountDriver,
