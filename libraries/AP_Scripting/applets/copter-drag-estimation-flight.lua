@@ -1,325 +1,352 @@
--- fly a Copter in specific patterns to estimate bluff body and momentum drag
--- see https://youtu.be/xVVtvVuZGQE?t=1423
+--[[
+ fly a Copter in a specific pattern to gather data for estimating
+ bluff body and momentum drag, used for EKF3 wind estimation
 
--- Vehicle should be flown up, up, up into air which is likely to be
---   consistent for the duration of the test, then this script enabled
+ see https://youtu.be/xVVtvVuZGQE?t=1423
 
--- constants
-local update_interval_ms = 10    -- script updates at 100hz
-local aux_switch_function = 300  -- auxiliary switch function controlling mode.  300 is Scripting 1
-local copter_guided_mode_num = 4 -- Copter's guided flight mode is mode 4
-local drift_accel_max = 0.1      -- accel must be below this to be considered at max vel
-local drive_accel_max = 0.1      -- accel must be below this to be considered at max vel
-local min_drive_time_ms = 5000   -- minimum time to drive into wind
-local min_drift_time_ms = 5000   -- minimum time to drift with wind while measuring
-local state_emit_interval_ms = 1000  -- rate wat which to emit state text messages
-local windspeed_min = 1 -- minimum windspeed this script is expected to be run in
-local minalt = 20  -- minimum altitude (in metres) for the script to run
+ How To Use
+   - assign RC option 300 (Scripting1) to a spare transmitter switch
+   - take off in LOITER and climb to somewhere in clean air, well away
+     from obstacles, at least 20m above home.  Ensure there is
+     downwind space for the vehicle to drift to the speed of the wind,
+     and upwind space for four drive-and-drift cycles
+   - change to mode GUIDED
+   - move the switch high
+   - be ready to take control again in LOITER if required
+   - wait for the script to report that it is done
 
+ The vehicle first holds a level attitude and drifts until it is
+ moving with the air mass; the terminal drift velocity is the wind
+ estimate.  It then flies four runs, one for each vehicle axis
+ orientation relative to the wind (nose-in, right-side-in, tail-in,
+ left-side-in).  Each run repositions to the drift end point, yaws to
+ the test heading, drives into the wind at a fixed lean angle until it
+ stops accelerating, then levels and drifts back downwind.  Finally
+ the vehicle returns to the position the initial drift started from.
+--]]
 
--- global state:
-local phase = nil
-local yaw_being_measured = 0
-local started_return = 0
+local UPDATE_INTERVAL_MS = 10    -- script updates at 100Hz
+local AUX_FUNCTION = 300         -- Scripting1 auxiliary switch function
+local MODE_GUIDED = 4
 
-local last_state_emitted_ms = 0
+local MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7}
 
+local DRIVE_LEAN_ANGLE_DEG = 30  -- lean angle when driving into wind
+local ACCEL_SETTLED_MAX = 0.15   -- filtered horizontal accel (m/s/s) below which we are at terminal velocity
+local ACCEL_LPF_HZ = 0.5         -- low-pass filter corner for settle detection
+local WIND_SPEED_MIN = 1.0       -- minimum windspeed (m/s) for the test to be useful
+local MIN_ALT_M = 20             -- minimum altitude above home for the script to run
+local INIT_DRIFT_MIN_MS = 8000   -- minimum time to drift for the wind measurement
+local SETTLE_HOLD_MS = 2000      -- time accel must stay low to be considered settled
+local DRIVE_MIN_MS = 5000        -- minimum time to drive into wind
+local DRIVE_MAX_MS = 60000       -- give up if still accelerating after this long
+local DRIFT_MIN_MS = 5000        -- minimum time to drift back with the wind
+local DRIFT_MAX_MS = 90000       -- give up if drift has not settled after this long
+local YAW_ERR_MAX_DEG = 3        -- heading acceptance for the yaw phase
+local YAW_HOLD_MS = 1000         -- time heading must be held to be considered achieved
+local DATUM_RADIUS_M = 4         -- reposition acceptance radius
+local RETURN_RADIUS_M = 2        -- final return acceptance radius
+local MAX_DIST_M = 800           -- abort if further than this from the start position
+
+local RUN_OFFSETS_DEG = { 0, 90, 180, 270 }  -- vehicle yaw relative to wind-from heading
+
+-- test state; nil when no test is running
+local run
+local abort_reason
 local state = "unknown"
-local abort_reason = nil
+local last_state_emit_ms = uint32_t(0)
 
--- measure_drift state
-local phase_initial_drift_start = nil
-
-function reset(string)
-    phase_initial_drift_start = nil
-    state = string
-    phase = nil
-    start_pos = nil
-    yaw_being_measured = 0
-    started_return = 0
+local function progress(severity, text)
+    gcs:send_text(severity, string.format("DRGE: %s", text))
 end
 
-function progress(string)
-    if string == nil then
-       string = "nil"
+local function wrap_180(angle_deg)
+    local a = angle_deg % 360
+    if a > 180 then
+        a = a - 360
     end
-    gcs:send_text(0, string.format("Drag: %s: %s", tostring(millis()), string))
+    return a
 end
 
--- returns distance in metres to pos (which is a Vector3)
-function distance_to(pos)
-    local here = ahrs:get_relative_position_NED_home()
-    local delta = pos - here
-    return delta:length()
+local function wrap_360(angle_deg)
+    return angle_deg % 360
 end
 
-function accel_xy()
-    -- return accel in earth-frame-xy; currently assumes z-accel is just gravity
-    return ahrs:get_accel():length() - 9.81
+local function abort_test(reason)
+    abort_reason = reason
+    progress(MAV_SEVERITY.WARNING, string.format("aborted: %s", reason))
+    run = nil
 end
 
-function handler_initial_drift()
-
-    if start_pos == nil then
-        start_pos = ahrs:get_relative_position_NED_home()
-        progress(string.format("start_pos x=%0.2f y=%0.2f", start_pos:x(), start_pos:y()))
-    end
-
-    -- instruct position controller to keep us level and at height:
-    -- roll, pitch, yaw, climb_rate, use_yaw_rate, yaw_rate
-    vehicle:set_target_angle_and_climbrate(0, 0, 0, 0, 0, 0)
-
-    -- spend at least <some> seconds in this bit
-    local now = millis()
-    if phase_initial_drift_start == nil then
-        phase_initial_drift_start = now
-    end
-    local elapsed = now - phase_initial_drift_start
-    if elapsed < 5000 then
-        state = string.format("initial drift") -- FIXME: show seconds remaining
-        return update, update_interval_ms
-    end
-
-    -- if our acceleration (presumably from wind...) is above 0.2m/s then
-    --        we're not done yet
-    if accel_xy() > drift_accel_max then
-        state = string.format("init drift: wait accel want<%0.2fm/s got=%0.2fm/s", drift_accel_max, accel_xy())
-        return update, update_interval_ms
-    end
-
-    -- ensure our velocity (presumably from wind...) is greater than some m/s:
-    got_groundspeed = ahrs:groundspeed_vector():length()
-    progress(string.format("groundspeed: %gm/s", got_groundspeed))
-    if got_groundspeed < windspeed_min then
-        state = string.format("initial drift - wind insufficient, got=%0.2fm/s want >%0.2fm/s",
-                          got_groundspeed, windspeed_min)
-        phase = "aborted"
-        return update, update_interval_ms
-    end
-
-    wind_estimate_end_pos = ahrs:get_relative_position_NED_home()
-    progress(string.format("end_pos x=%0.2f y=%0.2f", wind_estimate_end_pos:x(), wind_estimate_end_pos:y()))
-    local delta = start_pos - wind_estimate_end_pos
-    progress(string.format("metres travelled to measure wind: %0.2f", delta:length()))
---    progress(string.format("x=%0.2f y=%0.2f", delta:x(), delta:y()))
-    wind_angle = math.deg(math.atan(delta:y(), delta:x()))
-    progress(string.format("wind coming from heading %0.2f deg", wind_angle))
-
-    phase = "measure_drag"
-    yaw_being_measured = 0
-    measure_drag_phase = "measure_drag_start_phase"
-
-    return update, update_interval_ms
-
-end -- handler_initial_drift
-
--- measures drag at this yaw by driving into wind until we stop
---   accelerating then drifting back to where we started
-
-function handler_measure_drag()
-    local extra = nil
-    if measure_drag_phase == "measure_drag_start_phase" then
-        progress(string.format("Measuring drag at yaw=%0.2f", yaw_being_measured))
-        measure_drag_phase = "start_yaw"
-    elseif measure_drag_phase == "start_yaw" then
-        measure_drag_phase = "wait_heading"
-    elseif measure_drag_phase == "wait_heading" then
-        local target_roll = 0
-        local target_pitch = 0
-        local target_yaw = (yaw_being_measured + wind_angle) % 360
-        local climb_rate = 0
-        local use_yaw_rate = 1
-        local yaw_rate = 20  -- degrees/second
-        local current_yaw = math.deg(ahrs:get_yaw())  -- -180..180
-        if current_yaw < 0 then
-            current_yaw = 360 + current_yaw
-        end
-        local yaw_error = (180-(current_yaw - target_yaw)) % 180
-        if yaw_error < 0 then
-            yaw_rate = -yaw_rate
-        end
-        -- fixme: yaw in shorter direction
-        vehicle:set_target_angle_and_climbrate(target_roll, target_pitch, target_yaw, climb_rate, use_yaw_rate, yaw_rate)
-        
-        extra = string.format("heading want=%0.2f got=%0.2f", target_yaw, current_yaw)
-        if math.abs(yaw_error) < 2 then
-            progress(string.format("got heading %0.2f; moving to start", target_yaw))
-            measure_drag_phase = "move_to_start"
-        end
-    elseif measure_drag_phase == "move_to_start" then
-        vehicle:set_target_posvel_NED(wind_estimate_end_pos, Vector3f(0, 0, 0))
-        measure_drag_phase = "move_to_start_move"
-    elseif measure_drag_phase == "move_to_start_move" then
-        local rem = distance_to(wind_estimate_end_pos)
-        extra = string.format("dist=%0.2f", rem)
-        if rem < 4.0 then
-            measure_drag_phase = "drive_into_wind"
-            drive_into_wind_timer_start = millis()
-            extra = "done"
-        end
-    elseif measure_drag_phase == "drive_into_wind" then
-        -- FIXME: trig for this!
-        local circular_angle = 30
-        local target_roll = 0
-        local target_pitch = 0
-        if yaw_being_measured == 0 then
-            target_roll = 0
-            target_pitch = -circular_angle  -- FIXME
-        elseif yaw_being_measured == 90 then
-            target_roll = -circular_angle
-            target_pitch = 0    -- FIXME
-        elseif yaw_being_measured == 180 then
-            target_roll = 0
-            target_pitch = circular_angle    -- FIXME
-        else
-            target_roll = circular_angle
-            target_pitch = 0
-        end
-
-        local target_yaw = (yaw_being_measured + wind_angle) % 360
-        local climb_rate = 0
-        local use_yaw_rate = 0
-        local yaw_rate = 0  -- degrees/second
-        vehicle:set_target_angle_and_climbrate(target_roll, target_pitch, target_yaw, climb_rate, use_yaw_rate, yaw_rate)
-        -- check acceleration to see if we're done
-        local elapsed = millis() - drive_into_wind_timer_start
-        extra = string.format("accel=%0.2f want<%0.2f el=%s", accel_xy(), drive_accel_max, tostring(elapsed))
-        if elapsed > min_drive_time_ms and accel_xy() < drive_accel_max then
-            progress("Moving to drift_with_wind")
-            measure_drag_phase = "drift_with_wind"
-            drift_with_wind_timer_start = millis()
-        end        
-        -- TODO: check distance to see if we've gone too far
-    elseif measure_drag_phase == "drift_with_wind" then
-        -- command the vehicle to stay level
-        local target_roll = 0
-        local target_pitch = 0
-        local target_yaw = 0
-        local climb_rate = 0
-        local use_yaw_rate = 0
-        local yaw_rate = 0  -- degrees/second
-        vehicle:set_target_angle_and_climbrate(target_roll,target_pitch,target_yaw,climb_rate,use_yaw_rate,yaw_rate)
-
-        elapsed = millis() - drift_with_wind_timer_start
-
-        extra = string.format("accel_xy=%0.2f want<%0.2f el=%s", accel_xy(), drift_accel_max, tostring(elapsed))
-        -- see if we've completed the drift
-        if elapsed > min_drive_time_ms and accel_xy() < drift_accel_max then
-            progress("drift done")
-            measure_drag_phase = "end"
-        end
-    elseif measure_drag_phase == "end" then
-        yaw_being_measured = yaw_being_measured + 90
-        if yaw_being_measured >= 360 then
-            -- all measurements have been done
-            phase = "return_to_start_pos"
-        else
-            measure_drag_phase = "measure_drag_start_phase"
-        end
+-- one-pole low-pass filter; initialises on first sample
+local function lpf_apply(filter, sample, dt, cutoff_hz)
+    if filter.value == nil then
+        filter.value = sample
     else
-        abort_reason = string.format("unknown measure_drag_phase (%s)", measure_drag_phase)
-        phase = "aborted"
+        local alpha = dt / (dt + 1.0/(2.0 * math.pi * cutoff_hz))
+        filter.value = filter.value + (sample - filter.value) * alpha
     end
-
-    if extra == nil then
-        state = measure_drag_phase
-    else
-        state = string.format("%s: %s", measure_drag_phase, extra)
-    end
-
+    return filter.value
 end
 
--- just loops idly doing nothing - user will need to take control
-function handler_aborted()
-    progress(abort_reason)
-    return update, update_interval_ms
+-- magnitude of earth-frame horizontal acceleration.  gravity is
+-- vertical in the earth frame so this is zero at constant velocity
+-- regardless of vehicle attitude
+local function horizontal_accel()
+    local accel_ef = ahrs:body_to_earth(ahrs:get_accel())
+    local x = accel_ef:x()
+    local y = accel_ef:y()
+    return math.sqrt(x*x + y*y)
 end
 
-function handler_return_to_start_pos()
-    if started_return == 0 then
-        vehicle:set_target_posvel_NED(start_pos, Vector3f(0, 0, 0))
-        started_return = 1
+-- watch for the vehicle reaching terminal velocity in level flight
+-- and average the groundspeed once it has; returns the averaged
+-- groundspeed north,east components once settled, nil until then
+local function settled_groundspeed(now, min_elapsed_ms)
+    if now - run.phase_start_ms < min_elapsed_ms or
+        run.accel_filter.value == nil or
+        run.accel_filter.value > ACCEL_SETTLED_MAX then
+        run.settle_start_ms = nil
+        return nil
     end
-    local rem = distance_to(start_pos)
-    state = string.format("dist=%0.2f", rem)
-    if rem < 1.0 then
-        phase = "done"
+    if run.settle_start_ms == nil then
+        run.settle_start_ms = now
+        run.gs_sum_n = 0.0
+        run.gs_sum_e = 0.0
+        run.gs_count = 0
     end
-    return update, update_interval_ms
+    local gs = ahrs:groundspeed_vector()
+    run.gs_sum_n = run.gs_sum_n + gs:x()
+    run.gs_sum_e = run.gs_sum_e + gs:y()
+    run.gs_count = run.gs_count + 1
+    if now - run.settle_start_ms < SETTLE_HOLD_MS then
+        return nil
+    end
+    return run.gs_sum_n / run.gs_count, run.gs_sum_e / run.gs_count
 end
 
-function handler_done()
-    return update, update_interval_ms
+local function start_phase(phase, now)
+    run.phase = phase
+    run.phase_start_ms = now
+    run.settle_start_ms = nil
+    run.yaw_hold_start_ms = nil
 end
 
--- maps from a phase to a handler
-local phase_func_table = {
-    initial_drift = handler_initial_drift,
-    measure_drag = handler_measure_drag,
-    aborted = handler_aborted,
-    return_to_start_pos = handler_return_to_start_pos,
-    done = handler_done
+-- yaw of the vehicle for the current run
+local function run_target_yaw_deg()
+    return wrap_360(run.wind_from_deg + RUN_OFFSETS_DEG[run.run_index])
+end
+
+local function send_level_attitude(yaw_deg)
+    vehicle:set_target_angle_and_climbrate(0, 0, yaw_deg, 0, false, 0)
+end
+
+-- returns distance in metres to pos (an origin-relative Vector3f)
+local function distance_to(pos)
+    local here = ahrs:get_relative_position_NED_origin()
+    if here == nil then
+        return nil
+    end
+    return (pos - here):length()
+end
+
+local function handle_init_drift(now)
+    send_level_attitude(run.hold_yaw_deg)
+    state = string.format("initial drift accel=%.2f", run.accel_filter.value or 0)
+    local wind_n, wind_e = settled_groundspeed(now, INIT_DRIFT_MIN_MS)
+    if wind_n == nil or wind_e == nil then
+        return
+    end
+    local windspeed = math.sqrt(wind_n*wind_n + wind_e*wind_e)
+    if windspeed < WIND_SPEED_MIN then
+        abort_test(string.format("wind %.1fm/s below %.1fm/s min", windspeed, WIND_SPEED_MIN))
+        return
+    end
+    run.wind_n = wind_n
+    run.wind_e = wind_e
+    run.wind_from_deg = wrap_360(math.deg(math.atan(wind_e, wind_n)) + 180)
+    progress(MAV_SEVERITY.NOTICE, string.format("wind %.1fm/s from %.0fdeg", windspeed, run.wind_from_deg))
+    run.datum_pos = ahrs:get_relative_position_NED_origin()
+    run.run_index = 1
+    start_phase("move_to_datum", now)
+end
+
+local function handle_move_to_datum(now)
+    vehicle:set_target_posvel_NED(run.datum_pos, Vector3f())
+    local dist = distance_to(run.datum_pos)
+    if dist == nil then
+        return
+    end
+    state = string.format("run %u: to datum dist=%.1f", run.run_index, dist)
+    if dist < DATUM_RADIUS_M then
+        start_phase("yaw", now)
+    end
+end
+
+local function handle_yaw(now)
+    local target_yaw = run_target_yaw_deg()
+    send_level_attitude(target_yaw)
+    local yaw_err = wrap_180(target_yaw - math.deg(ahrs:get_yaw_rad()))
+    state = string.format("run %u: yaw want=%.0f err=%.1f", run.run_index, target_yaw, yaw_err)
+    if math.abs(yaw_err) > YAW_ERR_MAX_DEG then
+        run.yaw_hold_start_ms = nil
+        return
+    end
+    if run.yaw_hold_start_ms == nil then
+        run.yaw_hold_start_ms = now
+        return
+    end
+    if now - run.yaw_hold_start_ms > YAW_HOLD_MS then
+        start_phase("drive", now)
+    end
+end
+
+local function handle_drive(now)
+    -- lean towards the wind-from direction while holding the run heading
+    local offset_rad = math.rad(RUN_OFFSETS_DEG[run.run_index])
+    local roll = -DRIVE_LEAN_ANGLE_DEG * math.sin(offset_rad)
+    local pitch = -DRIVE_LEAN_ANGLE_DEG * math.cos(offset_rad)
+    vehicle:set_target_angle_and_climbrate(roll, pitch, run_target_yaw_deg(), 0, false, 0)
+
+    local elapsed = now - run.phase_start_ms
+    state = string.format("run %u: drive accel=%.2f", run.run_index, run.accel_filter.value or 0)
+    if elapsed > DRIVE_MAX_MS then
+        abort_test(string.format("run %u: drive did not settle", run.run_index))
+        return
+    end
+    if elapsed > DRIVE_MIN_MS and run.accel_filter.value ~= nil and run.accel_filter.value < ACCEL_SETTLED_MAX then
+        start_phase("drift", now)
+    end
+end
+
+local function handle_drift(now)
+    send_level_attitude(run_target_yaw_deg())
+    state = string.format("run %u: drift accel=%.2f", run.run_index, run.accel_filter.value or 0)
+    if now - run.phase_start_ms > DRIFT_MAX_MS then
+        abort_test(string.format("run %u: drift did not settle", run.run_index))
+        return
+    end
+    local wind_n = settled_groundspeed(now, DRIFT_MIN_MS)
+    if wind_n == nil then
+        return
+    end
+    if run.run_index >= #RUN_OFFSETS_DEG then
+        start_phase("return_to_start", now)
+        return
+    end
+    run.run_index = run.run_index + 1
+    start_phase("move_to_datum", now)
+end
+
+local function handle_return_to_start(now)
+    vehicle:set_target_posvel_NED(run.start_pos, Vector3f())
+    local dist = distance_to(run.start_pos)
+    if dist == nil then
+        return
+    end
+    state = string.format("return dist=%.1f", dist)
+    if dist < RETURN_RADIUS_M then
+        progress(MAV_SEVERITY.NOTICE, "done")
+        start_phase("done", now)
+    end
+end
+
+local function handle_done()
+    send_level_attitude(run.hold_yaw_deg)
+    state = "done"
+end
+
+local phase_handlers = {
+    init_drift = handle_init_drift,
+    move_to_datum = handle_move_to_datum,
+    yaw = handle_yaw,
+    drive = handle_drive,
+    drift = handle_drift,
+    return_to_start = handle_return_to_start,
+    done = handle_done,
 }
 
+local function new_test(now)
+    progress(MAV_SEVERITY.NOTICE, "starting")
+    return {
+        phase = "init_drift",
+        phase_start_ms = now,
+        start_pos = ahrs:get_relative_position_NED_origin(),
+        hold_yaw_deg = math.deg(ahrs:get_yaw_rad()),
+        accel_filter = {},
+        last_update_ms = now,
+        run_index = 0,
+    }
+end
 
-
--- main update function; responsible for determining phase of testing procedure
 function update()
-    --    progress("update")
- 
     local now = millis()
-    if (now - last_state_emitted_ms > state_emit_interval_ms) then
-        progress(state)
-        last_state_emitted_ms = now
+
+    -- if no aux switch allocation then do nothing
+    local aux_switch = rc:find_channel_for_option(AUX_FUNCTION)
+    if aux_switch == nil then
+        run = nil
+        state = string.format("want RCx_OPTION=%u", AUX_FUNCTION)
+    elseif aux_switch:get_aux_switch_pos() ~= 2 then
+        -- lowering the switch stops the test and clears any abort
+        run = nil
+        abort_reason = nil
+        state = "want switch high"
+    elseif abort_reason ~= nil then
+        -- hold in aborted state until the switch is cycled
+        state = string.format("aborted: %s", abort_reason)
+    else
+        local relpos_home = ahrs:get_relative_position_NED_home()
+        local relpos_origin = ahrs:get_relative_position_NED_origin()
+        if relpos_home == nil or relpos_origin == nil then
+            if run ~= nil then
+                abort_test("lost position estimate")
+            else
+                state = "want position estimate"
+            end
+        elseif -relpos_home:z() < MIN_ALT_M then
+            if run ~= nil then
+                abort_test(string.format("below %um", MIN_ALT_M))
+            else
+                state = string.format("want altitude >%um", MIN_ALT_M)
+            end
+        elseif vehicle:get_mode() ~= MODE_GUIDED then
+            if run ~= nil then
+                abort_test("not in GUIDED")
+            else
+                state = "want mode GUIDED"
+            end
+        else
+            if run == nil then
+                run = new_test(now)
+            end
+
+            -- track filtered horizontal acceleration for settle detection
+            local dt = (now - run.last_update_ms):tofloat() * 0.001
+            run.last_update_ms = now
+            if dt > 0 then
+                lpf_apply(run.accel_filter, horizontal_accel(), dt, ACCEL_LPF_HZ)
+            end
+
+            if run.phase ~= "done" then
+                local dist = distance_to(run.start_pos)
+                if dist ~= nil and dist > MAX_DIST_M then
+                    abort_test(string.format("%.0fm from start", dist))
+                end
+            end
+
+            if run ~= nil then
+                phase_handlers[run.phase](now)
+            end
+        end
     end
 
-    -- if no aux switch alocation then do nothing
-    local aux_switch = rc:find_channel_for_option(aux_switch_function)
-    if not aux_switch then
-        reset("phase_want_switch_allocation")
-        return update, update_interval_ms
+    if now - last_state_emit_ms > 1000 then
+        progress(MAV_SEVERITY.INFO, state)
+        last_state_emit_ms = now
     end
 
-    -- make sure we're well above home (bit of an assumption...)
-    local relpos_home = ahrs:get_relative_position_NED_home()
-    if relpos_home == nil then
-        reset("want home")
-        return update, update_interval_ms
-    end
-    relhome_alt = -relpos_home:z()
-    if relhome_alt < minalt then
-        reset(string.format("phase_want_altitude >%0.2fm now=%0.2fm", minalt, relhome_alt))
-        return update, update_interval_ms
-    end
-
-    -- if aux switch not asserted then do nothing
-    local sw_pos = aux_switch:get_aux_switch_pos()
-    if sw_pos ~= 2 then
-        reset(string.format("want_switch_position (got=%s want=%u)", swp_pos, 2))
-        return update, update_interval_ms
-    end
-
-    -- if not in Guided mode do nothing
-    if vehicle:get_mode() ~= copter_guided_mode_num then
-        reset(string.format("want_guided have %u", vehicle:get_mode()))
-        return update, update_interval_ms
-    end
-
-    if phase == nil then
-        phase = "initial_drift"
-    end
-
-    state = string.format("running: phase=%s", phase)
-
-    local func = phase_func_table[phase]
-    if func == nil then
-        phase = string.format("error-no-function (%s)", phase)
-        return update, 5000
-    end
-
-    func()
-
-    return update, update_interval_ms
+    return update, UPDATE_INTERVAL_MS
 end
 
 return update()
