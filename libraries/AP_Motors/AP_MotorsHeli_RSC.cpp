@@ -241,12 +241,17 @@ void AP_MotorsHeli_RSC::initialize()
 // configure - configure the RSC using current parameters
 void AP_MotorsHeli_RSC::configure()
 {
+    set_rsc_control_mode((RotorControlMode)_rsc_mode.get());
 
-    configure((RotorControlMode)(_rsc_mode.get()), _ramp_time.get(), _runup_time.get(), _critical_speed.get(), _idle_output.get());
+    // set desired rotor speed for setpoint mode from parameter.
+    if (_rsc_control_mode == ROTOR_CONTROL_MODE_SETPOINT) {
+        _setpoint_desired_rotor_speed = _rsc_setpoint.get() * 0.01f;
+    }
 
 }
 
-// configure - configure the RSC with specific settings, allows caller to specify settings instead of using parameters.
+// configure - configure an RSC instance whose parameters are not registered (the
+// DDVP tail rotor), copying the supplied settings into its parameter members.
 void AP_MotorsHeli_RSC::configure(RotorControlMode control_mode, int8_t ramp_time, int8_t runup_time, float critical_speed, float idle_output)
 {
     set_rsc_control_mode(control_mode);
@@ -254,11 +259,6 @@ void AP_MotorsHeli_RSC::configure(RotorControlMode control_mode, int8_t ramp_tim
     set_runup_time(runup_time);
     set_critical_speed(critical_speed);
     set_idle_output(idle_output);
-
-    // set desired rotor speed for setpoint mode from parameter.
-    if (_rsc_control_mode == ROTOR_CONTROL_MODE_SETPOINT) {
-        _setpoint_desired_rotor_speed = _rsc_setpoint.get() * 0.01f;
-    }
 
 }
 

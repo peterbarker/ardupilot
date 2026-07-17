@@ -42,7 +42,7 @@ public:
     // configure - configures RSC for current control mode, should be called on each update of control mode and on start-up after initialize() to setup parameters and scalars for the current control mode
     void        configure();
 
-    // configure - configure the RSC with specific settings, allows caller to specify settings instead of using parameters.
+    // configure - configure an RSC instance whose parameters are not registered (the DDVP tail rotor), copying the supplied settings into its parameter members
     void        configure(RotorControlMode control_mode,
                           int8_t ramp_time,
                           int8_t runup_time,
