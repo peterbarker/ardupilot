@@ -238,10 +238,21 @@ void AP_MotorsHeli_RSC::initialize()
 
 }
 
+// refresh_settings_from_params - copy this instance's parameter values into the active settings
+void AP_MotorsHeli_RSC::refresh_settings_from_params()
+{
+    set_ramp_time(_ramp_time.get());
+    set_runup_time(_runup_time.get());
+    set_critical_speed(_critical_speed.get());
+    set_idle_output(_idle_output.get());
+}
+
 // configure - configure the RSC using current parameters
 void AP_MotorsHeli_RSC::configure()
 {
     set_rsc_control_mode((RotorControlMode)_rsc_mode.get());
+    refresh_settings_from_params();
+    _settings_from_params = true;
 
     // set desired rotor speed for setpoint mode from parameter.
     if (_rsc_control_mode == ROTOR_CONTROL_MODE_SETPOINT) {
@@ -251,7 +262,7 @@ void AP_MotorsHeli_RSC::configure()
 }
 
 // configure - configure an RSC instance whose parameters are not registered (the
-// DDVP tail rotor), copying the supplied settings into its parameter members.
+// DDVP tail rotor), copying the supplied settings into its active settings.
 void AP_MotorsHeli_RSC::configure(RotorControlMode control_mode, int8_t ramp_time, int8_t runup_time, float critical_speed, float idle_output)
 {
     set_rsc_control_mode(control_mode);
@@ -259,12 +270,17 @@ void AP_MotorsHeli_RSC::configure(RotorControlMode control_mode, int8_t ramp_tim
     set_runup_time(runup_time);
     set_critical_speed(critical_speed);
     set_idle_output(idle_output);
+    _settings_from_params = false;
 
 }
 
 // configure - configure the RSC.
 void AP_MotorsHeli_RSC::configure_armed()
 {
+    // pick up parameter changes made while armed
+    if (_settings_from_params) {
+        refresh_settings_from_params();
+    }
 
     // set desired speed for each control mode
     switch (_rsc_control_mode) {
@@ -292,8 +308,11 @@ void AP_MotorsHeli_RSC::configure_armed()
         set_throttle_curve();
     }
 
-    // keeps user from changing RSC mode while armed
-    if (_rsc_mode.get() != get_rsc_control_mode()) {
+    // keeps user from changing RSC mode while armed.  Only applies when this
+    // instance's mode comes from its own parameter; an instance with injected
+    // settings (the DDVP tail rotor) must never write to its unregistered
+    // parameters.
+    if (_settings_from_params && _rsc_mode.get() != get_rsc_control_mode()) {
         reset_rsc_mode_param();
         _save_rsc_mode = true;
     }
@@ -540,7 +559,7 @@ AP_MotorsHeli_RSC::RSCSpoolState AP_MotorsHeli_RSC::update_spool_state(AP_Motors
 // update_rotor_ramp - slews rotor output scalar between 0 and 1, outputs float scalar to _rotor_ramp_output
 void AP_MotorsHeli_RSC::update_rotor_ramp(float rotor_ramp_input, float dt)
 {
-    float ramp_time = MAX(float(_ramp_time.get()), 1.0);
+    float ramp_time = MAX(float(_ramp_time_active), 1.0);
 
     // check if we need to use the bailout ramp up rate for the autorotation case
     if (autorotation.bailing_out()) {
@@ -565,9 +584,9 @@ void AP_MotorsHeli_RSC::update_rotor_ramp(float rotor_ramp_input, float dt)
 // to determine if the governor must be engaged for runup to be complete when using autothrottle RSC mode.
 void AP_MotorsHeli_RSC::update_rotor_runup(float dt)
 {
-    float runup_time = _runup_time;
+    float runup_time = _runup_time_active;
     // sanity check runup time
-    runup_time = MAX(_ramp_time+1,runup_time);
+    runup_time = MAX(_ramp_time_active+1,runup_time);
 
     // adjust rotor runup when in autorotation or bailing out
     if (in_autorotation()) {

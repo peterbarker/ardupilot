@@ -42,7 +42,7 @@ public:
     // configure - configures RSC for current control mode, should be called on each update of control mode and on start-up after initialize() to setup parameters and scalars for the current control mode
     void        configure();
 
-    // configure - configure an RSC instance whose parameters are not registered (the DDVP tail rotor), copying the supplied settings into its parameter members
+    // configure - configure an RSC instance whose parameters are not registered (the DDVP tail rotor), copying the supplied settings into its active settings
     void        configure(RotorControlMode control_mode,
                           int8_t ramp_time,
                           int8_t runup_time,
@@ -114,20 +114,23 @@ private:
     // reset_rsc_mode_param - resets rsc mode param to current control mode
     void            reset_rsc_mode_param() { _rsc_mode.set((uint8_t)_rsc_control_mode); }
 
-    // set_critical_speed
-    void            set_critical_speed(float critical_speed) { _critical_speed.set(critical_speed); }
+    // set_critical_speed - sets active critical speed, supplied in percent
+    void            set_critical_speed(float critical_speed) { _critical_speed_active = critical_speed * 0.01f; }
 
     // functions for autothrottle, throttle curve, governor, idle speed, output to servo
     void            set_governor_output(float governor_output) {_governor_output = governor_output; }
     void            governor_reset();
     float           get_control_output() const { return _control_output; }
-    void            set_idle_output(float idle_output) { _idle_output.set(idle_output); }
+    void            set_idle_output(float idle_output) { _idle_output_active = idle_output * 0.01f; }
     void            autothrottle_run();
     void            set_throttle_curve();
 
     // functions for ramp and runup timers
-    void            set_ramp_time(int8_t ramp_time) { _ramp_time.set(ramp_time); }
-    void            set_runup_time(int8_t runup_time) { _runup_time.set(runup_time); }
+    void            set_ramp_time(int8_t ramp_time) { _ramp_time_active = ramp_time; }
+    void            set_runup_time(int8_t runup_time) { _runup_time_active = runup_time; }
+
+    // refresh_settings_from_params - copy this instance's parameter values into the active settings
+    void            refresh_settings_from_params();
 
     // update_rotor_ramp - slews rotor output scalar between 0 and 1, outputs float scalar to _rotor_ramp_output
     void            update_rotor_ramp(float rotor_ramp_input, float dt);
@@ -154,8 +157,20 @@ private:
     RSCSpoolState          _spool_state;               // current spool state
     DesiredRSCSpoolState   _desired_spool_state;       // desired spool state
 
-    // internal variables
+    // active settings used by the runtime code.  These are copied from this
+    // instance's own parameters (see configure()/configure_armed()), or
+    // injected by the caller for an instance whose parameters are not
+    // registered (the DDVP tail rotor).  Runtime code must read these rather
+    // than the parameter members, and must never set() or save() the
+    // parameters - unregistered instances must not write to them at all.
     RotorControlMode _rsc_control_mode = ROTOR_CONTROL_MODE_DISABLED;   // RSC control mode, Passthrough, Setpoint, Throttle Curve or Autothrottle
+    int8_t          _ramp_time_active;            // active ramp time in seconds
+    int8_t          _runup_time_active;           // active runup time in seconds
+    float           _critical_speed_active;       // active critical speed as a fraction 0-1
+    float           _idle_output_active;          // active idle output as a fraction 0-1
+    bool            _settings_from_params;        // active settings follow this instance's own parameters
+
+    // internal variables
     float           _passthru_desired_rotor_speed;// latest pilot desired rotor speed, used for passthrough mode
     float           _setpoint_desired_rotor_speed;// latest setpoint desired rotor speed
     float           _desired_rotor_speed;         // latest desired rotor speed
@@ -191,9 +206,11 @@ private:
     AP_Float        _governor_range;            // RPM range +/- governor rpm reference setting where governor is operational
     AP_Int16        _cooldown_time;             // cooldown time to provide a fast idle
 
+    // active setting accessors
+    float           get_critical_speed() const { return _critical_speed_active; }
+    float           get_idle_output() const { return _idle_output_active; }
+
     // parameter accessors to allow conversions
-    float           get_critical_speed() const { return _critical_speed * 0.01; }
-    float           get_idle_output() const { return _idle_output * 0.01; }
     float           get_governor_torque() const { return _governor_torque * 0.01; }
     float           get_governor_compensator() const { return _governor_compensator * 0.000001; }
 
