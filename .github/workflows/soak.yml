@@ -1,0 +1,54 @@
+name: soak
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{github.workflow}}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  soak:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 300
+    container:
+      image: ardupilot/ardupilot-dev-base:v0.2.0
+      options: --privileged --cap-add=SYS_PTRACE --security-opt apparmor=unconfined --security-opt seccomp=unconfined
+    strategy:
+      fail-fast: false
+      matrix:
+        copy: [1, 2]
+        stress: [0, 2]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: 'recursive'
+
+      - uses: ./.github/actions/setup-ccache
+        with:
+          key-suffix: base
+
+      - name: soak (copy ${{matrix.copy}}, stress ${{matrix.stress}})
+        env:
+          CI_SOAK_STRESS: ${{matrix.stress}}
+        shell: bash
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          Tools/scripts/ci_soak.sh
+
+      - name: Archive buildlog artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+           name: soak-fail-copy${{matrix.copy}}-stress${{matrix.stress}}
+           path: |
+             /tmp/buildlogs
+             /__w/ardupilot/buildlogs
+             /__w/ardupilot/ardupilot/logs
+             /__w/ardupilot/ardupilot/core.*
+           retention-days: 14
