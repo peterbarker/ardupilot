@@ -3,3 +3,5 @@ include ../sparknavi-blue/hwdef.dat
 USE_BOOTLOADER_FROM_BOARD sparknavi-blue
 
 define AP_PLANE_CUSTOMCONTROL_ENABLED 1
+
+define AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED 1
