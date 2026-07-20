@@ -3006,29 +3006,40 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def GPSGlitchLoiter2(self):
         """test vehicle handles GPS glitch (aka EKF Reset) without twitching"""
-        self.context_push()
-        self.takeoff(10, mode="LOITER")
+        # both enabled filters see glitch-induced position resets; the
+        # vehicle response only depends on the active filter, so fly
+        # once with each:
+        for active_type in 3, 2:
+            self.start_subtest("active EKF type %u" % active_type)
+            self.context_push()
+            self.set_parameters({
+                "AHRS_EKF_TYPE": active_type,
+                "EK2_ENABLE": 1,
+                "EK3_ENABLE": 1,
+            })
+            self.reboot_sitl()
+            self.takeoff(10, mode="LOITER")
 
-        # wait for vehicle to level
-        self.wait_attitude(desroll=0, despitch=0, timeout=10, tolerance=1)
+            # wait for vehicle to level
+            self.wait_attitude(desroll=0, despitch=0, timeout=10, tolerance=1)
 
-        # apply glitch
-        self.set_parameter("SIM_GPS1_GLTCH_X", 0.001)
+            # apply glitch
+            self.set_parameter("SIM_GPS1_GLTCH_X", 0.001)
 
-        # check lean angles remain stable for 20 seconds
-        tstart = self.get_sim_time()
-        while self.get_sim_time_cached() - tstart < 20:
-            m = self.assert_receive_message('ATTITUDE')
-            roll_deg = math.degrees(m.roll)
-            pitch_deg = math.degrees(m.pitch)
-            self.progress("checking att: roll=%f pitch=%f " % (roll_deg, pitch_deg))
-            if abs(roll_deg) > 2 or abs(pitch_deg) > 2:
-                raise NotAchievedException("fly_gps_glitch_loiter_test2 failed, roll or pitch moved during GPS glitch")
+            # check lean angles remain stable for 20 seconds
+            tstart = self.get_sim_time()
+            while self.get_sim_time_cached() - tstart < 20:
+                m = self.assert_receive_message('ATTITUDE')
+                roll_deg = math.degrees(m.roll)
+                pitch_deg = math.degrees(m.pitch)
+                self.progress("checking att: roll=%f pitch=%f " % (roll_deg, pitch_deg))
+                if abs(roll_deg) > 2 or abs(pitch_deg) > 2:
+                    raise NotAchievedException("fly_gps_glitch_loiter_test2 failed, roll or pitch moved during GPS glitch")
 
-        # RTL, remove glitch and reboot sitl
-        self.do_RTL(alt_max=2)
-        self.context_pop()
-        self.reboot_sitl()
+            # RTL, remove glitch and reboot sitl
+            self.do_RTL(alt_max=2)
+            self.context_pop()
+            self.reboot_sitl()
 
     def GPSGlitchAuto(self, timeout=180):
         '''fly mission and test reaction to gps glitch'''
@@ -11939,43 +11950,53 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def GSF_reset(self):
         '''test the Gaussian Sum filter based Emergency reset'''
-        self.context_push()
-        self.set_parameters({
-            "COMPASS_ORIENT": 4,    # yaw 180
-            "COMPASS_USE2": 0,      # disable backup compasses to avoid pre-arm failures
-            "COMPASS_USE3": 0,
-        })
-        self.reboot_sitl()
-        self.change_mode('GUIDED')
-        self.wait_ready_to_arm()
+        # the emergency yaw reset request is routed by AHRS to the
+        # active estimator only, so fly once with each filter active;
+        # the other filter remains enabled throughout.
+        for active_type in 2, 3:
+            self.start_subtest("active EKF type %u" % active_type)
+            self.context_push()
+            self.set_parameters({
+                "AHRS_EKF_TYPE": active_type,
+                "EK2_ENABLE": 1,
+                "EK3_ENABLE": 1,
+                "COMPASS_ORIENT": 4,    # yaw 180
+                "COMPASS_USE2": 0,      # disable backup compasses to avoid pre-arm failures
+                "COMPASS_USE3": 0,
+            })
+            self.reboot_sitl()
+            self.context_collect('STATUSTEXT')
+            self.change_mode('GUIDED')
+            self.wait_ready_to_arm()
 
-        # record starting position
-        startpos = self.assert_receive_message('LOCAL_POSITION_NED')
-        self.progress("startpos=%s" % str(startpos))
+            # record starting position
+            startpos = self.assert_receive_message('LOCAL_POSITION_NED')
+            self.progress("startpos=%s" % str(startpos))
 
-        # arm vehicle and takeoff to at least 5m
-        self.arm_vehicle()
-        expected_alt = 5
-        self.user_takeoff(alt_min=expected_alt)
+            # arm vehicle and takeoff to at least 5m
+            self.arm_vehicle()
+            expected_alt = 5
+            self.user_takeoff(alt_min=expected_alt)
 
-        # watch for emergency yaw reset
-        self.wait_text("EKF3 IMU. emergency yaw reset", timeout=5, regex=True)
+            # watch for emergency yaw reset
+            self.wait_statustext("EKF%u IMU. emergency yaw reset" % active_type,
+                                 timeout=10, regex=True, check_context=True)
 
-        # record how far vehicle flew off
-        endpos = self.assert_receive_message('LOCAL_POSITION_NED')
-        delta_x = endpos.x - startpos.x
-        delta_y = endpos.y - startpos.y
-        dist_m = math.sqrt(delta_x*delta_x + delta_y*delta_y)
-        self.progress("GSF yaw reset triggered at %f meters" % dist_m)
+            # record how far vehicle flew off
+            endpos = self.assert_receive_message('LOCAL_POSITION_NED')
+            delta_x = endpos.x - startpos.x
+            delta_y = endpos.y - startpos.y
+            dist_m = math.sqrt(delta_x*delta_x + delta_y*delta_y)
+            self.progress("GSF yaw reset triggered at %f meters" % dist_m)
 
-        self.do_RTL()
-        self.context_pop()
-        self.reboot_sitl()
+            self.do_RTL()
+            self.context_pop()
+            self.reboot_sitl()
 
-        # ensure vehicle did not fly too far
-        dist_m_max = 8
-        if dist_m > dist_m_max:
-            raise NotAchievedException("GSF reset failed, vehicle flew too far (%f > %f)" % (dist_m, dist_m_max))
+            # ensure vehicle did not fly too far
+            dist_m_max = 8
+            if dist_m > dist_m_max:
+                raise NotAchievedException("GSF reset failed, vehicle flew too far (%f > %f)" % (dist_m, dist_m_max))
 
     def EKFBootstrapReset(self):
         '''verify EKF reset aux switch is disarmed-only and preserves origin'''
@@ -12271,40 +12292,50 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
     def EKFYawResetLogged(self):
         '''in-filter EKF yaw resets must propagate through AHRS and be logged'''
-        self.context_push()
-        self.set_parameters({
-            "COMPASS_ORIENT": 4,    # yaw 180
-            "COMPASS_USE2": 0,      # disable backup compasses to avoid pre-arm failures
-            "COMPASS_USE3": 0,
-        })
-        self.reboot_sitl()
-        self.change_mode('GUIDED')
-        self.wait_ready_to_arm()
-        self.arm_vehicle()
-        self.user_takeoff(alt_min=5)
+        # the emergency yaw reset request is routed by AHRS to the
+        # active estimator only, so fly once with each filter active;
+        # the other filter remains enabled throughout.
+        for active_type in 2, 3:
+            self.start_subtest("active EKF type %u" % active_type)
+            self.context_push()
+            self.set_parameters({
+                "AHRS_EKF_TYPE": active_type,
+                "EK2_ENABLE": 1,
+                "EK3_ENABLE": 1,
+                "COMPASS_ORIENT": 4,    # yaw 180
+                "COMPASS_USE2": 0,      # disable backup compasses to avoid pre-arm failures
+                "COMPASS_USE3": 0,
+            })
+            self.reboot_sitl()
+            self.context_collect('STATUSTEXT')
+            self.change_mode('GUIDED')
+            self.wait_ready_to_arm()
+            self.arm_vehicle()
+            self.user_takeoff(alt_min=5)
 
-        # the mis-oriented compass causes an in-filter emergency yaw
-        # reset shortly after takeoff:
-        self.wait_text("EKF3 IMU. emergency yaw reset", timeout=5, regex=True)
-        self.delay_sim_time(5, reason="let the event reach the log")
-        self.do_RTL()
+            # the mis-oriented compass causes an in-filter emergency
+            # yaw reset shortly after takeoff:
+            self.wait_statustext("EKF%u IMU. emergency yaw reset" % active_type,
+                                 timeout=10, regex=True, check_context=True)
+            self.delay_sim_time(5, reason="let the event reach the log")
+            self.do_RTL()
 
-        # the EKF's internal yaw reset must be noticed by AHRS, which
-        # logs an EKF_YAW_RESET event:
-        dfreader = self.dfreader_for_current_onboard_log()
-        armed = False
-        while True:
-            m = dfreader.recv_match(type='EV')
-            if m is None:
-                raise NotAchievedException("Did not find EKF_YAW_RESET event after arming")
-            if m.Id == 10:  # LogEvent::ARMED
-                armed = True
-            if armed and m.Id == 62:  # LogEvent::EKF_YAW_RESET
-                break
-        self.progress("Found EKF_YAW_RESET event in log")
+            # the active EKF's internal yaw reset must be noticed by
+            # AHRS, which logs an EKF_YAW_RESET event:
+            dfreader = self.dfreader_for_current_onboard_log()
+            armed = False
+            while True:
+                m = dfreader.recv_match(type='EV')
+                if m is None:
+                    raise NotAchievedException("Did not find EKF_YAW_RESET event after arming")
+                if m.Id == 10:  # LogEvent::ARMED
+                    armed = True
+                if armed and m.Id == 62:  # LogEvent::EKF_YAW_RESET
+                    break
+            self.progress("Found EKF_YAW_RESET event in log")
 
-        self.context_pop()
-        self.reboot_sitl()
+            self.context_pop()
+            self.reboot_sitl()
 
     def FlyRangeFinderMAVlink(self):
         '''fly mavlink-connected rangefinder'''
