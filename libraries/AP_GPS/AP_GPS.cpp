@@ -1958,6 +1958,31 @@ void AP_GPS::Write_GPS(uint8_t i)
         rtcm_fragments_discarded: rtcm_stats.fragments_discarded
     };
     AP::logger().WriteBlock(&pkt2, sizeof(pkt2));
+
+    /* write timing health statistics, only when they change */
+    const struct log_GPH pkt3{
+        LOG_PACKET_HEADER_INIT(LOG_GPH_MSG),
+        time_us       : time_us,
+        instance      : i,
+        healthy       : is_healthy(i),
+        delayed_count : timing[i].delayed_count,
+        lagged_count  : (uint8_t)MIN(state[i].lagged_sample_count, 255U),
+        avg_delta_ms  : (uint16_t)timing[i].average_delta_ms
+    };
+    auto &logged = gph_logged[i];
+    const uint32_t now_ms = AP_HAL::millis();
+    if (pkt3.healthy != logged.healthy ||
+        pkt3.delayed_count != logged.delayed_count ||
+        pkt3.lagged_count != logged.lagged_count ||
+        pkt3.avg_delta_ms != logged.avg_delta_ms ||
+        now_ms - logged.last_ms > 30000) {
+        logged.last_ms = now_ms;
+        logged.healthy = pkt3.healthy;
+        logged.delayed_count = pkt3.delayed_count;
+        logged.lagged_count = pkt3.lagged_count;
+        logged.avg_delta_ms = pkt3.avg_delta_ms;
+        AP::logger().WriteBlock(&pkt3, sizeof(pkt3));
+    }
 }
 #endif
 

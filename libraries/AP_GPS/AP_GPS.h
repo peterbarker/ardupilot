@@ -667,6 +667,17 @@ private:
     // Note allowance for an additional instance to contain blended data
     GPS_timing timing[GPS_MAX_INSTANCES];
     GPS_State state[GPS_MAX_INSTANCES];
+#if HAL_LOGGING_ENABLED
+    // last-logged GPH values; GPH is only written when these change,
+    // or as an infrequent heartbeat
+    struct {
+        uint32_t last_ms;
+        uint8_t healthy;
+        uint8_t delayed_count;
+        uint8_t lagged_count;
+        uint16_t avg_delta_ms;
+    } gph_logged[GPS_MAX_INSTANCES];
+#endif
     AP_GPS_Backend *drivers[GPS_MAX_INSTANCES];
     AP_HAL::UARTDriver *_port[GPS_MAX_RECEIVERS];
 

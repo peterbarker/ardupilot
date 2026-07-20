@@ -6,6 +6,7 @@
 #define LOG_IDS_FROM_GPS                        \
     LOG_GPS_MSG,                                \
     LOG_GPA_MSG,                                \
+    LOG_GPH_MSG,                                \
     LOG_GPS_RAW_MSG,                            \
     LOG_GPS_RAWH_MSG,                           \
     LOG_GPS_RAWS_MSG,                           \
@@ -81,6 +82,24 @@ struct PACKED log_GPA {
     int32_t  alt_ellipsoid;
     uint16_t rtcm_fragments_used;
     uint16_t rtcm_fragments_discarded;
+};
+
+// @LoggerMessage: GPH
+// @Description: GPS timing health statistics
+// @Field: TimeUS: Time since system startup
+// @Field: I: GPS instance number
+// @Field: Hlth: true if the receiver is considered healthy
+// @Field: DCnt: count of consecutive delayed messages
+// @Field: LagC: count of consecutive excessively-lagged samples
+// @Field: AvgD: low-pass filtered interval between messages
+struct PACKED log_GPH {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    uint8_t  instance;
+    uint8_t  healthy;
+    uint8_t  delayed_count;
+    uint8_t  lagged_count;
+    uint16_t avg_delta_ms;
 };
 
 /*
@@ -208,6 +227,8 @@ struct PACKED log_GPS_RAWS {
       "GPS",  "QBBIHBcLLeffffB", "TimeUS,I,Status,GMS,GWk,NSats,HDop,Lat,Lng,Alt,Spd,GCrs,VZ,Yaw,U", "s#-s-S-DUmnhnh-", "F--C-0BGGB000--" , true }, \
     { LOG_GPA_MSG,  sizeof(log_GPA), \
       "GPA",  "QBCCCCfBIHeHH", "TimeUS,I,VDop,HAcc,VAcc,SAcc,YAcc,VV,SMS,Delta,AEl,RTCMFU,RTCMFD", "s#-mmnd-ssm--", "F-BBBB0-CCB--" , true }, \
+    { LOG_GPH_MSG,  sizeof(log_GPH), \
+      "GPH",  "QBBBBH", "TimeUS,I,Hlth,DCnt,LagC,AvgD", "s#---s", "F----C" , true }, \
     { LOG_GPS_UBX1_MSG, sizeof(log_Ubx1), \
       "UBX1", "QBHBBHI",  "TimeUS,Instance,noisePerMS,jamInd,aPower,agcCnt,config", "s#-----", "F------"  , true }, \
     { LOG_GPS_UBX2_MSG, sizeof(log_Ubx2), \
