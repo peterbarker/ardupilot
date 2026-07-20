@@ -15321,6 +15321,57 @@ switch value'''
         self.reboot_sitl()
         self.delay_sim_time(2, reason="orientation update timer")  # we update orientation on a timer
 
+    def GPSTimingHealthRedetection(self):
+        '''timing-health statistics must reset when a receiver is re-detected'''
+        self.wait_ready_to_arm()
+        self.assert_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS, True, True, True)
+
+        # Poison the GPS timing-health average (AP_GPS
+        # average_delta_ms, healthy below 215ms) by running the
+        # simulated GPS at 1Hz for a while: each 1000ms fix interval
+        # is folded into the 2%-per-fix average (only intervals of two
+        # seconds or more are excluded), dragging it from the nominal
+        # 200ms towards 1000ms - roughly 470ms after 20 samples.  The
+        # intervals come from the simulation's own clock so this is
+        # deterministic at any speedup, and fixes keep arriving so no
+        # GPS timeout occurs.
+        self.set_parameter("SIM_GPS1_HZ", 1)
+        self.delay_sim_time(20, reason="slow fixes to poison the timing average")
+        self.set_parameter("SIM_GPS1_HZ", 5)
+        # on-time fixes are flowing again but the poisoned average
+        # renders the receiver unhealthy:
+        self.wait_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS, True, True, False, timeout=10)
+
+        # now stop the simulated receiver sending anything for longer
+        # than GPS_TIMEOUT_MS so the driver is freed and the receiver
+        # is re-detected from scratch; thirty skipped updates is six
+        # seconds of silence against the four-second timeout.  Note
+        # that SIM_GPS1_ENABLE=0 would not do here: it keeps sending
+        # no-fix messages, so the driver never times out.  The skip
+        # parameter is consumed by the simulation, so no read-back
+        # verification.
+        self.context_push()
+        self.context_collect('STATUSTEXT')
+        self.send_set_parameter("SIM_GPS1_SKIP", 30)
+        self.wait_statustext("GPS 1: detected", check_context=True, timeout=60)
+        detected_at = self.get_sim_time()
+        self.context_pop()
+
+        # a freshly-detected receiver delivering on-time fixes must
+        # become healthy promptly; inheriting the previous
+        # incarnation's poisoned average would keep it unhealthy for a
+        # further ~28 seconds of perfect delivery.  A healthy
+        # receiver shows up in about a second, so a 10-second deadline
+        # leaves many simulated seconds of margin on both sides
+        # against message-delivery jitter at high speedups.
+        self.wait_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS, True, True, True, timeout=60)
+        healthy_delay = self.get_sim_time() - detected_at
+        self.progress("GPS healthy %.2fs after re-detection" % healthy_delay)
+        if healthy_delay > 10:
+            raise NotAchievedException(
+                "GPS timing health inherited from previous receiver incarnation"
+                " (healthy after %.2fs)" % healthy_delay)
+
     def GPSTypes(self):
         '''check each simulated GPS works'''
         self.reboot_sitl()

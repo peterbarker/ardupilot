@@ -18568,6 +18568,7 @@ return update, 1000
             self.GPSForYaw,
             self.GPS_INPUT,
             self.DefaultIntervalsFromFiles,
+            self.GPSTimingHealthRedetection,
             self.GPSTypes,
             self.MultipleGPS,
             self.WatchAlts,
