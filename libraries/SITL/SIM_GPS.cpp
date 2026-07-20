@@ -168,6 +168,12 @@ const AP_Param::GroupInfo SIM::GPSParms::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("HNSE",       20, GPSParms, noise_horizontal, 0),
 
+    // @Param: SKIP
+    // @DisplayName: GPS update skip count
+    // @Description: Number of GPS updates to skip producing, simulating a momentary receiver dropout. Decremented by the simulation as updates are skipped.
+    // @User: Advanced
+    AP_GROUPINFO("SKIP",       21, GPSParms, skip_updates, 0),
+
     AP_GROUPEND
 };
 }
@@ -499,6 +505,13 @@ void GPS::update()
     }
 
     last_write_update_ms = now_ms;
+
+    if (params.skip_updates > 0) {
+        // drop this update entirely, simulating a momentary receiver dropout
+        _sitl->gps[instance].skip_updates.set(params.skip_updates - 1);
+        backend->update_read();
+        return;
+    }
 
     struct GPS_Data d {};
 

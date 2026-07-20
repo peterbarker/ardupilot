@@ -349,6 +349,7 @@ public:
         AP_Int32 options; // GPS options bitmask
         AP_Int8 fix_type; // GPS fix type
         AP_Float noise_horizontal; // horizontal noise radius in meters
+        AP_Int8 skip_updates; // number of updates to skip producing
     };
     GPSParms gps[AP_SIM_MAX_GPS_SENSORS];
 
