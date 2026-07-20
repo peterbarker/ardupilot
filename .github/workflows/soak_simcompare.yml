@@ -1,0 +1,65 @@
+name: soak EKF truth tests
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{github.workflow}}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  soak:
+    runs-on: ubuntu-22.04
+    container:
+      image: ardupilot/ardupilot-dev-base:v0.2.0
+      options: --privileged --cap-add=SYS_PTRACE --security-opt apparmor=unconfined --security-opt seccomp=unconfined
+    strategy:
+      fail-fast: false  # let every cell of the soak finish
+      matrix:
+        iter: [1, 2, 3, 4, 5, 6]
+        config:
+          - name: copter
+            cmd: build.Copter test.Copter.SIMCompare test.Copter.EKFYawResetLogged test.Copter.GSF_reset test.Copter.GPSGlitchLoiter2
+          - name: plane
+            cmd: build.Plane test.Plane.SIMCompare test.Plane.Replay
+          - name: rover
+            cmd: build.Rover test.Rover.SIMCompare
+          - name: sub
+            cmd: build.Sub test.Sub.SIMCompare
+          - name: blimp
+            cmd: build.Blimp test.Blimp.SIMCompare
+    name: soak-${{ matrix.config.name }}-${{ matrix.iter }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: 'recursive'
+
+      - name: Register autotest fail matcher
+        run: echo "::add-matcher::.github/problem-matchers/autotestfail.json"
+
+      - name: soak ${{ matrix.config.name }} (${{ matrix.iter }})
+        shell: bash
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          for i in 1 2 3 4; do
+            echo "==================== soak iteration $i ===================="
+            Tools/autotest/autotest.py ${{ matrix.config.cmd }} || exit 1
+          done
+
+      - name: Collect buildlogs
+        if: failure()
+        shell: bash
+        run: |
+          cp -r ../buildlogs /tmp/buildlogs || true
+
+      - name: Archive buildlog artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+           name: soak-fail-${{ matrix.config.name }}-${{ matrix.iter }}
+           path: |
+             /tmp/buildlogs
+           retention-days: 14
