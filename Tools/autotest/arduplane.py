@@ -3478,6 +3478,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
         self.set_parameters({
             "LOG_REPLAY": 1,
             "LOG_DISARMED": 1,
+            "EK2_ENABLE": 1,
 
             "SIM_WIND_SPD": 5,
             "SIM_WIND_DIR": 45,
