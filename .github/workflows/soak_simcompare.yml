@@ -44,6 +44,15 @@ jobs:
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           PATH="/github/home/.local/bin:$PATH"
+          # install MAVProxy and the in-tree pymavlink, as build_ci.sh does:
+          pushd /tmp
+            git clone https://github.com/ardupilot/MAVProxy --depth 1
+            pushd MAVProxy
+              python3 -m pip install --progress-bar off --cache-dir /tmp/pip-cache --user --force .
+            popd
+          popd
+          python3 -m pip uninstall -y pymavlink --cache-dir /tmp/pip-cache
+          (cd modules/mavlink/pymavlink && python3 -m pip install --progress-bar off --cache-dir /tmp/pip-cache --user .)
           for i in 1 2 3 4; do
             echo "==================== soak iteration $i ===================="
             Tools/autotest/autotest.py ${{ matrix.config.cmd }} || exit 1
