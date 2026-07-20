@@ -621,6 +621,13 @@ void AP_GPS::detect_instance(uint8_t instance)
     drivers[instance] = new_gps;
     timing[instance].last_message_time_ms = now;
     timing[instance].delta_time_ms = GPS_TIMEOUT_MS;
+    // reset the timing health statistics; a new receiver should not
+    // be judged by its predecessor's delivery cadence.  Seed the
+    // average at the expected message interval rather than measuring
+    // it from the first inter-message gap, which would fold the
+    // detection latency into the average.
+    timing[instance].delayed_count = 0;
+    timing[instance].average_delta_ms = get_rate_ms(instance);
 
     new_gps->broadcast_gps_type();
 }
