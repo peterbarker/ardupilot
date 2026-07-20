@@ -15372,6 +15372,137 @@ switch value'''
                 "GPS timing health inherited from previous receiver incarnation"
                 " (healthy after %.2fs)" % healthy_delay)
 
+    def GPSTimingHealthFilter(self):
+        '''timing-health filter must reject momentary glitches yet recover
+        slowly from sustained bad cadence.  Verified from the onboard log
+        (GPH/GPA messages) so measurements use simulation timestamps and
+        are immune to telemetry-delivery jitter.'''
+        self.context_push()
+        self.set_parameter("LOG_DISARMED", 1)
+        self.reboot_sitl()
+        self.wait_ready_to_arm()
+        self.assert_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS, True, True, True)
+        glitch_start = self.get_sim_time()
+
+        # a momentary glitch: skipping a single GPS update produces
+        # exactly one 400ms inter-message interval against the 200ms
+        # cadence.  This may not affect health: the delayed-message
+        # counter needs two consecutive delayed messages and the
+        # low-pass average moves 2% per fix.  The skip parameter is
+        # consumed by the simulation, so no read-back verification.
+        self.delay_sim_time(3, reason="baseline healthy cadence")
+        self.send_set_parameter("SIM_GPS1_SKIP", 1)
+        self.delay_sim_time(5, reason="observe response to glitch")
+        glitch_end = self.get_sim_time()
+        self.assert_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS, True, True, True)
+
+        # sustained bad cadence: 1Hz fixes drag the average up over 20
+        # seconds; once 5Hz resumes the filter must take its time
+        # coming back rather than snapping healthy on the first good
+        # interval
+        self.set_parameter("SIM_GPS1_HZ", 1)
+        self.delay_sim_time(20, reason="slow fixes to raise the average")
+        self.set_parameter("SIM_GPS1_HZ", 5)
+        self.wait_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS, True, True, False, timeout=10)
+        self.wait_sensor_state(mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS, True, True, True, timeout=60)
+
+        # all assertions below come from the onboard log:
+        def scan_log():
+            dfreader = self.dfreader_for_current_onboard_log()
+            glitch_deltas = []
+            glitch_unhealthy = 0
+            glitch_max_avg = 0
+            poison_end_us = None
+            poison_max_avg = 0
+            healthy_us = None
+            prev_slow_us = None
+            while True:
+                m = dfreader.recv_match(type=['GPA', 'GPH'])
+                if m is None:
+                    break
+                if m.I != 0:
+                    continue
+                t = m.TimeUS * 1e-6
+                if m.get_type() == 'GPA':
+                    if glitch_start < t < glitch_end and 230 < m.Delta < 2000:
+                        glitch_deltas.append(m.Delta)
+                    if t > glitch_end and 850 < m.Delta < 1200:
+                        # a 1Hz interval.  The last of these marks the
+                        # moment good cadence resumed - but only count
+                        # intervals which directly follow another, as
+                        # the driver's jitter correction re-baselining
+                        # after the cadence change emits a single long
+                        # interval well into the recovery.
+                        if (prev_slow_us is not None and
+                                m.TimeUS - prev_slow_us < 2200000):
+                            poison_end_us = m.TimeUS
+                            healthy_us = None
+                        prev_slow_us = m.TimeUS
+                    continue
+                # GPH:
+                if t < glitch_start:
+                    continue
+                if t < glitch_end:
+                    if not m.Hlth:
+                        glitch_unhealthy += 1
+                    glitch_max_avg = max(glitch_max_avg, m.AvgD)
+                    continue
+                if poison_end_us is None:
+                    continue
+                poison_max_avg = max(poison_max_avg, m.AvgD)
+                if m.Hlth and healthy_us is None:
+                    healthy_us = m.TimeUS
+            return (glitch_deltas, glitch_unhealthy, glitch_max_avg,
+                    poison_end_us, poison_max_avg, healthy_us)
+
+        # the log is read straight out of the running simulation's
+        # filesystem, so its tail - the recovery we are looking for -
+        # may not have been flushed yet; rescan until it appears (the
+        # sensor-state waits above prove it happened)
+        scan_start = time.time()
+        while True:
+            (glitch_deltas, glitch_unhealthy, glitch_max_avg,
+             poison_end_us, poison_max_avg, healthy_us) = scan_log()
+            if poison_end_us is not None and healthy_us is not None:
+                break
+            if time.time() - scan_start > 30:
+                raise NotAchievedException("recovery not found in onboard log")
+            self.delay_sim_time(2, reason="logger flush of the recovery records")
+
+        self.progress("glitch deltas: %s max-average: %u" %
+                      (glitch_deltas, glitch_max_avg))
+        if len(glitch_deltas) != 1:
+            raise NotAchievedException(
+                "expected exactly one long interval from the skipped update, got %s" %
+                glitch_deltas)
+        if not 300 < glitch_deltas[0] < 600:
+            raise NotAchievedException(
+                "skipped update should give a ~400ms interval, got %u" %
+                glitch_deltas[0])
+        if glitch_unhealthy:
+            raise NotAchievedException(
+                "momentary glitch flipped GPS health (%u unhealthy samples)" %
+                glitch_unhealthy)
+        if glitch_max_avg > 210:
+            raise NotAchievedException(
+                "momentary glitch moved the average too far (%u > 210)" %
+                glitch_max_avg)
+
+        recovery = (healthy_us - poison_end_us) * 1e-6
+        self.progress("recovered %.2fs after good cadence resumed, peak average %umilliseconds" %
+                      (recovery, poison_max_avg))
+        if poison_max_avg < 350:
+            raise NotAchievedException(
+                "poisoning did not take hold (peak average %u)" % poison_max_avg)
+        if recovery < 20:
+            raise NotAchievedException(
+                "recovery bypassed the low-pass filter (%.2fs)" % recovery)
+        if recovery > 45:
+            raise NotAchievedException(
+                "recovery slower than the filter predicts (%.2fs)" % recovery)
+
+        self.context_pop()
+
     def GPSTypes(self):
         '''check each simulated GPS works'''
         self.reboot_sitl()

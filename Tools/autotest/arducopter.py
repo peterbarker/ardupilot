@@ -18569,6 +18569,7 @@ return update, 1000
             self.GPS_INPUT,
             self.DefaultIntervalsFromFiles,
             self.GPSTimingHealthRedetection,
+            self.GPSTimingHealthFilter,
             self.GPSTypes,
             self.MultipleGPS,
             self.WatchAlts,
