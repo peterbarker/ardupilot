@@ -15252,15 +15252,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
     def tests2a(self):
         '''return list of all tests'''
         ret = ([
-            # something about SITLCompassCalibration appears to fail
-            # this one, so we put it first:
             self.FixedYawCalibration,
-
-            # we run this single 8min-and-40s test on its own, apart
-            #   from requiring FixedYawCalibration right before it
-            #   because without it, it fails to calibrate this
-            #   autotest appears to interfere with
-            #   FixedYawCalibration, no idea why.
             self.SITLCompassCalibration,
         ])
         return ret
