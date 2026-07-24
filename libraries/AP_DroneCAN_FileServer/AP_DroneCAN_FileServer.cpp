@@ -180,11 +180,126 @@ void AP_DroneCAN_FileServer::handle_getdirectoryentryinfo_request(const uavcan_p
     }
 }
 
+void AP_DroneCAN_FileServer::close_write_fd()
+{
+    if (wfd != -1) {
+        AP::FS().close(wfd);
+        wfd = -1;
+    }
+}
+
+void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_WriteRequest &req, uavcan_protocol_file_WriteResponse &rsp)
+{
+    char path[sizeof(wfd_path)];
+    if (!extract_path(req.path, path, sizeof(path))) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+        return;
+    }
+
+    WITH_SEMAPHORE(sem);
+
+    if (req.offset > INT32_MAX) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_FILE_TOO_LARGE;
+        return;
+    }
+
+    if (wfd != -1 && strcmp(path, wfd_path) != 0) {
+        close_write_fd();
+    }
+
+    if (req.data.len == 0) {
+        // an empty write signals the upload is complete.  We have no
+        // truncate in AP_Filesystem; an upload starting at offset
+        // zero opens with O_TRUNC instead, so all that remains is to
+        // close the file.  An empty write to a file we never opened
+        // is a zero-length upload; create the empty file
+        if (wfd == -1 && req.offset == 0) {
+            wfd = AP::FS().open(path, O_WRONLY | O_CREAT | O_TRUNC);
+            if (wfd == -1) {
+                rsp.error.value = errno_to_error();
+                return;
+            }
+        }
+        close_write_fd();
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+        return;
+    }
+
+    if (wfd == -1) {
+        // O_TRUNC when starting at offset zero so an upload shorter
+        // than any existing content replaces it entirely
+        const int flags = O_WRONLY | O_CREAT | (req.offset == 0 ? O_TRUNC : 0);
+        wfd = AP::FS().open(path, flags);
+        if (wfd == -1) {
+            rsp.error.value = errno_to_error();
+            return;
+        }
+        strncpy(wfd_path, path, sizeof(wfd_path)-1);
+        wfd_path[sizeof(wfd_path)-1] = 0;
+        wfd_ofs = 0;
+    }
+
+    if (req.offset != wfd_ofs) {
+        if (AP::FS().lseek(wfd, req.offset, SEEK_SET) == -1) {
+            rsp.error.value = errno_to_error();
+            close_write_fd();
+            return;
+        }
+        wfd_ofs = req.offset;
+    }
+
+    const int32_t n = AP::FS().write(wfd, req.data.data, req.data.len);
+    if (n < 0) {
+        rsp.error.value = errno_to_error();
+        close_write_fd();
+        return;
+    }
+    if ((uint16_t)n != req.data.len) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OUT_OF_SPACE;
+        close_write_fd();
+        return;
+    }
+    wfd_ofs += n;
+    last_write_ms = AP_HAL::millis();
+    rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+}
+
+void AP_DroneCAN_FileServer::handle_delete_request(const uavcan_protocol_file_DeleteRequest &req, uavcan_protocol_file_DeleteResponse &rsp)
+{
+    char path[sizeof(fd_path)];
+    if (!extract_path(req.path, path, sizeof(path))) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+        return;
+    }
+
+    WITH_SEMAPHORE(sem);
+
+    // drop any cached descriptor on the file being removed
+    if (fd != -1 && strcmp(path, fd_path) == 0) {
+        close_cached_fd();
+    }
+    if (wfd != -1 && strcmp(path, wfd_path) == 0) {
+        close_write_fd();
+    }
+
+    // note: no recursive directory removal, unlike the DSDL
+    // suggestion; a directory must be emptied first
+    if (AP::FS().unlink(path) != 0) {
+        rsp.error.value = errno_to_error();
+        return;
+    }
+    rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+}
+
 void AP_DroneCAN_FileServer::update()
 {
     WITH_SEMAPHORE(sem);
-    if (fd != -1 && AP_HAL::millis() - last_read_ms > FILE_SERVER_IDLE_CLOSE_MS) {
+    const uint32_t now_ms = AP_HAL::millis();
+    if (fd != -1 && now_ms - last_read_ms > FILE_SERVER_IDLE_CLOSE_MS) {
         close_cached_fd();
+    }
+    if (wfd != -1 && now_ms - last_write_ms > FILE_SERVER_IDLE_CLOSE_MS) {
+        close_write_fd();
     }
 }
 

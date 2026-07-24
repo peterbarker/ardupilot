@@ -44,6 +44,12 @@ public:
     // fill in a response to a uavcan.protocol.file.GetDirectoryEntryInfo request
     void handle_getdirectoryentryinfo_request(const uavcan_protocol_file_GetDirectoryEntryInfoRequest &req, uavcan_protocol_file_GetDirectoryEntryInfoResponse &rsp);
 
+    // fill in a response to a uavcan.protocol.file.Write request
+    void handle_write_request(const uavcan_protocol_file_WriteRequest &req, uavcan_protocol_file_WriteResponse &rsp);
+
+    // fill in a response to a uavcan.protocol.file.Delete request
+    void handle_delete_request(const uavcan_protocol_file_DeleteRequest &req, uavcan_protocol_file_DeleteResponse &rsp);
+
     // periodic housekeeping; closes the cached file descriptor if the
     // client has gone away mid-transfer
     void update();
@@ -58,6 +64,7 @@ private:
     static int16_t errno_to_error();
 
     void close_cached_fd();
+    void close_write_fd();
 
     // cached open file to avoid an open/seek/close cycle per 256-byte
     // read.  Only one file is served at a time; a Read for a
@@ -66,6 +73,13 @@ private:
     uint32_t fd_ofs;
     char fd_path[201];  // maximum DSDL Path length plus nul terminator
     uint32_t last_read_ms;
+
+    // separate cached file for writes, so an upload does not disturb
+    // a concurrent download
+    int wfd = -1;
+    uint32_t wfd_ofs;
+    char wfd_path[201];
+    uint32_t last_write_ms;
 
     HAL_Semaphore sem;
 };
