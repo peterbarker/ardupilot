@@ -490,6 +490,46 @@ void AP_Periph_FW::handle_file_getdirectoryentryinfo(CanardInstance* canard_inst
                    &buffer[0],
                    total_size);
 }
+
+void AP_Periph_FW::handle_file_write(CanardInstance* canard_instance, CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_WriteRequest req;
+    if (uavcan_protocol_file_WriteRequest_decode(transfer, &req)) {
+        return;
+    }
+
+    uavcan_protocol_file_WriteResponse pkt {};
+    dronecan_file_server.handle_write_request(req, pkt);
+
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_WRITE_RESPONSE_MAX_SIZE];
+    const uint16_t total_size = uavcan_protocol_file_WriteResponse_encode(&pkt, buffer, !canfdout());
+    canard_respond(canard_instance,
+                   transfer,
+                   UAVCAN_PROTOCOL_FILE_WRITE_SIGNATURE,
+                   UAVCAN_PROTOCOL_FILE_WRITE_ID,
+                   &buffer[0],
+                   total_size);
+}
+
+void AP_Periph_FW::handle_file_delete(CanardInstance* canard_instance, CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_DeleteRequest req;
+    if (uavcan_protocol_file_DeleteRequest_decode(transfer, &req)) {
+        return;
+    }
+
+    uavcan_protocol_file_DeleteResponse pkt {};
+    dronecan_file_server.handle_delete_request(req, pkt);
+
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_DELETE_RESPONSE_MAX_SIZE];
+    const uint16_t total_size = uavcan_protocol_file_DeleteResponse_encode(&pkt, buffer, !canfdout());
+    canard_respond(canard_instance,
+                   transfer,
+                   UAVCAN_PROTOCOL_FILE_DELETE_SIGNATURE,
+                   UAVCAN_PROTOCOL_FILE_DELETE_ID,
+                   &buffer[0],
+                   total_size);
+}
 #endif  // AP_PERIPH_FILE_SERVER_ENABLED
 
 void AP_Periph_FW::handle_allocation_response(CanardInstance* canard_instance, CanardRxTransfer* transfer)
@@ -893,6 +933,14 @@ void AP_Periph_FW::onTransferReceived(CanardInstance* canard_instance,
     case UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID:
         handle_file_getdirectoryentryinfo(canard_instance, transfer);
         break;
+
+    case UAVCAN_PROTOCOL_FILE_WRITE_ID:
+        handle_file_write(canard_instance, transfer);
+        break;
+
+    case UAVCAN_PROTOCOL_FILE_DELETE_ID:
+        handle_file_delete(canard_instance, transfer);
+        break;
 #endif
 
     case UAVCAN_PROTOCOL_RESTARTNODE_ID: {
@@ -1048,6 +1096,12 @@ bool AP_Periph_FW::shouldAcceptTransfer(const CanardInstance* canard_instance,
         return true;
     case UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID:
         *out_data_type_signature = UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE;
+        return true;
+    case UAVCAN_PROTOCOL_FILE_WRITE_ID:
+        *out_data_type_signature = UAVCAN_PROTOCOL_FILE_WRITE_SIGNATURE;
+        return true;
+    case UAVCAN_PROTOCOL_FILE_DELETE_ID:
+        *out_data_type_signature = UAVCAN_PROTOCOL_FILE_DELETE_SIGNATURE;
         return true;
 #endif
     case UAVCAN_PROTOCOL_RESTARTNODE_ID:

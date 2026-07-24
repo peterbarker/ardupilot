@@ -592,6 +592,8 @@ public:
     void handle_file_read(CanardInstance* canard_instance, CanardRxTransfer* transfer);
     void handle_file_getinfo(CanardInstance* canard_instance, CanardRxTransfer* transfer);
     void handle_file_getdirectoryentryinfo(CanardInstance* canard_instance, CanardRxTransfer* transfer);
+    void handle_file_write(CanardInstance* canard_instance, CanardRxTransfer* transfer);
+    void handle_file_delete(CanardInstance* canard_instance, CanardRxTransfer* transfer);
 #endif
     void handle_param_getset(CanardInstance* canard_instance, CanardRxTransfer* transfer);
     void handle_param_executeopcode(CanardInstance* canard_instance, CanardRxTransfer* transfer);
