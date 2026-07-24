@@ -170,6 +170,7 @@ BUILD_OPTIONS = [
     Feature('AP_Periph', 'PERIPH_BARO', 'AP_PERIPH_BARO_ENABLED', 'Emit DroneCAN StaticTemperature and StaticPressure Messages for AP_Baro Sensors', 0, None), # noqa
     Feature('AP_Periph', 'PERIPH_RANGEFINDER', 'AP_PERIPH_RANGEFINDER_ENABLED', 'Emit DroneCAN range_sensor_Measurement Messages ', 0, 'RANGEFINDER'), # noqa
     Feature('AP_Periph', 'PERIPH_IMU', 'AP_PERIPH_IMU_ENABLED', 'Emit DroneCAN ahrs_RawIMU Messages ', 0, None),
+    Feature('AP_Periph', 'PERIPH_FILE_SERVER', 'AP_PERIPH_FILE_SERVER_ENABLED', 'Enable serving files over DroneCAN (uavcan.protocol.file)', 0, None), # noqa
     Feature('AP_Periph', 'PERIPH_RC_OUT', 'AP_PERIPH_RC_OUT_ENABLED', 'Emit DroneCAN actuator_Status Messages', 0, None),
     Feature('AP_Periph', 'PERIPH_EFI', 'AP_PERIPH_EFI_ENABLED', 'Emit DroneCAN ice_reciprocating_Status Messages', 0, 'EFI'),
     Feature('AP_Periph', 'PERIPH_RCIN', 'AP_PERIPH_RCIN_ENABLED', 'Emit DroneCAN RCInput Messages', 0, 'RC_Protocol'),
@@ -431,6 +432,7 @@ BUILD_OPTIONS = [
     Feature('Other', 'SDCARD_MISSION', 'AP_SDCARD_STORAGE_ENABLED', 'Enable Storing mission on microSD cards', 0, None),
     Feature('Other', 'COMPASS_CAL', 'COMPASS_CAL_ENABLED', 'Enable "Tumble" compass calibration', 0, None),
     Feature('Other', 'DRONECAN_SERIAL', 'AP_DRONECAN_SERIAL_ENABLED', 'Enable DroneCAN virtual serial ports', 0, "DroneCAN,SERIALDEVICE_REGISTER"),  # NOQA: E501
+    Feature('Other', 'DRONECAN_FILE_SERVER', 'AP_DRONECAN_FILE_SERVER_ENABLED', 'Enable serving files over DroneCAN (uavcan.protocol.file)', 0, "DroneCAN"),  # NOQA: E501
     Feature('Other', 'Buttons', 'HAL_BUTTON_ENABLED', 'Enable Buttons', 0, None),
     Feature('Other', 'Logging', 'HAL_LOGGING_ENABLED', 'Enable Logging', 0, None),
     Feature('Other', 'CUSTOM_ROTATIONS', 'AP_CUSTOMROTATIONS_ENABLED', 'Enable Custom  sensor rotations', 0, None),
