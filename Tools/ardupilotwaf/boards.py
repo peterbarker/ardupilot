@@ -550,6 +550,7 @@ class Board:
             if not cfg.env.AP_PERIPH:
                 env.AP_LIBRARIES += [
                     'AP_DroneCAN',
+                    'AP_DroneCAN_FileServer',
                     'modules/DroneCAN/libcanard/*.c',
                     ]
                 if cfg.options.enable_dronecan_tests:
