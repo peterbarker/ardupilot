@@ -319,8 +319,10 @@ bool DroneCAN_Handle::Subscriber::handle_message(const CanardRxTransfer& transfe
 {
     if (transfer.transfer_type == CanardTransferTypeResponse &&
         (node_id != transfer.source_node_id ||
-         ((transfer.transfer_id+1)&0xFF) != handle->transfer_id)) {
-        // not from right node, or not right transfer ID
+         ((transfer.transfer_id+1)&0x1F) != (handle->transfer_id&0x1F))) {
+        // not from right node, or not right transfer ID.  Service
+        // transfer IDs are 5 bits on the wire while the handle's
+        // counter is 8 bits, so compare modulo 32
         return false;
     }
 
