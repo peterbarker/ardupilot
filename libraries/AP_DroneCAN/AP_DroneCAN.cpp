@@ -740,6 +740,26 @@ void AP_DroneCAN::handle_file_getdirectoryentryinfo_request(const CanardRxTransf
     file_server.handle_getdirectoryentryinfo_request(req, file_getdirectoryentryinfo_rsp);
     file_getdirectoryentryinfo_server.respond(transfer, file_getdirectoryentryinfo_rsp);
 }
+
+void AP_DroneCAN::handle_file_write_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_WriteRequest& req)
+{
+    if (!option_is_set(Options::ENABLE_FILE_SERVER)) {
+        return;
+    }
+    file_write_rsp = {};
+    file_server.handle_write_request(req, file_write_rsp);
+    file_write_server.respond(transfer, file_write_rsp);
+}
+
+void AP_DroneCAN::handle_file_delete_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_DeleteRequest& req)
+{
+    if (!option_is_set(Options::ENABLE_FILE_SERVER)) {
+        return;
+    }
+    file_delete_rsp = {};
+    file_server.handle_delete_request(req, file_delete_rsp);
+    file_delete_server.respond(transfer, file_delete_rsp);
+}
 #endif  // AP_DRONECAN_FILE_SERVER_ENABLED
 
 int16_t AP_DroneCAN::scale_esc_output(uint8_t idx){

@@ -405,6 +405,14 @@ private:
     Canard::ObjCallback<AP_DroneCAN, uavcan_protocol_file_GetDirectoryEntryInfoRequest> file_getdirectoryentryinfo_req_cb{this, &AP_DroneCAN::handle_file_getdirectoryentryinfo_request};
     Canard::Server<uavcan_protocol_file_GetDirectoryEntryInfoRequest> file_getdirectoryentryinfo_server{canard_iface, file_getdirectoryentryinfo_req_cb};
     uavcan_protocol_file_GetDirectoryEntryInfoResponse file_getdirectoryentryinfo_rsp;
+
+    Canard::ObjCallback<AP_DroneCAN, uavcan_protocol_file_WriteRequest> file_write_req_cb{this, &AP_DroneCAN::handle_file_write_request};
+    Canard::Server<uavcan_protocol_file_WriteRequest> file_write_server{canard_iface, file_write_req_cb};
+    uavcan_protocol_file_WriteResponse file_write_rsp;
+
+    Canard::ObjCallback<AP_DroneCAN, uavcan_protocol_file_DeleteRequest> file_delete_req_cb{this, &AP_DroneCAN::handle_file_delete_request};
+    Canard::Server<uavcan_protocol_file_DeleteRequest> file_delete_server{canard_iface, file_delete_req_cb};
+    uavcan_protocol_file_DeleteResponse file_delete_rsp;
 #endif  // AP_DRONECAN_FILE_SERVER_ENABLED
 
 #if AP_SCRIPTING_ENABLED
@@ -469,6 +477,8 @@ private:
     void handle_file_read_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_ReadRequest& req);
     void handle_file_getinfo_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_GetInfoRequest& req);
     void handle_file_getdirectoryentryinfo_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_GetDirectoryEntryInfoRequest& req);
+    void handle_file_write_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_WriteRequest& req);
+    void handle_file_delete_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_DeleteRequest& req);
 #endif
 
 #if AP_SCRIPTING_ENABLED
