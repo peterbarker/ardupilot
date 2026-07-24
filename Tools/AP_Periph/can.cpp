@@ -430,6 +430,68 @@ void AP_Periph_FW::handle_begin_firmware_update(CanardInstance* canard_instance,
 #endif
 }
 
+#if AP_PERIPH_FILE_SERVER_ENABLED
+void AP_Periph_FW::handle_file_read(CanardInstance* canard_instance, CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_ReadRequest req;
+    if (uavcan_protocol_file_ReadRequest_decode(transfer, &req)) {
+        return;
+    }
+
+    uavcan_protocol_file_ReadResponse pkt {};
+    dronecan_file_server.handle_read_request(req, pkt);
+
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_READ_RESPONSE_MAX_SIZE];
+    const uint16_t total_size = uavcan_protocol_file_ReadResponse_encode(&pkt, buffer, !canfdout());
+    canard_respond(canard_instance,
+                   transfer,
+                   UAVCAN_PROTOCOL_FILE_READ_SIGNATURE,
+                   UAVCAN_PROTOCOL_FILE_READ_ID,
+                   &buffer[0],
+                   total_size);
+}
+
+void AP_Periph_FW::handle_file_getinfo(CanardInstance* canard_instance, CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_GetInfoRequest req;
+    if (uavcan_protocol_file_GetInfoRequest_decode(transfer, &req)) {
+        return;
+    }
+
+    uavcan_protocol_file_GetInfoResponse pkt {};
+    dronecan_file_server.handle_getinfo_request(req, pkt);
+
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_GETINFO_RESPONSE_MAX_SIZE];
+    const uint16_t total_size = uavcan_protocol_file_GetInfoResponse_encode(&pkt, buffer, !canfdout());
+    canard_respond(canard_instance,
+                   transfer,
+                   UAVCAN_PROTOCOL_FILE_GETINFO_SIGNATURE,
+                   UAVCAN_PROTOCOL_FILE_GETINFO_ID,
+                   &buffer[0],
+                   total_size);
+}
+
+void AP_Periph_FW::handle_file_getdirectoryentryinfo(CanardInstance* canard_instance, CanardRxTransfer* transfer)
+{
+    uavcan_protocol_file_GetDirectoryEntryInfoRequest req;
+    if (uavcan_protocol_file_GetDirectoryEntryInfoRequest_decode(transfer, &req)) {
+        return;
+    }
+
+    uavcan_protocol_file_GetDirectoryEntryInfoResponse pkt {};
+    dronecan_file_server.handle_getdirectoryentryinfo_request(req, pkt);
+
+    uint8_t buffer[UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_RESPONSE_MAX_SIZE];
+    const uint16_t total_size = uavcan_protocol_file_GetDirectoryEntryInfoResponse_encode(&pkt, buffer, !canfdout());
+    canard_respond(canard_instance,
+                   transfer,
+                   UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE,
+                   UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID,
+                   &buffer[0],
+                   total_size);
+}
+#endif  // AP_PERIPH_FILE_SERVER_ENABLED
+
 void AP_Periph_FW::handle_allocation_response(CanardInstance* canard_instance, CanardRxTransfer* transfer)
 {
     // Rule C - updating the randomized time interval
@@ -819,6 +881,20 @@ void AP_Periph_FW::onTransferReceived(CanardInstance* canard_instance,
         handle_begin_firmware_update(canard_instance, transfer);
         break;
 
+#if AP_PERIPH_FILE_SERVER_ENABLED
+    case UAVCAN_PROTOCOL_FILE_READ_ID:
+        handle_file_read(canard_instance, transfer);
+        break;
+
+    case UAVCAN_PROTOCOL_FILE_GETINFO_ID:
+        handle_file_getinfo(canard_instance, transfer);
+        break;
+
+    case UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID:
+        handle_file_getdirectoryentryinfo(canard_instance, transfer);
+        break;
+#endif
+
     case UAVCAN_PROTOCOL_RESTARTNODE_ID: {
             printf("RestartNode\n");
             uavcan_protocol_RestartNodeResponse pkt {
@@ -963,6 +1039,17 @@ bool AP_Periph_FW::shouldAcceptTransfer(const CanardInstance* canard_instance,
     case UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_ID:
         *out_data_type_signature = UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_SIGNATURE;
         return true;
+#if AP_PERIPH_FILE_SERVER_ENABLED
+    case UAVCAN_PROTOCOL_FILE_READ_ID:
+        *out_data_type_signature = UAVCAN_PROTOCOL_FILE_READ_SIGNATURE;
+        return true;
+    case UAVCAN_PROTOCOL_FILE_GETINFO_ID:
+        *out_data_type_signature = UAVCAN_PROTOCOL_FILE_GETINFO_SIGNATURE;
+        return true;
+    case UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID:
+        *out_data_type_signature = UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE;
+        return true;
+#endif
     case UAVCAN_PROTOCOL_RESTARTNODE_ID:
         *out_data_type_signature = UAVCAN_PROTOCOL_RESTARTNODE_SIGNATURE;
         return true;
@@ -1477,6 +1564,10 @@ void AP_Periph_FW::process1HzTasks(uint64_t timestamp_usec)
      * Purging transfers that are no longer transmitted. This will occasionally free up some memory.
      */
     cleanup_stale_transactions(timestamp_usec);
+
+#if AP_PERIPH_FILE_SERVER_ENABLED
+    dronecan_file_server.update();
+#endif
 
     /*
      * Printing the memory usage statistics.

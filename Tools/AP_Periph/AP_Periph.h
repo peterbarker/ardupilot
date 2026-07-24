@@ -50,6 +50,15 @@
 #endif
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_DAC/AP_DAC.h>
+#include <AP_DroneCAN_FileServer/AP_DroneCAN_FileServer.h>
+
+#ifndef AP_PERIPH_FILE_SERVER_ENABLED
+#define AP_PERIPH_FILE_SERVER_ENABLED 0
+#endif
+
+#if AP_PERIPH_FILE_SERVER_ENABLED && !AP_DRONECAN_FILE_SERVER_ENABLED
+    #error "AP_PERIPH_FILE_SERVER_ENABLED requires AP_DRONECAN_FILE_SERVER_ENABLED"
+#endif
 
 #if AP_PERIPH_RELAY_ENABLED
 #if AP_PERIPH_PWM_HARDPOINT_ENABLED
@@ -460,6 +469,10 @@ public:
     AP_Logger logger;
 #endif
 
+#if AP_PERIPH_FILE_SERVER_ENABLED
+    AP_DroneCAN_FileServer dronecan_file_server;
+#endif
+
 #if AP_PERIPH_NETWORKING_ENABLED
     Networking_Periph networking_periph;
 #endif
@@ -575,6 +588,11 @@ public:
 
     // handlers for incoming messages
     void handle_get_node_info(CanardInstance* canard_instance, CanardRxTransfer* transfer);
+#if AP_PERIPH_FILE_SERVER_ENABLED
+    void handle_file_read(CanardInstance* canard_instance, CanardRxTransfer* transfer);
+    void handle_file_getinfo(CanardInstance* canard_instance, CanardRxTransfer* transfer);
+    void handle_file_getdirectoryentryinfo(CanardInstance* canard_instance, CanardRxTransfer* transfer);
+#endif
     void handle_param_getset(CanardInstance* canard_instance, CanardRxTransfer* transfer);
     void handle_param_executeopcode(CanardInstance* canard_instance, CanardRxTransfer* transfer);
     void handle_begin_firmware_update(CanardInstance* canard_instance, CanardRxTransfer* transfer);
