@@ -1,0 +1,191 @@
+#include "AP_DroneCAN_FileServer.h"
+
+#if AP_DRONECAN_FILE_SERVER_ENABLED
+
+#include <AP_Filesystem/AP_Filesystem.h>
+#include <AP_HAL/AP_HAL.h>
+
+#include <errno.h>
+#include <stdio.h>
+
+// close the cached file if no Read request has arrived recently
+#define FILE_SERVER_IDLE_CLOSE_MS 3000
+
+bool AP_DroneCAN_FileServer::extract_path(const uavcan_protocol_file_Path &path, char *buf, uint16_t buflen)
+{
+    if (path.path.len >= buflen) {
+        return false;
+    }
+    memcpy(buf, path.path.data, path.path.len);
+    buf[path.path.len] = 0;
+    // reject paths containing embedded nuls:
+    return strlen(buf) == path.path.len;
+}
+
+int16_t AP_DroneCAN_FileServer::errno_to_error()
+{
+    switch (errno) {
+    case ENOENT:
+        return UAVCAN_PROTOCOL_FILE_ERROR_NOT_FOUND;
+    case EIO:
+        return UAVCAN_PROTOCOL_FILE_ERROR_IO_ERROR;
+    case EACCES:
+        return UAVCAN_PROTOCOL_FILE_ERROR_ACCESS_DENIED;
+    case EISDIR:
+        return UAVCAN_PROTOCOL_FILE_ERROR_IS_DIRECTORY;
+    case EINVAL:
+        return UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+    case EFBIG:
+        return UAVCAN_PROTOCOL_FILE_ERROR_FILE_TOO_LARGE;
+    case ENOSPC:
+        return UAVCAN_PROTOCOL_FILE_ERROR_OUT_OF_SPACE;
+    default:
+        return UAVCAN_PROTOCOL_FILE_ERROR_UNKNOWN_ERROR;
+    }
+}
+
+void AP_DroneCAN_FileServer::close_cached_fd()
+{
+    if (fd != -1) {
+        AP::FS().close(fd);
+        fd = -1;
+    }
+}
+
+void AP_DroneCAN_FileServer::handle_read_request(const uavcan_protocol_file_ReadRequest &req, uavcan_protocol_file_ReadResponse &rsp)
+{
+    char path[sizeof(fd_path)];
+    if (!extract_path(req.path, path, sizeof(path))) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+        return;
+    }
+
+    WITH_SEMAPHORE(sem);
+
+    if (req.offset > INT32_MAX) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_FILE_TOO_LARGE;
+        return;
+    }
+
+    if (fd != -1 && strcmp(path, fd_path) != 0) {
+        close_cached_fd();
+    }
+    if (fd == -1) {
+        fd = AP::FS().open(path, O_RDONLY);
+        if (fd == -1) {
+            rsp.error.value = errno_to_error();
+            return;
+        }
+        strncpy(fd_path, path, sizeof(fd_path)-1);
+        fd_path[sizeof(fd_path)-1] = 0;
+        fd_ofs = 0;
+    }
+
+    if (req.offset != fd_ofs) {
+        if (AP::FS().lseek(fd, req.offset, SEEK_SET) == -1) {
+            rsp.error.value = errno_to_error();
+            close_cached_fd();
+            return;
+        }
+        fd_ofs = req.offset;
+    }
+
+    const int32_t n = AP::FS().read(fd, rsp.data.data, sizeof(rsp.data.data));
+    if (n < 0) {
+        rsp.error.value = errno_to_error();
+        close_cached_fd();
+        return;
+    }
+    rsp.data.len = n;
+    rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+    fd_ofs += n;
+    last_read_ms = AP_HAL::millis();
+
+    if ((uint16_t)n < sizeof(rsp.data.data)) {
+        // short read signals EOF to the client; we are done with this file
+        close_cached_fd();
+    }
+}
+
+void AP_DroneCAN_FileServer::handle_getinfo_request(const uavcan_protocol_file_GetInfoRequest &req, uavcan_protocol_file_GetInfoResponse &rsp)
+{
+    char path[sizeof(fd_path)];
+    if (!extract_path(req.path, path, sizeof(path))) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+        return;
+    }
+
+    AP_Filesystem::stat_t st;
+    if (!AP::FS().stat(path, st)) {
+        rsp.error.value = errno_to_error();
+        return;
+    }
+    rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+    if (st.is_directory()) {
+        rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_DIRECTORY | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+        rsp.size = 0;
+    } else {
+        rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_FILE | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+        rsp.size = st.size;
+    }
+}
+
+void AP_DroneCAN_FileServer::handle_getdirectoryentryinfo_request(const uavcan_protocol_file_GetDirectoryEntryInfoRequest &req, uavcan_protocol_file_GetDirectoryEntryInfoResponse &rsp)
+{
+    char path[sizeof(fd_path)];
+    if (!extract_path(req.directory_path, path, sizeof(path))) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+        return;
+    }
+
+    auto *d = AP::FS().opendir(path);
+    if (d == nullptr) {
+        rsp.error.value = errno_to_error();
+        return;
+    }
+
+    // no error unless we say otherwise; flags remaining zero indicates
+    // no-such-entry to the client
+    rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+
+    uint32_t index = 0;
+    for (struct dirent *entry = AP::FS().readdir(d); entry != nullptr; entry = AP::FS().readdir(d)) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        if (index++ != req.entry_index) {
+            continue;
+        }
+        char fullpath[sizeof(fd_path)];
+        // avoid doubling the separator if the client passed a trailing one:
+        const bool trailing_sep = (strlen(path) > 0 && path[strlen(path)-1] == '/');
+        const int len = snprintf(fullpath, sizeof(fullpath), trailing_sep ? "%s%s" : "%s/%s", path, entry->d_name);
+        if (len < 0 || len >= (int)sizeof(fullpath)) {
+            rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
+            break;
+        }
+        if (entry->d_type == DT_DIR) {
+            rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_DIRECTORY | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+        } else {
+            rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_FILE | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+        }
+        rsp.entry_full_path.path.len = len;
+        memcpy(rsp.entry_full_path.path.data, fullpath, len);
+        break;
+    }
+    AP::FS().closedir(d);
+
+    if (rsp.entry_type.flags == 0 && rsp.error.value == UAVCAN_PROTOCOL_FILE_ERROR_OK) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_NOT_FOUND;
+    }
+}
+
+void AP_DroneCAN_FileServer::update()
+{
+    WITH_SEMAPHORE(sem);
+    if (fd != -1 && AP_HAL::millis() - last_read_ms > FILE_SERVER_IDLE_CLOSE_MS) {
+        close_cached_fd();
+    }
+}
+
+#endif  // AP_DRONECAN_FILE_SERVER_ENABLED
