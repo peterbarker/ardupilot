@@ -38,6 +38,7 @@
 #include <AP_Relay/AP_Relay_config.h>
 #include <AP_Servo_Telem/AP_Servo_Telem_config.h>
 #include <AP_Mount/AP_Mount_config.h>
+#include <AP_DroneCAN_FileServer/AP_DroneCAN_FileServer.h>
 
 #ifndef DRONECAN_SRV_NUMBER
 #define DRONECAN_SRV_NUMBER NUM_SERVO_CHANNELS
@@ -156,6 +157,7 @@ public:
         ENABLE_STATS              = (1U<<8),
         ENABLE_FLEX_DEBUG         = (1U<<9),
         ALLOW_EXTENDED_AUX        = (1U<<10),
+        ENABLE_FILE_SERVER        = (1U<<11),
     };
 
     // check if a option is set
@@ -388,6 +390,23 @@ private:
     Canard::Server<uavcan_protocol_GetNodeInfoRequest> node_info_server{canard_iface, node_info_req_cb};
     uavcan_protocol_GetNodeInfoResponse node_info_rsp;
 
+#if AP_DRONECAN_FILE_SERVER_ENABLED
+    // file server, serving the local filesystem to other nodes
+    AP_DroneCAN_FileServer file_server;
+
+    Canard::ObjCallback<AP_DroneCAN, uavcan_protocol_file_ReadRequest> file_read_req_cb{this, &AP_DroneCAN::handle_file_read_request};
+    Canard::Server<uavcan_protocol_file_ReadRequest> file_read_server{canard_iface, file_read_req_cb};
+    uavcan_protocol_file_ReadResponse file_read_rsp;
+
+    Canard::ObjCallback<AP_DroneCAN, uavcan_protocol_file_GetInfoRequest> file_getinfo_req_cb{this, &AP_DroneCAN::handle_file_getinfo_request};
+    Canard::Server<uavcan_protocol_file_GetInfoRequest> file_getinfo_server{canard_iface, file_getinfo_req_cb};
+    uavcan_protocol_file_GetInfoResponse file_getinfo_rsp;
+
+    Canard::ObjCallback<AP_DroneCAN, uavcan_protocol_file_GetDirectoryEntryInfoRequest> file_getdirectoryentryinfo_req_cb{this, &AP_DroneCAN::handle_file_getdirectoryentryinfo_request};
+    Canard::Server<uavcan_protocol_file_GetDirectoryEntryInfoRequest> file_getdirectoryentryinfo_server{canard_iface, file_getdirectoryentryinfo_req_cb};
+    uavcan_protocol_file_GetDirectoryEntryInfoResponse file_getdirectoryentryinfo_rsp;
+#endif  // AP_DRONECAN_FILE_SERVER_ENABLED
+
 #if AP_SCRIPTING_ENABLED
     Canard::ObjCallback<AP_DroneCAN, dronecan_protocol_FlexDebug> FlexDebug_cb{this, &AP_DroneCAN::handle_FlexDebug};
     Canard::Subscriber<dronecan_protocol_FlexDebug> FlexDebug_listener{FlexDebug_cb, _driver_index};
@@ -446,6 +465,11 @@ private:
     void handle_param_get_set_response(const CanardRxTransfer& transfer, const uavcan_protocol_param_GetSetResponse& rsp);
     void handle_param_save_response(const CanardRxTransfer& transfer, const uavcan_protocol_param_ExecuteOpcodeResponse& rsp);
     void handle_node_info_request(const CanardRxTransfer& transfer, const uavcan_protocol_GetNodeInfoRequest& req);
+#if AP_DRONECAN_FILE_SERVER_ENABLED
+    void handle_file_read_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_ReadRequest& req);
+    void handle_file_getinfo_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_GetInfoRequest& req);
+    void handle_file_getdirectoryentryinfo_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_GetDirectoryEntryInfoRequest& req);
+#endif
 
 #if AP_SCRIPTING_ENABLED
     void handle_FlexDebug(const CanardRxTransfer& transfer, const dronecan_protocol_FlexDebug& msg);

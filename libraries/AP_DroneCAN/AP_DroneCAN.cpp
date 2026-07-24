@@ -127,7 +127,7 @@ const AP_Param::GroupInfo AP_DroneCAN::var_info[] = {
     // @Param: OPTION
     // @DisplayName: DroneCAN options
     // @Description: Option flags
-    // @Bitmask: 0:ClearDNADatabase,1:IgnoreDNANodeConflicts,2:EnableCanfd,3:IgnoreDNANodeUnhealthy,4:SendServoAsPWM,5:SendGNSS,6:UseHimarkServo,7:HobbyWingESC,8:EnableStats,9:EnableFlexDebug,10:SecondaryAllowExtendedFrames
+    // @Bitmask: 0:ClearDNADatabase,1:IgnoreDNANodeConflicts,2:EnableCanfd,3:IgnoreDNANodeUnhealthy,4:SendServoAsPWM,5:SendGNSS,6:UseHimarkServo,7:HobbyWingESC,8:EnableStats,9:EnableFlexDebug,10:SecondaryAllowExtendedFrames,11:EnableFileServer
     // @User: Advanced
     AP_GROUPINFO("OPTION", 5, AP_DroneCAN, _options, 0),
     
@@ -565,6 +565,10 @@ void AP_DroneCAN::loop(void)
         serial.update();
 #endif
 
+#if AP_DRONECAN_FILE_SERVER_ENABLED
+        file_server.update();
+#endif
+
 #if AP_RELAY_DRONECAN_ENABLED
         relay_hardpoint_send();
 #endif
@@ -705,6 +709,38 @@ void AP_DroneCAN::handle_node_info_request(const CanardRxTransfer& transfer, con
 
     node_info_server.respond(transfer, node_info_rsp);
 }
+
+#if AP_DRONECAN_FILE_SERVER_ENABLED
+void AP_DroneCAN::handle_file_read_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_ReadRequest& req)
+{
+    if (!option_is_set(Options::ENABLE_FILE_SERVER)) {
+        return;
+    }
+    file_read_rsp = {};
+    file_server.handle_read_request(req, file_read_rsp);
+    file_read_server.respond(transfer, file_read_rsp);
+}
+
+void AP_DroneCAN::handle_file_getinfo_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_GetInfoRequest& req)
+{
+    if (!option_is_set(Options::ENABLE_FILE_SERVER)) {
+        return;
+    }
+    file_getinfo_rsp = {};
+    file_server.handle_getinfo_request(req, file_getinfo_rsp);
+    file_getinfo_server.respond(transfer, file_getinfo_rsp);
+}
+
+void AP_DroneCAN::handle_file_getdirectoryentryinfo_request(const CanardRxTransfer& transfer, const uavcan_protocol_file_GetDirectoryEntryInfoRequest& req)
+{
+    if (!option_is_set(Options::ENABLE_FILE_SERVER)) {
+        return;
+    }
+    file_getdirectoryentryinfo_rsp = {};
+    file_server.handle_getdirectoryentryinfo_request(req, file_getdirectoryentryinfo_rsp);
+    file_getdirectoryentryinfo_server.respond(transfer, file_getdirectoryentryinfo_rsp);
+}
+#endif  // AP_DRONECAN_FILE_SERVER_ENABLED
 
 int16_t AP_DroneCAN::scale_esc_output(uint8_t idx){
     static const int16_t cmd_max = ((1<<13)-1);
