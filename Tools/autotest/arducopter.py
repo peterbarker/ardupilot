@@ -18625,6 +18625,104 @@ RTL_ALT_M 111
         if ex is not None:
             raise ex
 
+    def DroneCANLogDownload(self):
+        '''download a log from a peripheral via the DroneCAN file server'''
+        self.progress("Building Periph")
+        periph_board = 'sitl_periph_universal'
+        periph_builddir = util.reltopdir('build-periph')
+        util.build_SITL(
+            'bin/AP_Periph',
+            board=periph_board,
+            clean=False,
+            configure=True,
+            debug=True,
+            extra_configure_args=[
+                '--out', periph_builddir,
+            ],
+        )
+
+        # create the periph's run directory containing a "dataflash
+        # log" for the script to download
+        periph_rundir = util.reltopdir('run-periph-logdl')
+        if not os.path.exists(periph_rundir):
+            os.mkdir(periph_rundir)
+        periph_logdir = os.path.join(periph_rundir, 'logs')
+        if not os.path.exists(periph_logdir):
+            os.mkdir(periph_logdir)
+        # ensure stale parameter storage doesn't leave us with an
+        # unexpected node ID (AP_Periph has no -w option):
+        for storage in ['eeprom.bin']:
+            storage_path = os.path.join(periph_rundir, storage)
+            if os.path.exists(storage_path):
+                os.unlink(storage_path)
+        # not a multiple of the 256-byte Read chunk size, so the final
+        # short chunk is exercised:
+        log_content = os.urandom(30000)
+        log_name = '00000042.BIN'
+        with open(os.path.join(periph_logdir, log_name), 'wb') as f:
+            f.write(log_content)
+
+        fetched_name = 'dcl_125_' + log_name
+        if os.path.exists(fetched_name):
+            os.unlink(fetched_name)
+
+        self.progress("Starting Periph simulation")
+        self.context_push()
+        periph_exp = None
+        ex = None
+        try:
+            binary_path = pathlib.Path(periph_builddir, periph_board, 'bin', 'AP_Periph')
+            periph_exp = util.start_SITL(
+                binary_path,
+                cwd=periph_rundir,
+                stdout_prefix="periph-logdl",
+                gdb=self.gdb,
+                valgrind=self.valgrind,
+                param_defaults={'CAN_NODE': 125},
+                customisations=[
+                    '-I', str(1),
+                    '--serial0', 'mcast:',
+                ],
+                speedup=self.speedup,
+            )
+            self.expect_list_add(periph_exp)
+
+            self.set_parameters({
+                "CAN_P1_DRIVER": 1,
+                "SCR_ENABLE": 1,
+            })
+            self.install_applet_script_context('DroneCAN_log_download.lua')
+            self.context_collect('STATUSTEXT')
+            self.reboot_sitl()
+
+            self.wait_statustext('DroneCAN_log_download loaded', check_context=True, timeout=60)
+            self.set_parameter('DCLD_NODE', 125)
+            self.wait_statustext('DCLD: saved %s' % fetched_name, check_context=True, timeout=180)
+            self.wait_statustext('DCLD: node 125 done', check_context=True, timeout=60)
+
+            with open(fetched_name, 'rb') as f:
+                fetched = f.read()
+            if fetched != log_content:
+                raise NotAchievedException(
+                    "downloaded log content mismatch (want=%u bytes got=%u bytes)" %
+                    (len(log_content), len(fetched)))
+            if self.get_parameter('DCLD_NODE') != 0:
+                raise NotAchievedException("DCLD_NODE was not reset on completion")
+            os.unlink(fetched_name)
+
+        except Exception as e:  # noqa: BLE001
+            self.print_exception_caught(e)
+            ex = e
+        finally:
+            if periph_exp is not None:
+                self.progress("Stopping Periph")
+                self.expect_list_remove(periph_exp)
+                util.pexpect_close(periph_exp)
+        self.context_pop()
+        self.reboot_sitl()
+        if ex is not None:
+            raise ex
+
     def FenceRelative_TakeoffMode(self):
         '''method for the FenceRelative test to call'''
         return 'LOITER'
@@ -19111,6 +19209,7 @@ return update, 1000
             self.test_EKF3_option_disable_lane_switch,
             self.PLDNoParameters,
             self.PeriphMultiUARTTunnel,
+            self.DroneCANLogDownload,
             self.EKF3SRCPerCore,
             self.UTMGlobalPosition,
             self.UTMGlobalPositionWaypoint,
