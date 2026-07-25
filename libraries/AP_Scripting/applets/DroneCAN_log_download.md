@@ -43,5 +43,10 @@ setting DCLD_NODE again only fetches new logs.
 
 Progress and completion are reported as STATUSTEXT messages.
 
-Transfers use a single outstanding Read request at a time; expect
-roughly 15-20 kbyte/s on a 1Mbit classic CAN bus.
+Only one read is outstanding at a time, so the rate is set by the round
+trip to the remote node rather than by the bus: 256 bytes are moved per
+request, and a node which takes 50ms to answer will yield about 5
+kbyte/s however fast the bus is.
+
+Downloading from a simulated peripheral measures 4 to 6 kbyte/s. No
+figure has been measured against real hardware yet.
