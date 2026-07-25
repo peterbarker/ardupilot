@@ -899,6 +899,10 @@ def _build_recursion(bld):
 
     dirs_to_recurse.append('libraries/AP_Scripting')
 
+    if bld.env.BOARD == 'sitl':
+        # host side tools
+        dirs_to_recurse.append('libraries/AP_DroneCAN/tools/file_client')
+
     if bld.env.ENABLE_ONVIF:
         dirs_to_recurse.append('libraries/AP_ONVIF')
 
