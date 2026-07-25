@@ -18726,17 +18726,20 @@ RTL_ALT_M 111
     def DroneCANFileClient(self):
         '''download a file from ourselves with the DroneCAN file client tool'''
         self.progress("Building the DroneCAN file client")
-        # another test may have left waf configured for a different
-        # board, so configure for SITL: this is a host tool
+        # built into its own directory: the client is a host tool, and
+        # configuring the shared build would disturb whatever the rest
+        # of the suite has set up there
+        tool_builddir = util.reltopdir('build-file-client')
         util.build_SITL(
             'dronecan_file_client',
             board='sitl',
             clean=False,
             configure=True,
+            extra_configure_args=['--out', tool_builddir],
         )
-        tool = util.reltopdir(os.path.join(
-            'build', 'sitl', 'libraries', 'AP_DroneCAN', 'tools', 'file_client',
-            'dronecan_file_client'))
+        tool = os.path.join(
+            tool_builddir, 'sitl', 'libraries', 'AP_DroneCAN', 'tools', 'file_client',
+            'dronecan_file_client')
         if not os.path.exists(tool):
             raise NotAchievedException("file client was not built")
 
