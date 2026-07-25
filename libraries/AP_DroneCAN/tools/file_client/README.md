@@ -21,11 +21,12 @@ other dependencies. `make NOCANFD=1` builds without CANFD support.
     dronecan_file_client [options] <uri> list <remote-dir>
     dronecan_file_client [options] <uri> info <remote-path>
 
-The uri is an SLCAN port, either a serial device or the same protocol
-over TCP:
+The uri is an SLCAN port - a serial device or the same protocol over
+TCP - or a SITL multicast CAN bus:
 
     dronecan_file_client -n 10 /dev/ttyACM1 list /APM/LOGS
     dronecan_file_client -n 10 /dev/ttyACM1 get /APM/LOGS/00000001.BIN
+    dronecan_file_client -n 10 mcast:0 get logs/00000001.BIN
 
 Configure the autopilot for SLCAN first, for example on a second USB
 interface:

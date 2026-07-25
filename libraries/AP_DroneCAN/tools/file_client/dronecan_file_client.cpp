@@ -69,6 +69,7 @@ static struct {
 static CanardInstance canard;
 static uint8_t canard_memory[131072];
 static int transport_fd = -1;
+static bool transport_is_mcast;
 
 /* ------------------------------------------------------------------ */
 /* helpers                                                             */
@@ -196,17 +197,153 @@ static void slcan_pump_rx(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* multicast transport, as used between SITL instances                 */
+/* ------------------------------------------------------------------ */
+
+#define MCAST_ADDRESS_BASE "239.65.82.0"
+#define MCAST_PORT 57732U
+#define MCAST_MAGIC 0x2934U
+#define MCAST_FLAG_CANFD 0x0001
+#define MCAST_MAX_PKT_LEN 74
+
+struct __attribute__((packed)) mcast_pkt {
+    uint16_t magic;
+    uint16_t crc;
+    uint16_t flags;
+    uint32_t message_id;
+    uint8_t data[MCAST_MAX_PKT_LEN - 10];
+};
+
+static int mcast_tx_fd = -1;
+static struct sockaddr_in mcast_dest;
+
+static uint16_t crc16_ccitt_sw(const uint8_t *buf, uint32_t len, uint16_t crc)
+{
+    for (uint32_t i = 0; i < len; i++) {
+        crc ^= (uint16_t)buf[i] << 8;
+        for (uint8_t j = 0; j < 8; j++) {
+            crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : (crc << 1);
+        }
+    }
+    return crc;
+}
+
+static void mcast_send_frame(const CanardCANFrame *f)
+{
+    struct mcast_pkt pkt {};
+    pkt.magic = MCAST_MAGIC;
+#if CANARD_ENABLE_CANFD
+    if (f->canfd) {
+        pkt.flags |= MCAST_FLAG_CANFD;
+    }
+#endif
+    /*
+      the flag bits above the 29 bit ID must be kept: the far end
+      reconstructs the frame from this field and a missing extended
+      frame flag leaves it looking like an 11 bit ID, which the
+      DroneCAN stack ignores
+     */
+    pkt.message_id = f->id;
+    memcpy(pkt.data, f->data, f->data_len);
+    pkt.crc = crc16_ccitt_sw((uint8_t *)&pkt.flags, f->data_len + 6, 0xFFFFU);
+    if (sendto(mcast_tx_fd, &pkt, f->data_len + 10, 0,
+               (struct sockaddr *)&mcast_dest, sizeof(mcast_dest)) < 0) {
+        static bool reported;
+        if (!reported) {
+            perror("multicast send");
+            reported = true;
+        }
+    }
+}
+
+static void mcast_pump_rx(void)
+{
+    struct mcast_pkt pkt;
+    while (true) {
+        const ssize_t ret = recv(transport_fd, &pkt, sizeof(pkt), 0);
+        if (ret < 10) {
+            return;
+        }
+        if (pkt.magic != MCAST_MAGIC) {
+            continue;
+        }
+        if (pkt.crc != crc16_ccitt_sw((uint8_t *)&pkt.flags, ret - 4, 0xFFFFU)) {
+            continue;
+        }
+        CanardCANFrame f {};
+        f.id = pkt.message_id | CANARD_CAN_FRAME_EFF;
+        f.data_len = (uint8_t)(ret - 10);
+#if CANARD_ENABLE_CANFD
+        f.canfd = (pkt.flags & MCAST_FLAG_CANFD) != 0;
+#endif
+        memcpy(f.data, pkt.data, f.data_len);
+        canardHandleRxFrame(&canard, &f, micros64());
+    }
+}
+
+static bool mcast_init(uint8_t bus)
+{
+    char address[] = MCAST_ADDRESS_BASE;
+    address[strlen(address) - 1] = '0' + bus;
+
+    transport_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (transport_fd < 0) {
+        perror("socket");
+        return false;
+    }
+    int one = 1;
+    setsockopt(transport_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    struct sockaddr_in sa {};
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(MCAST_PORT);
+    sa.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (bind(transport_fd, (struct sockaddr *)&sa, sizeof(sa)) != 0) {
+        perror("bind");
+        return false;
+    }
+    struct ip_mreq mreq {};
+    mreq.imr_multiaddr.s_addr = inet_addr(address);
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    if (setsockopt(transport_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) != 0) {
+        perror("IP_ADD_MEMBERSHIP");
+        return false;
+    }
+    fcntl(transport_fd, F_SETFL, fcntl(transport_fd, F_GETFL, 0) | O_NONBLOCK);
+
+    // send from a separate socket so that our source port differs from
+    // the multicast port we are bound to
+    mcast_tx_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (mcast_tx_fd < 0) {
+        return false;
+    }
+    fcntl(mcast_tx_fd, F_SETFL, fcntl(mcast_tx_fd, F_GETFL, 0) | O_NONBLOCK);
+    memset(&mcast_dest, 0, sizeof(mcast_dest));
+    mcast_dest.sin_family = AF_INET;
+    mcast_dest.sin_port = htons(MCAST_PORT);
+    mcast_dest.sin_addr.s_addr = inet_addr(address);
+    return true;
+}
+
+/* ------------------------------------------------------------------ */
 /* transport dispatch                                                  */
 /* ------------------------------------------------------------------ */
 
 static void transport_send_frame(const CanardCANFrame *f)
 {
-    slcan_send_frame(f);
+    if (transport_is_mcast) {
+        mcast_send_frame(f);
+    } else {
+        slcan_send_frame(f);
+    }
 }
 
 static void transport_pump_rx(void)
 {
-    slcan_pump_rx();
+    if (transport_is_mcast) {
+        mcast_pump_rx();
+    } else {
+        slcan_pump_rx();
+    }
 }
 
 static void pump_tx(void)
@@ -711,6 +848,7 @@ static void usage(const char *prog)
             "\n"
             "uri:   /dev/ttyACM1            an SLCAN serial port\n"
             "       tcp:127.0.0.1:5772      an SLCAN port exposed over TCP\n"
+            "       mcast:0                 SITL multicast CAN, bus 0\n"
             "\n"
             "options:\n"
             "  -n NODE   node ID to fetch from (required)\n"
@@ -767,7 +905,12 @@ int main(int argc, char **argv)
     const char *command = argv[optind + 1];
     const char *arg = argc - optind > 2 ? argv[optind + 2] : nullptr;
 
-    if (strncmp(opts.uri, "tcp:", 4) == 0) {
+    transport_is_mcast = strncmp(opts.uri, "mcast:", 6) == 0;
+    if (transport_is_mcast) {
+        if (!mcast_init((uint8_t)atoi(opts.uri + 6))) {
+            return 1;
+        }
+    } else if (strncmp(opts.uri, "tcp:", 4) == 0) {
         // an SLCAN port exposed over TCP
         char host[64];
         int port = 0;
