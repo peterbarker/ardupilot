@@ -25,7 +25,9 @@ local UAVCAN_PROTOCOL_FILE_READ_ID = 48
 local FLAG_DIRECTORY = 2
 
 local READ_CHUNK_SIZE = 256
-local REQUEST_TIMEOUT_MS = 250
+-- a request and its reply is a round trip through the scripting
+-- scheduler at both ends, so allow far more than the typical time
+local REQUEST_TIMEOUT_MS = 1000
 local MAX_RETRIES = 10
 
 -- candidate log directories on the remote node; ChibiOS boards use
