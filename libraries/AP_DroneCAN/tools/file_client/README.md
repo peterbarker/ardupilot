@@ -10,10 +10,15 @@ build with `AP_PERIPH_FILE_SERVER_ENABLED`.
 
 ## Building
 
-    make
+The client is built by waf as part of a SITL build, being a host tool:
 
-The client links against the libcanard in `modules/DroneCAN` and has no
-other dependencies. `make NOCANFD=1` builds without CANFD support.
+    ./waf configure --board sitl
+    ./waf --targets dronecan_file_client
+
+The binary lands in
+`build/sitl/libraries/AP_DroneCAN/tools/file_client/dronecan_file_client`.
+It links against the libcanard in `modules/DroneCAN` and has no other
+dependencies.
 
 ## Usage
 

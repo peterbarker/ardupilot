@@ -1,0 +1,24 @@
+# encoding: utf-8
+
+# the file client is a host tool, so it is built on boards which are
+# themselves built for the host
+
+
+def build(bld):
+    if bld.env.BOARD != 'sitl':
+        return
+
+    bld.program(
+        source=[
+            'dronecan_file_client.cpp',
+            bld.srcnode.find_resource('modules/DroneCAN/libcanard/canard.c'),
+        ],
+        includes=[
+            bld.srcnode.find_dir('modules/DroneCAN/libcanard').abspath(),
+        ],
+        defines=['CANARD_ENABLE_CANFD=1'],
+        target='dronecan_file_client',
+        name='dronecan_file_client',
+        use=[],
+        install_path=None,
+    )

@@ -37,6 +37,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <time.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -66,6 +67,18 @@ static struct {
     bool verbose;
 } opts = {nullptr, nullptr, nullptr, 0, 100, 8, false, false};
 
+#if defined(USE_USER_HELPERS)
+/*
+  libcanard can be built expecting the application to serialise access
+  to its memory pool.  This tool drives canard from a single thread, so
+  these need do nothing
+ */
+extern "C" {
+void canard_allocate_sem_take(CanardPoolAllocator *allocator) { (void)allocator; }
+void canard_allocate_sem_give(CanardPoolAllocator *allocator) { (void)allocator; }
+}
+#endif
+
 static CanardInstance canard;
 static uint8_t canard_memory[131072];
 static int transport_fd = -1;
@@ -75,16 +88,30 @@ static bool transport_is_mcast;
 /* helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-static double now_s(void)
-{
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    return tv.tv_sec + tv.tv_usec * 1e-6;
-}
-
+/*
+  monotonic microseconds.  Deliberately integer: seconds since the
+  epoch do not fit in a float, and this is built with
+  -fsingle-precision-constant, which would silently evaluate a
+  floating point expression here at float precision - around two
+  minutes of resolution - and break every timeout in this program
+ */
 static uint64_t micros64(void)
 {
-    return (uint64_t)(now_s() * 1e6);
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000ULL + (uint64_t)(ts.tv_nsec / 1000);
+}
+
+static double now_s(void)
+{
+    // relative to the first call, so that the result stays small
+    // enough to be exact
+    static uint64_t start_us;
+    const uint64_t us = micros64();
+    if (start_us == 0) {
+        start_us = us;
+    }
+    return (double)(us - start_us) * 1e-6;
 }
 
 static uint8_t dlc_to_len(uint8_t dlc)
@@ -379,13 +406,34 @@ static uint16_t append_path(uint8_t *payload, uint16_t ofs, const char *path)
     return ofs + (uint16_t)plen;
 }
 
+/*
+  a reply, as copied out of the transfer.  The transfer itself is only
+  valid for the duration of the reception callback - canard frees its
+  payload blocks as soon as that returns - so the bytes are copied out
+  and everything afterwards works from this
+ */
 struct Reply {
     bool got;
-    bool timed_out;
     uint16_t payload_len;
     uint8_t payload[300];
-    const CanardRxTransfer *transfer;
 };
+
+// little endian field accessors over a copied payload
+static uint64_t reply_uint(const Reply &r, uint16_t byte_ofs, uint8_t nbytes)
+{
+    uint64_t v = 0;
+    for (uint8_t i = 0; i < nbytes; i++) {
+        if (byte_ofs + i < r.payload_len) {
+            v |= (uint64_t)r.payload[byte_ofs + i] << (8 * i);
+        }
+    }
+    return v;
+}
+
+static int16_t reply_int16(const Reply &r, uint16_t byte_ofs)
+{
+    return (int16_t)reply_uint(r, byte_ofs, 2);
+}
 
 // a pending Read, tracked by the transfer ID seen on the wire
 struct Pending {
@@ -520,7 +568,6 @@ static void on_reception(CanardInstance *ins, CanardRxTransfer *transfer)
     (void)ins;
     if (transfer->data_type_id == simple_expect_id && simple_expect_id != 0) {
         simple_reply.got = true;
-        simple_reply.transfer = transfer;
         simple_reply.payload_len = transfer->payload_len;
         const uint16_t n = transfer->payload_len < sizeof(simple_reply.payload) ?
             transfer->payload_len : (uint16_t)sizeof(simple_reply.payload);
@@ -575,10 +622,17 @@ static bool should_accept(const CanardInstance *ins, uint64_t *out_signature,
 static void send_request(uint64_t signature, uint8_t data_type_id, uint8_t *transfer_id,
                          const uint8_t *payload, uint16_t payload_len)
 {
+    // the optional arguments depend on how libcanard was configured
     const int16_t res = canardRequestOrRespond(&canard, opts.target_node,
                                                signature, data_type_id, transfer_id,
                                                CANARD_TRANSFER_PRIORITY_MEDIUM,
                                                CanardRequest, payload, payload_len
+#if CANARD_ENABLE_DEADLINE
+                                               , micros64() + 1000000U
+#endif
+#if CANARD_MULTI_IFACE
+                                               , 0xFF
+#endif
 #if CANARD_ENABLE_CANFD
                                                , opts.canfd
 #endif
@@ -643,12 +697,9 @@ static FileInfo cmd_getinfo(const char *path)
         return out;
     }
     // uint40 size, Error error, EntryType entry_type
-    uint64_t size = 0;
-    canardDecodeScalar(reply.transfer, 0, 40, false, &size);
-    int16_t err = 0;
-    canardDecodeScalar(reply.transfer, 40, 16, true, &err);
-    uint8_t flags = 0;
-    canardDecodeScalar(reply.transfer, 56, 8, false, &flags);
+    const uint64_t size = reply_uint(reply, 0, 5);
+    const int16_t err = reply_int16(reply, 5);
+    const uint8_t flags = (uint8_t)reply_uint(reply, 7, 1);
     out.error = err;
     out.ok = err == 0;
     out.size = size;
@@ -671,27 +722,23 @@ static int cmd_list(const char *dir)
             fprintf(stderr, "directory listing timed out at entry %u\n", index);
             return 1;
         }
-        int16_t err = 0;
-        canardDecodeScalar(reply.transfer, 0, 16, true, &err);
-        uint8_t flags = 0;
-        canardDecodeScalar(reply.transfer, 16, 8, false, &flags);
+        const int16_t err = reply_int16(reply, 0);
+        const uint8_t flags = (uint8_t)reply_uint(reply, 2, 1);
         if (err != 0 || flags == 0) {
             break;                      // end of directory
         }
         uint16_t path_len;
-        uint32_t bit_ofs;
+        uint16_t path_ofs;
         if (tao_active()) {
-            path_len = reply.transfer->payload_len > 3 ? reply.transfer->payload_len - 3 : 0;
-            bit_ofs = 24;
+            path_len = reply.payload_len > 3 ? reply.payload_len - 3 : 0;
+            path_ofs = 3;
         } else {
-            uint8_t l = 0;
-            canardDecodeScalar(reply.transfer, 24, 8, false, &l);
-            path_len = l;
-            bit_ofs = 32;
+            path_len = (uint16_t)reply_uint(reply, 3, 1);
+            path_ofs = 4;
         }
         char path[FILE_PATH_MAX + 1] {};
         for (uint16_t i = 0; i < path_len && i < FILE_PATH_MAX; i++) {
-            canardDecodeScalar(reply.transfer, bit_ofs + 8U * i, 8, false, (uint8_t *)&path[i]);
+            path[i] = (char)reply_uint(reply, path_ofs + i, 1);
         }
         const bool is_dir = (flags & ENTRY_TYPE_FLAG_DIRECTORY) != 0;
         if (is_dir) {
