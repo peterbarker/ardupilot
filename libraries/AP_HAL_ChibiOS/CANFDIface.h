@@ -251,6 +251,12 @@ protected:
         return rx_queue_.push(rx_item);
     }
 
+    void signal_rx_event() override {
+        if (sem_handle != nullptr) {
+            sem_handle->signal();
+        }
+    }
+
     int8_t get_iface_num(void) const override {
         return self_index_;
     }
