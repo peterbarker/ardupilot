@@ -375,9 +375,11 @@ int16_t CANIface::send(const AP_HAL::CANFrame& frame, uint64_t tx_deadline,
                   MCAST. Consider the frame sent if the send
                   succeeds. This allows for UDP MCAST and MAVCAN to
                   operate fully when the CAN bus has no cable plugged
-                  in
+                  in.  The delivery to the registered callbacks must
+                  happen outside the critical section: it takes
+                  semaphores and can write to a serial port
                  */
-                return AP_HAL::CANIface::send(frame, tx_deadline, flags);
+                goto deliver_to_callbacks;
             }
             return 0;    //we don't have free space
         }
@@ -429,6 +431,7 @@ int16_t CANIface::send(const AP_HAL::CANFrame& frame, uint64_t tx_deadline,
         pending_tx_[index].pushed         = false;
     }
 
+deliver_to_callbacks:
     // also send on MAVCAN, but don't consider it an error if we can't get the MAVCAN out
     AP_HAL::CANIface::send(frame, tx_deadline, flags);
 
@@ -931,6 +934,16 @@ void CANIface::checkAvailable(bool& read, bool& write, const AP_HAL::CANFrame* p
     read = !isRxBufferEmpty();
     if (pending_tx != nullptr) {
         write = canAcceptNewTxFrame();
+        if (!write && stats.tx_success == 0) {
+            /*
+              if we have never successfully transmitted a frame the
+              bus may have no cable plugged in and send() will
+              consider frames sent so that UDP MCAST and MAVCAN keep
+              working; report space so senders do not discard frames
+              before send() can do that
+             */
+            write = true;
+        }
     }
 }
 
