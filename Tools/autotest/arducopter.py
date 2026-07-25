@@ -18770,27 +18770,44 @@ RTL_ALT_M 111
 
         node_id = self.get_parameter("CAN_D1_UC_NODE")
 
-        self.progress("Listing the served directory")
-        output = util.run_cmd(
-            [tool, '-n', str(int(node_id)), 'mcast:0', 'list', served_dir],
-            output=True, directory='.')
-        if isinstance(output, bytes):
-            output = output.decode('utf-8', 'replace')
-        if 'test.bin' not in output:
-            raise NotAchievedException("test.bin not in listing: %s" % output)
+        # the two framings put the same data on the wire differently:
+        # the tail array optimisation applies to classic frames but not
+        # to CANFD, so the replies are decoded by separate paths and
+        # both need covering
+        for canfd in (False, True):
+            if canfd:
+                self.progress("Switching to CANFD")
+                self.set_parameters({
+                    "CAN_D1_UC_OPTION": 2048 | 4,   # EnableFileServer|EnableCanfd
+                })
+                self.reboot_sitl()
+            fd_args = ['-f'] if canfd else []
+            label = 'CANFD' if canfd else 'classic'
 
-        self.progress("Downloading the file")
-        util.run_cmd(
-            [tool, '-n', str(int(node_id)), '-d', '4', 'mcast:0', 'get', remote_path, local_path],
-            directory='.')
+            self.progress("Listing the served directory (%s)" % label)
+            output = util.run_cmd(
+                [tool, '-n', str(int(node_id))] + fd_args + ['mcast:0', 'list', served_dir],
+                output=True, directory='.')
+            if isinstance(output, bytes):
+                output = output.decode('utf-8', 'replace')
+            if 'test.bin' not in output:
+                raise NotAchievedException("test.bin not in %s listing: %s" % (label, output))
 
-        with open(local_path, 'rb') as f:
-            fetched = f.read()
-        if fetched != content:
-            raise NotAchievedException(
-                "downloaded content differs (want %u bytes, got %u)" %
-                (len(content), len(fetched)))
-        self.progress("Downloaded file matches")
+            self.progress("Downloading the file (%s)" % label)
+            if os.path.exists(local_path):
+                os.unlink(local_path)
+            util.run_cmd(
+                [tool, '-n', str(int(node_id)), '-d', '4'] + fd_args +
+                ['mcast:0', 'get', remote_path, local_path],
+                directory='.')
+
+            with open(local_path, 'rb') as f:
+                fetched = f.read()
+            if fetched != content:
+                raise NotAchievedException(
+                    "%s download differs (want %u bytes, got %u)" %
+                    (label, len(content), len(fetched)))
+            self.progress("Downloaded file matches (%s)" % label)
 
         shutil.rmtree(served_dir, ignore_errors=True)
 
