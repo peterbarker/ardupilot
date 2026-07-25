@@ -16,7 +16,6 @@
 #include "AP_MAVLinkCAN.h"
 #include <AP_HAL/utility/sparse-endian.h>
 #include <AP_Common/sorting.h>
-#include <AP_Common/ExpandingString.h>
 
 #if AP_MAVLINKCAN_ENABLED
 
@@ -168,7 +167,6 @@ void AP_MAVLinkCAN::_handle_can_frame(const mavlink_message_t &msg)
         }
     }
 
-    fwd_stats.inject_frames++;
     switch (msg.msgid) {
     case MAVLINK_MSG_ID_CAN_FRAME: {
         mavlink_can_frame_t p;
@@ -330,12 +328,10 @@ void AP_MAVLinkCAN::_handle_can_filter_modify(const mavlink_message_t &msg)
 void AP_MAVLinkCAN::can_frame_callback(uint8_t bus, const AP_HAL::CANFrame &frame, AP_HAL::CANIface::CanIOFlags flags)
 {
     uint32_t gen;
-    fwd_stats.cb_calls++;
     {
         WITH_SEMAPHORE(can_forward.sem);
         if (bus != can_forward.callback_bus) {
             // we are not registered for forwarding this bus, discard frame
-            fwd_stats.cb_filtered++;
             return;
         }
         if (can_forward.frame_counter++ == 100) {
@@ -364,7 +360,6 @@ void AP_MAVLinkCAN::can_frame_callback(uint8_t bus, const AP_HAL::CANFrame &fram
                 }
             }
             if (!bisect_search_uint16(can_forward.filter_ids, can_forward.num_filter_ids, id)) {
-                fwd_stats.cb_filtered++;
                 return;
             }
         }
@@ -388,7 +383,6 @@ void AP_MAVLinkCAN::can_frame_callback(uint8_t bus, const AP_HAL::CANFrame &fram
                 fwd_frames = NEW_NOTHROW ObjectBuffer<BufferFrame>(buffer_size);
                 if (fwd_frames != nullptr && fwd_frames->get_size() != 0) {
                     hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_MAVLinkCAN::process_fwd_frames, void));
-                    fwd_stats.io_registered = 1;
                     break;
                 }
                 delete fwd_frames;
@@ -408,9 +402,7 @@ void AP_MAVLinkCAN::can_frame_callback(uint8_t bus, const AP_HAL::CANFrame &fram
             gen : gen
         };
         if (!fwd_frames->push(frame_copy)) {
-            fwd_stats.push_drops++;
-        } else {
-            fwd_stats.pushed++;
+            fwd_frames_dropped++;
         }
     }
     process_fwd_frames();
@@ -422,7 +414,6 @@ void AP_MAVLinkCAN::can_frame_callback(uint8_t bus, const AP_HAL::CANFrame &fram
  */
 void AP_MAVLinkCAN::process_fwd_frames()
 {
-    fwd_stats.drain_calls++;
     mavlink_channel_t chan;
     uint8_t system_id;
     uint8_t component_id;
@@ -461,7 +452,6 @@ void AP_MAVLinkCAN::process_fwd_frames()
 #if HAL_CANFD_SUPPORTED
         if (frame.frame.isCanFDFrame()) {
             if (!HAVE_PAYLOAD_SPACE(chan, CANFD_FRAME)) {
-                fwd_stats.space_breaks++;
                 break;
             }
             mavlink_msg_canfd_frame_send(chan, system_id, component_id,
@@ -471,63 +461,14 @@ void AP_MAVLinkCAN::process_fwd_frames()
 #endif
         {
             if (!HAVE_PAYLOAD_SPACE(chan, CAN_FRAME)) {
-                fwd_stats.space_breaks++;
                 break;
             }
             mavlink_msg_can_frame_send(chan, system_id, component_id,
                                        frame.bus, data_len, frame.frame.id,
                                        const_cast<uint8_t*>(frame.frame.data));
         }
-        fwd_stats.sent++;
         fwd_frames->pop();
     }
-}
-
-/*
-  dump forwarding diagnostics for @SYS/mavlinkcan.txt
- */
-void AP_MAVLinkCAN::get_stats_text(ExpandingString &str)
-{
-    auto *s = singleton;
-    if (s == nullptr) {
-        str.printf("MAVLinkCAN not active\n");
-        return;
-    }
-    uint32_t depth = 0;
-    {
-        WITH_SEMAPHORE(s->fwd_frame_sem);
-        if (s->fwd_frames != nullptr) {
-            depth = s->fwd_frames->available();
-        }
-    }
-    uint32_t txspace = 0;
-    uint8_t cb_id;
-    uint8_t chan;
-    {
-        WITH_SEMAPHORE(s->can_forward.sem);
-        cb_id = s->can_forward.callback_id;
-        chan = (uint8_t)s->can_forward.chan;
-        txspace = comm_get_txspace(s->can_forward.chan);
-    }
-    str.printf("callback_id:  %u\n"
-               "chan:         %u\n"
-               "txspace:      %u\n"
-               "cb_calls:     %u\n"
-               "cb_filtered:  %u\n"
-               "pushed:       %u\n"
-               "push_drops:   %u\n"
-               "sent:         %u\n"
-               "drain_calls:  %u\n"
-               "space_breaks: %u\n"
-               "inject_frames:%u\n"
-               "io_registered:%u\n"
-               "queue_depth:  %u\n",
-               (unsigned)cb_id, (unsigned)chan, (unsigned)txspace,
-               (unsigned)s->fwd_stats.cb_calls, (unsigned)s->fwd_stats.cb_filtered,
-               (unsigned)s->fwd_stats.pushed, (unsigned)s->fwd_stats.push_drops,
-               (unsigned)s->fwd_stats.sent, (unsigned)s->fwd_stats.drain_calls,
-               (unsigned)s->fwd_stats.space_breaks, (unsigned)s->fwd_stats.inject_frames,
-               (unsigned)s->fwd_stats.io_registered, (unsigned)depth);
 }
 
 #endif  // AP_MAVLINKCAN_ENABLED
