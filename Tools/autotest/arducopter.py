@@ -18723,6 +18723,67 @@ RTL_ALT_M 111
         if ex is not None:
             raise ex
 
+    def DroneCANFileClient(self):
+        '''download a file from ourselves with the DroneCAN file client tool'''
+        tool_dir = util.reltopdir('libraries/AP_DroneCAN/tools/file_client')
+        tool = os.path.join(tool_dir, 'dronecan_file_client')
+
+        self.progress("Building the DroneCAN file client")
+        util.run_cmd(['make', 'clean', 'all'], directory=tool_dir)
+        if not os.path.exists(tool):
+            raise NotAchievedException("file client was not built")
+
+        # a file for the client to fetch, in the filesystem the
+        # autopilot serves.  Not a multiple of the 256 byte read size,
+        # so the short final chunk is exercised
+        served_dir = 'dronecan_file_client_test'
+        if not os.path.exists(served_dir):
+            os.mkdir(served_dir)
+        content = os.urandom(20000)
+        remote_path = os.path.join(served_dir, 'test.bin')
+        with open(remote_path, 'wb') as f:
+            f.write(content)
+
+        local_path = os.path.join(served_dir, 'fetched.bin')
+        if os.path.exists(local_path):
+            os.unlink(local_path)
+
+        # the driver parameters only appear once the driver is enabled
+        self.set_parameters({
+            "CAN_P1_DRIVER": 1,
+        })
+        self.reboot_sitl()
+        self.set_parameters({
+            "CAN_D1_UC_OPTION": 2048,   # EnableFileServer
+        })
+        self.reboot_sitl()
+
+        node_id = self.get_parameter("CAN_D1_UC_NODE")
+
+        self.progress("Listing the served directory")
+        output = util.run_cmd(
+            [tool, '-n', str(int(node_id)), 'mcast:0', 'list', served_dir],
+            output=True, directory='.')
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', 'replace')
+        if 'test.bin' not in output:
+            raise NotAchievedException("test.bin not in listing: %s" % output)
+
+        self.progress("Downloading the file")
+        util.run_cmd(
+            [tool, '-n', str(int(node_id)), '-d', '8', 'mcast:0', 'get', remote_path, local_path],
+            directory='.')
+
+        with open(local_path, 'rb') as f:
+            fetched = f.read()
+        if fetched != content:
+            raise NotAchievedException(
+                "downloaded content differs (want %u bytes, got %u)" %
+                (len(content), len(fetched)))
+        self.progress("Downloaded file matches")
+
+        shutil.rmtree(served_dir, ignore_errors=True)
+
     def FenceRelative_TakeoffMode(self):
         '''method for the FenceRelative test to call'''
         return 'LOITER'
@@ -19210,6 +19271,7 @@ return update, 1000
             self.PLDNoParameters,
             self.PeriphMultiUARTTunnel,
             self.DroneCANLogDownload,
+            self.DroneCANFileClient,
             self.EKF3SRCPerCore,
             self.UTMGlobalPosition,
             self.UTMGlobalPositionWaypoint,
