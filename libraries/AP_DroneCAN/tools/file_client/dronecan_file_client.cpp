@@ -966,6 +966,10 @@ int main(int argc, char **argv)
             return 1;
         }
         transport_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (transport_fd < 0) {
+            perror("socket");
+            return 1;
+        }
         struct sockaddr_in sa {};
         sa.sin_family = AF_INET;
         sa.sin_port = htons(port);
