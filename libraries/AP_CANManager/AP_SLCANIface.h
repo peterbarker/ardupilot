@@ -113,6 +113,12 @@ public:
 
     // Overriden methods
     bool set_event_handle(AP_HAL::BinarySemaphore *sem_handle) override;
+
+    // frames arriving over the serial port are only seen when we are
+    // polled; there is no interrupt to announce them
+    bool needs_rx_polling() const override {
+        return is_enabled();
+    }
     uint32_t getErrorCount() const override;
     void get_stats(ExpandingString &) override;
     bool is_busoff() const override;
