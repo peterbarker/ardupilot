@@ -34,6 +34,15 @@ private:
 
 #ifndef DRONECAN_HANDLE_MAX_PAYLOADS
 #define DRONECAN_HANDLE_MAX_PAYLOADS 8
+
+/*
+  how long a transfer may wait to be transmitted before it is
+  discarded.  A multi-frame transfer which does not reach the bus
+  within this time is dropped, and for a request that means waiting
+  for the reply that will never come, so allow well over the time the
+  CAN thread needs to drain a queued transfer
+ */
+#define DRONECAN_HANDLE_TRANSFER_TIMEOUT_MS 1000
 #endif
 
 /*

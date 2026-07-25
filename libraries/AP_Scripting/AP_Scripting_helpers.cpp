@@ -225,7 +225,7 @@ int DroneCAN_Handle::broadcast(lua_State *L)
 #if CANARD_ENABLE_CANFD
     transfer.canfd = h->canfd;
 #endif
-    transfer.timeout_ms = 10;
+    transfer.timeout_ms = DRONECAN_HANDLE_TRANSFER_TIMEOUT_MS;
 
     bool ok = iface.broadcast(transfer);
     lua_pushboolean(L, ok);
@@ -261,7 +261,7 @@ int DroneCAN_Handle::request(lua_State *L)
 #if CANARD_ENABLE_CANFD
     transfer.canfd = h->canfd;
 #endif
-    transfer.timeout_ms = 10;
+    transfer.timeout_ms = DRONECAN_HANDLE_TRANSFER_TIMEOUT_MS;
 
     WITH_SEMAPHORE(iface.get_sem_rx());
 
