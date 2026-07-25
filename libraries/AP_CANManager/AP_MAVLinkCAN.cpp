@@ -75,6 +75,8 @@ bool AP_MAVLinkCAN::_handle_can_forward(mavlink_channel_t chan, const mavlink_co
             hal.can[can_forward.callback_bus]->unregister_frame_callback(can_forward.callback_id);
             can_forward.callback_id = 0;
         }
+        can_forward.gen++;
+        flush_fwd_frames();
         return true;
     }
 
@@ -97,6 +99,19 @@ bool AP_MAVLinkCAN::_handle_can_forward(mavlink_channel_t chan, const mavlink_co
         return false;
     }
 
+    if (can_forward.callback_bus != bus ||
+        can_forward.chan != chan ||
+        can_forward.system_id != msg.sysid ||
+        can_forward.component_id != msg.compid) {
+        // the backlog belongs to the previous client; the periodic
+        // re-enable from an unchanged client must not flush, as the
+        // queue is busy precisely when that would drop frames.  The
+        // generation stamp catches the frame a callback already
+        // validated but has not yet pushed
+        can_forward.gen++;
+        flush_fwd_frames();
+    }
+
     can_forward.callback_bus = bus;
     can_forward.last_callback_enable_ms = AP_HAL::millis();
     can_forward.chan = chan;
@@ -106,6 +121,14 @@ bool AP_MAVLinkCAN::_handle_can_forward(mavlink_channel_t chan, const mavlink_co
     return true;
 }
 
+void AP_MAVLinkCAN::flush_fwd_frames()
+{
+    WITH_SEMAPHORE(fwd_frame_sem);
+    if (fwd_frames != nullptr) {
+        fwd_frames->clear();
+    }
+}
+
 /*
   handle a CAN_FRAME packet
  */
@@ -113,8 +136,9 @@ void AP_MAVLinkCAN::_handle_can_frame(const mavlink_message_t &msg)
 {
     if (frame_buffer == nullptr) {
         // allocate frame buffer
-        // 20 is good for firmware upload
-        uint8_t buffer_size = 20;
+        // 64 covers a pipelined burst of multi-frame service requests
+        // (e.g. file Write requests during an upload)
+        uint8_t buffer_size = 64;
         WITH_SEMAPHORE(frame_buffer_sem);
         while (frame_buffer == nullptr && buffer_size > 0) {
             // we'd like 20 frames, but will live with less
@@ -294,9 +318,7 @@ void AP_MAVLinkCAN::_handle_can_filter_modify(const mavlink_message_t &msg)
  */
 void AP_MAVLinkCAN::can_frame_callback(uint8_t bus, const AP_HAL::CANFrame &frame, AP_HAL::CANIface::CanIOFlags flags)
 {
-    mavlink_channel_t chan;
-    uint8_t system_id;
-    uint8_t component_id;
+    uint32_t gen;
     {
         WITH_SEMAPHORE(can_forward.sem);
         if (bus != can_forward.callback_bus) {
@@ -332,28 +354,111 @@ void AP_MAVLinkCAN::can_frame_callback(uint8_t bus, const AP_HAL::CANFrame &fram
                 return;
             }
         }
-        // remeber destination while we hold the mutex
+        // remember whose forwarding session this frame belongs to;
+        // ownership can change between here and the push below, and a
+        // frame must never be delivered to a client it was not
+        // captured for
+        gen = can_forward.gen;
+    }
+
+    // the rest is run without the can_forward.sem.  Frames are queued
+    // rather than sent directly: a burst of frames (e.g. a multi-frame
+    // service response) can easily exceed the instantaneous free space
+    // in the telemetry stream, and frames dropped here break the whole
+    // DroneCAN transfer they belong to
+    if (fwd_frames == nullptr) {
+        WITH_SEMAPHORE(fwd_frame_sem);
+        if (fwd_frames == nullptr) {
+            uint16_t buffer_size = 128;
+            while (fwd_frames == nullptr && buffer_size > 0) {
+                fwd_frames = NEW_NOTHROW ObjectBuffer<BufferFrame>(buffer_size);
+                if (fwd_frames != nullptr && fwd_frames->get_size() != 0) {
+                    hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_MAVLinkCAN::process_fwd_frames, void));
+                    break;
+                }
+                delete fwd_frames;
+                fwd_frames = nullptr;
+                buffer_size /= 2;
+            }
+            if (fwd_frames == nullptr) {
+                return;
+            }
+        }
+    }
+    {
+        WITH_SEMAPHORE(fwd_frame_sem);
+        struct BufferFrame frame_copy {
+            bus : bus,
+            frame : frame,
+            gen : gen
+        };
+        if (!fwd_frames->push(frame_copy)) {
+            fwd_frames_dropped++;
+        }
+    }
+    process_fwd_frames();
+}
+
+/*
+  drain captured bus frames to the GCS as telemetry stream space
+  becomes available
+ */
+void AP_MAVLinkCAN::process_fwd_frames()
+{
+    mavlink_channel_t chan;
+    uint8_t system_id;
+    uint8_t component_id;
+    uint32_t gen;
+    {
+        WITH_SEMAPHORE(can_forward.sem);
+        if (can_forward.callback_id == 0) {
+            // forwarding is not active; discard any backlog
+            WITH_SEMAPHORE(fwd_frame_sem);
+            if (fwd_frames != nullptr) {
+                struct BufferFrame frame;
+                while (fwd_frames->pop(frame)) {
+                }
+            }
+            return;
+        }
         chan = can_forward.chan;
         system_id = can_forward.system_id;
         component_id = can_forward.component_id;
+        gen = can_forward.gen;
     }
 
-    // the rest is run without the can_forward.sem
-    WITH_SEMAPHORE(comm_chan_lock(chan));
-    const uint8_t data_len = AP_HAL::CANFrame::dlcToDataLength(frame.dlc);
+    while (true) {
+        WITH_SEMAPHORE(fwd_frame_sem);
+        struct BufferFrame frame;
+        if (fwd_frames == nullptr || !fwd_frames->peek(frame)) {
+            break;
+        }
+        if (frame.gen != gen) {
+            // captured for a previous forwarding client; discard
+            IGNORE_RETURN(fwd_frames->pop(frame));
+            continue;
+        }
+        WITH_SEMAPHORE(comm_chan_lock(chan));
+        const uint8_t data_len = AP_HAL::CANFrame::dlcToDataLength(frame.frame.dlc);
 #if HAL_CANFD_SUPPORTED
-    if (frame.isCanFDFrame()) {
-        if (HAVE_PAYLOAD_SPACE(chan, CANFD_FRAME)) {
+        if (frame.frame.isCanFDFrame()) {
+            if (!HAVE_PAYLOAD_SPACE(chan, CANFD_FRAME)) {
+                break;
+            }
             mavlink_msg_canfd_frame_send(chan, system_id, component_id,
-                                         bus, data_len, frame.id, const_cast<uint8_t*>(frame.data));
-        }
-    } else
+                                         frame.bus, data_len, frame.frame.id,
+                                         const_cast<uint8_t*>(frame.frame.data));
+        } else
 #endif
-    {
-        if (HAVE_PAYLOAD_SPACE(chan, CAN_FRAME)) {
+        {
+            if (!HAVE_PAYLOAD_SPACE(chan, CAN_FRAME)) {
+                break;
+            }
             mavlink_msg_can_frame_send(chan, system_id, component_id,
-                                       bus, data_len, frame.id, const_cast<uint8_t*>(frame.data));
+                                       frame.bus, data_len, frame.frame.id,
+                                       const_cast<uint8_t*>(frame.frame.data));
         }
+        fwd_frames->pop();
     }
 }
 

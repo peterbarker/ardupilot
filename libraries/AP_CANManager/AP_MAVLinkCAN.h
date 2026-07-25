@@ -52,6 +52,8 @@ private:
         uint8_t component_id;
         uint8_t frame_counter;
         uint32_t last_callback_enable_ms;
+        // bumped whenever the owning client changes; see BufferFrame::gen
+        uint32_t gen;
         HAL_Semaphore sem;
         uint16_t num_filter_ids;
         uint16_t *filter_ids;
@@ -63,16 +65,36 @@ private:
     struct BufferFrame {
         uint8_t bus;
         AP_HAL::CANFrame frame;
+        // which forwarding ownership this frame was captured under;
+        // stale generations are discarded rather than delivered to a
+        // client they were not captured for
+        uint32_t gen;
     };
     
     // Frame buffer for queuing frames
     HAL_Semaphore frame_buffer_sem;
     ObjectBuffer<BufferFrame> *frame_buffer;
 
+    // frames captured from the bus awaiting forwarding to the GCS,
+    // drained as transmit space becomes available so that bursts
+    // larger than the instantaneous free space (e.g. a multi-frame
+    // file Read response) are not dropped
+    HAL_Semaphore fwd_frame_sem;
+    ObjectBuffer<BufferFrame> *fwd_frames;
+    uint32_t fwd_frames_dropped;
+
     static AP_MAVLinkCAN *ensure_singleton();
 
     // Process CAN frame forwarding
     void process_frame_buffer();
+
+    // drain captured bus frames to the GCS as space allows
+    void process_fwd_frames();
+
+    // discard any forwarded-frame backlog.  Called when the
+    // forwarding client changes: queued frames were captured for the
+    // old client and must not be delivered to the new one
+    void flush_fwd_frames();
 
     // Handle commands to forward CAN frames to GCS
     bool _handle_can_forward(mavlink_channel_t chan, const mavlink_command_int_t &packet, const mavlink_message_t &msg);
