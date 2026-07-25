@@ -173,6 +173,13 @@ public:
         return true;
     }
 
+    /*
+      true if received frames only become visible when the interface
+      is polled, rather than being announced by an interrupt.  Used by
+      the DroneCAN thread to decide how often it must poll
+     */
+    virtual bool needs_rx_polling() const { return false; }
+
     // Put frame in queue to be sent, return negative if error occurred, 0 if no space, and 1 if successful
     // must be called on child class
     virtual int16_t send(const CANFrame& frame, uint64_t tx_deadline, CanIOFlags flags);
@@ -236,6 +243,12 @@ public:
 protected:
     virtual int8_t get_iface_num() const = 0;
     virtual bool add_to_rx_queue(const CanRxItem &rx_item) = 0;
+
+    /*
+      wake any thread waiting on this interface after a frame has been
+      added to the receive queue outside of interrupt context
+     */
+    virtual void signal_rx_event() {}
 
     struct {
 #ifndef HAL_BOOTLOADER_BUILD

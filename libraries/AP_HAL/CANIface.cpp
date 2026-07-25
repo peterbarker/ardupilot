@@ -96,7 +96,11 @@ int16_t AP_HAL::CANIface::send(const CANFrame& frame, uint64_t tx_deadline, CanI
             rx_item.frame = frame;
             rx_item.timestamp_us = AP_HAL::micros64();
             rx_item.flags = AP_HAL::CANIface::IsForwardedFrame;
-            add_to_rx_queue(rx_item);
+            if (add_to_rx_queue(rx_item)) {
+                // this frame was injected rather than received by
+                // hardware, so no interrupt will announce it
+                signal_rx_event();
+            }
             added_to_rx_queue = true;
         }
     }
