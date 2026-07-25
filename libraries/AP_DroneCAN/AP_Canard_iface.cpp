@@ -407,7 +407,20 @@ void CanardInterface::process(uint32_t duration_ms) {
         }
         const uint64_t now = AP_HAL::micros64();
         if (now < deadline) {
-            IGNORE_RETURN(sem_handle.wait(deadline - now));
+            uint64_t wait_us = deadline - now;
+            /*
+              interfaces which do not raise an interrupt for received
+              frames - notably SLCAN over a serial port - are only
+              serviced when we poll them, so don't sleep for the whole
+              remaining slice
+             */
+            for (uint8_t i = 0; i < num_ifaces; i++) {
+                if (ifaces[i] != nullptr && ifaces[i]->needs_rx_polling()) {
+                    wait_us = MIN(wait_us, CANARD_RX_POLL_INTERVAL_US);
+                    break;
+                }
+            }
+            IGNORE_RETURN(sem_handle.wait(wait_us));
         } else {
             break;
         }

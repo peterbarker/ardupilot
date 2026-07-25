@@ -7,6 +7,14 @@
 class AP_DroneCAN;
 class CANSensor;
 
+/*
+  how often to poll interfaces which cannot announce received frames
+  with an interrupt
+ */
+#ifndef CANARD_RX_POLL_INTERVAL_US
+#define CANARD_RX_POLL_INTERVAL_US 200U
+#endif
+
 class CanardInterface : public Canard::Interface {
     friend class AP_DroneCAN;
 public:
