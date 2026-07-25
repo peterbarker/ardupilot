@@ -1,0 +1,839 @@
+/*
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+/*
+  command line client for the uavcan.protocol.file services, for
+  listing and downloading files - notably dataflash logs - from a
+  DroneCAN node.
+
+  Talks either to an SLCAN serial port or to a MAVLink endpoint
+  forwarding CAN traffic (MAVCAN).  Reads are pipelined, which matters:
+  each request/response pair costs a round trip, so a serialised
+  client runs several times slower than a pipelined one.
+
+  See README.md for build and usage.
+ */
+#include <canard.h>
+
+#include <arpa/inet.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <termios.h>
+#include <unistd.h>
+
+#define UAVCAN_PROTOCOL_FILE_GETINFO_ID 45
+#define UAVCAN_PROTOCOL_FILE_GETINFO_SIGNATURE 0x5004891EE8A27531ULL
+#define UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID 46
+#define UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE 0x8C46E8AB568BDA79ULL
+#define UAVCAN_PROTOCOL_FILE_READ_ID 48
+#define UAVCAN_PROTOCOL_FILE_READ_SIGNATURE 0x8DCDCA939F33F678ULL
+
+#define FILE_READ_CHUNK 256U
+#define FILE_PATH_MAX 200U
+#define ENTRY_TYPE_FLAG_DIRECTORY 2U
+
+// transfer IDs are five bits on the wire, so a deeper pipeline than
+// this cannot be matched to its requests
+#define MAX_PIPELINE_DEPTH 30
+
+static struct {
+    const char *uri;
+    const char *remote_path;
+    const char *local_path;
+    uint8_t target_node;
+    uint8_t local_node;
+    int depth;
+    bool canfd;
+    bool verbose;
+} opts = {nullptr, nullptr, nullptr, 0, 100, 8, false, false};
+
+static CanardInstance canard;
+static uint8_t canard_memory[131072];
+static int transport_fd = -1;
+
+/* ------------------------------------------------------------------ */
+/* helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+static double now_s(void)
+{
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    return tv.tv_sec + tv.tv_usec * 1e-6;
+}
+
+static uint64_t micros64(void)
+{
+    return (uint64_t)(now_s() * 1e6);
+}
+
+static uint8_t dlc_to_len(uint8_t dlc)
+{
+    static const uint8_t lens[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+    return lens[dlc & 0xF];
+}
+
+static uint8_t len_to_dlc(uint8_t len)
+{
+    if (len <= 8) {
+        return len;
+    }
+    static const uint8_t lens[7] = {12, 16, 20, 24, 32, 48, 64};
+    for (uint8_t i = 0; i < 7; i++) {
+        if (len <= lens[i]) {
+            return 9 + i;
+        }
+    }
+    return 15;
+}
+
+/* ------------------------------------------------------------------ */
+/* SLCAN transport                                                     */
+/* ------------------------------------------------------------------ */
+
+static void serial_write_all(const char *buf, size_t len)
+{
+    size_t ofs = 0;
+    while (ofs < len) {
+        const ssize_t n = write(transport_fd, buf + ofs, len - ofs);
+        if (n > 0) {
+            ofs += (size_t)n;
+        } else {
+            usleep(200);
+        }
+    }
+}
+
+static void slcan_send_frame(const CanardCANFrame *f)
+{
+    // an FD frame needs 1 + 8 + 1 + 128 characters
+    char line[160];
+    int n;
+#if CANARD_ENABLE_CANFD
+    if (f->canfd) {
+        n = snprintf(line, sizeof(line), "D%08X%X", (unsigned)(f->id & 0x1FFFFFFFU), len_to_dlc(f->data_len));
+    } else
+#endif
+    {
+        n = snprintf(line, sizeof(line), "T%08X%u", (unsigned)(f->id & 0x1FFFFFFFU), f->data_len);
+    }
+    for (uint8_t i = 0; i < f->data_len; i++) {
+        n += snprintf(line + n, sizeof(line) - n, "%02X", f->data[i]);
+    }
+    line[n++] = '\r';
+    serial_write_all(line, n);
+}
+
+static void slcan_handle_line(const char *line, size_t len)
+{
+    const bool is_fd = line[0] == 'D';
+    if (len < 10 || (line[0] != 'T' && !is_fd)) {
+        return;
+    }
+    CanardCANFrame f {};
+    char idbuf[9];
+    memcpy(idbuf, &line[1], 8);
+    idbuf[8] = 0;
+    f.id = (uint32_t)strtoul(idbuf, nullptr, 16) | CANARD_CAN_FRAME_EFF;
+    const char dlcbuf[2] = {line[9], 0};
+    const uint8_t dlc = (uint8_t)strtoul(dlcbuf, nullptr, 16);
+    const uint8_t nbytes = is_fd ? dlc_to_len(dlc) : dlc;
+    if ((!is_fd && dlc > 8) || len < 10 + 2U * nbytes) {
+        return;
+    }
+#if CANARD_ENABLE_CANFD
+    f.canfd = is_fd;
+#endif
+    f.data_len = nbytes;
+    for (uint8_t i = 0; i < nbytes; i++) {
+        const char b[3] = {line[10 + 2 * i], line[11 + 2 * i], 0};
+        f.data[i] = (uint8_t)strtoul(b, nullptr, 16);
+    }
+    canardHandleRxFrame(&canard, &f, micros64());
+}
+
+static void slcan_pump_rx(void)
+{
+    // an FD frame line can exceed 138 characters; a short buffer here
+    // silently discards every FD frame
+    static char linebuf[300];
+    static size_t linelen;
+    char buf[4096];
+    const ssize_t n = read(transport_fd, buf, sizeof(buf));
+    for (ssize_t i = 0; i < n; i++) {
+        const char c = buf[i];
+        if (c == '\r' || c == '\n' || c == '\a') {
+            if (linelen > 0) {
+                linebuf[linelen] = 0;
+                slcan_handle_line(linebuf, linelen);
+                linelen = 0;
+            }
+        } else if (linelen < sizeof(linebuf) - 1) {
+            linebuf[linelen++] = c;
+        } else {
+            linelen = 0;
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* transport dispatch                                                  */
+/* ------------------------------------------------------------------ */
+
+static void transport_send_frame(const CanardCANFrame *f)
+{
+    slcan_send_frame(f);
+}
+
+static void transport_pump_rx(void)
+{
+    slcan_pump_rx();
+}
+
+static void pump_tx(void)
+{
+    const CanardCANFrame *f;
+    while ((f = canardPeekTxQueue(&canard)) != nullptr) {
+        transport_send_frame(f);
+        canardPopTxQueue(&canard);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* service requests                                                    */
+/* ------------------------------------------------------------------ */
+
+/*
+  the tail array optimisation removes the length prefix of a trailing
+  array, but it does not apply to CANFD transfers
+ */
+static bool tao_active(void)
+{
+    return !opts.canfd;
+}
+
+// append a Path to a request payload, honouring TAO
+static uint16_t append_path(uint8_t *payload, uint16_t ofs, const char *path)
+{
+    const size_t plen = strlen(path);
+    if (!tao_active()) {
+        payload[ofs++] = (uint8_t)plen;
+    }
+    memcpy(&payload[ofs], path, plen);
+    return ofs + (uint16_t)plen;
+}
+
+struct Reply {
+    bool got;
+    bool timed_out;
+    uint16_t payload_len;
+    uint8_t payload[300];
+    const CanardRxTransfer *transfer;
+};
+
+// a pending Read, tracked by the transfer ID seen on the wire
+struct Pending {
+    bool active;
+    uint32_t chunk;
+    uint8_t wire_tid;
+    double sent_t;
+    uint8_t retries;
+};
+
+static Pending pending[MAX_PIPELINE_DEPTH];
+static uint8_t simple_transfer_id;
+
+/*
+  A Read reply carries no offset, so replies can only be matched to
+  requests by the five bit transfer ID on the wire.  There are only 32
+  of those, so if IDs are simply used in sequence a reply that arrives
+  late - after we have given up and moved on - is indistinguishable
+  from the reply to the request issued 32 requests later, and one
+  chunk's data is silently stored in another chunk's place.
+  (Observed in practice: chunk N holding the data of chunk N+32.)
+
+  Transfer IDs are therefore owned: an ID is allocated to a request and
+  is not reused until that request completes.  An ID belonging to a
+  request we abandoned is held back for long enough that a late reply
+  is certain to have arrived and been discarded before the ID can be
+  issued again.
+ */
+#define TRANSFER_ID_COUNT 32
+#define TRANSFER_ID_HOLDOFF_S 3.0
+
+enum TransferIDState {
+    TID_FREE = 0,
+    TID_INFLIGHT,
+    TID_HELD,
+};
+
+static struct {
+    TransferIDState state;
+    int slot;
+    double free_at;
+} transfer_ids[TRANSFER_ID_COUNT];
+
+// allocate an unused transfer ID, or -1 if none are available
+static int transfer_id_alloc(int slot)
+{
+    const double now = now_s();
+    for (uint8_t i = 0; i < TRANSFER_ID_COUNT; i++) {
+        if (transfer_ids[i].state == TID_HELD && now >= transfer_ids[i].free_at) {
+            transfer_ids[i].state = TID_FREE;
+        }
+    }
+    for (uint8_t i = 0; i < TRANSFER_ID_COUNT; i++) {
+        if (transfer_ids[i].state == TID_FREE) {
+            transfer_ids[i].state = TID_INFLIGHT;
+            transfer_ids[i].slot = slot;
+            return i;
+        }
+    }
+    return -1;
+}
+
+// state of the current download
+static uint8_t *file_buf;
+static bool *chunk_done;
+static uint32_t num_chunks;
+static uint32_t chunks_remaining;
+static uint32_t next_chunk;
+static uint32_t total_retries;
+static uint32_t short_replies;
+static uint32_t stale_replies;
+static bool download_failed;
+static uint64_t file_size;
+
+// state of a simple (non pipelined) request
+static Reply simple_reply;
+static uint16_t simple_expect_id;
+
+static void fill_pipeline(void);
+
+static void decode_read_response(const CanardRxTransfer *transfer, uint32_t chunk)
+{
+    int16_t err = 0;
+    canardDecodeScalar(transfer, 0, 16, true, &err);
+    if (err != 0) {
+        fprintf(stderr, "read error %d at offset %u\n", err, (unsigned)(chunk * FILE_READ_CHUNK));
+        download_failed = true;
+        return;
+    }
+    uint16_t data_len;
+    uint32_t bit_ofs;
+    if (tao_active()) {
+        // the trailing array runs to the end of the transfer
+        data_len = transfer->payload_len > 2 ? transfer->payload_len - 2 : 0;
+        bit_ofs = 16;
+    } else {
+        // explicit nine bit length prefix leaves the data unaligned
+        uint16_t len = 0;
+        canardDecodeScalar(transfer, 16, 9, false, &len);
+        data_len = len;
+        bit_ofs = 25;
+    }
+    if (data_len > FILE_READ_CHUNK) {
+        data_len = FILE_READ_CHUNK;
+    }
+    /*
+      every chunk but the last must be full.  A short reply here means
+      the reply did not belong to this request - replies carry no
+      offset, so a late reply whose transfer ID has been reused is
+      indistinguishable until its length gives it away - so drop it and
+      let the chunk be requested again
+     */
+    const uint64_t offset = (uint64_t)chunk * FILE_READ_CHUNK;
+    const uint64_t expected = file_size - offset < FILE_READ_CHUNK ?
+        file_size - offset : FILE_READ_CHUNK;
+    if (data_len != expected) {
+        short_replies++;
+        return;
+    }
+    uint8_t *out = &file_buf[(uint64_t)chunk * FILE_READ_CHUNK];
+    for (uint16_t i = 0; i < data_len; i++) {
+        canardDecodeScalar(transfer, bit_ofs + 8U * i, 8, false, &out[i]);
+    }
+    if (!chunk_done[chunk]) {
+        chunk_done[chunk] = true;
+        chunks_remaining--;
+    }
+}
+
+static void on_reception(CanardInstance *ins, CanardRxTransfer *transfer)
+{
+    (void)ins;
+    if (transfer->data_type_id == simple_expect_id && simple_expect_id != 0) {
+        simple_reply.got = true;
+        simple_reply.transfer = transfer;
+        simple_reply.payload_len = transfer->payload_len;
+        const uint16_t n = transfer->payload_len < sizeof(simple_reply.payload) ?
+            transfer->payload_len : (uint16_t)sizeof(simple_reply.payload);
+        for (uint16_t i = 0; i < n; i++) {
+            canardDecodeScalar(transfer, 8U * i, 8, false, &simple_reply.payload[i]);
+        }
+        return;
+    }
+    if (transfer->data_type_id != UAVCAN_PROTOCOL_FILE_READ_ID) {
+        return;
+    }
+    const uint8_t tid = transfer->transfer_id & (TRANSFER_ID_COUNT - 1);
+    if (transfer_ids[tid].state != TID_INFLIGHT) {
+        // a reply to a request we abandoned
+        stale_replies++;
+        return;
+    }
+    const int slot = transfer_ids[tid].slot;
+    if (slot < 0 || slot >= opts.depth || !pending[slot].active || pending[slot].wire_tid != tid) {
+        stale_replies++;
+        return;
+    }
+    const uint32_t chunk = pending[slot].chunk;
+    pending[slot].active = false;
+    transfer_ids[tid].state = TID_FREE;
+    decode_read_response(transfer, chunk);
+    fill_pipeline();
+}
+
+static bool should_accept(const CanardInstance *ins, uint64_t *out_signature,
+                          uint16_t data_type_id, CanardTransferType transfer_type,
+                          uint8_t source_node_id)
+{
+    (void)ins;
+    if (transfer_type != CanardTransferTypeResponse || source_node_id != opts.target_node) {
+        return false;
+    }
+    switch (data_type_id) {
+    case UAVCAN_PROTOCOL_FILE_READ_ID:
+        *out_signature = UAVCAN_PROTOCOL_FILE_READ_SIGNATURE;
+        return true;
+    case UAVCAN_PROTOCOL_FILE_GETINFO_ID:
+        *out_signature = UAVCAN_PROTOCOL_FILE_GETINFO_SIGNATURE;
+        return true;
+    case UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID:
+        *out_signature = UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE;
+        return true;
+    }
+    return false;
+}
+
+static void send_request(uint64_t signature, uint8_t data_type_id, uint8_t *transfer_id,
+                         const uint8_t *payload, uint16_t payload_len)
+{
+    const int16_t res = canardRequestOrRespond(&canard, opts.target_node,
+                                               signature, data_type_id, transfer_id,
+                                               CANARD_TRANSFER_PRIORITY_MEDIUM,
+                                               CanardRequest, payload, payload_len
+#if CANARD_ENABLE_CANFD
+                                               , opts.canfd
+#endif
+                                               );
+    if (res < 0) {
+        fprintf(stderr, "failed to queue request: %d\n", res);
+        exit(1);
+    }
+    pump_tx();
+}
+
+// issue a request and wait for its reply; returns false on timeout
+static bool request_and_wait(uint64_t signature, uint8_t data_type_id,
+                             const uint8_t *payload, uint16_t payload_len,
+                             double timeout, Reply &reply)
+{
+    for (int attempt = 0; attempt < 4; attempt++) {
+        memset(&reply, 0, sizeof(reply));
+        simple_reply = reply;
+        simple_expect_id = data_type_id;
+        send_request(signature, data_type_id, &simple_transfer_id, payload, payload_len);
+        const double deadline = now_s() + timeout;
+        while (now_s() < deadline) {
+            fd_set rfds;
+            FD_ZERO(&rfds);
+            FD_SET(transport_fd, &rfds);
+            struct timeval tv = {0, 2000};
+            select(transport_fd + 1, &rfds, nullptr, nullptr, &tv);
+            transport_pump_rx();
+            pump_tx();
+            if (simple_reply.got) {
+                reply = simple_reply;
+                simple_expect_id = 0;
+                return true;
+            }
+        }
+    }
+    simple_expect_id = 0;
+    return false;
+}
+
+/* ------------------------------------------------------------------ */
+/* commands                                                            */
+/* ------------------------------------------------------------------ */
+
+struct FileInfo {
+    bool ok;
+    uint64_t size;
+    bool is_directory;
+    int16_t error;
+};
+
+static FileInfo cmd_getinfo(const char *path)
+{
+    FileInfo out {};
+    uint8_t payload[1 + FILE_PATH_MAX];
+    const uint16_t len = append_path(payload, 0, path);
+    Reply reply;
+    if (!request_and_wait(UAVCAN_PROTOCOL_FILE_GETINFO_SIGNATURE, UAVCAN_PROTOCOL_FILE_GETINFO_ID,
+                          payload, len, 2.0, reply)) {
+        fprintf(stderr, "GetInfo timed out for %s\n", path);
+        return out;
+    }
+    // uint40 size, Error error, EntryType entry_type
+    uint64_t size = 0;
+    canardDecodeScalar(reply.transfer, 0, 40, false, &size);
+    int16_t err = 0;
+    canardDecodeScalar(reply.transfer, 40, 16, true, &err);
+    uint8_t flags = 0;
+    canardDecodeScalar(reply.transfer, 56, 8, false, &flags);
+    out.error = err;
+    out.ok = err == 0;
+    out.size = size;
+    out.is_directory = (flags & ENTRY_TYPE_FLAG_DIRECTORY) != 0;
+    return out;
+}
+
+static int cmd_list(const char *dir)
+{
+    for (uint32_t index = 0; ; index++) {
+        uint8_t payload[4 + 1 + FILE_PATH_MAX];
+        for (int i = 0; i < 4; i++) {
+            payload[i] = (index >> (8 * i)) & 0xFF;
+        }
+        const uint16_t len = append_path(payload, 4, dir);
+        Reply reply;
+        if (!request_and_wait(UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE,
+                              UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID,
+                              payload, len, 2.0, reply)) {
+            fprintf(stderr, "directory listing timed out at entry %u\n", index);
+            return 1;
+        }
+        int16_t err = 0;
+        canardDecodeScalar(reply.transfer, 0, 16, true, &err);
+        uint8_t flags = 0;
+        canardDecodeScalar(reply.transfer, 16, 8, false, &flags);
+        if (err != 0 || flags == 0) {
+            break;                      // end of directory
+        }
+        uint16_t path_len;
+        uint32_t bit_ofs;
+        if (tao_active()) {
+            path_len = reply.transfer->payload_len > 3 ? reply.transfer->payload_len - 3 : 0;
+            bit_ofs = 24;
+        } else {
+            uint8_t l = 0;
+            canardDecodeScalar(reply.transfer, 24, 8, false, &l);
+            path_len = l;
+            bit_ofs = 32;
+        }
+        char path[FILE_PATH_MAX + 1] {};
+        for (uint16_t i = 0; i < path_len && i < FILE_PATH_MAX; i++) {
+            canardDecodeScalar(reply.transfer, bit_ofs + 8U * i, 8, false, (uint8_t *)&path[i]);
+        }
+        const bool is_dir = (flags & ENTRY_TYPE_FLAG_DIRECTORY) != 0;
+        if (is_dir) {
+            printf("  %-40s <dir>\n", path);
+        } else {
+            const FileInfo info = cmd_getinfo(path);
+            if (info.ok) {
+                printf("  %-40s %10llu\n", path, (unsigned long long)info.size);
+            } else {
+                printf("  %-40s          ?\n", path);
+            }
+        }
+    }
+    return 0;
+}
+
+// returns false if no transfer ID is currently available
+static bool send_read(uint32_t chunk, int slot)
+{
+    const int tid = transfer_id_alloc(slot);
+    if (tid < 0) {
+        return false;
+    }
+    uint8_t payload[5 + 1 + FILE_PATH_MAX];
+    const uint64_t offset = (uint64_t)chunk * FILE_READ_CHUNK;
+    for (int i = 0; i < 5; i++) {
+        payload[i] = (offset >> (8 * i)) & 0xFF;
+    }
+    const uint16_t len = append_path(payload, 5, opts.remote_path);
+
+    pending[slot].active = true;
+    pending[slot].chunk = chunk;
+    pending[slot].wire_tid = (uint8_t)tid;
+    pending[slot].sent_t = now_s();
+    uint8_t wire_tid = (uint8_t)tid;
+    send_request(UAVCAN_PROTOCOL_FILE_READ_SIGNATURE, UAVCAN_PROTOCOL_FILE_READ_ID,
+                 &wire_tid, payload, len);
+    return true;
+}
+
+static void fill_pipeline(void)
+{
+    for (int i = 0; i < opts.depth; i++) {
+        if (pending[i].active) {
+            continue;
+        }
+        while (next_chunk < num_chunks && chunk_done[next_chunk]) {
+            next_chunk++;
+        }
+        if (next_chunk >= num_chunks) {
+            return;
+        }
+        pending[i].retries = 0;
+        if (!send_read(next_chunk, i)) {
+            return;             // no transfer ID free, try again later
+        }
+        next_chunk++;
+    }
+}
+
+static int cmd_get(void)
+{
+    const FileInfo info = cmd_getinfo(opts.remote_path);
+    if (!info.ok) {
+        fprintf(stderr, "cannot stat %s (error %d)\n", opts.remote_path, info.error);
+        return 1;
+    }
+    if (info.is_directory) {
+        fprintf(stderr, "%s is a directory\n", opts.remote_path);
+        return 1;
+    }
+    const uint64_t size = info.size;
+    file_size = size;
+    num_chunks = (uint32_t)((size + FILE_READ_CHUNK - 1) / FILE_READ_CHUNK);
+    if (num_chunks == 0) {
+        num_chunks = 1;
+    }
+    chunks_remaining = num_chunks;
+    file_buf = (uint8_t *)calloc(num_chunks, FILE_READ_CHUNK);
+    chunk_done = (bool *)calloc(num_chunks, sizeof(bool));
+    if (file_buf == nullptr || chunk_done == nullptr) {
+        fprintf(stderr, "out of memory for %llu bytes\n", (unsigned long long)size);
+        return 1;
+    }
+
+    const double t0 = now_s();
+    double last_cleanup = t0;
+    fill_pipeline();
+    while (chunks_remaining > 0 && !download_failed) {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(transport_fd, &rfds);
+        struct timeval tv = {0, 2000};
+        select(transport_fd + 1, &rfds, nullptr, nullptr, &tv);
+        transport_pump_rx();
+        pump_tx();
+
+        const double now = now_s();
+        if (now - last_cleanup > 0.1) {
+            canardCleanupStaleTransfers(&canard, micros64());
+            last_cleanup = now;
+        }
+        for (int i = 0; i < opts.depth; i++) {
+            if (!pending[i].active || now - pending[i].sent_t <= 0.5) {
+                continue;
+            }
+            if (++pending[i].retries > 8) {
+                fprintf(stderr, "chunk at offset %llu timed out\n",
+                        (unsigned long long)pending[i].chunk * FILE_READ_CHUNK);
+                return 1;
+            }
+            total_retries++;
+            // hold the abandoned ID back so a late reply cannot be
+            // mistaken for the reply to a future request
+            const uint8_t old_tid = pending[i].wire_tid;
+            transfer_ids[old_tid].state = TID_HELD;
+            transfer_ids[old_tid].free_at = now + TRANSFER_ID_HOLDOFF_S;
+            const uint32_t chunk = pending[i].chunk;
+            pending[i].active = false;
+            send_read(chunk, i);
+        }
+        fill_pipeline();
+    }
+    if (download_failed) {
+        return 1;
+    }
+    const double dt = now_s() - t0;
+
+    FILE *out = fopen(opts.local_path, "wb");
+    if (out == nullptr) {
+        perror("fopen");
+        return 1;
+    }
+    if (fwrite(file_buf, 1, size, out) != size) {
+        perror("fwrite");
+        fclose(out);
+        return 1;
+    }
+    fclose(out);
+    printf("%s -> %s: %llu bytes in %.2fs (%.0f bytes/sec, %u retries, %u stale replies)\n",
+           opts.remote_path, opts.local_path, (unsigned long long)size, dt,
+           size / dt, total_retries, stale_replies + short_replies);
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
+
+static void usage(const char *prog)
+{
+    fprintf(stderr,
+            "usage: %s [options] <uri> get <remote-path> [local-path]\n"
+            "       %s [options] <uri> list <remote-dir>\n"
+            "       %s [options] <uri> info <remote-path>\n"
+            "\n"
+            "uri:   /dev/ttyACM1            an SLCAN serial port\n"
+            "       tcp:127.0.0.1:5772      an SLCAN port exposed over TCP\n"
+            "\n"
+            "options:\n"
+            "  -n NODE   node ID to fetch from (required)\n"
+            "  -N NODE   our own node ID (default 100)\n"
+            "  -d DEPTH  pipeline depth for reads, 1 to %u (default 8)\n"
+            "  -f        use CANFD frames\n"
+            "  -v        verbose\n",
+            prog, prog, prog, MAX_PIPELINE_DEPTH);
+}
+
+int main(int argc, char **argv)
+{
+    int opt;
+    while ((opt = getopt(argc, argv, "n:N:d:fvh")) != -1) {
+        switch (opt) {
+        case 'n':
+            opts.target_node = (uint8_t)atoi(optarg);
+            break;
+        case 'N':
+            opts.local_node = (uint8_t)atoi(optarg);
+            break;
+        case 'd':
+            opts.depth = atoi(optarg);
+            break;
+        case 'f':
+            opts.canfd = true;
+            break;
+        case 'v':
+            opts.verbose = true;
+            break;
+        default:
+            usage(argv[0]);
+            return 1;
+        }
+    }
+    if (argc - optind < 2 || opts.target_node == 0) {
+        usage(argv[0]);
+        return 1;
+    }
+    if (opts.depth < 1) {
+        opts.depth = 1;
+    }
+    if (opts.depth > MAX_PIPELINE_DEPTH) {
+        opts.depth = MAX_PIPELINE_DEPTH;
+    }
+#if !CANARD_ENABLE_CANFD
+    if (opts.canfd) {
+        fprintf(stderr, "built without CANFD support\n");
+        return 1;
+    }
+#endif
+
+    opts.uri = argv[optind];
+    const char *command = argv[optind + 1];
+    const char *arg = argc - optind > 2 ? argv[optind + 2] : nullptr;
+
+    if (strncmp(opts.uri, "tcp:", 4) == 0) {
+        // an SLCAN port exposed over TCP
+        char host[64];
+        int port = 0;
+        if (sscanf(opts.uri + 4, "%63[^:]:%d", host, &port) != 2) {
+            fprintf(stderr, "expected tcp:ADDRESS:PORT\n");
+            return 1;
+        }
+        transport_fd = socket(AF_INET, SOCK_STREAM, 0);
+        struct sockaddr_in sa {};
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons(port);
+        sa.sin_addr.s_addr = inet_addr(host);
+        if (connect(transport_fd, (struct sockaddr *)&sa, sizeof(sa)) != 0) {
+            perror("connect");
+            return 1;
+        }
+        int one = 1;
+        setsockopt(transport_fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+        fcntl(transport_fd, F_SETFL, fcntl(transport_fd, F_GETFL, 0) | O_NONBLOCK);
+        serial_write_all("\rC\rS8\rO\r", 8);
+        usleep(200000);
+    } else {
+        transport_fd = open(opts.uri, O_RDWR | O_NOCTTY | O_NONBLOCK);
+        if (transport_fd < 0) {
+            perror("open");
+            return 1;
+        }
+        struct termios t;
+        tcgetattr(transport_fd, &t);
+        cfmakeraw(&t);
+        tcsetattr(transport_fd, TCSANOW, &t);
+        serial_write_all("\rC\rS8\rO\r", 8);
+        usleep(200000);
+        tcflush(transport_fd, TCIFLUSH);
+    }
+
+    canardInit(&canard, canard_memory, sizeof(canard_memory), on_reception, should_accept, nullptr);
+    canardSetLocalNodeID(&canard, opts.local_node);
+
+    if (strcmp(command, "get") == 0) {
+        if (arg == nullptr) {
+            usage(argv[0]);
+            return 1;
+        }
+        opts.remote_path = arg;
+        const char *slash = strrchr(arg, '/');
+        opts.local_path = argc - optind > 3 ? argv[optind + 3] : (slash ? slash + 1 : arg);
+        return cmd_get();
+    }
+    if (strcmp(command, "list") == 0) {
+        return cmd_list(arg != nullptr ? arg : "/");
+    }
+    if (strcmp(command, "info") == 0) {
+        if (arg == nullptr) {
+            usage(argv[0]);
+            return 1;
+        }
+        const FileInfo info = cmd_getinfo(arg);
+        if (!info.ok) {
+            fprintf(stderr, "error %d\n", info.error);
+            return 1;
+        }
+        printf("%s: %llu bytes%s\n", arg, (unsigned long long)info.size,
+               info.is_directory ? " (directory)" : "");
+        return 0;
+    }
+    usage(argv[0]);
+    return 1;
+}
