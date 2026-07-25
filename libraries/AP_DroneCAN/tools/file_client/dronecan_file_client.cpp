@@ -63,9 +63,10 @@ static struct {
     uint8_t target_node;
     uint8_t local_node;
     int depth;
+    bool adaptive;
     bool canfd;
     bool verbose;
-} opts = {nullptr, nullptr, nullptr, 0, 100, 8, false, false};
+} opts = {nullptr, nullptr, nullptr, 0, 100, 0, true, false, false};
 
 #if defined(USE_USER_HELPERS)
 /*
@@ -465,6 +466,44 @@ static uint8_t simple_transfer_id;
 #define TRANSFER_ID_COUNT 32
 #define TRANSFER_ID_HOLDOFF_S 3.0
 
+/*
+  How many reads to keep in flight.  A distant or busy node answers
+  slowly, and pushing more requests at it than it can service just
+  produces timeouts and retried work - one board measured here services
+  a read in 5ms, another in 54ms.  Unless a fixed depth is asked for,
+  start shallow and let the window follow what the node can actually
+  keep up with: grow while replies keep arriving, and back off sharply
+  when one does not.
+ */
+#define ADAPTIVE_START_DEPTH 2
+#define ADAPTIVE_GROW_AFTER 8       // consecutive good replies per step
+static int window = ADAPTIVE_START_DEPTH;
+static uint32_t good_streak;
+
+static int in_flight(void);
+
+static void window_reply_ok(void)
+{
+    if (!opts.adaptive) {
+        return;
+    }
+    if (++good_streak >= (uint32_t)(window * ADAPTIVE_GROW_AFTER)) {
+        good_streak = 0;
+        if (window < MAX_PIPELINE_DEPTH) {
+            window++;
+        }
+    }
+}
+
+static void window_timeout(void)
+{
+    if (!opts.adaptive) {
+        return;
+    }
+    good_streak = 0;
+    window = window > 2 ? window / 2 : 1;
+}
+
 enum TransferIDState {
     TID_FREE = 0,
     TID_INFLIGHT,
@@ -477,7 +516,17 @@ static struct {
     double free_at;
 } transfer_ids[TRANSFER_ID_COUNT];
 
-// allocate an unused transfer ID, or -1 if none are available
+/*
+  allocate an unused transfer ID, or -1 if none are available.
+
+  Allocation rotates rather than taking the lowest free ID: the
+  receiving end treats a transfer whose ID repeats the previous one as
+  a duplicate and discards it, so handing out 0, 0, 0 - which is what
+  taking the lowest free ID does when only one request is in flight -
+  means every request is ignored and only its retry gets through.
+ */
+static uint8_t transfer_id_next;
+
 static int transfer_id_alloc(int slot)
 {
     const double now = now_s();
@@ -486,10 +535,12 @@ static int transfer_id_alloc(int slot)
             transfer_ids[i].state = TID_FREE;
         }
     }
-    for (uint8_t i = 0; i < TRANSFER_ID_COUNT; i++) {
+    for (uint8_t n = 0; n < TRANSFER_ID_COUNT; n++) {
+        const uint8_t i = (transfer_id_next + n) % TRANSFER_ID_COUNT;
         if (transfer_ids[i].state == TID_FREE) {
             transfer_ids[i].state = TID_INFLIGHT;
             transfer_ids[i].slot = slot;
+            transfer_id_next = (i + 1) % TRANSFER_ID_COUNT;
             return i;
         }
     }
@@ -586,13 +637,14 @@ static void on_reception(CanardInstance *ins, CanardRxTransfer *transfer)
         return;
     }
     const int slot = transfer_ids[tid].slot;
-    if (slot < 0 || slot >= opts.depth || !pending[slot].active || pending[slot].wire_tid != tid) {
+    if (slot < 0 || slot >= MAX_PIPELINE_DEPTH || !pending[slot].active || pending[slot].wire_tid != tid) {
         stale_replies++;
         return;
     }
     const uint32_t chunk = pending[slot].chunk;
     pending[slot].active = false;
     transfer_ids[tid].state = TID_FREE;
+    window_reply_ok();
     decode_read_response(transfer, chunk);
     fill_pipeline();
 }
@@ -779,23 +831,70 @@ static bool send_read(uint32_t chunk, int slot)
     return true;
 }
 
+static int in_flight(void)
+{
+    int n = 0;
+    for (int i = 0; i < MAX_PIPELINE_DEPTH; i++) {
+        if (pending[i].active) {
+            n++;
+        }
+    }
+    return n;
+}
+
+static bool chunk_in_flight(uint32_t chunk)
+{
+    for (int i = 0; i < MAX_PIPELINE_DEPTH; i++) {
+        if (pending[i].active && pending[i].chunk == chunk) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+  the lowest chunk which is neither stored nor currently requested.
+  The cursor is only a hint: a request which could not be issued, or
+  one abandoned after too long, leaves a hole behind it, and every
+  chunk must still be accounted for
+ */
+static bool next_needed_chunk(uint32_t *out)
+{
+    while (next_chunk < num_chunks &&
+           (chunk_done[next_chunk] || chunk_in_flight(next_chunk))) {
+        next_chunk++;
+    }
+    if (next_chunk < num_chunks) {
+        *out = next_chunk;
+        return true;
+    }
+    for (uint32_t c = 0; c < num_chunks; c++) {
+        if (!chunk_done[c] && !chunk_in_flight(c)) {
+            *out = c;
+            return true;
+        }
+    }
+    return false;
+}
+
 static void fill_pipeline(void)
 {
-    for (int i = 0; i < opts.depth; i++) {
+    const int limit = opts.adaptive ? window : opts.depth;
+    for (int i = 0; i < MAX_PIPELINE_DEPTH; i++) {
+        if (in_flight() >= limit) {
+            return;
+        }
         if (pending[i].active) {
             continue;
         }
-        while (next_chunk < num_chunks && chunk_done[next_chunk]) {
-            next_chunk++;
-        }
-        if (next_chunk >= num_chunks) {
-            return;
+        uint32_t chunk;
+        if (!next_needed_chunk(&chunk)) {
+            return;             // everything is stored or in flight
         }
         pending[i].retries = 0;
-        if (!send_read(next_chunk, i)) {
+        if (!send_read(chunk, i)) {
             return;             // no transfer ID free, try again later
         }
-        next_chunk++;
     }
 }
 
@@ -826,6 +925,7 @@ static int cmd_get(void)
 
     const double t0 = now_s();
     double last_cleanup = t0;
+    double last_report = t0;
     fill_pipeline();
     while (chunks_remaining > 0 && !download_failed) {
         fd_set rfds;
@@ -837,11 +937,17 @@ static int cmd_get(void)
         pump_tx();
 
         const double now = now_s();
+        if (opts.verbose && now - last_report > 1.0) {
+            last_report = now;
+            fprintf(stderr, "  [%.0fs] window=%d inflight=%d remaining=%u cursor=%u retries=%u short=%u stale=%u\n",
+                    now - t0, window, in_flight(), chunks_remaining, next_chunk,
+                    total_retries, short_replies, stale_replies);
+        }
         if (now - last_cleanup > 0.1) {
             canardCleanupStaleTransfers(&canard, micros64());
             last_cleanup = now;
         }
-        for (int i = 0; i < opts.depth; i++) {
+        for (int i = 0; i < MAX_PIPELINE_DEPTH; i++) {
             if (!pending[i].active || now - pending[i].sent_t <= 0.5) {
                 continue;
             }
@@ -851,6 +957,7 @@ static int cmd_get(void)
                 return 1;
             }
             total_retries++;
+            window_timeout();
             // hold the abandoned ID back so a late reply cannot be
             // mistaken for the reply to a future request
             const uint8_t old_tid = pending[i].wire_tid;
@@ -881,6 +988,9 @@ static int cmd_get(void)
     printf("%s -> %s: %llu bytes in %.2fs (%.0f bytes/sec, %u retries, %u stale replies)\n",
            opts.remote_path, opts.local_path, (unsigned long long)size, dt,
            size / dt, total_retries, stale_replies + short_replies);
+    if (opts.adaptive && opts.verbose) {
+        printf("final window: %d\n", window);
+    }
     return 0;
 }
 
@@ -900,7 +1010,8 @@ static void usage(const char *prog)
             "options:\n"
             "  -n NODE   node ID to fetch from (required)\n"
             "  -N NODE   our own node ID (default 100)\n"
-            "  -d DEPTH  pipeline depth for reads, 1 to %u (default 8)\n"
+            "  -d DEPTH  fixed pipeline depth for reads, 1 to %u; without\n"
+            "            this the depth adapts to how fast the node replies\n"
             "  -f        use CANFD frames\n"
             "  -v        verbose\n",
             prog, prog, prog, MAX_PIPELINE_DEPTH);
@@ -919,6 +1030,7 @@ int main(int argc, char **argv)
             break;
         case 'd':
             opts.depth = atoi(optarg);
+            opts.adaptive = false;
             break;
         case 'f':
             opts.canfd = true;
@@ -935,11 +1047,13 @@ int main(int argc, char **argv)
         usage(argv[0]);
         return 1;
     }
-    if (opts.depth < 1) {
-        opts.depth = 1;
-    }
-    if (opts.depth > MAX_PIPELINE_DEPTH) {
-        opts.depth = MAX_PIPELINE_DEPTH;
+    if (!opts.adaptive) {
+        if (opts.depth < 1) {
+            opts.depth = 1;
+        }
+        if (opts.depth > MAX_PIPELINE_DEPTH) {
+            opts.depth = MAX_PIPELINE_DEPTH;
+        }
     }
 #if !CANARD_ENABLE_CANFD
     if (opts.canfd) {

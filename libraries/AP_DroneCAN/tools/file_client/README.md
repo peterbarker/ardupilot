@@ -45,16 +45,20 @@ Options:
 
     -n NODE   node ID to fetch from (required)
     -N NODE   our own node ID (default 100)
-    -d DEPTH  pipeline depth for reads, 1 to 30 (default 8)
+    -d DEPTH  fixed pipeline depth for reads, 1 to 30; without this
+              the depth adapts to how fast the node replies
     -f        use CANFD frames
     -v        verbose
 
 ## Speed
 
 Reads are pipelined because each request and reply is a round trip; a
-serialised client is several times slower. Depth 4 to 16 is usually
-enough to saturate the far end, and deeper pipelines eventually make
-throughput worse as replies begin to time out.
+serialised client is several times slower. How much pipelining a node
+can absorb varies enormously - one board measured here serves a read in
+5ms and another, busy one in 54ms - so by default the depth adapts:
+it starts shallow, grows while replies keep arriving, and halves when
+one does not. Pass -d to pin it instead, which is useful when
+measuring.
 
 CANFD makes by far the largest difference, because a 256 byte reply
 needs about five FD frames rather than 38 classic ones. Measured
