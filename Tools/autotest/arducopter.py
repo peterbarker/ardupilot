@@ -18736,6 +18736,134 @@ RTL_ALT_M 111
             if ex is not None:
                 raise ex
 
+    def DroneCANFileFetch(self):
+        '''fetch a file from a peripheral with the in-firmware DroneCAN file client'''
+        self.progress("Building Periph")
+        periph_board = 'sitl_periph_universal'
+        periph_builddir = util.reltopdir('build-periph')
+        util.build_SITL(
+            'bin/AP_Periph',
+            board=periph_board,
+            clean=False,
+            configure=True,
+            debug=True,
+            extra_configure_args=['--out', periph_builddir],
+        )
+
+        periph_rundir = util.reltopdir('run-periph-fileclient')
+        if not os.path.exists(periph_rundir):
+            os.mkdir(periph_rundir)
+        periph_logdir = os.path.join(periph_rundir, 'logs')
+        if not os.path.exists(periph_logdir):
+            os.mkdir(periph_logdir)
+        for storage in ['eeprom.bin']:
+            storage_path = os.path.join(periph_rundir, storage)
+            if os.path.exists(storage_path):
+                os.unlink(storage_path)
+        # not a multiple of the 256-byte read, so the short final
+        # reply which ends the transfer is exercised
+        log_content = os.urandom(50000)
+        with open(os.path.join(periph_logdir, '00000042.BIN'), 'wb') as f:
+            f.write(log_content)
+        # nothing to fetch at all
+        with open(os.path.join(periph_logdir, 'empty.BIN'), 'wb') as f:
+            pass
+        # ends exactly on a read boundary, so the end of the file is a
+        # reply carrying nothing rather than a short one
+        aligned_content = os.urandom(256 * 6)
+        with open(os.path.join(periph_logdir, 'aligned.BIN'), 'wb') as f:
+            f.write(aligned_content)
+
+        fetched_name = 'dcfc_fetched.BIN'
+        if os.path.exists(fetched_name):
+            os.unlink(fetched_name)
+
+        self.context_push()
+        periph_exp = None
+        ex = None
+        try:
+            binary_path = pathlib.Path(periph_builddir, periph_board, 'bin', 'AP_Periph')
+            periph_exp = util.start_SITL(
+                binary_path,
+                cwd=periph_rundir,
+                stdout_prefix="periph-fileclient",
+                gdb=self.gdb,
+                valgrind=self.valgrind,
+                param_defaults={'CAN_NODE': 125},
+                customisations=['-I', str(1), '--serial0', 'mcast:'],
+                speedup=self.speedup,
+            )
+            self.expect_list_add(periph_exp)
+
+            self.set_parameters({
+                "CAN_P1_DRIVER": 1,
+                "SCR_ENABLE": 1,
+            })
+            self.install_test_script_context('dronecan_file_client_test.lua')
+            self.context_collect('STATUSTEXT')
+            self.reboot_sitl()
+
+            self.wait_statustext('dronecan_file_client_test loaded', check_context=True, timeout=60)
+            self.set_parameter('DCFC_NODE', 125)
+            self.wait_statustext('DCFC: done', check_context=True, timeout=180)
+
+            with open(fetched_name, 'rb') as f:
+                fetched = f.read()
+            if fetched != log_content:
+                raise NotAchievedException(
+                    "fetched content mismatch (want=%u bytes got=%u bytes)" %
+                    (len(log_content), len(fetched)))
+
+            # a file which ends exactly on a read boundary: the client
+            # only learns where the end is from a reply carrying
+            # nothing, which is a different path to a short reply
+            self.progress("Fetching a file which ends on a read boundary")
+            self.set_parameter('DCFC_CASE', 3)
+            self.set_parameter('DCFC_NODE', 125)
+            self.wait_statustext('DCFC: done', check_context=True, timeout=120)
+            with open(fetched_name, 'rb') as f:
+                fetched = f.read()
+            if fetched != aligned_content:
+                raise NotAchievedException(
+                    "aligned fetch mismatch (want=%u got=%u)" %
+                    (len(aligned_content), len(fetched)))
+
+            self.progress("Fetching an empty file")
+            self.set_parameter('DCFC_CASE', 2)
+            self.set_parameter('DCFC_NODE', 125)
+            self.wait_statustext('DCFC: done', check_context=True, timeout=120)
+            if os.path.getsize(fetched_name) != 0:
+                raise NotAchievedException("empty fetch was not empty")
+
+            # the node answers with an error, which has to come back as
+            # a failure rather than as a transfer which never ends
+            self.progress("Fetching a file which is not there")
+            self.set_parameter('DCFC_CASE', 1)
+            self.set_parameter('DCFC_NODE', 125)
+            self.wait_statustext('DCFC: failed', check_context=True, timeout=120)
+
+            # nothing answers at all, so this exercises the retry and
+            # the giving up which follows it
+            self.progress("Fetching from a node which is not there")
+            self.set_parameter('DCFC_CASE', 0)
+            self.set_parameter('DCFC_NODE', 97)
+            self.wait_statustext('DCFC: failed', check_context=True, timeout=180)
+
+            os.unlink(fetched_name)
+
+        except Exception as e:  # noqa: BLE001
+            self.print_exception_caught(e)
+            ex = e
+        finally:
+            if periph_exp is not None:
+                self.progress("Stopping Periph")
+                self.expect_list_remove(periph_exp)
+                util.pexpect_close(periph_exp)
+        self.context_pop()
+        self.reboot_sitl()
+        if ex is not None:
+            raise ex
+
     def DroneCANFileClient(self):
         '''download a file from ourselves with the DroneCAN file client tool'''
         self.progress("Building the DroneCAN file client")
@@ -19386,6 +19514,9 @@ return update, 1000
             self.PeriphMultiUARTTunnel,
             self.DroneCANLogDownload,
             self.DroneCANFileClient,
+            # DroneCANFileFetch is left out until
+            # AP_DRONECAN_FILE_CLIENT_ENABLED defaults on again; see the
+            # transfer ID problem described in its config header
             self.EKF3SRCPerCore,
             self.UTMGlobalPosition,
             self.UTMGlobalPositionWaypoint,
