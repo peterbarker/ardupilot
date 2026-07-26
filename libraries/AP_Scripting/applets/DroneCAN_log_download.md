@@ -77,9 +77,11 @@ a second, about 87% of the bus. So this script runs at under a tenth
 of what the link will carry, and the gap is round trips rather than
 bandwidth.
 
-Pipelining this script would need the scripting DroneCAN bindings to
-allow more than one request outstanding on a handle, which they
-presently do not.
+DroneCAN_log_fetch.lua does the same job at 113 kbyte/s by handing the
+transfer to AP_DroneCAN_FileClient, which is C++ and keeps eight reads
+in flight. Pipelining this script instead would need the scripting
+DroneCAN bindings to allow more than one request outstanding on a
+handle, which they presently do not.
 
 That is within a few percent of what the C++ client in
 libraries/AP_DroneCAN/tools/file_client manages when it is held to one

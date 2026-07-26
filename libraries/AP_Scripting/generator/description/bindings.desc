@@ -1173,6 +1173,13 @@ singleton SITL::SIM depends AP_SIM_ENABLED
 singleton SITL::SIM rename sim
 singleton SITL::SIM method set_pose boolean uint8_t'skip_check Location Quaternion Vector3f Vector3f
 
+singleton AP_DroneCAN_FileClient depends AP_DRONECAN_FILE_CLIENT_ENABLED
+singleton AP_DroneCAN_FileClient rename dronecan_file
+singleton AP_DroneCAN_FileClient method start boolean uint8_t 1 127 string string
+singleton AP_DroneCAN_FileClient method stop void
+singleton AP_DroneCAN_FileClient method get_status uint8_t
+singleton AP_DroneCAN_FileClient method get_bytes uint32_t
+
 userdata DroneCAN_Handle depends HAL_ENABLE_DRONECAN_DRIVERS
 userdata DroneCAN_Handle creation DroneCAN_Handle::new_handle 4
 userdata DroneCAN_Handle manual broadcast DroneCAN_Handle::broadcast 1 1
