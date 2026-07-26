@@ -8,7 +8,22 @@ def build(bld):
     if bld.env.BOARD != 'sitl':
         return
 
-    bld.program(
+    # the vehicle wraps malloc so that it can account for allocations,
+    # and the vehicle library provides the wrapper.  This program links
+    # none of that - it is libcanard and nothing else - so the flag has
+    # no provider here, and on a coverage build libgcov's own calls to
+    # malloc would fail to link.  Give the program an env of its own
+    # with those flags taken out
+    env = bld.env.derive()
+    env.detach()
+    env.LINKFLAGS = [f for f in env.LINKFLAGS if 'wrap' not in f]
+
+    bld.ap_program(
+        env=env,
+        program_name='dronecan_file_client',
+        program_groups=['tool'],
+        use_legacy_defines=False,
+        vehicle_binary=False,
         source=[
             'dronecan_file_client.cpp',
             bld.srcnode.find_resource('modules/DroneCAN/libcanard/canard.c'),
@@ -17,8 +32,5 @@ def build(bld):
             bld.srcnode.find_dir('modules/DroneCAN/libcanard').abspath(),
         ],
         defines=['CANARD_ENABLE_CANFD=1'],
-        target='dronecan_file_client',
-        name='dronecan_file_client',
         use=[],
-        install_path=None,
     )

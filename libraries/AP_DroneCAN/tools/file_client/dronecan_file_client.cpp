@@ -45,16 +45,27 @@
 #define UAVCAN_PROTOCOL_FILE_GETINFO_SIGNATURE 0x5004891EE8A27531ULL
 #define UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID 46
 #define UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE 0x8C46E8AB568BDA79ULL
+#define UAVCAN_PROTOCOL_FILE_DELETE_ID 47
+#define UAVCAN_PROTOCOL_FILE_DELETE_SIGNATURE 0x78648C99170B47AAULL
+#define UAVCAN_PROTOCOL_FILE_WRITE_ID 49
+#define UAVCAN_PROTOCOL_FILE_WRITE_SIGNATURE 0x515AA1DC77E58429ULL
 #define UAVCAN_PROTOCOL_FILE_READ_ID 48
 #define UAVCAN_PROTOCOL_FILE_READ_SIGNATURE 0x8DCDCA939F33F678ULL
 
 #define FILE_READ_CHUNK 256U
+#define FILE_WRITE_CHUNK 192U
 #define FILE_PATH_MAX 200U
 #define ENTRY_TYPE_FLAG_DIRECTORY 2U
 
 // transfer IDs are five bits on the wire, so a deeper pipeline than
 // this cannot be matched to its requests
 #define MAX_PIPELINE_DEPTH 30
+
+// how the pipeline depth is chosen; see the controllers below
+enum WindowAlgo {
+    WINDOW_AIMD = 0,
+    WINDOW_PROBE,
+};
 
 static struct {
     const char *uri;
@@ -64,9 +75,10 @@ static struct {
     uint8_t local_node;
     int depth;
     bool adaptive;
+    enum WindowAlgo algo;
     bool canfd;
     bool verbose;
-} opts = {nullptr, nullptr, nullptr, 0, 100, 0, true, false, false};
+} opts = {nullptr, nullptr, nullptr, 0, 100, 0, true, WINDOW_AIMD, false, false};
 
 #if defined(USE_USER_HELPERS)
 /*
@@ -408,6 +420,19 @@ static uint16_t append_path(uint8_t *payload, uint16_t ofs, const char *path)
 }
 
 /*
+  append a Path which is not the last field of its message.  The tail
+  array optimisation only ever drops the length of the *last* field, so
+  a Path with anything after it always carries its length
+ */
+static uint16_t append_sized_path(uint8_t *payload, uint16_t ofs, const char *path)
+{
+    const size_t plen = strlen(path);
+    payload[ofs++] = (uint8_t)plen;
+    memcpy(&payload[ofs], path, plen);
+    return ofs + (uint16_t)plen;
+}
+
+/*
   a reply, as copied out of the transfer.  The transfer itself is only
   valid for the duration of the reception callback - canard frees its
   payload blocks as soon as that returns - so the bytes are copied out
@@ -471,28 +496,107 @@ static uint8_t simple_transfer_id;
   slowly, and pushing more requests at it than it can service just
   produces timeouts and retried work - one board measured here services
   a read in 5ms, another in 54ms.  Unless a fixed depth is asked for,
-  start shallow and let the window follow what the node can actually
-  keep up with: grow while replies keep arriving, and back off sharply
-  when one does not.
+  the depth follows what the link can actually carry.  Two controllers
+  are available, chosen with -a:
+
+  probe   time how long a run of chunks takes and step the depth in
+          whichever direction last made that better.  This measures the
+          quantity we actually want and needs no opinion about how many
+          timeouts are too many.
+
+  aimd    grow by one after a run of good replies, halve on a timeout.
+          This is fine while the CAN wire is not the limit, but on a bus
+          where it is, timeouts happen even at the best depth, so the
+          depth never settles: it climbs until throughput collapses,
+          halves to below the best depth, and climbs again.  Measured
+          over a 1Mbit bus it returned about two thirds of the
+          throughput of the best fixed depth.
  */
 #define ADAPTIVE_START_DEPTH 2
 #define ADAPTIVE_GROW_AFTER 8       // consecutive good replies per step
+
+// how many chunks the probe controller times before it decides, and how
+// much worse a run has to be before it turns around.  The margin keeps
+// ordinary jitter from causing a reversal
+#define PROBE_RUN_CHUNKS 64
+#define PROBE_WORSE_RATIO 0.97
+// how far below the best run we tolerate before going back to the depth
+// which produced it, and how fast that best fades so that a depth which
+// was good once does not hold us there forever
+#define PROBE_FALLBACK_RATIO 0.9
+#define PROBE_BEST_DECAY 0.99
+
 static int window = ADAPTIVE_START_DEPTH;
 static uint32_t good_streak;
 
+static double probe_run_start;
+static bool probe_running;
+static uint32_t probe_run_chunks;
+static double probe_prev_rate;
+static double probe_best_rate;
+static int probe_best_window = ADAPTIVE_START_DEPTH;
+static int probe_dir = 1;
+
 static int in_flight(void);
+
+static void window_step(int delta)
+{
+    window += delta;
+    if (window < 1) {
+        window = 1;
+    } else if (window > MAX_PIPELINE_DEPTH) {
+        window = MAX_PIPELINE_DEPTH;
+    }
+}
 
 static void window_reply_ok(void)
 {
     if (!opts.adaptive) {
         return;
     }
-    if (++good_streak >= (uint32_t)(window * ADAPTIVE_GROW_AFTER)) {
-        good_streak = 0;
-        if (window < MAX_PIPELINE_DEPTH) {
-            window++;
+    if (opts.algo == WINDOW_AIMD) {
+        if (++good_streak >= (uint32_t)(window * ADAPTIVE_GROW_AFTER)) {
+            good_streak = 0;
+            window_step(1);
         }
+        return;
     }
+
+    if (!probe_running) {
+        probe_running = true;
+        probe_run_start = now_s();
+    }
+    if (++probe_run_chunks < PROBE_RUN_CHUNKS) {
+        return;
+    }
+    const double now = now_s();
+    const double dt = now - probe_run_start;
+    const double rate = dt > 0 ? probe_run_chunks / dt : 0;
+    if (rate > probe_best_rate) {
+        probe_best_rate = rate;
+        probe_best_window = window;
+    }
+    if (probe_best_rate > 0 && rate < probe_best_rate * PROBE_FALLBACK_RATIO) {
+        /*
+          this depth is well off the best we have managed.  Stepping one
+          at a time from here just wanders, so go back to the depth that
+          produced the best run and probe the other way from there
+         */
+        window = probe_best_window;
+        probe_dir = -probe_dir;
+    } else {
+        if (probe_prev_rate > 0 && rate < probe_prev_rate * PROBE_WORSE_RATIO) {
+            // the last step made things worse, so go back the other way
+            probe_dir = -probe_dir;
+        }
+        window_step(probe_dir);
+    }
+    // let the best fade, so a depth which suited earlier conditions
+    // does not pin the window there for the rest of the transfer
+    probe_best_rate *= PROBE_BEST_DECAY;
+    probe_prev_rate = rate;
+    probe_run_chunks = 0;
+    probe_run_start = now;
 }
 
 static void window_timeout(void)
@@ -500,8 +604,19 @@ static void window_timeout(void)
     if (!opts.adaptive) {
         return;
     }
-    good_streak = 0;
-    window = window > 2 ? window / 2 : 1;
+    if (opts.algo == WINDOW_AIMD) {
+        good_streak = 0;
+        window = window > 2 ? window / 2 : 1;
+        return;
+    }
+    /*
+      the probe controller deliberately does not react here.  A timeout
+      on its own says nothing about the right depth - a busy bus times
+      one out now and then even at its best depth - and treating each
+      one as congestion is exactly what makes aimd oscillate.  A depth
+      which really is too deep shows up as a slower run, and the timing
+      above will turn around.
+     */
 }
 
 enum TransferIDState {
@@ -559,11 +674,46 @@ static uint32_t stale_replies;
 static bool download_failed;
 static uint64_t file_size;
 
+// set once a reply proves the file ends before GetInfo said it would.
+// See decode_read_response()
+static bool size_unreliable;
+
 // state of a simple (non pipelined) request
 static Reply simple_reply;
 static uint16_t simple_expect_id;
 
 static void fill_pipeline(void);
+
+// the lowest chunk we have not stored yet
+static uint32_t lowest_missing_chunk(void)
+{
+    for (uint32_t c = 0; c < num_chunks; c++) {
+        if (!chunk_done[c]) {
+            return c;
+        }
+    }
+    return num_chunks;
+}
+
+/*
+  the file ends part way through this chunk: keep what came back and
+  account for the chunks past the end, which will never be filled
+ */
+static void store_final_chunk(const CanardRxTransfer *transfer, uint32_t chunk,
+                              uint16_t data_len, uint32_t bit_ofs)
+{
+    uint8_t *out = &file_buf[(uint64_t)chunk * FILE_READ_CHUNK];
+    for (uint16_t i = 0; i < data_len; i++) {
+        canardDecodeScalar(transfer, bit_ofs + 8U * i, 8, false, &out[i]);
+    }
+    file_size = (uint64_t)chunk * FILE_READ_CHUNK + data_len;
+    for (uint32_t c = chunk; c < num_chunks; c++) {
+        if (!chunk_done[c]) {
+            chunk_done[c] = true;
+            chunks_remaining--;
+        }
+    }
+}
 
 static void decode_read_response(const CanardRxTransfer *transfer, uint32_t chunk)
 {
@@ -602,6 +752,29 @@ static void decode_read_response(const CanardRxTransfer *transfer, uint32_t chun
         file_size - offset : FILE_READ_CHUNK;
     if (data_len != expected) {
         short_replies++;
+        /*
+          a reply shorter than we asked for is either a file which ends
+          before GetInfo said it would - the @SYS files report a fixed
+          nominal size rather than their real one - or a stale reply
+          from a reused transfer ID.  Replies carry no offset, so the
+          two look alike while several reads are in flight.  Stop
+          pipelining and ask again: with one read outstanding a short
+          reply can only belong to the read we are waiting on, and the
+          lowest chunk we still need is the only one we ask for
+         */
+        if (data_len < expected) {
+            if (size_unreliable && chunk == lowest_missing_chunk()) {
+                store_final_chunk(transfer, chunk, data_len, bit_ofs);
+                return;
+            }
+            size_unreliable = true;
+            opts.adaptive = false;
+            opts.depth = 1;
+            window = 1;
+            // the chunk holding the end of the file is behind the
+            // cursor, which only moves forward, so send it back
+            next_chunk = 0;
+        }
         return;
     }
     uint8_t *out = &file_buf[(uint64_t)chunk * FILE_READ_CHUNK];
@@ -667,6 +840,12 @@ static bool should_accept(const CanardInstance *ins, uint64_t *out_signature,
     case UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID:
         *out_signature = UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_SIGNATURE;
         return true;
+    case UAVCAN_PROTOCOL_FILE_WRITE_ID:
+        *out_signature = UAVCAN_PROTOCOL_FILE_WRITE_SIGNATURE;
+        return true;
+    case UAVCAN_PROTOCOL_FILE_DELETE_ID:
+        *out_signature = UAVCAN_PROTOCOL_FILE_DELETE_SIGNATURE;
+        return true;
     }
     return false;
 }
@@ -696,12 +875,21 @@ static void send_request(uint64_t signature, uint8_t data_type_id, uint8_t *tran
     pump_tx();
 }
 
-// issue a request and wait for its reply; returns false on timeout
+/*
+  issue a request and wait for its reply; returns false once the
+  attempts are used up.
+
+  A reply can simply go missing - a frame dropped on the wire is
+  answered by nobody - so what matters is asking again promptly rather
+  than waiting a long time on each go.  Every request here can be sent
+  again safely: a read has no side effect, and a write puts the same
+  bytes at the same offset.
+ */
 static bool request_and_wait(uint64_t signature, uint8_t data_type_id,
                              const uint8_t *payload, uint16_t payload_len,
-                             double timeout, Reply &reply)
+                             double timeout, Reply &reply, int attempts = 4)
 {
-    for (int attempt = 0; attempt < 4; attempt++) {
+    for (int attempt = 0; attempt < attempts; attempt++) {
         memset(&reply, 0, sizeof(reply));
         simple_reply = reply;
         simple_expect_id = data_type_id;
@@ -898,6 +1086,85 @@ static void fill_pipeline(void)
     }
 }
 
+/*
+  upload a file.  Writes are sent one at a time: an upload is not the
+  hot path here, and the node has to see them in order anyway
+ */
+static int cmd_put(const char *local_path, const char *remote_path)
+{
+    FILE *in = fopen(local_path, "rb");
+    if (in == nullptr) {
+        perror("fopen");
+        return 1;
+    }
+    uint64_t offset = 0;
+    const double t0 = now_s();
+    while (true) {
+        uint8_t chunk[FILE_WRITE_CHUNK];
+        const size_t n = fread(chunk, 1, sizeof(chunk), in);
+        uint8_t payload[5 + 1 + FILE_PATH_MAX + 1 + FILE_WRITE_CHUNK];
+        uint16_t ofs = 0;
+        for (int i = 0; i < 5; i++) {
+            payload[ofs++] = (uint8_t)((offset >> (8 * i)) & 0xFF);
+        }
+        ofs = append_sized_path(payload, ofs, remote_path);
+        if (!tao_active()) {
+            payload[ofs++] = (uint8_t)n;
+        }
+        memcpy(&payload[ofs], chunk, n);
+        ofs += (uint16_t)n;
+        Reply reply;
+        /*
+          a node writing to a slow filesystem takes longer to answer
+          than it does to read, so allow more than a read would; but
+          keep it short enough that a dropped reply is asked for again
+          quickly, and try plenty of times rather than few and slow
+         */
+        if (!request_and_wait(UAVCAN_PROTOCOL_FILE_WRITE_SIGNATURE, UAVCAN_PROTOCOL_FILE_WRITE_ID,
+                              payload, ofs, 2.0, reply, 10)) {
+            fprintf(stderr, "write timed out at offset %llu\n", (unsigned long long)offset);
+            fclose(in);
+            return 1;
+        }
+        const int16_t err = reply_int16(reply, 0);
+        if (err != 0) {
+            fprintf(stderr, "write error %d at offset %llu\n", err, (unsigned long long)offset);
+            fclose(in);
+            return 1;
+        }
+        offset += n;
+        if (n == 0) {
+            // an empty write is how the node is told the file is done
+            break;
+        }
+    }
+    fclose(in);
+    const double dt = now_s() - t0;
+    printf("%s -> %s: %llu bytes in %.2fs (%.0f bytes/sec)\n",
+           local_path, remote_path, (unsigned long long)offset, dt,
+           dt > 0 ? offset / dt : 0);
+    return 0;
+}
+
+static int cmd_rm(const char *remote_path)
+{
+    uint8_t payload[1 + FILE_PATH_MAX];
+    const uint16_t len = append_path(payload, 0, remote_path);
+    Reply reply;
+    if (!request_and_wait(UAVCAN_PROTOCOL_FILE_DELETE_SIGNATURE, UAVCAN_PROTOCOL_FILE_DELETE_ID,
+                          payload, len, 2.0, reply)) {
+        fprintf(stderr, "delete timed out for %s\n", remote_path);
+        return 1;
+    }
+    const int16_t err = reply_int16(reply, 0);
+    if (err != 0) {
+        fprintf(stderr, "delete error %d for %s\n", err, remote_path);
+        return 1;
+    }
+    printf("deleted %s\n", remote_path);
+    return 0;
+}
+
 static int cmd_get(void)
 {
     const FileInfo info = cmd_getinfo(opts.remote_path);
@@ -979,15 +1246,18 @@ static int cmd_get(void)
         perror("fopen");
         return 1;
     }
-    if (fwrite(file_buf, 1, size, out) != size) {
+    // file_size is the size we were told, less any truncation found
+    // when the file turned out to end early
+    const uint64_t written = file_size;
+    if (fwrite(file_buf, 1, written, out) != written) {
         perror("fwrite");
         fclose(out);
         return 1;
     }
     fclose(out);
     printf("%s -> %s: %llu bytes in %.2fs (%.0f bytes/sec, %u retries, %u stale replies)\n",
-           opts.remote_path, opts.local_path, (unsigned long long)size, dt,
-           size / dt, total_retries, stale_replies + short_replies);
+           opts.remote_path, opts.local_path, (unsigned long long)written, dt,
+           written / dt, total_retries, stale_replies + short_replies);
     if (opts.adaptive && opts.verbose) {
         printf("final window: %d\n", window);
     }
@@ -1002,6 +1272,8 @@ static void usage(const char *prog)
             "usage: %s [options] <uri> get <remote-path> [local-path]\n"
             "       %s [options] <uri> list <remote-dir>\n"
             "       %s [options] <uri> info <remote-path>\n"
+            "       %s [options] <uri> put <local-path> <remote-path>\n"
+            "       %s [options] <uri> rm <remote-path>\n"
             "\n"
             "uri:   /dev/ttyACM1            an SLCAN serial port\n"
             "       tcp:127.0.0.1:5772      an SLCAN port exposed over TCP\n"
@@ -1012,15 +1284,20 @@ static void usage(const char *prog)
             "  -N NODE   our own node ID (default 100)\n"
             "  -d DEPTH  fixed pipeline depth for reads, 1 to %u; without\n"
             "            this the depth adapts to how fast the node replies\n"
+            "  -a ALGO   how the depth adapts, one of:\n"
+            "              aimd   grow on good replies, halve on a timeout\n"
+            "                     (default)\n"
+            "              probe  experimental; time runs of chunks and follow\n"
+            "                     whichever direction improves throughput\n"
             "  -f        use CANFD frames\n"
             "  -v        verbose\n",
-            prog, prog, prog, MAX_PIPELINE_DEPTH);
+            prog, prog, prog, prog, prog, MAX_PIPELINE_DEPTH);
 }
 
 int main(int argc, char **argv)
 {
     int opt;
-    while ((opt = getopt(argc, argv, "n:N:d:fvh")) != -1) {
+    while ((opt = getopt(argc, argv, "n:N:d:a:fvh")) != -1) {
         switch (opt) {
         case 'n':
             opts.target_node = (uint8_t)atoi(optarg);
@@ -1031,6 +1308,17 @@ int main(int argc, char **argv)
         case 'd':
             opts.depth = atoi(optarg);
             opts.adaptive = false;
+            break;
+        case 'a':
+            if (strcmp(optarg, "probe") == 0) {
+                opts.algo = WINDOW_PROBE;
+            } else if (strcmp(optarg, "aimd") == 0) {
+                opts.algo = WINDOW_AIMD;
+            } else {
+                fprintf(stderr, "unknown adaption algorithm %s\n", optarg);
+                usage(argv[0]);
+                return 1;
+            }
             break;
         case 'f':
             opts.canfd = true;
@@ -1128,6 +1416,22 @@ int main(int argc, char **argv)
     if (strcmp(command, "list") == 0) {
         return cmd_list(arg != nullptr ? arg : "/");
     }
+    if (strcmp(command, "put") == 0) {
+        if (arg == nullptr || argc - optind < 4) {
+            usage(argv[0]);
+            return 1;
+        }
+        return cmd_put(arg, argv[optind + 3]);
+    }
+
+    if (strcmp(command, "rm") == 0) {
+        if (arg == nullptr) {
+            usage(argv[0]);
+            return 1;
+        }
+        return cmd_rm(arg);
+    }
+
     if (strcmp(command, "info") == 0) {
         if (arg == nullptr) {
             usage(argv[0]);
