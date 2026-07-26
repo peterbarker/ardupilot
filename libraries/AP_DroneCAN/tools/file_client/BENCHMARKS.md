@@ -66,10 +66,10 @@ than the extra concurrency gains. CANFD peaks at **depth 16** and is
 flat from 8 upwards.
 
 It looked at first as though the host SLCAN link was what capped CANFD
-at around 185 kB/s. **It is not.** Streaming over the same wire
-reaches 468 kB/s with no request and response in the way, so the link
-has plenty left; what caps a transfer is the cost of a chunk at each
-end. See "What the link actually carries" below.
+at around 185 kB/s. **It is not.** The in-firmware client reaches a
+similar figure over the wire with no serial link anywhere in the path,
+so what both are hitting is a per-chunk cost shared by the two nodes.
+See "Where the time goes" below.
 
 ## Adaptive controllers
 
@@ -132,6 +132,74 @@ tool is limited by the host SLCAN link rather than the bus. gui_tool figure: 841
 driven headlessly through the real `FileDownloadWindow` widget over
 the same SLCAN port, output byte-identical to this tool's.
 
+## The in-firmware client
+
+`AP_DroneCAN_FileClient` fetches node to node with no serial link in
+the path, eight reads in flight. Measured X6 fetching from the
+Pixhawk6C over CANFD, 7491584 byte file:
+
+| | throughput |
+|---|---|
+| fetching, writing the file locally | 113 kB/s |
+| the same with the local write skipped | 167 kB/s |
+
+That is about 3x what the Lua applet manages on the same link, which
+was the point of writing it. It is *not* faster than the host tool
+over SLCAN, which was the surprise.
+
+## Where the time goes
+
+Both ends are ours, so each end's filesystem can be taken out in turn:
+an empty local path throws the data away as it arrives, and
+`@SYS/storage.bin` on the far node is RAM backed. Depth 8, CANFD,
+timing the transfer alone:
+
+| server reads from | client writes to | throughput | per 256 byte chunk |
+|---|---|---|---|
+| SD | SD | 114 kB/s | 2.24 ms |
+| SD | nothing | 167 kB/s | 1.53 ms |
+| RAM | SD | 128 kB/s | 1.99 ms |
+| RAM | nothing | **212 kB/s** | **1.21 ms** |
+
+Subtracting across those:
+
+| | ms per chunk | share of a normal transfer |
+|---|---|---|
+| client writing the chunk | ~0.75 | 33% |
+| server reading the chunk | ~0.29 | 13% |
+| everything else | ~1.21 | 54% |
+
+The client's write is the largest single cost and the easiest to fix:
+it seeks and writes for every 256 bytes, because replies can arrive
+out of order. Buffering runs of chunks would recover most of it.
+
+**The remaining 1.21 ms per chunk is not the bus and not the
+filesystem, and pipelining does not hide it** - going from 8 reads in
+flight to 16 gained under 5%. It is a per-chunk cost paid somewhere in
+the two nodes' DroneCAN handling, and it is the same cost the host
+tool runs into at 185 kB/s over SLCAN.
+
+How much of the bus that leaves is worth knowing. The frame counters
+in `@SYS/canN_stats.txt` on the serving node moved by 105691 sent and
+22036 received over about thirty seconds of a transfer, near enough
+4250 frames a second, which agrees with six frames per chunk at the
+measured chunk rate. A full 64 byte CANFD frame here is roughly 107us
+- about 35us of arbitration at 1Mbit and 69us of data at 8Mbit - so a
+chunk occupies the wire for around 585us, and the fastest case above
+works out at close to half the bus.
+
+So the bus is neither the constraint nor irrelevant: there is
+somewhere around a factor of two of headroom, not the factor of four
+the round trip figure on its own suggests. That last sentence rests on
+calculated frame timings rather than a measured saturation point; a
+broadcast which simply streams as fast as the driver accepts would
+replace the arithmetic with a number.
+
+Two caveats on the RAM figures: `@SYS/storage.bin` is only 16 kbyte,
+so it was fetched forty times over and each fetch pays a fresh open
+which regenerates the buffer - 212 kB/s is if anything an
+underestimate of what the protocol alone would manage.
+
 ## What the link actually carries
 
 Both ends being ours, the request and response can be taken out of it
@@ -155,6 +223,36 @@ At the top of that table the receiving driver counted 8120 frames a
 second, which at roughly 107us of airtime a frame is **87% of the
 bus**. So 468 kB/s is close to what this wire will carry, and the
 2.06us per byte is the wire rather than the software.
+
+## Reading the file transfer against it
+
+Comparing like with like - a 256 byte payload either way:
+
+| | per 256 bytes | throughput | of the link |
+|---|---|---|---|
+| broadcast, no round trip | 591 us | 433 kB/s | 100% |
+| file transfer, no filesystem at either end | 1210 us | 212 kB/s | 49% |
+| file transfer as it normally runs | 2240 us | 114 kB/s | 26% |
+
+So a chunk costs 619us more than simply sending those bytes. Some of
+that is real: a Read also sends a request, worth about 150us of wire
+and fixed cost. The remaining ~470us is the round trip itself, and it
+is the part pipelining ought to hide but does not.
+
+Putting the whole 2.24ms of a normal chunk together:
+
+| | us | share |
+|---|---|---|
+| client writing to its SD card | 750 | 33% |
+| data bytes on the wire | 530 | 24% |
+| server reading from its SD card | 290 | 13% |
+| the request transfer | 150 | 7% |
+| round trip not hidden by pipelining | 520 | 23% |
+
+Only the second row is unavoidable at this chunk size. The first is a
+seek and a write per 256 bytes and should mostly go away with
+buffering; the last is worth understanding before anything else is
+optimised.
 
 ## MAVCAN
 
@@ -204,14 +302,15 @@ dronecan_file_client -n 12 -f -d 4 <bridge-slcan> get /APM/LOGS/00000002.BIN out
 # watch the window move
 ```
 
-The streaming figures above come from a script kept beside this
-file's numbers rather than in it:
+The node-to-node figures, and the streaming ones above, come from two
+scripts kept beside this file's numbers rather than in it:
 
 ```
+libraries/AP_Scripting/tests/dronecan_file_bench.lua    # what limits a fetch
 libraries/AP_Scripting/tests/dronecan_stream_bench.lua  # what the link carries
 ```
 
-with dronecan_bench.md next to it for how to drive it.
+with dronecan_bench.md next to them for how to drive each one.
 
 Confirm the bus is healthy before believing any number:
 
