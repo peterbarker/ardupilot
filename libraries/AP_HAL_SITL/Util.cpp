@@ -138,9 +138,11 @@ bool HALSITL::Util::get_random_vals(uint8_t* data, size_t size)
 // request information on uart I/O
 void HALSITL::Util::uart_info(ExpandingString &str)
 {
-    // Calculate time since last call
+    // Calculate time since last call.  The backends divide by this,
+    // so never hand them a zero: two calls can land in the same
+    // millisecond.
     const uint32_t now_ms = AP_HAL::millis();
-    const uint32_t dt_ms = now_ms - sys_uart_stats.last_ms;
+    const uint32_t dt_ms = MAX(now_ms - sys_uart_stats.last_ms, 1U);
     sys_uart_stats.last_ms = now_ms;
 
     // a header to allow for machine parsers to determine format
