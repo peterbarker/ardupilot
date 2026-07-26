@@ -39,6 +39,7 @@
 #include <AP_Servo_Telem/AP_Servo_Telem_config.h>
 #include <AP_Mount/AP_Mount_config.h>
 #include <AP_DroneCAN_FileServer/AP_DroneCAN_FileServer.h>
+#include <AP_DroneCAN_FileClient/AP_DroneCAN_FileClient.h>
 
 #ifndef DRONECAN_SRV_NUMBER
 #define DRONECAN_SRV_NUMBER NUM_SERVO_CHANNELS
@@ -414,6 +415,14 @@ private:
     Canard::Server<uavcan_protocol_file_DeleteRequest> file_delete_server{canard_iface, file_delete_req_cb};
     uavcan_protocol_file_DeleteResponse file_delete_rsp;
 #endif  // AP_DRONECAN_FILE_SERVER_ENABLED
+
+#if AP_DRONECAN_FILE_CLIENT_ENABLED
+public:
+    // fetch files from another node on this bus
+    AP_DroneCAN_FileClient &get_file_client() { return file_client; }
+private:
+    AP_DroneCAN_FileClient file_client;
+#endif  // AP_DRONECAN_FILE_CLIENT_ENABLED
 
 #if AP_SCRIPTING_ENABLED
     Canard::ObjCallback<AP_DroneCAN, dronecan_protocol_FlexDebug> FlexDebug_cb{this, &AP_DroneCAN::handle_FlexDebug};

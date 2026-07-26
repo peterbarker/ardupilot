@@ -505,6 +505,10 @@ void AP_DroneCAN::init(uint8_t driver_index)
     serial.init(this);
 #endif
 
+#if AP_DRONECAN_FILE_CLIENT_ENABLED
+    file_client.init(this);
+#endif
+
     _initialized = true;
 }
 
@@ -567,6 +571,9 @@ void AP_DroneCAN::loop(void)
 
 #if AP_DRONECAN_FILE_SERVER_ENABLED
         file_server.update();
+#endif
+#if AP_DRONECAN_FILE_CLIENT_ENABLED
+        file_client.update();
 #endif
 
 #if AP_RELAY_DRONECAN_ENABLED
