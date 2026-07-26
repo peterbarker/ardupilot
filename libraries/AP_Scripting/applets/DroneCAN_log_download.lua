@@ -34,7 +34,7 @@ local MAX_RETRIES = 10
 -- /APM/LOGS, SITL uses logs
 local LOG_DIR_CANDIDATES = {"/APM/LOGS", "logs", "APM/LOGS"}
 
-param:add_table(PARAM_TABLE_KEY, PARAM_TABLE_PREFIX, 3)
+param:add_table(PARAM_TABLE_KEY, PARAM_TABLE_PREFIX, 4)
 
 local function bind_add_param(name, idx, default_value)
    assert(param:add_param(PARAM_TABLE_KEY, idx, name, default_value), string.format('could not add param %s', name))
@@ -68,15 +68,96 @@ local DCLD_CANDRV = bind_add_param('CANDRV', 2, 0)
 --]]
 local DCLD_DEBUG = bind_add_param('DEBUG', 3, 0)
 
+--[[
+  // @Param: DCLD_CANFD
+  // @DisplayName: DroneCAN log download CANFD
+  // @Description: send requests as CANFD frames. The remote node must
+  // have CANFD enabled as well. Replies are decoded according to how
+  // they arrive, so this only controls what is sent.
+  // @Values: 0:Classic CAN,1:CANFD
+  // @User: Advanced
+--]]
+local DCLD_CANFD = bind_add_param('CANFD', 4, 0)
+
 if DroneCAN_Handle == nil then
    gcs:send_text(MAV_SEVERITY.ERROR, "DCLD: DroneCAN_Handle not available")
    return
 end
 
 local can_driver = math.floor(DCLD_CANDRV:get())
-local getinfo_handle = DroneCAN_Handle(can_driver, uint64_t(0x5004891E, 0xE8A27531), UAVCAN_PROTOCOL_FILE_GETINFO_ID)
-local direntry_handle = DroneCAN_Handle(can_driver, uint64_t(0x8C46E8AB, 0x568BDA79), UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID)
-local read_handle = DroneCAN_Handle(can_driver, uint64_t(0x8DCDCA93, 0x9F33F678), UAVCAN_PROTOCOL_FILE_READ_ID)
+local send_canfd = DCLD_CANFD:get() > 0
+local getinfo_handle = DroneCAN_Handle(can_driver, uint64_t(0x5004891E, 0xE8A27531), UAVCAN_PROTOCOL_FILE_GETINFO_ID, send_canfd)
+local direntry_handle = DroneCAN_Handle(can_driver, uint64_t(0x8C46E8AB, 0x568BDA79), UAVCAN_PROTOCOL_FILE_GETDIRECTORYENTRYINFO_ID, send_canfd)
+local read_handle = DroneCAN_Handle(can_driver, uint64_t(0x8DCDCA93, 0x9F33F678), UAVCAN_PROTOCOL_FILE_READ_ID, send_canfd)
+
+--[[
+   pull a trailing uint8 array out of a reply.
+
+   The tail array optimisation drops the length of the last field when
+   it is an array, so with classic frames the array simply runs to the
+   end of the payload.  It does not apply to CANFD, where the length is
+   written out instead, and a length which is not a whole number of
+   bits leaves the array that many bits out of step with the bytes it
+   sits in.
+
+   hdr_bits is where the array's length would start, and len_bits is
+   how wide that length is: nine bits for the 256 byte read buffer,
+   eight for the 200 byte path
+--]]
+local function tail_array(payload, canfd, hdr_bytes, hdr_bits, len_bits)
+   if not canfd then
+      return payload:sub(hdr_bytes + 1)
+   end
+   if len_bits == 8 then
+      -- byte aligned, so the array follows the length whole
+      local n = payload:byte(hdr_bytes + 1)
+      if n == nil then
+         return ""
+      end
+      return payload:sub(hdr_bytes + 2, hdr_bytes + 1 + n)
+   end
+   --[[
+      nine bit length.  Bits are numbered from the top of each byte, so
+      the ninth bit of the length is the *top* bit of the byte after
+      it, and the array which follows starts one bit into that byte -
+      every array byte is made of seven bits of one payload byte and
+      one bit of the next
+   --]]
+   local lo = payload:byte(hdr_bytes + 1)
+   local hi = payload:byte(hdr_bytes + 2)
+   if lo == nil or hi == nil then
+      return ""
+   end
+   local n = lo | ((hi >> 7) << 8)
+   if payload:byte(hdr_bytes + 1 + n) == nil then
+      return ""
+   end
+   --[[
+      shifting the array up a bit at a time costs about 30us per byte
+      in the scripting VM, which on a 256 byte read is far more than
+      the transfer itself.  Move a word at a time instead: the same
+      work in a quarter of the iterations
+   --]]
+   local out = {}
+   local k = 1
+   local base = hdr_bytes + 2
+   local i = 0
+   while i + 4 <= n do
+      local w = string.unpack(">I4", payload, base + i)
+      local nxt = payload:byte(base + i + 4) or 0
+      out[k] = string.pack(">I4", ((w << 1) | (nxt >> 7)) & 0xFFFFFFFF)
+      k = k + 1
+      i = i + 4
+   end
+   while i < n do
+      local a = payload:byte(base + i)
+      local b = payload:byte(base + i + 1) or 0
+      out[k] = string.char(((a << 1) | (b >> 7)) & 0xFF)
+      k = k + 1
+      i = i + 1
+   end
+   return table.concat(out)
+end
 
 local target_node = 0
 
@@ -109,11 +190,11 @@ local function poll_pending()
    if pending == nil then
       return
    end
-   local payload, nodeid = pending.handle:check_message()
+   local payload, nodeid, _, canfd = pending.handle:check_message()
    if payload ~= nil and nodeid == target_node then
       local p = pending
       pending = nil
-      p.on_reply(payload)
+      p.on_reply(payload, canfd)
       return
    end
    if millis() - pending.sent_ms > REQUEST_TIMEOUT_MS then
@@ -129,18 +210,30 @@ local function poll_pending()
    end
 end
 
--- request encoders.  DSDL tail array optimisation applies to the
--- trailing Path, so it is sent with no length prefix
-local function getinfo_request(path)
+--[[
+   request encoders.  Every one of these ends with the Path, which is
+   an array, so the tail array optimisation drops its length - but only
+   for classic frames.  A CANFD request has to carry the length, and
+   the fields ahead of the Path are whole bytes in all three, so it
+   goes in as one byte
+--]]
+local function encode_path(path)
+   if send_canfd then
+      return string.char(#path) .. path
+   end
    return path
 end
 
+local function getinfo_request(path)
+   return encode_path(path)
+end
+
 local function direntry_request(index, path)
-   return string.pack("<I4", index) .. path
+   return string.pack("<I4", index) .. encode_path(path)
 end
 
 local function read_request(offset, path)
-   return string.pack("<I5", offset) .. path
+   return string.pack("<I5", offset) .. encode_path(path)
 end
 
 -- download state
@@ -201,14 +294,16 @@ local start_next_file  -- forward declaration
 local function send_next_read()
    local c = current
    start_request(read_handle, read_request(c.offset, c.path),
-                 function(payload)
+                 function(payload, canfd)
                     local err = string.unpack("<i2", payload)
                     if err ~= 0 then
                        abort_current_file(string.format("read error %d at offset %u", err, c.offset))
                        start_next_file()
                        return
                     end
-                    local data = payload:sub(3)
+                    -- Error is two bytes, then the data array with a
+                    -- nine bit length when there is no TAO
+                    local data = tail_array(payload, canfd, 2, 16, 9)
                     c.fd:write(data)
                     c.offset = c.offset + #data
                     stats.bytes = stats.bytes + #data
@@ -276,9 +371,11 @@ end
 
 local function request_next_direntry()
    start_request(direntry_handle, direntry_request(list_index, remote_dir),
-                 function(payload)
+                 function(payload, canfd)
                     local err, flags = string.unpack("<i2B", payload)
-                    local fullpath = payload:sub(4)
+                    -- Error and EntryType are three bytes, then the
+                    -- path with an eight bit length when there is no TAO
+                    local fullpath = tail_array(payload, canfd, 3, 24, 8)
                     if err ~= 0 or flags == 0 then
                        -- end of directory
                        debug(string.format("%u logs to fetch", #file_queue))

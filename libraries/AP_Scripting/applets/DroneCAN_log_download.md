@@ -48,5 +48,41 @@ trip to the remote node rather than by the bus: 256 bytes are moved per
 request, and a node which takes 50ms to answer will yield about 5
 kbyte/s however fast the bus is.
 
-Downloading from a simulated peripheral measures 4 to 6 kbyte/s. No
-figure has been measured against real hardware yet.
+Downloading from a simulated peripheral measures 4 to 6 kbyte/s.
+
+Against real hardware, fetching from a Pixhawk6C with the script
+running on a ZeroOne X6, timed across the transfer itself:
+
+  classic CAN, 1Mbit    27 kbyte/s    9.3 ms per 256 byte read
+  CANFD, 8Mbit          35 kbyte/s    7.3 ms per 256 byte read
+
+Enumerating the remote directory first costs under a second and is not
+included above.
+
+Only one read is outstanding at a time, so what sets these figures is
+the round trip, not the bus: at 256 bytes a read, 7.3 ms per round
+trip is 35 kbyte/s however wide the bus is. Of that 7.3 ms about 2.8
+ms is this script shifting the reply into place - CANFD carries an
+explicit array length which leaves the data a bit out of step with the
+bytes holding it - and about 4.5 ms is the round trip proper. Classic
+frames need no such shifting but spend about 5 ms of every read
+putting 43 frames on a 1Mbit wire, which is why they come out slower
+despite the cheaper decode.
+
+Pipelining reads would be the change that matters. Streaming
+broadcasts between the same two boards, with no request and response
+in the way, carries 433 kbyte/s at a 256 byte payload and 468 kbyte/s
+at 1000 bytes - at which point the receiving driver counts 8120 frames
+a second, about 87% of the bus. So this script runs at under a tenth
+of what the link will carry, and the gap is round trips rather than
+bandwidth.
+
+Pipelining this script would need the scripting DroneCAN bindings to
+allow more than one request outstanding on a handle, which they
+presently do not.
+
+That is within a few percent of what the C++ client in
+libraries/AP_DroneCAN/tools/file_client manages when it is held to one
+read at a time, so the limit is the serialised read rather than the
+cost of running in Lua. The same client pipelining four reads reaches
+36 kbyte/s on the same bus. See BENCHMARKS.md alongside that tool.
