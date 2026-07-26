@@ -18666,62 +18666,75 @@ RTL_ALT_M 111
         if os.path.exists(fetched_name):
             os.unlink(fetched_name)
 
-        self.progress("Starting Periph simulation")
-        self.context_push()
-        periph_exp = None
-        ex = None
-        try:
-            binary_path = pathlib.Path(periph_builddir, periph_board, 'bin', 'AP_Periph')
-            periph_exp = util.start_SITL(
-                binary_path,
-                cwd=periph_rundir,
-                stdout_prefix="periph-logdl",
-                gdb=self.gdb,
-                valgrind=self.valgrind,
-                param_defaults={'CAN_NODE': 125},
-                customisations=[
-                    '-I', str(1),
-                    '--serial0', 'mcast:',
-                ],
-                speedup=self.speedup,
-            )
-            self.expect_list_add(periph_exp)
+        # the tail array optimisation applies to classic frames but not
+        # to CANFD, so the trailing Path of each request and the array
+        # coming back are packed differently and both need covering
+        for canfd in (False, True):
+            periph_params = {'CAN_NODE': 125}
+            if canfd:
+                periph_params['CAN_FDMODE'] = 1
+            self.progress("Fetching over %s" % ('CANFD' if canfd else 'classic'))
+            self.progress("Starting Periph simulation")
+            self.context_push()
+            periph_exp = None
+            ex = None
+            try:
+                binary_path = pathlib.Path(periph_builddir, periph_board, 'bin', 'AP_Periph')
+                periph_exp = util.start_SITL(
+                    binary_path,
+                    cwd=periph_rundir,
+                    stdout_prefix="periph-logdl",
+                    gdb=self.gdb,
+                    valgrind=self.valgrind,
+                    param_defaults=periph_params,
+                    customisations=[
+                        '-I', str(1),
+                        '--serial0', 'mcast:',
+                    ],
+                    speedup=self.speedup,
+                )
+                self.expect_list_add(periph_exp)
 
-            self.set_parameters({
-                "CAN_P1_DRIVER": 1,
-                "SCR_ENABLE": 1,
-            })
-            self.install_applet_script_context('DroneCAN_log_download.lua')
-            self.context_collect('STATUSTEXT')
+                self.set_parameters({
+                    "CAN_P1_DRIVER": 1,
+                    "SCR_ENABLE": 1,
+                })
+                self.install_applet_script_context('DroneCAN_log_download.lua')
+                self.context_collect('STATUSTEXT')
+                self.reboot_sitl()
+
+                self.wait_statustext('DroneCAN_log_download loaded', check_context=True, timeout=60)
+                if canfd:
+                    # the script reads DCLD_CANFD once as it starts
+                    self.set_parameter('DCLD_CANFD', 1)
+                    self.reboot_sitl()
+                    self.wait_statustext('DroneCAN_log_download loaded', check_context=True, timeout=60)
+                self.set_parameter('DCLD_NODE', 125)
+                self.wait_statustext('DCLD: saved %s' % fetched_name, check_context=True, timeout=180)
+                self.wait_statustext('DCLD: node 125 done', check_context=True, timeout=60)
+
+                with open(fetched_name, 'rb') as f:
+                    fetched = f.read()
+                if fetched != log_content:
+                    raise NotAchievedException(
+                        "downloaded log content mismatch (want=%u bytes got=%u bytes)" %
+                        (len(log_content), len(fetched)))
+                if self.get_parameter('DCLD_NODE') != 0:
+                    raise NotAchievedException("DCLD_NODE was not reset on completion")
+                os.unlink(fetched_name)
+
+            except Exception as e:  # noqa: BLE001
+                self.print_exception_caught(e)
+                ex = e
+            finally:
+                if periph_exp is not None:
+                    self.progress("Stopping Periph")
+                    self.expect_list_remove(periph_exp)
+                    util.pexpect_close(periph_exp)
+            self.context_pop()
             self.reboot_sitl()
-
-            self.wait_statustext('DroneCAN_log_download loaded', check_context=True, timeout=60)
-            self.set_parameter('DCLD_NODE', 125)
-            self.wait_statustext('DCLD: saved %s' % fetched_name, check_context=True, timeout=180)
-            self.wait_statustext('DCLD: node 125 done', check_context=True, timeout=60)
-
-            with open(fetched_name, 'rb') as f:
-                fetched = f.read()
-            if fetched != log_content:
-                raise NotAchievedException(
-                    "downloaded log content mismatch (want=%u bytes got=%u bytes)" %
-                    (len(log_content), len(fetched)))
-            if self.get_parameter('DCLD_NODE') != 0:
-                raise NotAchievedException("DCLD_NODE was not reset on completion")
-            os.unlink(fetched_name)
-
-        except Exception as e:  # noqa: BLE001
-            self.print_exception_caught(e)
-            ex = e
-        finally:
-            if periph_exp is not None:
-                self.progress("Stopping Periph")
-                self.expect_list_remove(periph_exp)
-                util.pexpect_close(periph_exp)
-        self.context_pop()
-        self.reboot_sitl()
-        if ex is not None:
-            raise ex
+            if ex is not None:
+                raise ex
 
     def DroneCANFileClient(self):
         '''download a file from ourselves with the DroneCAN file client tool'''
@@ -18730,16 +18743,20 @@ RTL_ALT_M 111
         # configuring the shared build would disturb whatever the rest
         # of the suite has set up there
         tool_builddir = util.reltopdir('build-file-client')
+        # match the tool to the vehicle build: a coverage run of the
+        # vehicle is no use if the tool it is talking to was built
+        # without instrumentation, as none of its lines are counted
+        tool_coverage = any(
+            pathlib.Path(util.reltopdir('build/sitl/libraries/AP_DroneCAN')).rglob('*.gcno'))
         util.build_SITL(
-            'dronecan_file_client',
+            'tool/dronecan_file_client',
             board='sitl',
             clean=False,
             configure=True,
+            coverage=tool_coverage,
             extra_configure_args=['--out', tool_builddir],
         )
-        tool = os.path.join(
-            tool_builddir, 'sitl', 'libraries', 'AP_DroneCAN', 'tools', 'file_client',
-            'dronecan_file_client')
+        tool = os.path.join(tool_builddir, 'sitl', 'tool', 'dronecan_file_client')
         if not os.path.exists(tool):
             raise NotAchievedException("file client was not built")
 
@@ -18753,6 +18770,12 @@ RTL_ALT_M 111
         remote_path = os.path.join(served_dir, 'test.bin')
         with open(remote_path, 'wb') as f:
             f.write(content)
+
+        # an empty file: the first read returns no data at all, which
+        # is also how the end of a file is signalled
+        empty_remote_path = os.path.join(served_dir, 'empty.bin')
+        with open(empty_remote_path, 'wb') as f:
+            pass
 
         local_path = os.path.join(served_dir, 'fetched.bin')
         if os.path.exists(local_path):
@@ -18774,6 +18797,16 @@ RTL_ALT_M 111
         # the tail array optimisation applies to classic frames but not
         # to CANFD, so the replies are decoded by separate paths and
         # both need covering
+        # each run of the client is a new process whose transfer IDs
+        # start from zero again.  A node which sees the same transfer
+        # ID twice in quick succession discards the second as a repeat,
+        # so give every run a node ID of its own
+        client_node = [100]
+
+        def client_args():
+            client_node[0] += 1
+            return [tool, '-n', str(int(node_id)), '-N', str(client_node[0])]
+
         for canfd in (False, True):
             if canfd:
                 self.progress("Switching to CANFD")
@@ -18786,7 +18819,7 @@ RTL_ALT_M 111
 
             self.progress("Listing the served directory (%s)" % label)
             output = util.run_cmd(
-                [tool, '-n', str(int(node_id))] + fd_args + ['mcast:0', 'list', served_dir],
+                client_args() + fd_args + ['mcast:0', 'list', served_dir],
                 output=True, directory='.')
             if isinstance(output, bytes):
                 output = output.decode('utf-8', 'replace')
@@ -18797,7 +18830,7 @@ RTL_ALT_M 111
             if os.path.exists(local_path):
                 os.unlink(local_path)
             util.run_cmd(
-                [tool, '-n', str(int(node_id)), '-d', '4'] + fd_args +
+                client_args() + ['-d', '4'] + fd_args +
                 ['mcast:0', 'get', remote_path, local_path],
                 directory='.')
 
@@ -18808,6 +18841,60 @@ RTL_ALT_M 111
                     "%s download differs (want %u bytes, got %u)" %
                     (label, len(content), len(fetched)))
             self.progress("Downloaded file matches (%s)" % label)
+
+            self.progress("Downloading an empty file (%s)" % label)
+            if os.path.exists(local_path):
+                os.unlink(local_path)
+            util.run_cmd(
+                client_args() + ['-d', '4'] + fd_args +
+                ['mcast:0', 'get', empty_remote_path, local_path],
+                directory='.')
+            with open(local_path, 'rb') as f:
+                fetched = f.read()
+            if len(fetched) != 0:
+                raise NotAchievedException(
+                    "%s empty download returned %u bytes" % (label, len(fetched)))
+
+            # the @SYS files are generated when opened and report a
+            # fixed nominal size rather than their real one, so the
+            # client reads past the end of the file.  That must come
+            # back as an end of file rather than an error, and the
+            # client must stop at the real end
+            self.progress("Downloading a generated @SYS file (%s)" % label)
+            if os.path.exists(local_path):
+                os.unlink(local_path)
+            # deep enough that reads are certainly issued past the
+            # real end of the file: @SYS reports a nominal size far
+            # larger than its content, and it is those reads which have
+            # to come back as an end rather than as an error
+            util.run_cmd(
+                client_args() + ['-d', '16'] + fd_args +
+                ['mcast:0', 'get', '@SYS/uarts.txt', local_path],
+                directory='.')
+            with open(local_path, 'rb') as f:
+                fetched = f.read()
+            if not fetched.startswith(b'UARTV1'):
+                raise NotAchievedException(
+                    "%s @SYS/uarts.txt download is not uart stats: %s" %
+                    (label, fetched[:32]))
+            if len(fetched) >= 100000:
+                raise NotAchievedException(
+                    "%s @SYS/uarts.txt was not truncated at the real end (%u bytes)" %
+                    (label, len(fetched)))
+            self.progress("Generated file fetched, %u bytes (%s)" % (len(fetched), label))
+
+            # the error paths: these all have to come back as errors
+            # rather than as an empty success
+            self.progress("Checking error handling (%s)" % label)
+            missing = os.path.join(served_dir, 'nosuch.bin')
+            for desc, args in [
+                    ("fetching a missing file", ['get', missing, local_path]),
+                    ("deleting a missing file", ['rm', missing]),
+                    ("fetching a directory", ['get', served_dir, local_path]),
+            ]:
+                if util.run_cmd(client_args() + fd_args + ['mcast:0'] + args,
+                                directory='.', checkfail=False) == 0:
+                    raise NotAchievedException("%s: %s did not fail" % (label, desc))
 
         shutil.rmtree(served_dir, ignore_errors=True)
 
