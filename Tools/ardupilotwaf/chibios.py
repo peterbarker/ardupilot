@@ -495,6 +495,7 @@ def setup_canmgr_build(cfg):
     env.AP_LIBRARIES += [
         'AP_DroneCAN',
         'AP_DroneCAN_FileServer',
+        'AP_DroneCAN_FileClient',
         'modules/DroneCAN/libcanard/*.c',
         ]
     env.INCLUDES += [
