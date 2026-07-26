@@ -83,6 +83,20 @@ void AP_DroneCAN_FileServer::handle_read_request(const uavcan_protocol_file_Read
 
     if (req.offset != fd_ofs) {
         if (AP::FS().lseek(fd, req.offset, SEEK_SET) == -1) {
+            if (errno == EINVAL) {
+                // the two backends differ here.  FATFS is the one
+                // which follows POSIX: an offset at or past the end of
+                // a file is legal, and the read which follows returns
+                // no bytes.  @SYS deliberately departs from that and
+                // refuses any offset past its end with EINVAL.  As far
+                // as this protocol is concerned neither is an error -
+                // an empty read is how a client is told where the file
+                // ends - so answer the same way for both.
+                rsp.data.len = 0;
+                rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+                last_read_ms = AP_HAL::millis();
+                return;
+            }
             rsp.error.value = errno_to_error();
             close_cached_fd();
             return;
@@ -101,10 +115,11 @@ void AP_DroneCAN_FileServer::handle_read_request(const uavcan_protocol_file_Read
     fd_ofs += n;
     last_read_ms = AP_HAL::millis();
 
-    if ((uint16_t)n < sizeof(rsp.data.data)) {
-        // short read signals EOF to the client; we are done with this file
-        close_cached_fd();
-    }
+    // a short read signals EOF to the client.  We leave the file open
+    // for the idle timer to reap: a client with several reads in
+    // flight will ask for offsets past the end, and reopening for each
+    // of those would regenerate the content of a @SYS file, which both
+    // costs time and can hand back a different snapshot each time.
 }
 
 void AP_DroneCAN_FileServer::handle_getinfo_request(const uavcan_protocol_file_GetInfoRequest &req, uavcan_protocol_file_GetInfoResponse &rsp)
