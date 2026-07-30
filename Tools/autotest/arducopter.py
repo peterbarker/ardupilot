@@ -1262,6 +1262,25 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.start_subtest("GCS failsafe SmartRTL twice")
         self.setGCSfailsafe(3)
         self.set_parameter('FS_OPTIONS', 8)
+
+        # REPRODUCER (temporary): emulate the autotest process being
+        # starved of CPU by the CI runner part-way up the takeoff
+        # climb, as seen in
+        # https://github.com/ArduPilot/ardupilot/actions/runs/30555012339
+        stalled = []
+
+        def stall_harness_once(mav, m):
+            if len(stalled):
+                return
+            if m.get_type() != 'GLOBAL_POSITION_INT':
+                return
+            if m.relative_alt < 30000:  # mm
+                return
+            stalled.append(True)
+            self.progress("REPRODUCER: stalling harness for 7 wallclock seconds")
+            time.sleep(7)
+        self.install_message_hook_context(stall_harness_once)
+
         self.takeoffAndMoveAway()
         self.set_heartbeat_rate(0)
         self.wait_mode("SMART_RTL")
