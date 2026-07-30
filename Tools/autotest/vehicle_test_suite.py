@@ -168,6 +168,13 @@ class MsgRcvTimeoutException(AutoTestTimeoutException):
     pass
 
 
+class HarnessStalledException(AutoTestTimeoutException):
+    """Thrown when this Python process was itself starved of CPU while
+    waiting for something, meaning any timeout we hit says nothing
+    about the vehicle."""
+    pass
+
+
 class NotAchievedException(ErrorException):
     """Thrown when fails to achieve a goal"""
     pass
@@ -2221,6 +2228,13 @@ class TestSuite(abc.ABC):
         self.last_sim_time_cached = 0
         self.last_sim_time_cached_wallclock = 0
 
+        # going this many wall-clock seconds without processing a
+        # mavlink message means this process was starved of CPU rather
+        # than the vehicle being slow to respond:
+        self.harness_stall_threshold_s = 1.0
+        self.harness_stall_count = 0
+        self.last_message_hook_wallclock = time.time()
+
         # to autotest we do not want to go to the internet for tiles,
         # usually.  Set this to False to gather tiles from internet in
         # the case there are new tiles required, then add them to the
@@ -3640,6 +3654,17 @@ class TestSuite(abc.ABC):
     def message_hook(self, mav, msg):
         """Called as each mavlink msg is received."""
 #        print("msg: %s" % str(msg))
+
+        # note any period in which this process was starved of CPU.
+        # The simulation runs on while we are descheduled, and our
+        # receive socket overflows, silently dropping messages - so a
+        # timeout spanning such a period tells us nothing about the
+        # vehicle:
+        now = time.time()
+        if now - self.last_message_hook_wallclock > self.harness_stall_threshold_s:
+            self.harness_stall_count += 1
+        self.last_message_hook_wallclock = now
+
         if msg.get_type() == 'STATUSTEXT':
             self.progress("AP: %s" % msg.text, send_statustext=False)
 
@@ -12191,7 +12216,32 @@ Also, ignores heartbeats not from our target system'''
             mav=mav,
         )
 
-    def poll_message(self, message_id, timeout=10, quiet=False, mav=None, target_sysid=None, target_compid=None, p2=0):
+    def poll_message(self, message_id, timeout=10, quiet=False, mav=None, target_sysid=None, target_compid=None, p2=0,
+                     attempts=3):
+        '''request a single message from the vehicle and return it.
+
+        Polling is idempotent, so if we discover that we were starved
+        of CPU while waiting - meaning our receive socket overflowed
+        and dropped either the ack or the message itself - we simply
+        ask again rather than failing the test.'''
+        for attempt in range(attempts):
+            try:
+                return self.poll_message_attempt(
+                    message_id,
+                    timeout=timeout,
+                    quiet=quiet,
+                    mav=mav,
+                    target_sysid=target_sysid,
+                    target_compid=target_compid,
+                    p2=p2,
+                )
+            except HarnessStalledException as e:
+                if attempt == attempts - 1:
+                    raise
+                self.progress("poll_message: %s; retrying (%u/%u)" % (str(e), attempt+1, attempts-1))
+
+    def poll_message_attempt(self, message_id, timeout=10, quiet=False, mav=None, target_sysid=None, target_compid=None,
+                             p2=0):
         if mav is None:
             mav = self.mav
         if target_sysid is None:
@@ -12200,30 +12250,43 @@ Also, ignores heartbeats not from our target system'''
             target_compid = 1
         if isinstance(message_id, str):
             message_id = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % message_id)
-        tstart = self.get_sim_time() # required for timeout in run_cmd_get_ack to work
-        self.send_poll_message(message_id, quiet=quiet, mav=mav, target_sysid=target_sysid, target_compid=target_compid, p2=p2)
-        self.run_cmd_get_ack(
-            mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE,
-            mavutil.mavlink.MAV_RESULT_ACCEPTED,
-            timeout,
-            quiet=quiet,
-            mav=mav,
-        )
-        while True:
-            if self.get_sim_time_cached() - tstart > timeout:
-                raise NotAchievedException("Did not receive polled message")
-            m = mav.recv_match(blocking=True,
-                               timeout=0.1)
-            if self.mav != mav:
-                self.drain_mav()
-            if m is None:
-                continue
-            if m.id != message_id:
-                continue
-            if (m.get_srcSystem() != target_sysid or
-                    m.get_srcComponent() != target_compid):
-                continue
-            return m
+        # note this before taking our reference time; a stall while
+        # taking it leaves us with a stale reference, which is exactly
+        # the case we are trying to detect:
+        stall_count = self.harness_stall_count
+        try:
+            tstart = self.get_sim_time() # required for timeout in run_cmd_get_ack to work
+            self.send_poll_message(message_id, quiet=quiet, mav=mav, target_sysid=target_sysid,
+                                   target_compid=target_compid, p2=p2)
+            self.run_cmd_get_ack(
+                mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE,
+                mavutil.mavlink.MAV_RESULT_ACCEPTED,
+                timeout,
+                quiet=quiet,
+                mav=mav,
+            )
+            while True:
+                if self.get_sim_time_cached() - tstart > timeout:
+                    raise NotAchievedException("Did not receive polled message")
+                m = mav.recv_match(blocking=True,
+                                   timeout=0.1)
+                if self.mav != mav:
+                    self.drain_mav()
+                if m is None:
+                    continue
+                if m.id != message_id:
+                    continue
+                if (m.get_srcSystem() != target_sysid or
+                        m.get_srcComponent() != target_compid):
+                    continue
+                return m
+        except (AutoTestTimeoutException, NotAchievedException) as e:
+            if self.harness_stall_count == stall_count:
+                raise
+            # we were descheduled while waiting, so whatever we were
+            # waiting for was probably dropped by our overflowing
+            # receive socket.  The vehicle is not at fault here:
+            raise HarnessStalledException("%s (harness stalled)" % str(e))
 
     def get_messages_frame(self, msg_names):
         '''try to get a "frame" of named messages - a set of messages as close
