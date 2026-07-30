@@ -233,6 +233,23 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.progress("Fly eastbound away from home")
         self.set_rc(2, 1800)
         self.delay_sim_time(10, reason="copter to fly east")
+
+    def takeoffAndMoveAwayWithoutGCSFailsafe(self, **kwargs):
+        '''takeoffAndMoveAway with the GCS failsafe disabled for its duration.
+
+        The GCS failsafe is not under test while we are getting the
+        vehicle into position, but leaving it armed here couples the
+        test to how promptly this Python process is scheduled: our GCS
+        heartbeats are paced in wall-clock time, so being starved of
+        CPU for FS_GCS_TIMEOUT/SIM_SPEEDUP wall-clock seconds (~1.25s
+        as things stand) triggers a spurious failsafe part-way through
+        the takeoff.  CI runners do exactly that to us.'''
+        fs_gcs_enable = self.get_parameter('FS_GCS_ENABLE')
+        if fs_gcs_enable != 0:
+            self.set_parameter('FS_GCS_ENABLE', 0)
+        self.takeoffAndMoveAway(**kwargs)
+        if fs_gcs_enable != 0:
+            self.set_parameter('FS_GCS_ENABLE', fs_gcs_enable)
         self.set_rc(2, 1500)
         self.hover()
         self.progress("Copter staging 50 meters east of home at 50 meters altitude In mode Alt Hold")
@@ -1262,14 +1279,14 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.start_subtest("GCS failsafe SmartRTL twice")
         self.setGCSfailsafe(3)
         self.set_parameter('FS_OPTIONS', 8)
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.set_heartbeat_rate(0)
         self.wait_mode("SMART_RTL")
         self.wait_disarmed()
         self.set_heartbeat_rate(self.speedup)
         self.wait_statustext("GCS Failsafe Cleared", timeout=60)
 
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.set_heartbeat_rate(0)
         self.wait_statustext("GCS Failsafe")
 
@@ -1297,7 +1314,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # Trigger telemetry loss with failsafe disabled. Verify no action taken.
         self.start_subtest("GCS failsafe disabled test: FS_GCS_ENABLE=0 should take no failsafe action")
         self.setGCSfailsafe(0)
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.set_heartbeat_rate(0)
         self.delay_sim_time(5, reason="GCS failsafe to not trigger")
         self.wait_mode("ALT_HOLD")
@@ -1352,7 +1369,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # Trigger telemetry loss with failsafe enabled. Verify failsafe triggers and land completes
         self.start_subtest("GCS failsafe LAND with no options test: FS_GCS_ENABLE=5 & FS_OPTIONS=0")
         self.setGCSfailsafe(5)
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.set_heartbeat_rate(0)
         self.wait_mode("LAND")
         self.wait_landed_and_disarmed()
@@ -1363,7 +1380,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # Trigger telemetry loss with failsafe enabled. Verify failsafe triggers and SmartRTL completes
         self.start_subtest("GCS failsafe SmartRTL->RTL with no options test: FS_GCS_ENABLE=3 & FS_OPTIONS=0")
         self.setGCSfailsafe(3)
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.set_heartbeat_rate(0)
         self.wait_mode("SMART_RTL")
         self.wait_disarmed()
@@ -1374,7 +1391,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # Trigger telemetry loss with failsafe enabled. Verify failsafe triggers and SmartRTL completes
         self.start_subtest("GCS failsafe SmartRTL->Land with no options test: FS_GCS_ENABLE=4 & FS_OPTIONS=0")
         self.setGCSfailsafe(4)
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.set_heartbeat_rate(0)
         self.wait_mode("SMART_RTL")
         self.wait_disarmed()
@@ -1385,7 +1402,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         # Trigger telemetry loss with an invalid failsafe value. Verify failsafe triggers and RTL completes
         self.start_subtest("GCS failsafe invalid value with no options test: FS_GCS_ENABLE=99 & FS_OPTIONS=0")
         self.setGCSfailsafe(99)
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.set_heartbeat_rate(0)
         self.wait_mode("RTL")
         self.wait_rtl_complete()
@@ -1400,7 +1417,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException("load copter_mission failed")
         self.setGCSfailsafe(1)
         self.set_parameter('FS_OPTIONS', 16)
-        self.takeoffAndMoveAway()
+        self.takeoffAndMoveAwayWithoutGCSFailsafe()
         self.progress("Testing continue in pilot controlled modes")
         self.set_heartbeat_rate(0)
         self.wait_statustext("GCS Failsafe - Continuing Pilot Control", timeout=60)
