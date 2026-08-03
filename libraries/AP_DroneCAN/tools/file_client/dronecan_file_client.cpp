@@ -17,8 +17,10 @@
   listing and downloading files - notably dataflash logs - from a
   DroneCAN node.
 
-  Talks either to an SLCAN serial port or to a MAVLink endpoint
-  forwarding CAN traffic (MAVCAN).  Reads are pipelined, which matters:
+  Talks to an SLCAN serial port, the same protocol over TCP, or a
+  SITL multicast bus.  There is no MAVCAN transport here; for
+  fetching over a MAVLink connection use dronecan_gui_tool or
+  pydronecan's mavcan driver.  Reads are pipelined, which matters:
   each request/response pair costs a round trip, so a serialised
   client runs several times slower than a pipelined one.
 
