@@ -40,14 +40,44 @@ protected:
     }
 
     void remove_test_dir() {
-        // no recursive remove in AP_Filesystem, so name what we make
-        static const char *names[] = {
-            "hello.bin", "empty.bin", "written.bin", "doomed.bin", "big.bin",
-        };
-        for (const char *n : names) {
-            AP::FS().unlink(path_in_dir(n));
+        remove_tree(TEST_DIR);
+    }
+
+    // recursively remove a path so a failed test cannot leave litter
+    // that upsets the next one
+    static void remove_tree(const char *target) {
+        if (AP::FS().unlink(target) == 0) {
+            return;
         }
-        AP::FS().unlink(TEST_DIR);
+        auto *d = AP::FS().opendir(target);
+        if (d == nullptr) {
+            return;
+        }
+        char child[256];
+        while (true) {
+            child[0] = 0;
+            for (struct dirent *entry = AP::FS().readdir(d); entry != nullptr; entry = AP::FS().readdir(d)) {
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                    continue;
+                }
+                // bounded so the compiler can see truncation is impossible
+                snprintf(child, sizeof(child), "%.120s/%.120s", target, entry->d_name);
+                break;
+            }
+            if (child[0] == 0) {
+                break;
+            }
+            remove_tree(child);
+            // rescan from the top; deleting while iterating is not
+            // dependable
+            AP::FS().closedir(d);
+            d = AP::FS().opendir(target);
+            if (d == nullptr) {
+                return;
+            }
+        }
+        AP::FS().closedir(d);
+        AP::FS().unlink(target);
     }
 
     // returns a pointer to a static buffer; one at a time
@@ -80,6 +110,30 @@ protected:
         uavcan_protocol_file_ReadResponse rsp {};
         server.handle_read_request(req, rsp);
         return rsp;
+    }
+
+    // send one Write request and return the error it drew
+    int16_t write_at(const char *name, uint64_t offset, const uint8_t *data, uint16_t len, uint8_t node = NODE_A) {
+        uavcan_protocol_file_WriteRequest req {};
+        set_path(req.path, path_in_dir(name));
+        req.offset = offset;
+        req.data.len = len;
+        if (len > 0) {
+            memcpy(req.data.data, data, len);
+        }
+        uavcan_protocol_file_WriteResponse rsp {};
+        server.handle_write_request(req, node, rsp);
+        return rsp.error.value;
+    }
+
+    // read the whole file back and check it holds exactly this content
+    void expect_content(const char *name, const uint8_t *data, uint16_t len) {
+        const auto rd = read_at(name, 0);
+        EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, rd.error.value);
+        ASSERT_EQ(len, rd.data.len);
+        if (len > 0) {
+            EXPECT_EQ(0, memcmp(data, rd.data.data, len));
+        }
     }
 };
 
@@ -342,6 +396,184 @@ TEST_F(FileServerTest, DeleteOfMissingFileIsNotFound)
     uavcan_protocol_file_DeleteResponse rsp {};
     server.handle_delete_request(req, rsp);
     EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_NOT_FOUND, rsp.error.value);
+}
+
+/*
+  resuming into an existing longer file and finishing early: the
+  completing write carries the final size and everything beyond it
+  must go.  Closing without truncating leaves a stale tail which reads
+  back as part of the upload
+ */
+TEST_F(FileServerTest, WriteCompletionTruncatesAStaleTail)
+{
+    const uint8_t old_content[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    write_file("written.bin", old_content, sizeof(old_content));
+
+    // patch two bytes in the middle, then declare the file complete
+    // at six bytes
+    const uint8_t patch[] = {7, 7};
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", 4, patch, sizeof(patch)));
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", 6, nullptr, 0));
+
+    const uint8_t expected[] = {1, 1, 1, 1, 7, 7};
+    expect_content("written.bin", expected, sizeof(expected));
+}
+
+/*
+  chunks landing out of order - an offset four write before the offset
+  zero one - must still leave exactly the declared bytes.  The first
+  write not being at zero means no O_TRUNC, so this leans entirely on
+  the completion truncating
+ */
+TEST_F(FileServerTest, WriteOutOfOrderChunksLeaveExactlyTheContent)
+{
+    const uint8_t old_content[] = {9, 9, 9, 9, 9, 9, 9, 9, 9};
+    write_file("written.bin", old_content, sizeof(old_content));
+
+    const uint8_t tail[] = {5, 6};
+    const uint8_t head[] = {1, 2, 3, 4};
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", 4, tail, sizeof(tail)));
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", 0, head, sizeof(head)));
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", 6, nullptr, 0));
+
+    const uint8_t expected[] = {1, 2, 3, 4, 5, 6};
+    expect_content("written.bin", expected, sizeof(expected));
+}
+
+/*
+  a completion with no preceding writes is a bare truncation of an
+  existing file, reaching the descriptor-less path
+ */
+TEST_F(FileServerTest, BareCompletionTruncatesAnExistingFile)
+{
+    const uint8_t old_content[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    write_file("written.bin", old_content, sizeof(old_content));
+
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", 3, nullptr, 0));
+
+    expect_content("written.bin", old_content, 3);
+}
+
+/*
+  a second node writing while an upload is in progress is refused
+  rather than allowed to interleave through the shared descriptor;
+  once the first upload completes the second node gets its turn
+ */
+TEST_F(FileServerTest, CompetingWriterIsRefusedUntilTheFirstFinishes)
+{
+    const uint8_t a[] = {1, 2, 3};
+    const uint8_t b[] = {4, 5, 6};
+
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", 0, a, sizeof(a), NODE_A));
+    // same path and another path both refused
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_ACCESS_DENIED, write_at("written.bin", 0, b, sizeof(b), NODE_B));
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_ACCESS_DENIED, write_at("other.bin", 0, b, sizeof(b), NODE_B));
+    // the owner is unaffected
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("written.bin", sizeof(a), nullptr, 0, NODE_A));
+
+    expect_content("written.bin", a, sizeof(a));
+
+    // and with that upload complete the other node may write
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("other.bin", 0, b, sizeof(b), NODE_B));
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, write_at("other.bin", sizeof(b), nullptr, 0, NODE_B));
+    expect_content("other.bin", b, sizeof(b));
+}
+
+/*
+  deleting a directory removes what is beneath it, as the service
+  contract requires
+ */
+TEST_F(FileServerTest, DeleteRemovesADirectoryTree)
+{
+    const uint8_t content[] = {1, 2, 3};
+    ASSERT_EQ(0, AP::FS().mkdir(path_in_dir("sub")));
+    write_file("sub/one.bin", content, sizeof(content));
+    write_file("sub/two.bin", content, sizeof(content));
+    ASSERT_EQ(0, AP::FS().mkdir(path_in_dir("sub/deeper")));
+    write_file("sub/deeper/three.bin", content, sizeof(content));
+
+    uavcan_protocol_file_DeleteRequest req {};
+    set_path(req.path, path_in_dir("sub"));
+    uavcan_protocol_file_DeleteResponse rsp {};
+    server.handle_delete_request(req, rsp);
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, rsp.error.value);
+
+    AP_Filesystem::stat_t st;
+    EXPECT_FALSE(AP::FS().stat(path_in_dir("sub"), st));
+}
+
+/*
+  the recursion has a depth limit; a tree deeper than it draws an
+  error rather than a runaway
+ */
+TEST_F(FileServerTest, DeleteOfTooDeepATreeIsRefused)
+{
+    char deep[128];
+    snprintf(deep, sizeof(deep), "%s", path_in_dir("deep"));
+    ASSERT_EQ(0, AP::FS().mkdir(deep));
+    // nine levels below the target exceeds the limit of eight
+    for (uint8_t i = 0; i < 9; i++) {
+        const size_t len = strlen(deep);
+        snprintf(&deep[len], sizeof(deep)-len, "/d%u", i);
+        ASSERT_EQ(0, AP::FS().mkdir(deep));
+    }
+
+    uavcan_protocol_file_DeleteRequest req {};
+    set_path(req.path, path_in_dir("deep"));
+    uavcan_protocol_file_DeleteResponse rsp {};
+    server.handle_delete_request(req, rsp);
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE, rsp.error.value);
+}
+
+/*
+  files a client may write have to say so; service discovery data
+  which contradicts the server's own behaviour sends conforming
+  clients away
+ */
+TEST_F(FileServerTest, GetInfoReportsWriteability)
+{
+    const uint8_t content[] = {1, 2, 3};
+    write_file("hello.bin", content, sizeof(content));
+
+    uavcan_protocol_file_GetInfoRequest req {};
+    set_path(req.path, path_in_dir("hello.bin"));
+    uavcan_protocol_file_GetInfoResponse rsp {};
+    server.handle_getinfo_request(req, rsp);
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, rsp.error.value);
+    EXPECT_TRUE(rsp.entry_type.flags & UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE);
+    EXPECT_TRUE(rsp.entry_type.flags & UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_WRITEABLE);
+
+    // the generated filesystems are not writeable and must not claim
+    // to be
+    uavcan_protocol_file_GetInfoRequest sysreq {};
+    set_path(sysreq.path, "@SYS/memory.txt");
+    uavcan_protocol_file_GetInfoResponse sysrsp {};
+    server.handle_getinfo_request(sysreq, sysrsp);
+    if (sysrsp.error.value == UAVCAN_PROTOCOL_FILE_ERROR_OK) {
+        EXPECT_FALSE(sysrsp.entry_type.flags & UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_WRITEABLE);
+    }
+}
+
+/*
+  one Delete request may only do so much work; a directory holding
+  more entries than the budget draws an error instead of stalling the
+  CAN thread for as long as the tree is deep and wide
+ */
+TEST_F(FileServerTest, DeleteOfTooManyEntriesIsRefused)
+{
+    ASSERT_EQ(0, AP::FS().mkdir(path_in_dir("many")));
+    const uint8_t content[] = {1};
+    for (uint8_t i = 0; i < 70; i++) {
+        char name[32];
+        snprintf(name, sizeof(name), "many/f%03u.bin", i);
+        write_file(name, content, sizeof(content));
+    }
+
+    uavcan_protocol_file_DeleteRequest req {};
+    set_path(req.path, path_in_dir("many"));
+    uavcan_protocol_file_DeleteResponse rsp {};
+    server.handle_delete_request(req, rsp);
+    EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE, rsp.error.value);
 }
 
 AP_GTEST_MAIN()
