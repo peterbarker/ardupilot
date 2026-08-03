@@ -55,6 +55,7 @@ public:
     int32_t write(int fd, const void *buf, uint32_t count) override;
     int fsync(int fd) override;
     int32_t lseek(int fd, int32_t offset, int whence) override;
+    int ftruncate(int fd, uint32_t length) override;
     int stat(const char *pathname, struct stat *stbuf) override;
     int unlink(const char *pathname) override;
     int mkdir(const char *pathname) override;

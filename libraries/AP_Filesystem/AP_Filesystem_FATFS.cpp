@@ -466,6 +466,45 @@ off_t AP_Filesystem_FATFS::lseek(int fileno, off_t position, int whence)
     return fh->fptr;
 }
 
+int AP_Filesystem_FATFS::ftruncate(int fileno, uint32_t length)
+{
+    FIL *fh;
+    FRESULT res;
+
+    errno = 0;
+
+    FS_CHECK_ALLOWED(-1);
+    WITH_SEMAPHORE(sem);
+
+    fh = fileno_to_fatfs(fileno);
+    if (fh == nullptr) { // unknown fileno?
+        return -1; // errno already set
+    }
+
+    // f_truncate truncates at the current file pointer, so position
+    // there first.  Note that unlike POSIX, extending the file leaves
+    // the new region undefined rather than zeroed
+    const FSIZE_t old_ofs = fh->fptr;
+    res = f_lseek(fh, length);
+    if (res) {
+        errno = fatfs_to_errno(res);
+        return -1;
+    }
+    res = f_truncate(fh);
+    if (res) {
+        errno = fatfs_to_errno(res);
+        return -1;
+    }
+    if (old_ofs < length) {
+        res = f_lseek(fh, old_ofs);
+        if (res) {
+            errno = fatfs_to_errno(res);
+            return -1;
+        }
+    }
+    return 0;
+}
+
 static time_t fat_time_to_unix(uint16_t date, uint16_t time)
 {
     struct tm tp;

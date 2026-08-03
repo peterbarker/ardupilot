@@ -175,6 +175,12 @@ int32_t AP_Filesystem::lseek(int fd, int32_t offset, int seek_from)
     return backend.fs.lseek(fd, offset, seek_from);
 }
 
+int AP_Filesystem::ftruncate(int fd, uint32_t length)
+{
+    const Backend &backend = backend_by_fd(fd);
+    return backend.fs.ftruncate(fd, length);
+}
+
 int AP_Filesystem::stat(const char *pathname, struct stat *stbuf)
 {
     const Backend &backend = backend_by_path(pathname);

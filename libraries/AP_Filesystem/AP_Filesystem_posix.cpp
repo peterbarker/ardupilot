@@ -134,6 +134,12 @@ int32_t AP_Filesystem_Posix::lseek(int fd, int32_t offset, int seek_from)
     return ::lseek(fd, offset, seek_from);
 }
 
+int AP_Filesystem_Posix::ftruncate(int fd, uint32_t length)
+{
+    FS_CHECK_ALLOWED(-1);
+    return ::ftruncate(fd, length);
+}
+
 int AP_Filesystem_Posix::stat(const char *pathname, struct stat *stbuf)
 {
     FS_CHECK_ALLOWED(-1);

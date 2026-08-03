@@ -74,6 +74,11 @@ int32_t AP_Filesystem_ESP32::lseek(int fd, int32_t offset, int seek_from)
     return ::lseek(fd, offset, seek_from);
 }
 
+int AP_Filesystem_ESP32::ftruncate(int fd, uint32_t length)
+{
+    return ::ftruncate(fd, length);
+}
+
 int AP_Filesystem_ESP32::stat(const char *pathname, struct stat *stbuf)
 {
 #if FSDEBUG

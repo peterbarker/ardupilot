@@ -87,6 +87,7 @@ public:
     int32_t write(int fd, const void *buf, uint32_t count);
     int fsync(int fd);
     int32_t lseek(int fd, int32_t offset, int whence);
+    int ftruncate(int fd, uint32_t length);
     int stat(const char *pathname, struct stat *stbuf);
 
     // stat variant for scripting

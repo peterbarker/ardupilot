@@ -232,6 +232,31 @@ int32_t AP_Filesystem_FlashMemory_LittleFS::lseek(int fd, int32_t position, int 
     return pos;
 }
 
+int AP_Filesystem_FlashMemory_LittleFS::ftruncate(int fd, uint32_t length)
+{
+    FS_CHECK_ALLOWED(-1);
+    WITH_SEMAPHORE(fs_sem);
+    ENSURE_MOUNTED();
+
+    FileDescriptor* fp = lfs_file_from_fd(fd);
+    if (fp == nullptr) {
+        return -1;
+    }
+
+    LFS_CHECK(lfs_file_truncate(&fs, &(fp->file), length));
+    // littlefs leaves the file offset untouched, even past the new
+    // end; bring it back to honour the API contract
+    const lfs_soff_t pos = lfs_file_tell(&fs, &(fp->file));
+    if (pos < 0) {
+        errno = errno_from_lfs_error(pos);
+        return -1;
+    }
+    if ((uint32_t)pos > length) {
+        LFS_CHECK(lfs_file_seek(&fs, &(fp->file), length, LFS_SEEK_SET));
+    }
+    return 0;
+}
+
 int AP_Filesystem_FlashMemory_LittleFS::stat(const char *name, struct stat *buf)
 {
     FS_CHECK_ALLOWED(-1);
