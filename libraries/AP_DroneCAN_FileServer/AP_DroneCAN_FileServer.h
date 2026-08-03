@@ -32,6 +32,10 @@ class AP_DroneCAN_FileServer {
 public:
 
     AP_DroneCAN_FileServer() {}
+    ~AP_DroneCAN_FileServer() {
+        close_cached_fd();
+        close_write_fd();
+    }
 
     CLASS_NO_COPY(AP_DroneCAN_FileServer);
 
