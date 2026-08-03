@@ -77,6 +77,10 @@ private:
     // true if filepath is dirpath itself or lies beneath it
     static bool path_is_or_is_under(const char *dirpath, const char *filepath);
 
+    // true if the given path may be written or deleted; the
+    // generated filesystems are not writeable
+    static bool path_is_writeable(const char *path);
+
     // cached open file to avoid an open/seek/close cycle per 256-byte
     // read.  Only one file is served at a time; a Read for a
     // different path closes this one

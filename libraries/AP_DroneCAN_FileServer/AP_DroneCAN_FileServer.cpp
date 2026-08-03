@@ -132,6 +132,13 @@ void AP_DroneCAN_FileServer::handle_read_request(const uavcan_protocol_file_Read
     // costs time and can hand back a different snapshot each time.
 }
 
+bool AP_DroneCAN_FileServer::path_is_writeable(const char *path)
+{
+    // the generated filesystems are read-only; the other virtual
+    // backends (e.g. @MISSION, @PARAM) do accept writes
+    return strncmp(path, "@ROMFS", 6) != 0 && strncmp(path, "@SYS", 4) != 0;
+}
+
 void AP_DroneCAN_FileServer::handle_getinfo_request(const uavcan_protocol_file_GetInfoRequest &req, uavcan_protocol_file_GetInfoResponse &rsp)
 {
     char path[sizeof(fd_path)];
@@ -146,11 +153,13 @@ void AP_DroneCAN_FileServer::handle_getinfo_request(const uavcan_protocol_file_G
         return;
     }
     rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
+    const uint8_t rw_flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE |
+        (path_is_writeable(path) ? UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_WRITEABLE : 0);
     if (st.is_directory()) {
-        rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_DIRECTORY | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+        rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_DIRECTORY | rw_flags;
         rsp.size = 0;
     } else {
-        rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_FILE | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+        rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_FILE | rw_flags;
         rsp.size = st.size;
     }
 }
@@ -189,10 +198,12 @@ void AP_DroneCAN_FileServer::handle_getdirectoryentryinfo_request(const uavcan_p
             rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_INVALID_VALUE;
             break;
         }
+        const uint8_t rw_flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE |
+            (path_is_writeable(fullpath) ? UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_WRITEABLE : 0);
         if (entry->d_type == DT_DIR) {
-            rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_DIRECTORY | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+            rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_DIRECTORY | rw_flags;
         } else {
-            rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_FILE | UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_READABLE;
+            rsp.entry_type.flags = UAVCAN_PROTOCOL_FILE_ENTRYTYPE_FLAG_FILE | rw_flags;
         }
         rsp.entry_full_path.path.len = len;
         memcpy(rsp.entry_full_path.path.data, fullpath, len);
