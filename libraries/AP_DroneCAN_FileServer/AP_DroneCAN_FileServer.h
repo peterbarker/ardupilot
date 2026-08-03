@@ -68,6 +68,15 @@ private:
     void close_cached_fd();
     void close_write_fd();
 
+    // remove path and, if it is a directory, everything beneath it.
+    // path is a scratch buffer of buflen bytes holding the target;
+    // it is extended in place while recursing and restored before
+    // returning.  Returns 0 on success, -1 with errno set on failure
+    static int remove_tree(char *path, uint16_t buflen, uint8_t depth, uint16_t &budget);
+
+    // true if filepath is dirpath itself or lies beneath it
+    static bool path_is_or_is_under(const char *dirpath, const char *filepath);
+
     // cached open file to avoid an open/seek/close cycle per 256-byte
     // read.  Only one file is served at a time; a Read for a
     // different path closes this one

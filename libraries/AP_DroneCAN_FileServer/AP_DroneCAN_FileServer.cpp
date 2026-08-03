@@ -11,6 +11,16 @@
 // close the cached file if no Read request has arrived recently
 #define FILE_SERVER_IDLE_CLOSE_MS 3000
 
+// how far Delete will recurse into a directory tree
+#define FILE_SERVER_DELETE_MAX_DEPTH 8
+
+// how many removals one Delete request may perform.  The tree comes
+// out synchronously in the CAN thread with the server locked, so the
+// work must be bounded; a larger tree draws an error.  This is also
+// what stops a delete of a directory something is busy refilling -
+// the logger's, say - from never finishing
+#define FILE_SERVER_DELETE_MAX_ENTRIES 64
+
 bool AP_DroneCAN_FileServer::extract_path(const uavcan_protocol_file_Path &path, char *buf, uint16_t buflen)
 {
     if (path.path.len >= buflen) {
@@ -310,6 +320,102 @@ void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_Wri
     rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
 }
 
+bool AP_DroneCAN_FileServer::path_is_or_is_under(const char *dirpath, const char *filepath)
+{
+    if (strcmp(dirpath, filepath) == 0) {
+        return true;
+    }
+    const size_t dirlen = strlen(dirpath);
+    if (strncmp(dirpath, filepath, dirlen) != 0) {
+        return false;
+    }
+    // a prefix only counts on a component boundary: "APM/LO" does
+    // not contain "APM/LOGS/x.BIN" but "APM/LOGS" and "APM/LOGS/" do
+    return filepath[dirlen] == '/' || (dirlen > 0 && dirpath[dirlen-1] == '/');
+}
+
+int AP_DroneCAN_FileServer::remove_tree(char *path, uint16_t buflen, uint8_t depth, uint16_t &budget)
+{
+    if (budget == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // try a plain remove first: files and empty directories go this
+    // way, leaving only directories with content for the recursion
+    // below
+    if (AP::FS().unlink(path) == 0) {
+        budget--;
+        return 0;
+    }
+
+    AP_Filesystem::stat_t st;
+    if (!AP::FS().stat(path, st) || !st.is_directory()) {
+        // not a directory, so the plain remove was the right tool;
+        // report its failure (note that the stat may have replaced
+        // its errno)
+        return -1;
+    }
+
+    if (depth >= FILE_SERVER_DELETE_MAX_DEPTH) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    const uint16_t dirlen = strlen(path);
+    // remove entries one at a time, rescanning the directory after
+    // each: deleting while iterating is not safe on all backends
+    while (true) {
+        auto *d = AP::FS().opendir(path);
+        if (d == nullptr) {
+            return -1;
+        }
+        bool found = false;
+        bool overflow = false;
+        for (struct dirent *entry = AP::FS().readdir(d); entry != nullptr; entry = AP::FS().readdir(d)) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                continue;
+            }
+            // the entry name is only valid until closedir, so build
+            // the child path while it lives
+            const int len = snprintf(&path[dirlen], buflen - dirlen, "/%s", entry->d_name);
+            if (len < 0 || len >= (int)(buflen - dirlen)) {
+                overflow = true;
+                break;
+            }
+            found = true;
+            break;
+        }
+        AP::FS().closedir(d);
+        if (overflow) {
+            path[dirlen] = 0;
+            errno = EINVAL;
+            return -1;
+        }
+        if (!found) {
+            // directory is now empty
+            break;
+        }
+        const int ret = remove_tree(path, buflen, depth+1, budget);
+        path[dirlen] = 0;
+        if (ret != 0) {
+            return -1;
+        }
+    }
+    // the directory itself is a removal like any other, and must not
+    // escape the budget: a tree of directories would otherwise come
+    // out almost free of charge
+    if (budget == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (AP::FS().unlink(path) != 0) {
+        return -1;
+    }
+    budget--;
+    return 0;
+}
+
 void AP_DroneCAN_FileServer::handle_delete_request(const uavcan_protocol_file_DeleteRequest &req, uavcan_protocol_file_DeleteResponse &rsp)
 {
     char path[sizeof(fd_path)];
@@ -320,17 +426,16 @@ void AP_DroneCAN_FileServer::handle_delete_request(const uavcan_protocol_file_De
 
     WITH_SEMAPHORE(sem);
 
-    // drop any cached descriptor on the file being removed
-    if (fd != -1 && strcmp(path, fd_path) == 0) {
+    // drop any cached descriptor on or under the entry being removed
+    if (fd != -1 && path_is_or_is_under(path, fd_path)) {
         close_cached_fd();
     }
-    if (wfd != -1 && strcmp(path, wfd_path) == 0) {
+    if (wfd != -1 && path_is_or_is_under(path, wfd_path)) {
         close_write_fd();
     }
 
-    // note: no recursive directory removal, unlike the DSDL
-    // suggestion; a directory must be emptied first
-    if (AP::FS().unlink(path) != 0) {
+    uint16_t budget = FILE_SERVER_DELETE_MAX_ENTRIES;
+    if (remove_tree(path, sizeof(path), 0, budget) != 0) {
         rsp.error.value = errno_to_error();
         return;
     }
