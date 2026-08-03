@@ -499,7 +499,7 @@ void AP_Periph_FW::handle_file_write(CanardInstance* canard_instance, CanardRxTr
     }
 
     uavcan_protocol_file_WriteResponse pkt {};
-    dronecan_file_server.handle_write_request(req, pkt);
+    dronecan_file_server.handle_write_request(req, transfer->source_node_id, pkt);
 
     uint8_t buffer[UAVCAN_PROTOCOL_FILE_WRITE_RESPONSE_MAX_SIZE];
     const uint16_t total_size = uavcan_protocol_file_WriteResponse_encode(&pkt, buffer, !canfdout());
