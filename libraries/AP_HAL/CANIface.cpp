@@ -82,6 +82,7 @@ int16_t AP_HAL::CANIface::send(const CANFrame& frame, uint64_t tx_deadline, CanI
 #ifndef HAL_BOOTLOADER_BUILD
     WITH_SEMAPHORE(callbacks.sem);
 #endif
+    bool delivered = false;
     bool added_to_rx_queue = false;
     for (auto &cb : callbacks.cb) {
         if (cb == nullptr) {
@@ -90,6 +91,7 @@ int16_t AP_HAL::CANIface::send(const CANFrame& frame, uint64_t tx_deadline, CanI
         if ((flags & IsForwardedFrame) == 0) {
             // call the frame callback from send only if the frame originated from this node
             cb(get_iface_num(), frame, flags);
+            delivered = true;
         } else if (!added_to_rx_queue) {
             // the frame was forwarded from another interface, so add it to the receive queue
             CanRxItem rx_item;
@@ -100,11 +102,15 @@ int16_t AP_HAL::CANIface::send(const CANFrame& frame, uint64_t tx_deadline, CanI
                 // this frame was injected rather than received by
                 // hardware, so no interrupt will announce it
                 signal_rx_event();
+                delivered = true;
             }
             added_to_rx_queue = true;
         }
     }
-    return 1;
+    // report whether anything consumed the frame: a caller with no
+    // hardware path (the no-cable fallback) must not claim success
+    // for a frame nothing received
+    return delivered ? 1 : 0;
 }
 
 /*
