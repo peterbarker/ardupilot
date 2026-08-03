@@ -747,7 +747,7 @@ void AP_DroneCAN::handle_file_write_request(const CanardRxTransfer& transfer, co
         return;
     }
     file_write_rsp = {};
-    file_server.handle_write_request(req, file_write_rsp);
+    file_server.handle_write_request(req, transfer.source_node_id, file_write_rsp);
     file_write_server.respond(transfer, file_write_rsp);
 }
 

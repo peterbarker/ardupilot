@@ -26,6 +26,10 @@ class FileServerTest : public ::testing::Test {
 protected:
     AP_DroneCAN_FileServer server;
 
+    // the node id most requests arrive from, and a competitor
+    static constexpr uint8_t NODE_A = 10;
+    static constexpr uint8_t NODE_B = 11;
+
     void SetUp() override {
         remove_test_dir();
         AP::FS().mkdir(TEST_DIR);
@@ -256,13 +260,13 @@ TEST_F(FileServerTest, WriteThenCloseLeavesTheContent)
     req.data.len = sizeof(content);
     memcpy(req.data.data, content, sizeof(content));
     uavcan_protocol_file_WriteResponse rsp {};
-    server.handle_write_request(req, rsp);
+    server.handle_write_request(req, NODE_A, rsp);
     EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, rsp.error.value);
 
     // an empty write closes the file
     req.offset = sizeof(content);
     req.data.len = 0;
-    server.handle_write_request(req, rsp);
+    server.handle_write_request(req, NODE_A, rsp);
     EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, rsp.error.value);
 
     const auto rd = read_at("written.bin", 0);
@@ -287,12 +291,12 @@ TEST_F(FileServerTest, WriteFromZeroTruncates)
     req.data.len = sizeof(fresh);
     memcpy(req.data.data, fresh, sizeof(fresh));
     uavcan_protocol_file_WriteResponse rsp {};
-    server.handle_write_request(req, rsp);
+    server.handle_write_request(req, NODE_A, rsp);
     EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, rsp.error.value);
 
     req.offset = sizeof(fresh);
     req.data.len = 0;
-    server.handle_write_request(req, rsp);
+    server.handle_write_request(req, NODE_A, rsp);
 
     const auto rd = read_at("written.bin", 0);
     EXPECT_EQ(sizeof(fresh), rd.data.len);
@@ -309,7 +313,7 @@ TEST_F(FileServerTest, EmptyUploadCreatesAnEmptyFile)
     req.offset = 0;
     req.data.len = 0;
     uavcan_protocol_file_WriteResponse rsp {};
-    server.handle_write_request(req, rsp);
+    server.handle_write_request(req, NODE_A, rsp);
     EXPECT_EQ(UAVCAN_PROTOCOL_FILE_ERROR_OK, rsp.error.value);
 
     const auto rd = read_at("empty.bin", 0);
