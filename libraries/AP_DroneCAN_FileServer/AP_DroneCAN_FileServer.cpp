@@ -203,7 +203,7 @@ void AP_DroneCAN_FileServer::close_write_fd()
     }
 }
 
-void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_WriteRequest &req, uavcan_protocol_file_WriteResponse &rsp)
+void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_WriteRequest &req, uint8_t src_node_id, uavcan_protocol_file_WriteResponse &rsp)
 {
     char path[sizeof(wfd_path)];
     if (!extract_path(req.path, path, sizeof(path))) {
@@ -215,6 +215,16 @@ void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_Wri
 
     if (req.offset > INT32_MAX) {
         rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_FILE_TOO_LARGE;
+        return;
+    }
+
+    // one upload at a time.  There is one cached descriptor, so a
+    // second node writing - to the same path or any other - would
+    // silently interleave with the first through it; refuse instead.
+    // A wedged writer gives the slot up when the idle timer reaps
+    // the descriptor
+    if (wfd != -1 && src_node_id != wfd_node) {
+        rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_ACCESS_DENIED;
         return;
     }
 
@@ -252,6 +262,7 @@ void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_Wri
         strncpy(wfd_path, path, sizeof(wfd_path)-1);
         wfd_path[sizeof(wfd_path)-1] = 0;
         wfd_ofs = 0;
+        wfd_node = src_node_id;
     }
 
     if (req.offset != wfd_ofs) {

@@ -44,8 +44,10 @@ public:
     // fill in a response to a uavcan.protocol.file.GetDirectoryEntryInfo request
     void handle_getdirectoryentryinfo_request(const uavcan_protocol_file_GetDirectoryEntryInfoRequest &req, uavcan_protocol_file_GetDirectoryEntryInfoResponse &rsp);
 
-    // fill in a response to a uavcan.protocol.file.Write request
-    void handle_write_request(const uavcan_protocol_file_WriteRequest &req, uavcan_protocol_file_WriteResponse &rsp);
+    // fill in a response to a uavcan.protocol.file.Write request.
+    // src_node_id identifies the writing client; only one node may
+    // have an upload in progress at a time
+    void handle_write_request(const uavcan_protocol_file_WriteRequest &req, uint8_t src_node_id, uavcan_protocol_file_WriteResponse &rsp);
 
     // fill in a response to a uavcan.protocol.file.Delete request
     void handle_delete_request(const uavcan_protocol_file_DeleteRequest &req, uavcan_protocol_file_DeleteResponse &rsp);
@@ -80,6 +82,9 @@ private:
     uint32_t wfd_ofs;
     char wfd_path[201];
     uint32_t last_write_ms;
+    // the node whose upload this is; a competing writer is refused
+    // rather than have two nodes interleave through one descriptor
+    uint8_t wfd_node;
 
     HAL_Semaphore sem;
 };
