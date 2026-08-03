@@ -306,6 +306,7 @@ int16_t CANIface::send(const AP_HAL::CANFrame& frame, uint64_t tx_deadline,
     }
     PERF_STATS(stats.tx_requests);
 
+    bool queued_to_hw = true;
     {
         CriticalSectionLocker lock;
 
@@ -322,17 +323,17 @@ int16_t CANIface::send(const AP_HAL::CANFrame& frame, uint64_t tx_deadline,
         } else {
             PERF_STATS(stats.tx_overflow);
 #if !defined(HAL_BOOTLOADER_BUILD)
-            if (stats.tx_success == 0) {
+            if (tx_virtual_only()) {
                 /*
-                  if we have never successfully transmitted a frame
-                  then we may be operating with just MAVCAN or UDP
-                  MCAST. Consider the frame sent if the send
-                  succeeds. This allows for UDP MCAST and MAVCAN to
-                  operate fully when the CAN bus has no cable plugged
-                  in.  The delivery to the registered callbacks must
-                  happen outside the critical section: it takes
-                  semaphores and can write to a serial port
+                  nothing has ever made it onto the wire and the bus
+                  has had far longer than it needs to prove itself
+                  present, so we may be operating with just MAVCAN or
+                  UDP MCAST when the CAN bus has no cable plugged in.
+                  Hand the frame to the registered callbacks.  That
+                  delivery must happen outside the critical section:
+                  it takes semaphores and can write to a serial port
                  */
+                queued_to_hw = false;
                 goto deliver_to_callbacks;
             }
 #endif
@@ -375,8 +376,16 @@ int16_t CANIface::send(const AP_HAL::CANFrame& frame, uint64_t tx_deadline,
 #if !defined(HAL_BOOTLOADER_BUILD)
 deliver_to_callbacks:
 #endif
-    // also send on MAVCAN, but don't consider it an error if we can't send
-    AP_HAL::CANIface::send(frame, tx_deadline, flags);
+    {
+        // also send on MAVCAN.  When the frame was queued to hardware
+        // a callback delivery failure is not an error; when it was
+        // not, the callbacks are the only delivery there is, so their
+        // result is the result
+        const int16_t cb_ret = AP_HAL::CANIface::send(frame, tx_deadline, flags);
+        if (!queued_to_hw) {
+            return cb_ret;
+        }
+    }
 
     return 1;
 }
@@ -634,13 +643,12 @@ void CANIface::checkAvailable(bool& read, bool& write, const AP_HAL::CANFrame* p
     if (pending_tx != nullptr) {
         write = canAcceptNewTxFrame();
 #if !defined(HAL_BOOTLOADER_BUILD)
-        if (!write && stats.tx_success == 0) {
+        if (!write && tx_virtual_only()) {
             /*
-              if we have never successfully transmitted a frame the
-              bus may have no cable plugged in and send() will
-              consider frames sent so that UDP MCAST and MAVCAN keep
-              working; report space so senders do not discard frames
-              before send() can do that
+              the bus appears to have no cable plugged in and send()
+              will hand frames to the callbacks so that UDP MCAST and
+              MAVCAN keep working; report space so senders do not
+              discard frames before send() can do that
              */
             write = true;
         }
@@ -873,9 +881,21 @@ bool CANIface::init(const uint32_t bitrate)
         can_->FMR &= ~bxcan::FMR_FINIT;
     }
     initialised_ = true;
+    init_time_us_ = AP_HAL::micros64();
 
     return true;
 }
+
+#if !defined(HAL_BOOTLOADER_BUILD)
+bool CANIface::tx_virtual_only() const
+{
+    // a healthy bus acknowledges within microseconds, so a full FIFO
+    // in the first moments after init is a startup burst to wait
+    // out, not a missing cable
+    return stats.tx_success == 0 &&
+        AP_HAL::micros64() - init_time_us_ > 2000000ULL;
+}
+#endif
 
 #if !defined(HAL_BUILD_AP_PERIPH) && !defined(HAL_BOOTLOADER_BUILD)
 void CANIface::get_stats(ExpandingString &str)

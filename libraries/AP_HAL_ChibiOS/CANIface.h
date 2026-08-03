@@ -110,6 +110,9 @@ class ChibiOS::CANIface : public AP_HAL::CANIface
     bool had_activity_:1;
     AP_HAL::BinarySemaphore *sem_handle;
 
+    // when init() completed, for tx_virtual_only()
+    uint64_t init_time_us_;
+
     const uint8_t self_index_;
 
     bool computeTimings(uint32_t target_bitrate, Timings& out_timings);
@@ -130,6 +133,14 @@ class ChibiOS::CANIface : public AP_HAL::CANIface
 
     void checkAvailable(bool& read, bool& write,
                         const AP_HAL::CANFrame* pending_tx) const;
+
+#if !defined(HAL_BOOTLOADER_BUILD)
+    // true if frames may be considered delivered by callback alone:
+    // nothing has ever been transmitted successfully and the
+    // interface has been up far longer than a healthy bus needs to
+    // acknowledge a frame, so the bus has no cable plugged in
+    bool tx_virtual_only() const;
+#endif
 
     bool waitMsrINakBitStateChange(bool target_state);
 
