@@ -85,6 +85,10 @@ private:
     // the node whose upload this is; a competing writer is refused
     // rather than have two nodes interleave through one descriptor
     uint8_t wfd_node;
+    // whether completion must truncate: false only while the upload
+    // has run in order from offset zero, where O_TRUNC at open plus
+    // the writes themselves already make the length exact
+    bool wfd_needs_truncate;
 
     HAL_Semaphore sem;
 };

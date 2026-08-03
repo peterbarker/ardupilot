@@ -233,17 +233,31 @@ void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_Wri
     }
 
     if (req.data.len == 0) {
-        // an empty write signals the upload is complete.  We have no
-        // truncate in AP_Filesystem; an upload starting at offset
-        // zero opens with O_TRUNC instead, so all that remains is to
-        // close the file.  An empty write to a file we never opened
-        // is a zero-length upload; create the empty file
-        if (wfd == -1 && req.offset == 0) {
-            wfd = AP::FS().open(path, O_WRONLY | O_CREAT | O_TRUNC);
+        // an empty write signals the upload is complete, and requires
+        // us to truncate the file at the supplied offset.  An empty
+        // write to a file we never opened is a zero-length upload or
+        // a bare truncation; open the file so the same path serves
+        if (wfd == -1) {
+            wfd = AP::FS().open(path, O_WRONLY | O_CREAT);
             if (wfd == -1) {
                 rsp.error.value = errno_to_error();
                 return;
             }
+            // the file's existing length is unknown here
+            wfd_needs_truncate = true;
+        }
+        // a sequential upload from offset zero opened with O_TRUNC
+        // and wrote every byte in order, so the file is already
+        // exactly this long and there is nothing to truncate.  That
+        // matters beyond economy: the virtual backends which apply an
+        // upload when it is closed (@PARAM, @MISSION) support only
+        // that shape and have no truncate, and must not draw an error
+        // here for an upload the close below will apply
+        if ((wfd_needs_truncate || req.offset != wfd_ofs) &&
+            AP::FS().ftruncate(wfd, req.offset) == -1) {
+            rsp.error.value = errno_to_error();
+            close_write_fd();
+            return;
         }
         close_write_fd();
         rsp.error.value = UAVCAN_PROTOCOL_FILE_ERROR_OK;
@@ -263,6 +277,9 @@ void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_Wri
         wfd_path[sizeof(wfd_path)-1] = 0;
         wfd_ofs = 0;
         wfd_node = src_node_id;
+        // beginning anywhere but zero leaves existing content in
+        // place, which only a truncate at completion clears up
+        wfd_needs_truncate = (req.offset != 0);
     }
 
     if (req.offset != wfd_ofs) {
@@ -272,6 +289,9 @@ void AP_DroneCAN_FileServer::handle_write_request(const uavcan_protocol_file_Wri
             return;
         }
         wfd_ofs = req.offset;
+        // no longer a straight run from zero; only a truncate at
+        // completion makes the final length certain
+        wfd_needs_truncate = true;
     }
 
     const int32_t n = AP::FS().write(wfd, req.data.data, req.data.len);
