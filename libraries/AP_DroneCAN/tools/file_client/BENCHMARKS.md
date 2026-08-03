@@ -14,7 +14,7 @@ Measured 2026-07-26.
 | | |
 |---|---|
 | Serving node | Holybro Pixhawk6C, STM32H743, node 12, ArduCopter branch build |
-| Bridge | ZeroOne X6, STM32H743, node 10, SLCAN on SERIAL7 (`-if02`) |
+| Bridge | ZeroOne X6, STM32H743, node 10, SLCAN on SERIAL8 (`-if02`) |
 | Client | `dronecan_file_client` on the host, over the bridge's SLCAN port |
 | Bus | CAN1, 1 Mbit arbitration, 8 Mbit FD data phase, 120R both ends |
 | File | `/APM/LOGS/00000002.BIN`, 841859 bytes (3290 chunks of 256) |
@@ -155,6 +155,41 @@ At the top of that table the receiving driver counted 8120 frames a
 second, which at roughly 107us of airtime a frame is **87% of the
 bus**. So 468 kB/s is close to what this wire will carry, and the
 2.06us per byte is the wire rather than the software.
+
+## MAVCAN
+
+Measured 2026-08-03, same two boards, using pydronecan's `mavcan`
+driver over each board's first USB MAVLink interface (256 byte
+chunks, fixed pipeline depth).  The `dronecan_file_client` tool does
+not speak MAVCAN; use dronecan_gui_tool or pydronecan.
+
+| path | framing | depth: rate |
+|---|---|---|
+| Pixhawk6C serving itself over its own USB | classic | 2: 18.6, 4: **25.5**, 8: 24.6 kB/s |
+| Pixhawk6C serving itself | CANFD | 4: 46.5, 8: 80.5, 16: 108, 24: **144.8** kB/s |
+| node 12 through the X6's tunnel and the wire | classic | 2: 10.1, 4: 10.4, 8: **11.5** kB/s |
+| node 12 through the tunnel and the wire | CANFD | 4: 45.9, 8: **53.9** kB/s |
+
+What the numbers say:
+
+- **Ask for CANFD on the tunnel.**  A 256 byte chunk is 5
+  `CANFD_FRAME` messages rather than 38 `CAN_FRAME` ones, and the
+  cost is per message, not per byte: FD is 4-6x faster end to end.
+  pydronecan takes `send_canfd=True`; the server answers in the
+  framing it was asked in.
+- Classic tops out near depth 4 and FD near depth 24; **depth 30
+  collapsed** (88 kB/s, retries) as the window closes on the five bit
+  transfer-ID space.  A client pipelining that deep needs the owned
+  transfer-ID discipline this tool uses for SLCAN.
+- The wire hop costs about half the rate (144.8 self against 53.9
+  remote at the same framing): each request is store-and-forwarded
+  through the bridge at ~20ms plus ~1ms per frame, so FD helps twice.
+- Forwarding ownership is a single global slot re-claimed at 1Hz;
+  a second MAVCAN client steals it and the two fight.  A depth 8 FD
+  transfer survived three deliberate steals at full rate with zero
+  retries - the forwarding queue is flushed and generation-stamped
+  across ownership changes - but two clients working the same
+  autopilot still halve each other's service, so don't.
 
 ## Reproducing
 
