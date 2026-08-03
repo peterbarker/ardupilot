@@ -166,7 +166,10 @@ int16_t CANIface::send(const AP_HAL::CANFrame& frame, const uint64_t tx_deadline
     stats.tx_requests++;
     _pollRead();     // Read poll is necessary because it can release the pending TX flag
     _pollWrite();
-    return AP_HAL::CANIface::send(frame, tx_deadline, flags);
+    // also deliver to any registered callbacks; the frame has been
+    // queued to the socket, so their result is not this send's result
+    AP_HAL::CANIface::send(frame, tx_deadline, flags);
+    return 1;
 }
 
 int16_t CANIface::receive(AP_HAL::CANFrame& out_frame, uint64_t& out_timestamp_us,
