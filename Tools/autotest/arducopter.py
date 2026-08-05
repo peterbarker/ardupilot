@@ -3536,6 +3536,63 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
 
         self.do_RTL(timeout=500)
 
+    def SaveTrimSimpleMode(self):
+        '''check SAVE_TRIM is not affected by the simple mode stick rotation'''
+
+        # SAVE_TRIM is only accepted in STABILIZE with the throttle stick at
+        # zero, so put STABILIZE on switch position 1 and make that position
+        # a simple mode position.  Takeoff happens in Loiter on position 2
+        self.set_parameters({
+            "FLTMODE_CH": 5,
+            "FLTMODE1": 0,   # Stabilize
+            "FLTMODE2": 5,   # Loiter
+            "SIMPLE": 1,     # FLTMODE1 (Stabilize) uses simple mode
+            "RC7_OPTION": 5, # SaveTrim
+            "AHRS_TRIM_X": 0,
+            "AHRS_TRIM_Y": 0,
+        })
+        self.wait_ready_to_arm()
+
+        # simple mode rotates the pilot's sticks relative to the heading
+        # captured when the vehicle was armed
+        armed_heading = self.get_heading()
+
+        self.takeoff(20, mode="LOITER")
+
+        # yaw 90 degrees away from the armed heading so that any simple mode
+        # rotation leaking into SAVE_TRIM turns roll input into pitch trim
+        self.set_rc(4, 1560)
+        self.wait_heading(armed_heading + 90, timeout=60)
+        self.set_rc(4, 1500)
+
+        self.land_and_disarm()
+
+        # enter Stabilize using the mode switch so that simple mode engages
+        self.set_rc(3, 1000)
+        self.set_rc(5, 1165)
+        self.wait_mode('STABILIZE')
+
+        # apply a roll-only stick input and save it as trim
+        self.context_collect('STATUSTEXT')
+        self.set_rc(1, 1600)
+        self.set_rc(7, 2000)
+        self.wait_statustext('Trim saved', check_context=True)
+        self.context_stop_collecting('STATUSTEXT')
+        self.set_rc(7, 1000)
+        self.set_rc(1, 1500)
+
+        # AHRS trim is in body frame so a roll-only stick input must be saved
+        # as roll trim regardless of the vehicle's heading
+        trim_roll_rad = self.get_parameter("AHRS_TRIM_X")
+        trim_pitch_rad = self.get_parameter("AHRS_TRIM_Y")
+        self.progress("AHRS_TRIM_X=%f AHRS_TRIM_Y=%f (rad)" % (trim_roll_rad, trim_pitch_rad))
+        if trim_roll_rad < math.radians(2):
+            raise NotAchievedException(
+                "Roll stick was not saved as roll trim (AHRS_TRIM_X=%f rad)" % trim_roll_rad)
+        if abs(trim_pitch_rad) > math.radians(1):
+            raise NotAchievedException(
+                "Roll stick leaked into pitch trim (AHRS_TRIM_Y=%f rad)" % trim_pitch_rad)
+
     # fly_super_simple - flies a circle around home for 45 seconds
     def SuperSimpleCircle(self, timeout=45):
         '''Fly a circle in SUPER SIMPLE mode'''
@@ -15686,6 +15743,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
              self.ModeAltHold,
              self.ModeLoiter,
              self.SimpleMode,
+             self.SaveTrimSimpleMode,
              self.SuperSimpleCircle,
              self.ModeCircle,
              self.MagFail,
