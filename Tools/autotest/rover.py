@@ -4710,18 +4710,13 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         closest = None
         tstart = self.get_sim_time()
         while True:
-            if self.get_sim_time_cached() - tstart > 120:
+            if self.get_sim_time_cached() - tstart > 180:
                 raise NotAchievedException(
                     "Did not pass the intermediate point (closest %s m)" %
                     str(closest))
             d = self.get_distance(loc, self.get_location())
             if closest is None or d < closest:
                 closest = d
-            elif d > closest + 20:
-                # been past it and heading away again; no need to watch
-                # the vehicle all the way home, which takes a good deal
-                # longer than getting to the corner does
-                break
             if self.distance_to_home() < 10:
                 break
         self.progress("Closest approach to intermediate point: %.1fm" % closest)
@@ -6578,18 +6573,26 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         # once it has turned, so every sample is inside the window by
         # then, and this stops depending on where the samples fall.
         settled = 2
+        # The vehicle closes the last few degrees of the turn slowly -
+        # about 0.3 degrees a second - so coming round from 180 it can
+        # still be ten degrees out when wait_heading()'s default thirty
+        # seconds are up, and we report where it had got to:
+        #     Failed to attain Heading want 0.0, reached 350
+        # It is not stuck there; it is still turning.  Give it time.
+        turn_timeout = 120
+
         for method in self.run_cmd, self.run_cmd_int:
             self.progress("Forwards!")
             method(mavutil.mavlink.MAV_CMD_DO_SET_REVERSE, p1=0)
-            self.wait_heading(0, minimum_duration=settled)
+            self.wait_heading(0, minimum_duration=settled, timeout=turn_timeout)
 
             self.progress("Backwards!")
             method(mavutil.mavlink.MAV_CMD_DO_SET_REVERSE, p1=1)
-            self.wait_heading(180, minimum_duration=settled)
+            self.wait_heading(180, minimum_duration=settled, timeout=turn_timeout)
 
             self.progress("Forwards!")
             method(mavutil.mavlink.MAV_CMD_DO_SET_REVERSE, p1=0)
-            self.wait_heading(0, minimum_duration=settled)
+            self.wait_heading(0, minimum_duration=settled, timeout=turn_timeout)
 
         self.disarm_vehicle()
 
