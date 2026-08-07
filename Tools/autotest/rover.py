@@ -933,6 +933,16 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         self.set_parameters({
             "MAV_GCS_SYSID": self.mav.source_system,
             "RC10_OPTION": 46,  # RC Override Enable
+            # Overrides normally expire RC_OVERRIDE_TIME (3s of vehicle
+            # time) after the last one arrives, and the vehicle then
+            # falls back to the TX value - which is exactly what this
+            # test raises the alarm about.  At Rover's speedup of 30
+            # those 3s are 100ms of wall clock, so a scheduling stall in
+            # this process while --parallel keeps the machine busy is
+            # enough to make us report a bug which is not there.
+            # Timeouts are orthogonal to the enable-channel behaviour
+            # under test; a negative value turns them off.
+            "RC_OVERRIDE_TIME": -1,
         })
 
         self.change_mode('MANUAL')
