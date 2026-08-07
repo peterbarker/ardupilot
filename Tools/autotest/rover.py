@@ -4689,7 +4689,21 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         self.change_mode("SMART_RTL")
 
         self.progress("Ensure we go via intermediate point")
-        self.wait_distance_to_location(loc, 0, 5, timeout=60)
+        # Each sample here waits on a fresh GPS fix, so consecutive ones
+        # land about 5m apart - the same width as the 0-5m band this
+        # used to ask for.  Whether the run passes is then down to where
+        # the samples happen to fall: over ten runs the closest one came
+        # in between 4.64 and 4.97m, inside the band by as little as
+        # three centimetres, and a run whose samples fell a fraction
+        # later missed it altogether and timed out:
+        #     Failed to attain Distance want 0.0, reached 9.625282874303613
+        # Ask for 10m, which is two sample spacings, so one has to land
+        # inside it.  This does check less than 5m did - it now stops at
+        # the ~9.8m sample rather than the ~4.8m one - but the thing it
+        # is here to catch is a vehicle cutting across the square
+        # instead of retracing its path, which misses the corner by far
+        # more than ten metres.
+        self.wait_distance_to_location(loc, 0, 10, timeout=60)
 
         self.progress("Ensure we get home")
         self.wait_distance_to_home(3, 7, timeout=30)
