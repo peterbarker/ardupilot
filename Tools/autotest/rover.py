@@ -6549,18 +6549,30 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
 
         self.wait_groundspeed(3, 100, minimum_duration=5)
 
+        # The vehicle slews through the wanted heading far faster than
+        # we sample it: consecutive samples in a passing run are 21, 111
+        # and 85 degrees apart, against the 10-degree-wide window
+        # wait_heading()'s default accuracy gives us.  Taking the first
+        # sample which lands inside is then luck - one run "attained"
+        # 355, right on the edge - and when no sample lands inside we
+        # report wherever the nearest one was:
+        #     Failed to attain Heading want 0.0, reached 350
+        # Ask for the heading to be held instead.  The vehicle settles
+        # once it has turned, so every sample is inside the window by
+        # then, and this stops depending on where the samples fall.
+        settled = 2
         for method in self.run_cmd, self.run_cmd_int:
             self.progress("Forwards!")
             method(mavutil.mavlink.MAV_CMD_DO_SET_REVERSE, p1=0)
-            self.wait_heading(0)
+            self.wait_heading(0, minimum_duration=settled)
 
             self.progress("Backwards!")
             method(mavutil.mavlink.MAV_CMD_DO_SET_REVERSE, p1=1)
-            self.wait_heading(180)
+            self.wait_heading(180, minimum_duration=settled)
 
             self.progress("Forwards!")
             method(mavutil.mavlink.MAV_CMD_DO_SET_REVERSE, p1=0)
-            self.wait_heading(0)
+            self.wait_heading(0, minimum_duration=settled)
 
         self.disarm_vehicle()
 
