@@ -12943,9 +12943,22 @@ Also, ignores heartbeats not from our target system'''
                                       (lat2, lon2))
                         time.sleep(1)
                     if alt is None:
-                        # no data - we can't send the packet
-                        raise ValueError("No elevation data for (%f %f)" % (lat2, lon2))
+                        # no data - we can't send the packet.  Do not make
+                        # that fatal: the vehicle asks about anywhere its
+                        # mission goes, and a mission left behind by an
+                        # earlier test asks about somewhere this test has
+                        # no business having data for -
+                        #     No elevation data for (-26.590366 151.845361)
+                        # which is Kingaroy, from a mission loaded a
+                        # couple of tests earlier.  A real terrain server
+                        # simply does not answer, and the vehicle copes.
+                        self.progress("No elevation data for (%f %f); not "
+                                      "answering this request" % (lat2, lon2))
+                        data = None
+                        break
                     data.append(int(alt))
+                if data is None:
+                    continue
                 self.terrain_data_messages_sent += 1
                 self.mav.mav.terrain_data_send(m.lat,
                                                m.lon,
