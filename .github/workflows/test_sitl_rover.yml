@@ -1,285 +1,180 @@
-name: test rover
+name: test rover  # NB: the name is part of the ccache key; do not change it
+
+# THIS BRANCH IS AN EXPERIMENT, NOT FOR MERGE.
+#
+# Trying to reproduce, and to tell apart the two explanations for, this:
+#
+#     RTL_SPEED (Test RTL_SPEED is honoured) (Failed to attain groundspeed
+#     between 5.4 and 5.6, reached 0.028583424165844917)
+#
+# The vehicle is stationary where it should be doing 5.5m/s.  RTL_SPEED
+# drives out on a mission and then does four RTL legs at different
+# speeds; between them those legs spend about 160m of the 300m it has,
+# and a vehicle which starts closer simply arrives home and stops.
+#
+# Two candidate explanations:
+#
+#   1. starvation.  The test's process does not get scheduled and
+#      something is measured wrongly.  If this is it, loading the machine
+#      should provoke it, and the test on its own on an idle machine
+#      should not.
+#
+#   2. where the vehicle starts.  This has only been seen in --parallel
+#      runs, which no longer reset the SITL between tests, so RTL_SPEED
+#      begins wherever the previous test left the vehicle.  If this is
+#      it, no amount of CPU load will provoke it on its own; it needs the
+#      rest of the suite running before it.
+#
+# On a 32-core machine it failed twice at --parallel=6 with 26 cores
+# spare, which points at 2 rather than 1 - but that is one observation.
+#
+# The branch this is cut from carries a precondition in RTL_SPEED which
+# waits for the vehicle to be 250m from home before it starts spending
+# that distance.  That makes the two cases say different things:
+#
+#   "Failed to attain Distance to home"  -> explanation 2
+#   "Failed to attain groundspeed"       -> explanation 1
+#
+# Whichever it is, keep the logs.  Every previous occurrence has been
+# overwritten by the following run before it could be read.
 
 on:
   push:
-    paths-ignore:
-      # remove other vehicles
-      - 'AntennaTracker/**'
-      - 'ArduCopter/**'
-      - 'ArduPlane/**'
-      - 'ArduSub/**'
-      - 'Blimp/**'
-      # remove non SITL HAL
-      - 'libraries/AP_HAL_ChibiOS/**'
-      - 'libraries/AP_HAL_ESP32/**'
-      - 'libraries/AP_HAL_QURT/**'
-      # remove non SITL directories
-      - 'Tools/AP_Bootloader/**'
-      - 'Tools/AP_Periph/**'
-      - 'Tools/bootloaders/**'
-      - 'Tools/CHDK-Scripts/**'
-      - 'Tools/CodeStyle/**'
-      - 'Tools/completion/**'
-      - 'Tools/CPUInfo/**'
-      - 'Tools/debug/**'
-      - 'Tools/environment_install/**'
-      - 'Tools/FilterTestTool/**'
-      - 'Tools/Frame_params/**'
-      - 'Tools/geotag/**'
-      - 'Tools/GIT_Test/**'
-      - 'Tools/gittools/**'
-      - 'Tools/Hello/**'
-      - 'Tools/IO_Firmware/**'
-      - 'Tools/Linux_HAL_Essentials/**'
-      - 'Tools/Pozyx/**'
-      - 'Tools/PrintVersion.py'
-      - 'Tools/Replay/**'
-      - 'Tools/simulink/**'
-      - 'Tools/UDP_Proxy/**'
-      - 'Tools/vagrant/**'
-      - 'Tools/Vicon/**'
-      # Discard python file from Tools/scripts as not used
-      - 'Tools/scripts/**.py'
-      - 'Tools/scripts/build_sizes/**'
-      - 'Tools/scripts/build_tests/**'
-      - 'Tools/scripts/CAN/**'
-      - 'Tools/scripts/signing/**'
-      # Remove other vehicles autotest
-      - 'Tools/autotest/antennatracker.py'
-      - 'Tools/autotest/arducopter.py'
-      - 'Tools/autotest/arduplane.py'
-      - 'Tools/autotest/ardusub.py'
-      - 'Tools/autotest/blimp.py'
-      - 'Tools/autotest/helicopter.py'
-      - 'Tools/autotest/location.txt'
-      - 'Tools/autotest/quadplane.py'
-      - 'Tools/autotest/swarminit.txt'
-      - 'Tools/autotest/sim_vehicle.py'
-      # Remove markdown files as irrelevant
-      - '**.md'
-      # Remove dotfile at root directory
-      - '.dir-locals.el'
-      - '.dockerignore'
-      - '.editorconfig'
-      - '.flake8'
-      - '.gitattributes'
-      - '.github'
-      - '.gitignore'
-      - '.pre-commit-config.yaml'
-      - '.pydevproject'
-      - '.valgrind-suppressions'
-      - '.valgrindrc'
-      - 'Dockerfile'
-      - 'Vagrantfile'
-      - 'Makefile'
-      # Remove some directories check
-      - '.vscode/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      # Remove change on other workflows
-      - '.github/**'
-      - '!.github/workflows/test_sitl_rover.yml'  # except this one
-
-  pull_request:
-    paths-ignore:
-      # remove other vehicles
-      - 'AntennaTracker/**'
-      - 'ArduCopter/**'
-      - 'ArduPlane/**'
-      - 'ArduSub/**'
-      - 'Blimp/**'
-      # remove non SITL HAL
-      - 'libraries/AP_HAL_ChibiOS/**'
-      - 'libraries/AP_HAL_ESP32/**'
-      - 'libraries/AP_HAL_QURT/**'
-      # remove non SITL directories
-      - 'Tools/AP_Bootloader/**'
-      - 'Tools/AP_Periph/**'
-      - 'Tools/bootloaders/**'
-      - 'Tools/CHDK-Scripts/**'
-      - 'Tools/CodeStyle/**'
-      - 'Tools/completion/**'
-      - 'Tools/CPUInfo/**'
-      - 'Tools/debug/**'
-      - 'Tools/environment_install/**'
-      - 'Tools/FilterTestTool/**'
-      - 'Tools/Frame_params/**'
-      - 'Tools/geotag/**'
-      - 'Tools/GIT_Test/**'
-      - 'Tools/gittools/**'
-      - 'Tools/Hello/**'
-      - 'Tools/IO_Firmware/**'
-      - 'Tools/Linux_HAL_Essentials/**'
-      - 'Tools/Pozyx/**'
-      - 'Tools/PrintVersion.py'
-      - 'Tools/Replay/**'
-      - 'Tools/simulink/**'
-      - 'Tools/UDP_Proxy/**'
-      - 'Tools/vagrant/**'
-      - 'Tools/Vicon/**'
-      # Discard python file from Tools/scripts as not used
-      - 'Tools/scripts/**.py'
-      - 'Tools/scripts/build_sizes/**'
-      - 'Tools/scripts/build_tests/**'
-      - 'Tools/scripts/CAN/**'
-      - 'Tools/scripts/signing/**'
-      # Remove other vehicles autotest
-      - 'Tools/autotest/antennatracker.py'
-      - 'Tools/autotest/arducopter.py'
-      - 'Tools/autotest/arduplane.py'
-      - 'Tools/autotest/ardusub.py'
-      - 'Tools/autotest/blimp.py'
-      - 'Tools/autotest/helicopter.py'
-      - 'Tools/autotest/location.txt'
-      - 'Tools/autotest/quadplane.py'
-      - 'Tools/autotest/swarminit.txt'
-      - 'Tools/autotest/sim_vehicle.py'
-      # Remove markdown files as irrelevant
-      - '**.md'
-      # Remove dotfile at root directory
-      - '.dir-locals.el'
-      - '.dockerignore'
-      - '.editorconfig'
-      - '.flake8'
-      - '.gitattributes'
-      - '.github'
-      - '.gitignore'
-      - '.pre-commit-config.yaml'
-      - '.pydevproject'
-      - '.valgrind-suppressions'
-      - '.valgrindrc'
-      - 'Dockerfile'
-      - 'Vagrantfile'
-      - 'Makefile'
-      # Remove some directories check
-      - '.vscode/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      # Remove change on other workflows
-      - '.github/**'
-      - '!.github/workflows/test_sitl_rover.yml'  # except this one
-
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{github.workflow}}-${{ github.ref }}
+  group: ${{github.ref}}-${{github.workflow}}
   cancel-in-progress: true
-
-permissions:
-  contents: read  # checkout; jobs that save ccache add actions:write per-job
 
 jobs:
   build:
     permissions:
       contents: read
-      actions: write  # save-ccache prunes the previous cache entry
+      actions: write
     runs-on: ubuntu-22.04
-    container: ardupilot/ardupilot-dev-${{ matrix.toolchain }}:v0.2.0
-    strategy:
-      fail-fast: false  # don't cancel if a job from the matrix fails
-      matrix:
-        toolchain: [
-            base,  # GCC
-        ]
+    container: ardupilot/ardupilot-dev-base:v0.2.0
     steps:
-      # git checkout the PR
       - uses: actions/checkout@v7
         with:
           submodules: 'recursive'
       - uses: ./.github/actions/setup-ccache
         with:
-          key-suffix: ${{ matrix.toolchain }}
-      - name: build rover ${{ matrix.toolchain }}
+          key-suffix: base
+      - name: build rover
         shell: bash
-        # Need --enable-math-check-indexes to match build_ci.sh build phase
         run: |
-          pppd --help # fail with `command not found` if ppp install failed
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           PATH="/github/home/.local/bin:$PATH"
           ./waf configure --board sitl --debug --enable-math-check-indexes
           ./waf build --target bin/ardurover
           ccache -s
-          ccache -z
-      # Pre-build the firmware that tests build at test time, so those
-      # objects are in the saved ccache and the in-test builds become
-      # ccache hits.  Only master pushes save the cache (see
-      # save-ccache), so only they pay for this - on PR runs the chunks
-      # restore master's cache and the pre-build would be pure waste.
-      - name: pre-build test-time firmware
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        shell: bash
-        run: |
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          PATH="/github/home/.local/bin:$PATH"
-          # NetworkingWebServerPPP rebuilds the rover with PPP enabled
-          ./waf configure --board sitl --debug --enable-math-check-indexes --enable-PPP
-          ./waf build --target bin/ardurover
-          ccache -s
-      - uses: ./.github/actions/save-ccache
-        with:
-          key-suffix: ${{ matrix.toolchain }}
 
-  autotest:
-    needs: build  # don't try to launch the tests matrix if it doesn't build first, profit from caching for fast build
+  repro:
+    needs: build
     runs-on: ubuntu-22.04
+    timeout-minutes: 330
     container:
       image: ardupilot/ardupilot-dev-base:v0.2.0
       options: --privileged --cap-add=SYS_PTRACE --security-opt apparmor=unconfined --security-opt seccomp=unconfined
     strategy:
-      fail-fast: false  # don't cancel if a job from the matrix fails
+      fail-fast: false
       matrix:
-        config: [
-            sitltest-rover,
-            sitltest-sailboat,
-            sitltest-balancebot
-        ]
+        # solo        - the test on its own, idle machine
+        # solo-loaded - the test on its own with the cores kept busy
+        # suite       - the whole Rover suite, which is where it has
+        #               actually been seen to fail
+        mode: [solo, solo-loaded, suite]
+        shard: [1, 2, 3, 4]
+
+    name: repro (${{matrix.mode}} ${{matrix.shard}})
 
     steps:
-      # git checkout the PR
       - uses: actions/checkout@v7
         with:
           submodules: 'recursive'
 
-      - name: Register gcc problem matcher
-        run: echo "::add-matcher::.github/problem-matchers/gcc.json"
-
-      - name: Register python problem matcher
-        run: echo "::add-matcher::.github/problem-matchers/python.json"
-
-      - name: Register autotest warn matcher
-        run: echo "::add-matcher::.github/problem-matchers/autotestwarn.json"
-
-      - name: Register autotest fail matcher
-        run: echo "::add-matcher::.github/problem-matchers/autotestfail.json"
-
       - uses: ./.github/actions/setup-ccache
         with:
           key-suffix: base
-      - name: test ${{matrix.config}}
-        env:
-          CI_BUILD_TARGET: ${{matrix.config}}
+
+      - name: describe runner
+        shell: bash
+        run: |
+          echo "nproc: $(nproc)"
+          free -m || true
+
+      - name: build rover
         shell: bash
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           PATH="/github/home/.local/bin:$PATH"
-          Tools/scripts/build_ci.sh
+          ./waf configure --board sitl --debug --enable-math-check-indexes
+          ./waf build --target bin/ardurover
 
-      - name: Archive buildlog artifacts
+      - name: hunt
+        shell: bash
+        env:
+          MODE: ${{matrix.mode}}
+        run: |
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          PATH="/github/home/.local/bin:$PATH"
+          KEEP=/tmp/rtlspeed-failures
+          mkdir -p $KEEP
+
+          case "$MODE" in
+            solo)        iterations=15; loopers=0 ;;
+            solo-loaded) iterations=15; loopers=8 ;;
+            suite)       iterations=3;  loopers=0 ;;
+          esac
+
+          pids=""
+          for i in $(seq 1 $loopers); do
+            ( while :; do :; done ) &
+            pids="$pids $!"
+          done
+          echo "started $loopers cpu loopers on $(nproc) cores"
+
+          fails=0
+          for n in $(seq 1 $iterations); do
+            rm -f ../buildlogs/autotest.lck
+            rm -rf scripts parallel-autotest
+            if [ "$MODE" = "suite" ]; then
+              cmd="./Tools/autotest/autotest.py --no-configure --parallel=6 test.Rover"
+            else
+              cmd="./Tools/autotest/autotest.py --no-configure test.Rover.RTL_SPEED"
+            fi
+            echo "=== iteration $n/$iterations: $cmd"
+            if $cmd > /tmp/iter-$n.log 2>&1; then
+              echo "    pass"
+            else
+              fails=$((fails+1))
+              echo "    FAIL - keeping logs"
+              d=$KEEP/iteration-$n
+              mkdir -p $d
+              cp /tmp/iter-$n.log $d/ || true
+              # the per-test log is the one worth having, and the one the
+              # next iteration would otherwise overwrite:
+              cp ../buildlogs/Rover-*.txt $d/ 2>/dev/null || true
+              cp -r logs $d/dataflash 2>/dev/null || true
+              grep -aoE "Failed to attain [^)]*" /tmp/iter-$n.log | head -3 > $d/reason.txt || true
+            fi
+          done
+
+          for p in $pids; do kill $p 2>/dev/null || true; done
+
+          echo "############################################"
+          echo "MODE=$MODE  failures=$fails of $iterations"
+          for d in $KEEP/iteration-*; do
+            [ -d "$d" ] || continue
+            echo "--- $(basename $d): $(head -1 $d/reason.txt 2>/dev/null)"
+          done
+          echo "############################################"
+
+      - name: Archive failures
         uses: actions/upload-artifact@v7
-        if: failure()
+        if: always()
         with:
-           name: ${{ github.workflow }}-fail-${{matrix.config}}
-           path: |
-             /tmp/buildlogs
-             /__w/ardupilot/ardupilot/logs
-             /__w/ardupilot/ardupilot/ap-*.core
-             /__w/ardupilot/ardupilot/core.*
-             /__w/ardupilot/ardupilot/dumpstack.sh_*
-             /__w/ardupilot/ardupilot/dumpcore.sh_*
-           retention-days: 14
-
-      - name: Archive .bin artifacts
-        uses: actions/upload-artifact@v7
-        with:
-           name: ${{ github.workflow }}-BIN-${{matrix.config}}
-           path: /__w/ardupilot/ardupilot/logs
-           retention-days: 7
-
+          name: rtlspeed-${{matrix.mode}}-${{matrix.shard}}
+          path: /tmp/rtlspeed-failures
+          retention-days: 14
+          if-no-files-found: ignore
