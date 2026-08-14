@@ -38,14 +38,19 @@ public:
 
     bool init() override;
     void update() override;
-    void tare() override;
+    bool tare() override;
+    bool calibrate_scale(float mass_kg) override;
 
     // backend-specific parameters exposed via AP_SUBGROUPVARPTR
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
     void timer();   // periodic I2C callback, called at ~80 Hz
-    void update_tare();  // complete a pending tare; called from update()
+
+    // begin averaging for a zero-offset or scale calibration
+    bool start_calibration(bool scale_cal, float mass_kg);
+    // complete a pending calibration; called from update()
+    void update_calibration();
 
     bool set_bit(uint8_t reg, uint8_t bit);
     bool clear_bit(uint8_t reg, uint8_t bit);
@@ -67,14 +72,16 @@ private:
     AP_Float zero_offset; // zero offset in raw ADC counts; written by tare()
     AP_Float scale;      // raw ADC counts per Newton; set at calibration time
 
-    // in-progress tare, shared between timer() (device thread) and
-    // tare()/update() (main thread)
+    // in-progress calibration, shared between timer() (device thread) and
+    // tare()/calibrate_scale()/update() (main thread)
     struct {
         int64_t  sum {0};
         uint16_t count {0};
         uint32_t start_ms {0};
+        float    mass_kg {0};        // known mass, for a scale calibration
+        bool     scale_cal {false};  // false: zero offset, true: scale factor
         bool     pending {false};
-    } tare_state;
+    } cal_state;
 
     bool initialised;
 };
