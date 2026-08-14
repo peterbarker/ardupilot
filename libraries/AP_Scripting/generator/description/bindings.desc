@@ -311,7 +311,8 @@ singleton AP_ForceSensor rename force_sensor
 singleton AP_ForceSensor method num_sensors uint8_t
 singleton AP_ForceSensor method force_N float uint8_t'skip_check
 singleton AP_ForceSensor method healthy boolean uint8_t'skip_check
-singleton AP_ForceSensor method tare void uint8_t'skip_check
+singleton AP_ForceSensor method tare boolean uint8_t'skip_check
+singleton AP_ForceSensor method calibrate_scale boolean uint8_t'skip_check float 0 1000
 
 include AP_Terrain/AP_Terrain.h
 
