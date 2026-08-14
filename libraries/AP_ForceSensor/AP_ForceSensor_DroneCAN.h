@@ -41,7 +41,7 @@ public:
 
     bool init() override { return true; }
     void update() override;
-    void tare() override;
+    bool tare() override;
 
 private:
     AP_ForceSensor_DroneCAN(AP_ForceSensor &frontend, uint8_t instance);

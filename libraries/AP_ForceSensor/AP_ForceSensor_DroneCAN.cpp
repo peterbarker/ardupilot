@@ -110,12 +110,13 @@ void AP_ForceSensor_DroneCAN::update()
   tare: offset future readings so the current weight reads as zero.
   Runtime-only — not persisted to EEPROM.
  */
-void AP_ForceSensor_DroneCAN::tare()
+bool AP_ForceSensor_DroneCAN::tare()
 {
     WITH_SEMAPHORE(sem);
     // latest.force_N already has the current offset removed, so the offset
     // which makes it read zero is the current offset plus that residual
     tare_offset_N += latest.force_N;
+    return true;
 }
 
 /*

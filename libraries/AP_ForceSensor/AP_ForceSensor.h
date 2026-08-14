@@ -61,8 +61,13 @@ public:
     void init();
     void update();
 
-    // tare instance: record current reading as zero offset
-    void tare(uint8_t instance);
+    // tare instance: record current reading as zero offset.
+    // Returns true if the operation was started.
+    bool tare(uint8_t instance);
+
+    // set an instance's scale factor from a known mass, in kg, which is
+    // currently applied to it. Returns true if the operation was started.
+    bool calibrate_scale(uint8_t instance, float mass_kg);
 
     float   force_N(uint8_t instance) const;
     bool    healthy(uint8_t instance) const;

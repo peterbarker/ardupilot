@@ -19,6 +19,7 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/I2CDevice.h>
+#include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL &hal;
@@ -49,11 +50,15 @@ static constexpr uint8_t I2C_ADDR = 0x2A;
 // Periodic callback interval: ~80 Hz (12.5 ms)
 static constexpr uint32_t TIMER_PERIOD_US = 12500;
 
-// number of raw samples averaged to produce a new zero offset, and how long
-// to wait for them before giving up. At the slowest sample rate (10 SPS) the
-// full set takes 3.2s, comfortably inside the timeout.
-static constexpr uint16_t TARE_SAMPLES    = 32;
-static constexpr uint32_t TARE_TIMEOUT_MS = 10000;
+// number of raw samples averaged to produce a new zero offset or scale
+// factor, and how long to wait for them before giving up. At the slowest
+// sample rate (10 SPS) the full set takes 3.2s, comfortably inside the timeout.
+static constexpr uint16_t CAL_SAMPLES    = 32;
+static constexpr uint32_t CAL_TIMEOUT_MS = 10000;
+
+// a scale calibration is rejected if the applied load moves the reading by
+// less than this many counts, which would make the result mostly noise
+static constexpr float CAL_MIN_DELTA_COUNTS = 1000;
 
 // table of backend-specific user settable parameters
 const AP_Param::GroupInfo AP_ForceSensor_NAU7802::var_info[] = {
@@ -227,9 +232,9 @@ void AP_ForceSensor_NAU7802::timer()
     }
 
     WITH_SEMAPHORE(sem);
-    if (tare_state.pending && tare_state.count < TARE_SAMPLES) {
-        tare_state.sum += raw;
-        tare_state.count++;
+    if (cal_state.pending && cal_state.count < CAL_SAMPLES) {
+        cal_state.sum += raw;
+        cal_state.count++;
     }
     // store force in latest for update()
     latest.force_N = force_N;
@@ -266,61 +271,121 @@ void AP_ForceSensor_NAU7802::update()
         copy_to_frontend(0.0f, AP_ForceSensor::Status::NoData);
     }
 
-    update_tare();
+    update_calibration();
 }
 
 /*
-  tare: start averaging raw readings. The new zero offset is applied by
-  update_tare() once enough samples have been collected.
+  tare: start averaging raw readings to establish a new zero offset
  */
-void AP_ForceSensor_NAU7802::tare()
+bool AP_ForceSensor_NAU7802::tare()
 {
-    WITH_SEMAPHORE(sem);
-    if (tare_state.pending) {
-        // a tare is already running; let it finish
-        return;
-    }
-    tare_state.sum      = 0;
-    tare_state.count    = 0;
-    tare_state.start_ms = AP_HAL::millis();
-    tare_state.pending  = true;
+    return start_calibration(false, 0);
 }
 
 /*
-  finish a pending tare. Runs on the main thread so that the parameter write
-  and the GCS notification are kept off the device thread.
+  start a scale calibration against a mass which is currently applied to the
+  sensor. The sensor should have been tared beforehand.
  */
-void AP_ForceSensor_NAU7802::update_tare()
+bool AP_ForceSensor_NAU7802::calibrate_scale(float mass_kg)
+{
+    // the comparison is written this way so that a NaN mass is rejected too
+    if (!(mass_kg > 0)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING,
+                      "ForceSensor[%u]: calibration mass must be positive",
+                      (unsigned)instance);
+        return false;
+    }
+    return start_calibration(true, mass_kg);
+}
+
+/*
+  begin averaging raw readings. The result is applied by update_calibration()
+  once enough samples have been collected.
+ */
+bool AP_ForceSensor_NAU7802::start_calibration(bool scale_cal, float mass_kg)
+{
+    if (!initialised) {
+        return false;
+    }
+    WITH_SEMAPHORE(sem);
+    if (cal_state.pending) {
+        // one is already running; let it finish
+        return false;
+    }
+    cal_state.sum       = 0;
+    cal_state.count     = 0;
+    cal_state.start_ms  = AP_HAL::millis();
+    cal_state.mass_kg   = mass_kg;
+    cal_state.scale_cal = scale_cal;
+    cal_state.pending   = true;
+    return true;
+}
+
+/*
+  finish a pending calibration. Runs on the main thread so that the parameter
+  write and the GCS notification are kept off the device thread.
+ */
+void AP_ForceSensor_NAU7802::update_calibration()
 {
     int64_t sum;
     uint16_t count;
+    bool scale_cal;
+    float mass_kg;
 
     {
         WITH_SEMAPHORE(sem);
-        if (!tare_state.pending) {
+        if (!cal_state.pending) {
             return;
         }
-        if (tare_state.count < TARE_SAMPLES &&
-            AP_HAL::millis() - tare_state.start_ms < TARE_TIMEOUT_MS) {
+        if (cal_state.count < CAL_SAMPLES &&
+            AP_HAL::millis() - cal_state.start_ms < CAL_TIMEOUT_MS) {
             // still collecting
             return;
         }
-        sum   = tare_state.sum;
-        count = tare_state.count;
-        tare_state.pending = false;
+        sum       = cal_state.sum;
+        count     = cal_state.count;
+        scale_cal = cal_state.scale_cal;
+        mass_kg   = cal_state.mass_kg;
+        cal_state.pending = false;
     }
 
-    if (count < TARE_SAMPLES) {
+    if (count < CAL_SAMPLES) {
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING,
-                      "ForceSensor[%u]: tare failed, got %u of %u samples",
-                      (unsigned)instance, (unsigned)count, (unsigned)TARE_SAMPLES);
+                      "ForceSensor[%u]: calibration failed, got %u of %u samples",
+                      (unsigned)instance, (unsigned)count, (unsigned)CAL_SAMPLES);
         return;
     }
 
-    const float zero = (float)(sum / (int64_t)count);
-    zero_offset.set_and_save(zero);
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "ForceSensor[%u]: tared, zero=%.1f",
-                  (unsigned)instance, (double)zero);
+    const float avg = (float)(sum / (int64_t)count);
+
+    if (!scale_cal) {
+        zero_offset.set_and_save(avg);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "ForceSensor[%u]: tared, zero=%.1f",
+                      (unsigned)instance, (double)avg);
+        return;
+    }
+
+    // the change from the zero offset must be well clear of the sensor noise
+    // for the resulting scale factor to mean anything
+    const float delta = avg - zero_offset.get();
+    if (fabsf(delta) < CAL_MIN_DELTA_COUNTS) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING,
+                      "ForceSensor[%u]: calibration failed, load too small (%.0f counts)",
+                      (unsigned)instance, (double)delta);
+        return;
+    }
+
+    const float new_scale = delta / (mass_kg * GRAVITY_MSS);
+    if (!isfinite(new_scale) || is_zero(new_scale)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING,
+                      "ForceSensor[%u]: calibration failed, bad scale factor",
+                      (unsigned)instance);
+        return;
+    }
+
+    scale.set_and_save(new_scale);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "ForceSensor[%u]: calibrated, scale=%.1f counts/N",
+                  (unsigned)instance, (double)new_scale);
 }
 
 // --- private I2C helpers ---
