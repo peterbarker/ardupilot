@@ -19,6 +19,7 @@
 #include <AP_LTM_Telem/AP_LTM_Telem.h>
 #include <AP_Devo_Telem/AP_Devo_Telem.h>
 #include <AP_Filesystem/AP_Filesystem_config.h>
+#include <AP_ForceSensor/AP_ForceSensor_config.h>
 #include <AP_Frsky_Telem/AP_Frsky_config.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Mount/AP_Mount_config.h>
@@ -727,6 +728,9 @@ protected:
     MAV_RESULT handle_command_do_fence_enable(const mavlink_command_int_t &packet);
     MAV_RESULT handle_command_debug_trap(const mavlink_command_int_t &packet);
     MAV_RESULT handle_command_set_ekf_source_set(const mavlink_command_int_t &packet);
+#if AP_FORCESENSOR_ENABLED
+    MAV_RESULT handle_command_force_sensor_calibrate(const mavlink_command_int_t &packet);
+#endif
     MAV_RESULT handle_command_airframe_configuration(const mavlink_command_int_t &packet);
 
     /*

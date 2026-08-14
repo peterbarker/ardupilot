@@ -36,6 +36,7 @@
 #include <AP_RangeFinder/AP_RangeFinder_Backend.h>
 #include <AP_Airspeed/AP_Airspeed.h>
 #include <AP_Camera/AP_Camera.h>
+#include <AP_ForceSensor/AP_ForceSensor.h>
 #include <AP_Gripper/AP_Gripper.h>
 #include <AC_Sprayer/AC_Sprayer.h>
 #include <AP_BLHeli/AP_BLHeli.h>
@@ -5143,6 +5144,38 @@ MAV_RESULT GCS_MAVLINK::handle_command_set_ekf_source_set(const mavlink_command_
 }
 #endif
 
+#if AP_FORCESENSOR_ENABLED
+MAV_RESULT GCS_MAVLINK::handle_command_force_sensor_calibrate(const mavlink_command_int_t &packet)
+{
+    if (hal.util->get_soft_armed()) {
+        GCS_SEND_TEXT(MAV_SEVERITY_NOTICE, "Disarm to allow calibration");
+        return MAV_RESULT_FAILED;
+    }
+
+    AP_ForceSensor *force_sensor = AP::force_sensor();
+    if (force_sensor == nullptr) {
+        return MAV_RESULT_UNSUPPORTED;
+    }
+
+    // the mavlink command numbers instances from 1, the library from 0
+    const uint32_t cmd_instance = uint32_t(packet.param1);
+    if (cmd_instance < 1 || cmd_instance > FORCESENSOR_MAX_INSTANCES) {
+        return MAV_RESULT_DENIED;
+    }
+    const uint8_t instance = uint8_t(cmd_instance - 1);
+
+    // the calibration runs asynchronously; its outcome is reported by statustext
+    switch (uint8_t(packet.param2)) {
+    case 0:  // zero the sensor, with no load applied
+        return force_sensor->tare(instance) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+    case 1:  // set the scale factor from a known applied mass
+        return force_sensor->calibrate_scale(instance, packet.param3) ?
+            MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+    }
+    return MAV_RESULT_DENIED;
+}
+#endif  // AP_FORCESENSOR_ENABLED
+
 #if AP_GRIPPER_ENABLED
 MAV_RESULT GCS_MAVLINK::handle_command_do_gripper(const mavlink_command_int_t &packet)
 {
@@ -5855,6 +5888,11 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
 #if AP_AHRS_ENABLED
     case MAV_CMD_SET_EKF_SOURCE_SET:
         return handle_command_set_ekf_source_set(packet);
+#endif
+
+#if AP_FORCESENSOR_ENABLED
+    case MAV_CMD_FORCE_SENSOR_CALIBRATE:
+        return handle_command_force_sensor_calibrate(packet);
 #endif
 
 #if AP_RCPROTOCOL_ENABLED
