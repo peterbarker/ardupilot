@@ -19800,99 +19800,100 @@ return update, 1000
 
     def ForceSensorNAU7802(self):
         '''test NAU7802 I2C load cell via SITL simulator'''
-        self.context_push()
-        ex = None
-        try:
-            # First reboot: set TYPE so the backend is created and its params appear.
-            self.set_parameters({
-                "FSCL1_TYPE": 1,       # NAU7802
-                "FSCL1_ADDR": 0x2A,
-                "FSCL1_BUS": 0,
-                "LOG_DISARMED": 1,
-            })
-            self.reboot_sitl()
+        # First reboot: set TYPE so the backend is created and its params appear.
+        self.set_parameters({
+            "FSCL1_TYPE": 1,       # NAU7802
+            "FSCL1_ADDR": 0x2A,
+            "FSCL1_BUS": 0,
+            "LOG_DISARMED": 1,
+        })
+        self.reboot_sitl()
 
-            # Backend-specific params are now accessible — set calibration
-            self.set_parameters({
-                "FSCL1_SCALE": 1000.0, # 1000 raw counts per Newton
-                "FSCL1_ZERO": 0,
-            })
-            self.reboot_sitl()
+        # backend-specific params exist only once a backend was allocated, so
+        # being able to set these confirms the sensor was detected
+        self.set_parameters({
+            "FSCL1_SCALE": 0,      # raw-count mode, as calibration starts from
+            "FSCL1_ZERO": 0,
+        })
 
-            # TimeUS of the most recent FSCL record, used to anchor the waits
-            # below so an old record cannot satisfy a later condition
-            def latest_fscl_timeus():
+        # TimeUS of the most recent FSCL record, used to anchor the waits below
+        # so that an old record cannot satisfy a later condition
+        def latest_fscl_timeus():
+            dfreader = self.dfreader_for_current_onboard_log()
+            last = 0
+            while True:
+                m = dfreader.recv_match(type="FSCL")
+                if m is None:
+                    return last
+                last = m.TimeUS
+
+        # poll the onboard log until an FSCL record satisfies predicate
+        def wait_fscl(predicate, description, after_us=0, timeout=20):
+            tstart = self.get_sim_time()
+            while True:
+                if self.get_sim_time_cached() - tstart > timeout:
+                    raise NotAchievedException("No FSCL record %s" % description)
                 dfreader = self.dfreader_for_current_onboard_log()
-                last = 0
                 while True:
                     m = dfreader.recv_match(type="FSCL")
                     if m is None:
-                        return last
-                    last = m.TimeUS
+                        break
+                    if m.TimeUS > after_us and predicate(m):
+                        return m
 
-            # poll the onboard log until an FSCL record satisfies predicate
-            def wait_fscl(predicate, description, after_us=0, timeout=20):
-                tstart = self.get_sim_time()
-                while True:
-                    if self.get_sim_time_cached() - tstart > timeout:
-                        raise NotAchievedException("No FSCL record %s" % description)
-                    dfreader = self.dfreader_for_current_onboard_log()
-                    while True:
-                        m = dfreader.recv_match(type="FSCL")
-                        if m is None:
-                            break
-                        if m.TimeUS > after_us and predicate(m):
-                            return m
+        # sensor produces good data reading ~0 counts unloaded
+        self.set_parameter("SIM_FSCL_LOAD", 0)
+        m = wait_fscl(lambda m: m.Sts == 2 and abs(m.ForceN) < 100,
+                      "with Sts=Good while unloaded")
+        self.progress("NAU7802 detected: FSCL Sts=Good raw=%.1f" % m.ForceN)
 
-            # sensor produces good data reading ~0 N unloaded — confirms detection
-            m = wait_fscl(lambda m: m.Sts == 2 and abs(m.ForceN) < 0.5,
-                          "with Sts=Good and ForceN~0")
-            self.progress("NAU7802 detected: FSCL Sts=Good ForceN=%.3f" % m.ForceN)
+        # zero the sensor using the calibration command
+        self.context_collect('STATUSTEXT')
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_FORCE_SENSOR_CALIBRATE,
+                         p1=1,   # instance, numbered from 1
+                         p2=0)   # zero the sensor
+        self.wait_statustext("tared", timeout=30, check_context=True)
 
-            # set simulated load to 9.81 N and verify log reads it
-            anchor_us = latest_fscl_timeus()
-            self.set_parameter("SIM_FSCL_LOAD", 9.81)
-            wait_fscl(lambda m: abs(m.ForceN - 9.81) < 0.5,
-                      "reading 9.81 N", after_us=anchor_us)
+        # apply a 1kg load and have the vehicle work out the scale factor.
+        # The simulator produces 1000 raw counts per Newton.
+        self.set_parameter("SIM_FSCL_LOAD", 1.0 * 9.80665)
+        self.context_collect('STATUSTEXT')
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_FORCE_SENSOR_CALIBRATE,
+                         p1=1,     # instance
+                         p2=1,     # set scale factor
+                         p3=1.0)   # known mass, kg
+        self.wait_statustext("calibrated", timeout=30, check_context=True)
 
-            # tare via scripting, triggered by SCR_USER1 so the tare happens
-            # while we are connected rather than racing the boot sequence
-            script = """
-local tared = false
-function update()
-    if not tared and force_sensor ~= nil and param:get('SCR_USER1') == 1 then
-        if force_sensor:healthy(0) then
-            force_sensor:tare(0)
-            tared = true
-        end
-    end
-    return update, 100
-end
-return update, 100
-"""
-            self.install_script_content_context("force_sensor_tare.lua", script)
-            self.set_parameters({
-                "SCR_ENABLE": 1,
-                "SCR_USER1": 0,
-            })
-            self.reboot_sitl()
+        scale = self.get_parameter("FSCL1_SCALE")
+        if abs(scale - 1000) > 5:
+            raise NotAchievedException("Expected SCALE~1000 counts/N, got %f" % scale)
+        self.progress("Calibrated FSCL1_SCALE=%.1f counts/N" % scale)
 
-            anchor_us = latest_fscl_timeus()
-            self.context_collect('STATUSTEXT')
-            self.set_parameter("SCR_USER1", 1)
-            # the tare averages a block of samples before saving the offset and
-            # announces the result; wait for that rather than guessing a delay
-            self.wait_statustext("tared", timeout=30, check_context=True)
-            wait_fscl(lambda m: m.Sts == 2 and abs(m.ForceN) < 0.5,
-                      "reading ~0 N after tare", after_us=anchor_us)
+        # having been calibrated, the sensor should report the applied load
+        anchor_us = latest_fscl_timeus()
+        wait_fscl(lambda m: m.Sts == 2 and abs(m.ForceN - 9.80665) < 0.2,
+                  "reading the applied 1kg", after_us=anchor_us)
 
-        except Exception as e:
-            self.print_exception_caught(e)
-            ex = e
-        self.context_pop()
-        self.reboot_sitl()
-        if ex is not None:
-            raise ex
+        # and a different load should read correctly without recalibration
+        anchor_us = latest_fscl_timeus()
+        self.set_parameter("SIM_FSCL_LOAD", 0.5 * 9.80665)
+        wait_fscl(lambda m: m.Sts == 2 and abs(m.ForceN - 0.5 * 9.80665) < 0.2,
+                  "reading a 0.5kg load", after_us=anchor_us)
+
+        # an out-of-range instance is refused
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_FORCE_SENSOR_CALIBRATE,
+                         p1=3, p2=0,
+                         want_result=mavutil.mavlink.MAV_RESULT_DENIED)
+
+        # so is a scale calibration with no mass given
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_FORCE_SENSOR_CALIBRATE,
+                         p1=1, p2=1, p3=0,
+                         want_result=mavutil.mavlink.MAV_RESULT_FAILED)
+
+        # and an unknown operation
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_FORCE_SENSOR_CALIBRATE,
+                         p1=1, p2=7,
+                         want_result=mavutil.mavlink.MAV_RESULT_DENIED)
 
     def tests2b(self):  # this block currently around 9.5mins here
         '''return list of all tests'''
