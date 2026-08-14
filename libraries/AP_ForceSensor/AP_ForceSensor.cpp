@@ -171,12 +171,23 @@ void AP_ForceSensor::update()
 /*
   tare (zero) a force sensor instance
  */
-void AP_ForceSensor::tare(uint8_t instance)
+bool AP_ForceSensor::tare(uint8_t instance)
 {
     if (instance >= num_instances || drivers[instance] == nullptr) {
-        return;
+        return false;
     }
-    drivers[instance]->tare();
+    return drivers[instance]->tare();
+}
+
+/*
+  calibrate an instance's scale factor from a known applied mass
+ */
+bool AP_ForceSensor::calibrate_scale(uint8_t instance, float mass_kg)
+{
+    if (instance >= num_instances || drivers[instance] == nullptr) {
+        return false;
+    }
+    return drivers[instance]->calibrate_scale(mass_kg);
 }
 
 /*

@@ -34,8 +34,13 @@ public:
     // update frontend state from backend data; called from main thread at ~10 Hz
     virtual void update() = 0;
 
-    // tare: record current reading as zero. Default no-op; backends override as needed.
-    virtual void tare() {}
+    // tare: record current reading as zero. Returns true if the operation was
+    // started. Default is unsupported; backends override as needed.
+    virtual bool tare() { return false; }
+
+    // set the scale factor from a known mass currently applied to the sensor.
+    // Returns true if the operation was started.
+    virtual bool calibrate_scale(float mass_kg) { return false; }
 
     AP_ForceSensor::Type type() const {
         return (AP_ForceSensor::Type)frontend.params[instance].type.get();
