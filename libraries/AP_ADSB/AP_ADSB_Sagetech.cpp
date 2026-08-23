@@ -494,7 +494,11 @@ void AP_ADSB_Sagetech::send_msg_GPS()
 
     const double lat_deg = latitude * (double)1.0e-7 * (latitude < 0 ? -1 : 1);
     const double lat_minutes = (lat_deg - int(lat_deg)) * 60;
-    snprintf((char*)&pkt.payload[11], 11, "%02u%02u.%05u", (unsigned)lat_deg, (unsigned)lat_minutes, unsigned((lat_minutes - (int)lat_minutes) * 1.0E5));
+    if (snprintf((char*)&pkt.payload[11], 11, "%02u%02u.%05u",
+                 (unsigned)lat_deg, (unsigned)lat_minutes,
+                 unsigned((lat_minutes - (int)lat_minutes) * 1.0E5)) != 10) {
+        return;
+    }
 
     // ground speed
     const Vector2f speed = loc.groundspeed_vector();
