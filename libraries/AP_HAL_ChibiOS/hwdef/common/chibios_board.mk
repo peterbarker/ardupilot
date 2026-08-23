@@ -227,6 +227,9 @@ TOPT = -mthumb -DTHUMB
 
 # Define C warning options here
 CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes -Werror
+ifeq ($(USE_USB_MSD),yes)
+CWARN += -Wno-unterminated-string-initialization
+endif
 
 # Define C++ warning options here
 CPPWARN = -Wall -Wextra -Wundef -Werror
