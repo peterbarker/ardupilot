@@ -5379,6 +5379,17 @@ MAV_RESULT GCS_MAVLINK::try_command_long_as_command_int(const mavlink_command_lo
         }
     }
 
+    // send a warning if we are going to guess at a frame to use:
+    if (command_long_stores_location((MAV_CMD)packet.command) ||
+        (MAV_CMD)packet.command == MAV_CMD_NAV_TAKEOFF ||
+        (MAV_CMD)packet.command == MAV_CMD_NAV_VTOL_TAKEOFF) {
+        const auto now_ms = AP_HAL::millis();
+        if (now_ms - last_command_long_location_command_warning_ms > 10000) {
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Received command=%u as COMMAND_LONG; should be COMMAND_INT", (unsigned)packet.command);
+            last_command_long_location_command_warning_ms = now_ms;
+        }
+    }
+
     // convert and run the command
     mavlink_command_int_t command_int;
     convert_COMMAND_LONG_to_COMMAND_INT(packet, command_int, frame);

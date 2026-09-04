@@ -808,7 +808,10 @@ protected:
     virtual void convert_COMMAND_LONG_to_COMMAND_INT(const mavlink_command_long_t &in, mavlink_command_int_t &out, MAV_FRAME frame = MAV_FRAME_GLOBAL_RELATIVE_ALT);
     virtual bool mav_frame_for_command_long(MAV_FRAME &fame, MAV_CMD packet_command) const;
     MAV_RESULT try_command_long_as_command_int(const mavlink_command_long_t &packet, const mavlink_message_t &msg);
-#endif
+    // last time we sent a warning to the GCS that we are choosing a
+    // frame at random:
+    uint32_t last_command_long_location_command_warning_ms;
+#endif  // AP_MAVLINK_COMMAND_LONG_ENABLED
 
     // methods to extract a Location object from a command_int
     bool location_from_command_t(const mavlink_command_int_t &in, Location &out);
