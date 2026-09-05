@@ -676,8 +676,12 @@ bool AP_Mission::set_current_cmd(uint16_t index)
         _prev_nav_cmd_id    = AP_MISSION_CMD_ID_NONE;
         _prev_nav_cmd_index = AP_MISSION_CMD_INDEX_NONE;
         _prev_nav_cmd_wp_index = AP_MISSION_CMD_INDEX_NONE;
-        // reset the jump tracking to zero
-        init_jump_tracking();
+        if (_flags.state == MISSION_COMPLETE) {
+            // reset the jump tracking to zero.  Note that setting
+            // index zero does not do this; use the reset parameter of
+            // MAV_CMD_DO_SET_MISSION_CURRENT for that.
+            init_jump_tracking();
+        }
         if (index == 0) {
             index = 1;
         }
