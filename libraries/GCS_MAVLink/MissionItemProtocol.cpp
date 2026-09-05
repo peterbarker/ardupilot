@@ -101,7 +101,7 @@ void MissionItemProtocol::handle_mission_count(
         return;
     }
 
-    truncate(packet);
+    truncate(packet.count);
 
     if (packet.count == 0) {
         // no requests to send...

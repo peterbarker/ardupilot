@@ -15,7 +15,7 @@ public:
         return MAV_MISSION_TYPE_FENCE;
     }
 
-    void truncate(const mavlink_mission_count_t &packet) override;
+    void truncate(uint16_t count) override;
     MAV_MISSION_RESULT complete(const GCS_MAVLINK &_link) override;
     void timeout() override;
 

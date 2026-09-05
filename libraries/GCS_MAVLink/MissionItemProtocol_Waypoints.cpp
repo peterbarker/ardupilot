@@ -125,10 +125,10 @@ void MissionItemProtocol_Waypoints::timeout()
     link->send_text(MAV_SEVERITY_WARNING, "Mission upload timeout");
 }
 
-void MissionItemProtocol_Waypoints::truncate(const mavlink_mission_count_t &packet)
+void MissionItemProtocol_Waypoints::truncate(uint16_t count)
 {
     // new mission arriving, truncate mission to be the same length
-    mission.truncate(packet.count);
+    mission.truncate(count);
 }
 
 #endif  // HAL_GCS_ENABLED && AP_MISSION_ENABLED

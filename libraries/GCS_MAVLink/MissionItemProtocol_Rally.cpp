@@ -194,9 +194,9 @@ void MissionItemProtocol_Rally::timeout()
     link->send_text(MAV_SEVERITY_WARNING, "Rally upload timeout");
 }
 
-void MissionItemProtocol_Rally::truncate(const mavlink_mission_count_t &packet)
+void MissionItemProtocol_Rally::truncate(uint16_t count)
 {
-    rally.truncate(packet.count);
+    rally.truncate(count);
 }
 
 #endif  // HAL_GCS_ENABLED && HAL_RALLY_ENABLED

@@ -23,7 +23,7 @@ public:
     // truncate() is called to set the absolute number of items.  It
     // must be less than or equal to the current number of items (you
     // can't truncate-to a longer list)
-    void truncate(const mavlink_mission_count_t &packet) override;
+    void truncate(uint16_t count) override;
 
 protected:
 

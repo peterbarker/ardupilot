@@ -220,9 +220,9 @@ uint16_t MissionItemProtocol_Fence::max_items() const
     return _fence.polyfence().max_items();
 }
 
-void MissionItemProtocol_Fence::truncate(const mavlink_mission_count_t &packet)
+void MissionItemProtocol_Fence::truncate(uint16_t count)
 {
-    // FIXME: validate packet.count is same as allocated number of items
+    // FIXME: validate count is same as allocated number of items
 }
 
 bool MissionItemProtocol_Fence::clear_all_items()
