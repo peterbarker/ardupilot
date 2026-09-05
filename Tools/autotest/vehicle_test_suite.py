@@ -7846,6 +7846,17 @@ class TestSuite(abc.ABC):
             check_afterwards=check_afterwards
         )
 
+    def set_mission_numbering(self, numbering, want_result=mavutil.mavlink.MAV_RESULT_ACCEPTED):
+        '''select the mission item sequence-numbering convention used on
+        this link using MAV_CMD_SET_MISSION_NUMBERING.  numbering is a
+        MISSION_NUMBERING enumeration value; the vehicle defaults to
+        MISSION_NUMBERING_HOME_IS_ITEM_ZERO on boot.'''
+        self.run_cmd(
+            mavutil.mavlink.MAV_CMD_SET_MISSION_NUMBERING,
+            p1=numbering,
+            want_result=want_result,
+        )
+
     def verify_parameter_values(self, parameter_stuff, max_delta=0.0):
         bad = ""
         for param in parameter_stuff:

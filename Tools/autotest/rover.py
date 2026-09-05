@@ -6100,6 +6100,221 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             want_result=mavutil.mavlink.MAV_RESULT_FAILED,
         )
 
+    def MissionNumbering_expected_home_item(self):
+        '''return a MISSION_ITEM_INT for what the vehicle should send as
+        item 0 under MISSION_NUMBERING_HOME_IS_ITEM_ZERO'''
+        home = self.poll_home_position()
+        return self.create_MISSION_ITEM_INT(
+            mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+            frame=mavutil.mavlink.MAV_FRAME_GLOBAL,
+            x=home.latitude,
+            y=home.longitude,
+            z=home.altitude / 1000.0,
+        )
+
+    def MissionNumbering_renumbered(self, items, offset):
+        '''return a copy of items with offset added to each sequence
+        number and to each DO_JUMP target'''
+        ret = []
+        for item in items:
+            item = copy.copy(item)
+            item.seq += offset
+            if item.command == mavutil.mavlink.MAV_CMD_DO_JUMP:
+                item.param1 += offset
+            ret.append(item)
+        return ret
+
+    def MissionNumbering_check_items_same(self, want, got):
+        check_atts = ['mission_type', 'command', 'x', 'y', 'z', 'seq', 'param1']
+        self.check_mission_items_same('waypoint', check_atts, want, got)
+
+    def MissionNumbering_assert_count_on_link(self, want):
+        '''assert MISSION_COUNT reflects the numbering in use on the link'''
+        self.mav.mav.mission_request_list_send(1, 1, mavutil.mavlink.MAV_MISSION_TYPE_MISSION)
+        m = self.assert_receive_message(
+            'MISSION_COUNT',
+            condition=f'MISSION_COUNT.target_system=={self.mav.source_system}',
+        )
+        if m.count != want:
+            raise NotAchievedException(f"Unexpected MISSION_COUNT want={want} got={m.count}")
+
+    def MissionNumbering(self):
+        '''Test mission transfer under MAV_CMD_SET_MISSION_NUMBERING'''
+        LEGACY = mavutil.mavlink.MISSION_NUMBERING_HOME_IS_ITEM_ZERO
+        STANDARD = mavutil.mavlink.MISSION_NUMBERING_STANDARD
+        MISSION = mavutil.mavlink.MAV_MISSION_TYPE_MISSION
+
+        self.progress("Checking invalid numbering values are denied")
+        for bad in 2, -1, 0.5:
+            self.set_mission_numbering(bad, want_result=mavutil.mavlink.MAV_RESULT_DENIED)
+
+        self.progress("Uploading with home as item 0")
+        legacy_items = self.create_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 20, 0, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 40, 0, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 60, 0, 0),
+            self.create_MISSION_ITEM_INT(mavutil.mavlink.MAV_CMD_DO_JUMP, p1=2, p2=1),
+        ])
+        self.check_mission_upload_download(legacy_items)
+        self.assert_mission_count(len(legacy_items))
+
+        self.progress("Downloading same mission under standard numbering")
+        self.set_mission_numbering(STANDARD)
+        self.MissionNumbering_assert_count_on_link(len(legacy_items) - 1)
+        got = self.download_using_mission_protocol(MISSION)
+        self.MissionNumbering_check_items_same(
+            self.MissionNumbering_renumbered(legacy_items[1:], -1),
+            got,
+        )
+
+        self.progress("Uploading under standard numbering; DO_JUMP targets first item")
+        home = self.home_position_as_location()
+        standard_items = [
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+                x=int(self.offset_location_ne(home, 30, 0).lat * 1e7),
+                y=int(self.offset_location_ne(home, 30, 0).lng * 1e7),
+                seq=0,
+            ),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+                x=int(self.offset_location_ne(home, 50, 0).lat * 1e7),
+                y=int(self.offset_location_ne(home, 50, 0).lng * 1e7),
+                seq=1,
+            ),
+            self.create_MISSION_ITEM_INT(mavutil.mavlink.MAV_CMD_DO_JUMP, p1=0, p2=1, seq=2),
+        ]
+        self.upload_using_mission_protocol(MISSION, standard_items)
+        # home is still stored on the vehicle:
+        self.assert_mission_count(len(standard_items) + 1)
+        self.MissionNumbering_assert_count_on_link(len(standard_items))
+        got = self.download_using_mission_protocol(MISSION)
+        self.MissionNumbering_check_items_same(standard_items, got)
+
+        self.progress("Requesting an item beyond the end of the mission")
+        self.mav.mav.mission_request_int_send(1, 1, len(standard_items), MISSION)
+        m = self.assert_receive_message(
+            'MISSION_COUNT',
+            condition=f'MISSION_COUNT.target_system=={self.mav.source_system}',
+        )
+        if m.count != len(standard_items):
+            raise NotAchievedException(f"Unexpected count in educational MISSION_COUNT ({m.count})")
+        m = self.assert_receive_message(
+            'MISSION_ACK',
+            condition=f'MISSION_ACK.target_system=={self.mav.source_system}',
+        )
+        if m.type != mavutil.mavlink.MAV_MISSION_INVALID_SEQUENCE:
+            raise NotAchievedException(f"Expected MAV_MISSION_INVALID_SEQUENCE got {m.type}")
+
+        self.progress("Downloading same mission with home as item 0")
+        self.set_mission_numbering(LEGACY)
+        self.MissionNumbering_assert_count_on_link(len(standard_items) + 1)
+        got = self.download_using_mission_protocol(MISSION)
+        want = [self.MissionNumbering_expected_home_item()]
+        want.extend(self.MissionNumbering_renumbered(standard_items, 1))
+        self.MissionNumbering_check_items_same(want, got)
+
+        self.progress("Partial update under standard numbering")
+        self.set_mission_numbering(STANDARD)
+        replacement = copy.copy(standard_items[1])
+        replacement.x = int(self.offset_location_ne(home, 70, 0).lat * 1e7)
+        replacement.y = int(self.offset_location_ne(home, 70, 0).lng * 1e7)
+        self.upload_using_mission_protocol(MISSION, [replacement], start_index=1)
+        standard_items[1] = replacement
+        appended = self.create_MISSION_ITEM_INT(
+            mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+            frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+            x=int(self.offset_location_ne(home, 90, 0).lat * 1e7),
+            y=int(self.offset_location_ne(home, 90, 0).lng * 1e7),
+            seq=len(standard_items),
+        )
+        self.upload_using_mission_protocol(MISSION, [appended], start_index=len(standard_items))
+        standard_items.append(appended)
+        got = self.download_using_mission_protocol(MISSION)
+        self.MissionNumbering_check_items_same(standard_items, got)
+
+        self.progress("Partial update starting beyond the end is rejected")
+        self.mav.mav.mission_write_partial_list_send(
+            1,
+            1,
+            len(standard_items) + 1,
+            len(standard_items) + 1,
+            MISSION,
+        )
+        m = self.assert_receive_message(
+            'MISSION_ACK',
+            condition=f'MISSION_ACK.target_system=={self.mav.source_system}',
+        )
+        if m.type != mavutil.mavlink.MAV_MISSION_ERROR:
+            raise NotAchievedException(f"Expected MAV_MISSION_ERROR got {m.type}")
+
+        self.progress("Numbering reverts to home-as-item-0 on reboot")
+        self.reboot_sitl()
+        self.MissionNumbering_assert_count_on_link(len(standard_items) + 1)
+
+        self.progress("Uploading an empty mission under standard numbering")
+        self.set_mission_numbering(STANDARD)
+        self.upload_using_mission_protocol(MISSION, [])
+        self.MissionNumbering_assert_count_on_link(0)
+        self.assert_mission_count(0)
+        self.set_mission_numbering(LEGACY)
+        self.MissionNumbering_assert_count_on_link(0)
+
+    def MissionNumberingRuntime(self):
+        '''Test MISSION_CURRENT, MISSION_ITEM_REACHED and set-current under MAV_CMD_SET_MISSION_NUMBERING'''
+        LEGACY = mavutil.mavlink.MISSION_NUMBERING_HOME_IS_ITEM_ZERO
+        STANDARD = mavutil.mavlink.MISSION_NUMBERING_STANDARD
+        MISSION = mavutil.mavlink.MAV_MISSION_TYPE_MISSION
+
+        self.set_mission_numbering(STANDARD)
+        home = self.home_position_as_location()
+        items = []
+        for (seq, north) in (0, 20), (1, 40), (2, 60):
+            loc = self.offset_location_ne(home, north, 0)
+            items.append(self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+                x=int(loc.lat * 1e7),
+                y=int(loc.lng * 1e7),
+                seq=seq,
+            ))
+        self.upload_using_mission_protocol(MISSION, items)
+
+        self.progress("Setting current item is in link numbering; reported the same way")
+        self.set_current_waypoint_using_mav_cmd_do_set_mission_current(1)
+        self.wait_current_waypoint(1, timeout=10)
+        self.set_current_waypoint(2)
+        self.progress("Item beyond the end of the mission is rejected")
+        self.run_cmd(
+            mavutil.mavlink.MAV_CMD_DO_SET_MISSION_CURRENT,
+            p1=len(items),
+            want_result=mavutil.mavlink.MAV_RESULT_FAILED,
+        )
+
+        self.progress("Same stored item reported one higher under home-as-item-0 numbering")
+        self.set_mission_numbering(LEGACY)
+        self.wait_current_waypoint(3, timeout=10)
+        self.set_mission_numbering(STANDARD)
+        self.wait_current_waypoint(2, timeout=10)
+
+        self.progress("Driving mission; reached and current items use link numbering")
+        self.set_current_waypoint(0)
+        self.context_collect('MISSION_ITEM_REACHED')
+        self.context_collect('STATUSTEXT')
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_statustext("Mission Complete", timeout=120, check_context=True)
+        reached = [m.seq for m in self.context_collection('MISSION_ITEM_REACHED')]
+        if reached != [0, 1, 2]:
+            raise NotAchievedException(f"Unexpected MISSION_ITEM_REACHED sequence: {reached}")
+        m = self.assert_receive_message('MISSION_CURRENT')
+        if m.seq != 2 or m.total != len(items):
+            raise NotAchievedException(f"Unexpected MISSION_CURRENT: {self.dump_message_verbose(m)}")
+        self.disarm_vehicle()
+
     def FlashStorage(self):
         '''Test flash storage (for parameters etc)'''
         self.set_parameter("LOG_BITMASK", 1)
@@ -8581,6 +8796,8 @@ return update()
             self.SET_POSITION_TARGET_LOCAL_NED,
             self.MAV_CMD_DO_SET_MISSION_CURRENT,
             self.MAV_CMD_DO_SET_MISSION_CURRENT_looped_mission,
+            self.MissionNumbering,
+            self.MissionNumberingRuntime,
             self.MAV_CMD_DO_CHANGE_SPEED,
             self.MAV_CMD_MISSION_START,
             self.Button,
