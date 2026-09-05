@@ -2,6 +2,8 @@
 
 #include "MissionItemProtocol.h"
 
+#include <AP_Mission/AP_Mission.h>
+
 class MissionItemProtocol_Waypoints : public MissionItemProtocol {
 public:
     MissionItemProtocol_Waypoints(class AP_Mission &_mission) :
@@ -58,5 +60,15 @@ private:
     // replace_item() replaces an item in the stored list
     MAV_MISSION_RESULT replace_item(const mavlink_mission_item_int_t &) override WARN_IF_UNUSED;
 
+    // returns true if the target of a DO_JUMP command is acceptable
+    bool jump_target_valid(const AP_Mission::Mission_Command &cmd) const;
+
+    // the GCS on a link may have selected MISSION_NUMBERING_STANDARD,
+    // in which case its sequence numbers are one less than
+    // AP_Mission's indexes as it does not count home as an item.
+    // DO_JUMP's target must be converted along with the item's
+    // sequence number.
+    uint16_t seq_offset(const GCS_MAVLINK &_link) const override;
+    void apply_seq_offset(mavlink_mission_item_int_t &item, int16_t offset) const override;
 };
 

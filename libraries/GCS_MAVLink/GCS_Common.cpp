@@ -719,13 +719,19 @@ MISSION_STATE GCS_MAVLINK::mission_state(const AP_Mission &mission) const
     return MISSION_STATE_UNKNOWN;
 }
 
-void GCS_MAVLINK::send_mission_current(const class AP_Mission &mission, uint16_t seq)
+void GCS_MAVLINK::send_mission_current(const class AP_Mission &mission, uint16_t index)
 {
     auto num_commands = mission.num_commands();
     if (num_commands > 0) {
         // exclude home location from the count; see message definition.
         num_commands -= 1;
     }
+
+    // convert AP_Mission index to the sequence numbering in use on
+    // this link; index 0 (home, or no current command) is sent as 0
+    // regardless of the convention in use:
+    const uint16_t offset = mission_seq_offset();
+    const uint16_t seq = (index > offset) ? index - offset : 0;
 
 #if AP_VEHICLE_ENABLED
     const uint8_t mission_mode = AP::vehicle()->current_mode_requires_mission() ? 1 : 0;
@@ -759,8 +765,12 @@ void GCS_MAVLINK::handle_mission_set_current(AP_Mission &mission, const mavlink_
     mavlink_mission_set_current_t packet;
     mavlink_msg_mission_set_current_decode(&msg, &packet);
 
+    // convert from the sequence numbering in use on this link to an
+    // AP_Mission index:
+    const uint16_t index = packet.seq + mission_seq_offset();
+
     // set current command
-    if (mission.set_current_cmd(packet.seq)) {
+    if (mission.set_current_cmd(index)) {
         // because MISSION_SET_CURRENT is a message not a command,
         // there is not ACK associated with us successfully changing
         // our waypoint.  Some GCSs use the fact we return exactly the
@@ -770,7 +780,7 @@ void GCS_MAVLINK::handle_mission_set_current(AP_Mission &mission, const mavlink_
         // exactly that sequence number in it, even if ArduPilot never
         // actually holds that as a sequence number (e.g. packet.seq==0).
         if (HAVE_PAYLOAD_SPACE(chan, MISSION_CURRENT)) {
-            send_mission_current(mission, packet.seq);
+            send_mission_current(mission, index);
         } else {
             // schedule it for later:
             send_message(MSG_CURRENT_WAYPOINT);
@@ -5000,9 +5010,12 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_set_mission_current(const mavlink_comm
         return MAV_RESULT_DENIED;
     }
 
+    // convert from the sequence numbering in use on this link to an
+    // AP_Mission index:
+    uint32_t index = 0;
     if (packet.param1 >= 0) {
-        const uint32_t seq = (uint32_t)packet.param1;
-        if (seq > INT16_MAX || !mission.is_valid_index(seq)) {
+        index = (uint32_t)packet.param1 + mission_seq_offset();
+        if (index > INT16_MAX || !mission.is_valid_index(index)) {
             return MAV_RESULT_FAILED;
         }
     }
@@ -5017,8 +5030,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_set_mission_current(const mavlink_comm
         mission.reset_jump_counters();
     }
     if (packet.param1 >= 0) {
-        const uint32_t seq = (uint32_t)packet.param1;
-        if (!mission.set_current_cmd(seq)) {
+        if (!mission.set_current_cmd(index)) {
             return MAV_RESULT_FAILED;
         }
     }
@@ -5045,6 +5057,30 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_jump_tag(const mavlink_command_int_t &
     // volunteer the new current waypoint for all listeners
     send_message(MSG_CURRENT_WAYPOINT);
 
+    return MAV_RESULT_ACCEPTED;
+}
+
+/*
+  handle MAV_CMD_SET_MISSION_NUMBERING; the GCS selects whether item
+  0 of the mission is home (the legacy ArduPilot convention) or the
+  first mission command (the convention described by the MAVLink
+  mission protocol).  The selection applies to this link only.
+ */
+MAV_RESULT GCS_MAVLINK::handle_command_set_mission_numbering(const mavlink_command_int_t &packet)
+{
+    const float p1 = packet.param1;
+    if (p1 < 0 || p1 > UINT8_MAX || !is_equal(p1, floorf(p1))) {
+        return MAV_RESULT_DENIED;
+    }
+    const uint8_t numbering = (uint8_t)p1;
+    switch (numbering) {
+    case MISSION_NUMBERING_HOME_IS_ITEM_ZERO:
+    case MISSION_NUMBERING_STANDARD:
+        break;
+    default:
+        return MAV_RESULT_DENIED;
+    }
+    mission_numbering = (MISSION_NUMBERING)numbering;
     return MAV_RESULT_ACCEPTED;
 }
 #endif
@@ -5769,6 +5805,9 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
 
     case MAV_CMD_DO_SET_MISSION_CURRENT:
         return handle_command_do_set_mission_current(packet);
+
+    case MAV_CMD_SET_MISSION_NUMBERING:
+        return handle_command_set_mission_numbering(packet);
 #endif
 
     case MAV_CMD_DO_SET_MODE:
@@ -5998,9 +6037,15 @@ bool GCS_MAVLINK::try_send_mission_message(const enum ap_message id)
         break;
     }
     case MSG_MISSION_ITEM_REACHED:
+    {
         CHECK_PAYLOAD_SIZE(MISSION_ITEM_REACHED);
-        mavlink_msg_mission_item_reached_send(chan, mission_item_reached_index);
+        // convert AP_Mission index to the sequence numbering in use
+        // on this link:
+        const uint16_t offset = mission_seq_offset();
+        const uint16_t seq = (mission_item_reached_index > offset) ? mission_item_reached_index - offset : 0;
+        mavlink_msg_mission_item_reached_send(chan, seq);
         break;
+    }
     case MSG_NEXT_MISSION_REQUEST_WAYPOINTS:
         CHECK_PAYLOAD_SIZE(MISSION_REQUEST);
         gcs().try_send_queued_message_for_type(MAV_MISSION_TYPE_MISSION);

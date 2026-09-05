@@ -38,16 +38,43 @@ MAV_MISSION_RESULT MissionItemProtocol_Waypoints::append_item(const mavlink_miss
         return res;
     }
 
-    if (cmd.id == MAV_CMD_DO_JUMP) {
-        if ((cmd.content.jump.target >= item_count() && cmd.content.jump.target > request_last) || cmd.content.jump.target == 0) {
-            return MAV_MISSION_ERROR;
-        }
+    if (cmd.id == MAV_CMD_DO_JUMP && !jump_target_valid(cmd)) {
+        return MAV_MISSION_ERROR;
     }
 
     if (!mission.add_cmd(cmd)) {
         return MAV_MISSION_ERROR;
     }
     return MAV_MISSION_ACCEPTED;
+}
+
+// the target of a DO_JUMP must be an existing item or one which will
+// be uploaded before the current transfer is complete, and may not be
+// home:
+bool MissionItemProtocol_Waypoints::jump_target_valid(const AP_Mission::Mission_Command &cmd) const
+{
+    const uint16_t target = cmd.content.jump.target;
+    if (target == 0) {
+        return false;
+    }
+    if (target < item_count()) {
+        return true;
+    }
+    // request_last is in the sequence numbering used on the link:
+    return target <= request_last + seq_offset(*link);
+}
+
+uint16_t MissionItemProtocol_Waypoints::seq_offset(const GCS_MAVLINK &_link) const
+{
+    return _link.mission_seq_offset();
+}
+
+void MissionItemProtocol_Waypoints::apply_seq_offset(mavlink_mission_item_int_t &item, int16_t offset) const
+{
+    MissionItemProtocol::apply_seq_offset(item, offset);
+    if (item.command == MAV_CMD_DO_JUMP) {
+        item.param1 += offset;
+    }
 }
 
 bool MissionItemProtocol_Waypoints::clear_all_items()
@@ -109,10 +136,8 @@ MAV_MISSION_RESULT MissionItemProtocol_Waypoints::replace_item(const mavlink_mis
     }
 
     // sanity check for DO_JUMP command
-    if (cmd.id == MAV_CMD_DO_JUMP) {
-        if ((cmd.content.jump.target >= item_count() && cmd.content.jump.target > request_last) || cmd.content.jump.target == 0) {
-            return MAV_MISSION_ERROR;
-        }
+    if (cmd.id == MAV_CMD_DO_JUMP && !jump_target_valid(cmd)) {
+        return MAV_MISSION_ERROR;
     }
     if (!mission.replace_cmd(cmd.index, cmd)) {
         return MAV_MISSION_ERROR;

@@ -88,20 +88,26 @@ void MissionItemProtocol::handle_mission_count(
         return;
     }
 
-    if (packet.count > max_items()) {
+    // number of items which will be stored on the vehicle once the
+    // transfer is complete; this includes home if the GCS does not
+    // count it as an item.  An empty list stores nothing at all.
+    const uint16_t offset = seq_offset(_link);
+    const uint32_t stored_count = (packet.count == 0) ? 0 : packet.count + offset;
+
+    if (stored_count > max_items()) {
         // FIXME: different items take up different storage space!
         send_mission_ack(_link, msg, MAV_MISSION_NO_SPACE);
-        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Only %u items are supported", (unsigned)max_items());
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "Only %u items are supported", (unsigned)(max_items() - offset));
         return;
     }
 
-    MAV_MISSION_RESULT ret_alloc = allocate_receive_resources(packet.count);
+    MAV_MISSION_RESULT ret_alloc = allocate_receive_resources(stored_count);
     if (ret_alloc != MAV_MISSION_ACCEPTED) {
         send_mission_ack(_link, msg, ret_alloc);
         return;
     }
 
-    truncate(packet.count);
+    truncate(stored_count);
 
     if (packet.count == 0) {
         // no requests to send...
@@ -135,8 +141,20 @@ void MissionItemProtocol::handle_mission_request_list(
     mavlink_msg_mission_count_send(_link.get_chan(),
                                    msg.sysid,
                                    msg.compid,
-                                   item_count(),
+                                   item_count_on_link(_link),
                                    mission_type());
+}
+
+uint16_t MissionItemProtocol::item_count_on_link(const GCS_MAVLINK &_link) const
+{
+    const uint16_t count = item_count();
+    const uint16_t offset = seq_offset(_link);
+    if (count <= offset) {
+        // a mission which contains only home is empty as far as a
+        // GCS not expecting home to be item 0 is concerned
+        return 0;
+    }
+    return count - offset;
 }
 
 void MissionItemProtocol::handle_mission_request_int(GCS_MAVLINK &_link,
@@ -154,8 +172,9 @@ void MissionItemProtocol::handle_mission_request_int(GCS_MAVLINK &_link,
         return;
     }
 
+    const uint16_t offset = seq_offset(_link);
     mavlink_mission_item_int_t ret_packet;
-    const MAV_MISSION_RESULT result_code = get_item(packet.seq, ret_packet);
+    const MAV_MISSION_RESULT result_code = get_item(packet.seq + offset, ret_packet);
     if (result_code != MAV_MISSION_ACCEPTED) {
         if (result_code == MAV_MISSION_INVALID_SEQUENCE) {
             // try to educate the GCS on the actual size of the mission:
@@ -164,7 +183,7 @@ void MissionItemProtocol::handle_mission_request_int(GCS_MAVLINK &_link,
                 mavlink_msg_mission_count_send(chan,
                                                msg.sysid,
                                                msg.compid,
-                                               item_count(),
+                                               item_count_on_link(_link),
                                                mission_type());
             }
         }
@@ -172,6 +191,7 @@ void MissionItemProtocol::handle_mission_request_int(GCS_MAVLINK &_link,
         send_mission_ack(_link, msg, result_code);
         return;
     }
+    apply_seq_offset(ret_packet, -offset);
 
     ret_packet.target_system = mavlink_msg_target_field(msg.sysid);
     ret_packet.target_component = msg.compid;
@@ -189,12 +209,14 @@ void MissionItemProtocol::handle_mission_request(GCS_MAVLINK &_link,
         return;
     }
 
+    const uint16_t offset = seq_offset(_link);
     mavlink_mission_item_int_t item_int;
-    MAV_MISSION_RESULT ret = get_item(packet.seq, item_int);
+    MAV_MISSION_RESULT ret = get_item(packet.seq + offset, item_int);
     if (ret != MAV_MISSION_ACCEPTED) {
         send_mission_ack(_link, msg, ret);
         return;
     }
+    apply_seq_offset(item_int, -offset);
 
     item_int.target_system = mavlink_msg_target_field(msg.sysid);
     item_int.target_component = msg.compid;
@@ -244,8 +266,9 @@ void MissionItemProtocol::handle_mission_write_partial_list(GCS_MAVLINK &_link,
     }
 
     // start waypoint receiving
-    if ((unsigned)packet.start_index > item_count() ||
-        (unsigned)packet.end_index > item_count() ||
+    const uint16_t offset = seq_offset(_link);
+    if ((unsigned)packet.start_index + offset > item_count() ||
+        (unsigned)packet.end_index + offset > item_count() ||
         packet.end_index < packet.start_index) {
         GCS_SEND_TEXT(MAV_SEVERITY_WARNING,"Flight plan update rejected"); // FIXME: Remove this anytime after 2020-01-22
         send_mission_ack(_link, msg, MAV_MISSION_ERROR);
@@ -283,15 +306,20 @@ void MissionItemProtocol::handle_mission_item(const mavlink_message_t &msg, cons
         return;
     }
 
+    // convert from the sequence numbering in use on the link to the
+    // indexes used to store items:
+    mavlink_mission_item_int_t item = cmd;
+    apply_seq_offset(item, seq_offset(*link));
+
     const uint16_t _item_count = item_count();
 
     MAV_MISSION_RESULT result;
-    if (cmd.seq < _item_count) {
+    if (item.seq < _item_count) {
         // command index is within the existing list, replace the command
-        result = replace_item(cmd);
-    } else if (cmd.seq == _item_count) {
+        result = replace_item(item);
+    } else if (item.seq == _item_count) {
         // command is at the end of command list, add the command
-        result = append_item(cmd);
+        result = append_item(item);
     } else {
         // beyond the end of the command list, return an error
         result = MAV_MISSION_ERROR;

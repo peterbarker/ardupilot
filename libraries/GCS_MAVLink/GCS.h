@@ -349,11 +349,21 @@ public:
     // mission item index to be sent on queued msg, delayed or not
     uint16_t mission_item_reached_index = AP_MISSION_CMD_INDEX_NONE;
 
+    // offset between mission item sequence numbers used on this link
+    // and AP_Mission indexes; add it to a sequence number received on
+    // this link to get an index, subtract it from an index to get the
+    // sequence number to send.  Non-zero only if the GCS has selected
+    // MISSION_NUMBERING_STANDARD with MAV_CMD_SET_MISSION_NUMBERING,
+    // in which case home is not item 0 of the mission.
+    uint16_t mission_seq_offset() const {
+        return mission_numbering == MISSION_NUMBERING_STANDARD ? 1 : 0;
+    }
+
     // generate a MISSION_STATE enumeration value for where the
     // mission is up to:
     virtual MISSION_STATE mission_state(const class AP_Mission &mission) const;
-    // send a mission_current message for the supplied waypoint
-    void send_mission_current(const class AP_Mission &mission, uint16_t seq);
+    // send a mission_current message for the supplied AP_Mission index
+    void send_mission_current(const class AP_Mission &mission, uint16_t index);
 
     // common send functions
     void send_heartbeat(void) const;
@@ -740,6 +750,7 @@ protected:
 #if AP_MISSION_ENABLED
     virtual MAV_RESULT handle_command_do_set_mission_current(const mavlink_command_int_t &packet);
     MAV_RESULT handle_command_do_jump_tag(const mavlink_command_int_t &packet);
+    MAV_RESULT handle_command_set_mission_numbering(const mavlink_command_int_t &packet);
 #endif
     MAV_RESULT handle_command_battery_reset(const mavlink_command_int_t &packet);
     void handle_command_long(const mavlink_message_t &msg);
@@ -860,6 +871,10 @@ private:
     mavlink_status_t _channel_status;
 
     const AP_SerialManager::UARTState *uartstate;
+
+    // sequence-number convention selected by the GCS on this link
+    // using MAV_CMD_SET_MISSION_NUMBERING; see mission_seq_offset()
+    MISSION_NUMBERING mission_numbering = MISSION_NUMBERING_HOME_IS_ITEM_ZERO;
 
     // last time we got a non-zero RSSI from RADIO_STATUS
     static struct LastRadioStatus {

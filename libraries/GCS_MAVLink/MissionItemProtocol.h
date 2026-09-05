@@ -77,6 +77,24 @@ protected:
 
     uint16_t        request_last; // last request index
 
+    // returns the offset between item sequence numbers as used on
+    // _link and the indexes used to store items on the vehicle.  Only
+    // the waypoint protocol has a non-zero offset - when the GCS has
+    // selected MISSION_NUMBERING_STANDARD and thus does not expect
+    // home to be item 0.  See MAV_CMD_SET_MISSION_NUMBERING.
+    virtual uint16_t seq_offset(const GCS_MAVLINK &_link) const { return 0; }
+
+    // item_count() as seen from _link; see seq_offset()
+    uint16_t item_count_on_link(const GCS_MAVLINK &_link) const;
+
+    // converts an item between the sequence numbering used on a link
+    // and the indexes used to store items on the vehicle by adding
+    // offset to the item's sequence number - and to any other field
+    // in the item which refers to an item by sequence number
+    virtual void apply_seq_offset(mavlink_mission_item_int_t &item, int16_t offset) const {
+        item.seq += offset;
+    }
+
 private:
 
     // returns true if we are either not receiving, or we successfully
