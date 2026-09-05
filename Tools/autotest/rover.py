@@ -6315,6 +6315,38 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             raise NotAchievedException(f"Unexpected MISSION_CURRENT: {self.dump_message_verbose(m)}")
         self.disarm_vehicle()
 
+    def MissionSetCurrentZeroDoesNotResetJumps(self):
+        '''Test setting current item 0 restarts the mission without resetting DO_JUMP counters'''
+        # home(0), WP1(1,30m N), WP2(2,60m N), WP3(3,90m N), DO_JUMP(4,to=2,repeat=1)
+        self.start_driving_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 30, 0, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 60, 0, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 90, 0, 0),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_DO_JUMP,
+                p1=2,  # jump to item 2 (WP2)
+                p2=1,  # repeat once
+            ),
+        ])
+
+        self.progress("Waiting for the DO_JUMP to fire")
+        self.assert_receive_message('MISSION_ITEM_REACHED', condition='MISSION_ITEM_REACHED.seq==3', timeout=120)
+        self.wait_current_waypoint(2, timeout=10)
+
+        self.progress("Restarting mission by setting item 0")
+        self.context_collect('MISSION_ITEM_REACHED')
+        self.context_collect('STATUSTEXT')
+        self.set_current_waypoint(0, check_afterwards=False)
+        self.wait_current_waypoint(1, timeout=10)
+
+        # the DO_JUMP has already run its once, so the mission must
+        # now run straight through to completion:
+        self.wait_statustext("Mission Complete", timeout=120, check_context=True)
+        reached = [m.seq for m in self.context_collection('MISSION_ITEM_REACHED')]
+        if reached != [1, 2, 3]:
+            raise NotAchievedException(f"DO_JUMP counter was reset; reached items: {reached}")
+        self.disarm_vehicle()
+
     def FlashStorage(self):
         '''Test flash storage (for parameters etc)'''
         self.set_parameter("LOG_BITMASK", 1)
@@ -8798,6 +8830,7 @@ return update()
             self.MAV_CMD_DO_SET_MISSION_CURRENT_looped_mission,
             self.MissionNumbering,
             self.MissionNumberingRuntime,
+            self.MissionSetCurrentZeroDoesNotResetJumps,
             self.MAV_CMD_DO_CHANGE_SPEED,
             self.MAV_CMD_MISSION_START,
             self.Button,
