@@ -16293,6 +16293,8 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         )
         self.set_parameters({
             'RALLY_INCL_HOME': 0,
+            # assert_altitude's poll can answer long after arrival: loiter until it does, rather than reading the descent
+            'RTL_LOIT_TIME': 60000,
         })
         self.takeoff(10, mode='GUIDED')
         self.hover()
@@ -16300,6 +16302,8 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.wait_location(rally_loc, height_accuracy=None)
         self.assert_altitude(rally_alt, relative=True)
         self.progress("Ensuring we're descending")
+        # answer in hand; the loiter timer reads the live parameter, so descend now
+        self.set_parameter('RTL_LOIT_TIME', 0)
         self.wait_altitude(20, 25, relative=True)
         self.change_mode('LOITER')
         self.progress("Flying home")
