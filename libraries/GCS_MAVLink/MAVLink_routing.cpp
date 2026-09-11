@@ -71,6 +71,11 @@ MAVLink_routing::MAVLink_routing(void) : num_routes(0) {}
         is the historical behaviour; by default a message addressed to
         another component is not processed locally
 
+    1f) the message has a target_system of zero or the flight
+        controllers target system, is one of a few safety-of-life
+        commands (see message_is_component_agnostic()) and was not
+        forwarded to its target_component on another link
+
   When a flight controller receives a message it should forward it
   onto another different link if any of these conditions hold for that
   link: 
@@ -207,6 +212,43 @@ static bool compid_is_ours(int16_t compid)
     return false;
 }
 
+#if AP_MAVLINK_COMMANDS_FOR_OTHER_COMPONENTS_ENABLED
+/*
+  return true if this message must be acted upon when it is addressed
+  to a component of our system other than our own which we have never
+  seen a message from.
+
+  Releasing the parachute is a last-resort, safety-of-life action; if a
+  GCS addresses the command at a component which does not appear to
+  exist then acting on it ourselves is much better than discarding it.
+  If the command is forwarded on to the addressed component then we keep
+  out of it.  A component we only know of on the link the command
+  arrived on has already been sent the command, so it is not forwarded
+  and we act on it as well.
+ */
+static bool message_is_component_agnostic(const mavlink_message_t &msg)
+{
+    uint16_t command;
+    switch (msg.msgid) {
+    case MAVLINK_MSG_ID_COMMAND_LONG:
+        command = mavlink_msg_command_long_get_command(&msg);
+        break;
+    case MAVLINK_MSG_ID_COMMAND_INT:
+        command = mavlink_msg_command_int_get_command(&msg);
+        break;
+    default:
+        return false;
+    }
+
+    switch (command) {
+    case MAV_CMD_DO_PARACHUTE:
+        return true;
+    }
+
+    return false;
+}
+#endif  // AP_MAVLINK_COMMANDS_FOR_OTHER_COMPONENTS_ENABLED
+
 bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
                               const mavlink_message_t &msg)
 {
@@ -222,6 +264,15 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
                                             compid_is_ours(target_component));
     bool process_locally = match_system && match_component;
 
+#if AP_MAVLINK_COMMANDS_FOR_OTHER_COMPONENTS_ENABLED
+    // parachute commands are acted upon when they are addressed to
+    // another component of our system which we have no route to:
+    const bool component_agnostic = (match_system && !match_component &&
+                                     message_is_component_agnostic(msg));
+#else
+    const bool component_agnostic = false;
+#endif
+
     // don't ever forward data from a private channel
     // unless a Gopro camera is connected to a Solo gimbal
     const bool from_private_channel = in_link.is_private();
@@ -232,7 +283,13 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
     }
 #endif
     if (should_process_locally) {
-        return process_locally;
+        // nothing is forwarded from a private channel, so such a
+        // command is handled here or not at all.
+        // Note that this changes once a GoPro is detected on a Solo
+        // gimbal; the channel then forwards like any other, so a
+        // command for a component we have a route to stops being
+        // handled here.
+        return process_locally || component_agnostic;
     }
 
     if (process_locally && !broadcast_system && !broadcast_component) {
@@ -242,8 +299,16 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
 
     // forward on any channels matching the targets
     bool forwarded = false;
+    // true if the message was sent to the component of our system it
+    // is addressed to; a message for all systems is forwarded to every
+    // route, so "forwarded" alone does not tell us that
+    bool forwarded_to_component = false;
     bool sent_to_chan[MAVLINK_COMM_NUM_BUFFERS];
     memset(sent_to_chan, 0, sizeof(sent_to_chan));
+    // true if the message was sent on the channel, i.e. it fitted in the
+    // transmit buffer; never true for the channel it arrived on
+    bool queued_on_chan[MAVLINK_COMM_NUM_BUFFERS];
+    memset(queued_on_chan, 0, sizeof(queued_on_chan));
     for (uint8_t i=0; i<num_routes; i++) {
 
         // Skip if channel is private and the target system or component IDs do not match
@@ -264,7 +329,8 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
                                   !match_system))) {
 
             if (&in_link != out_link && !sent_to_chan[routes[i].channel]) {
-                if (out_link->check_payload_size(msg.len)) {
+                queued_on_chan[routes[i].channel] = out_link->check_payload_size(msg.len);
+                if (queued_on_chan[routes[i].channel]) {
 #if ROUTING_DEBUG
                     ::printf("fwd msg %u from chan %u on chan %u sysid=%d compid=%d\n",
                              msg.msgid,
@@ -278,7 +344,23 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
                 sent_to_chan[routes[i].channel] = true;
                 forwarded = true;
             }
+            // a component with the same ID on another system is not the
+            // one the message is addressed to, even if the message is
+            // for all systems:
+            const bool route_to_target_component = (routes[i].sysid == mavlink_system.sysid &&
+                                                    routes[i].compid == target_component);
+            if (route_to_target_component && queued_on_chan[routes[i].channel]) {
+                forwarded_to_component = true;
+            }
         }
+    }
+
+    if (component_agnostic && !forwarded_to_component) {
+        // a parachute command for another component of our system is
+        // handled regardless of MAV_OPTIONS unless we sent it on to that
+        // component.  Note that it may still have been forwarded
+        // elsewhere, e.g. to every link if it is for all systems.
+        process_locally = true;
     }
 
     if (!match_component &&
