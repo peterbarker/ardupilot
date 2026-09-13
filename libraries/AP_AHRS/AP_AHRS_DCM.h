@@ -143,8 +143,8 @@ private:
     // returns true if DCM should consume airspeed data
     static bool airspeed_sensor_enabled(void) {
     #if AP_AIRSPEED_ENABLED
-        const AP_Airspeed *_airspeed = AP::airspeed();
-        return _airspeed != nullptr && _airspeed->use() && _airspeed->healthy();
+        const AP_Airspeed &_airspeed = AP::airspeed();
+        return _airspeed.use() && _airspeed.healthy();
     #else
         return false;
     #endif
@@ -153,8 +153,8 @@ private:
     // returns true if DCM should consume airspeed data
     static bool airspeed_sensor_enabled(uint8_t airspeed_index) {
     #if AP_AIRSPEED_ENABLED
-        const AP_Airspeed *_airspeed = AP::airspeed();
-        return _airspeed != nullptr && _airspeed->use(airspeed_index) && _airspeed->healthy(airspeed_index);
+        const AP_Airspeed &_airspeed = AP::airspeed();
+        return _airspeed.use(airspeed_index) && _airspeed.healthy(airspeed_index);
     #else
         return false;
     #endif

@@ -735,8 +735,8 @@ bool AP_AHRS::using_airspeed_sensor() const
  */
 bool AP_AHRS::_should_use_airspeed_sensor(uint8_t airspeed_index) const
 {
-    const auto *airspeed = AP::airspeed();
-    if (airspeed == nullptr || !airspeed->healthy(airspeed_index) || !airspeed->use(airspeed_index)) {
+    const auto &airspeed = AP::airspeed();
+    if (!airspeed.healthy(airspeed_index) || !airspeed.use(airspeed_index)) {
         return false;
     }
     nav_filter_status filter_status;
@@ -764,7 +764,7 @@ bool AP_AHRS::_airspeed_EAS(float &airspeed_ret, AirspeedEstimateType &airspeed_
 #endif
 #if AP_AIRSPEED_ENABLED && AP_GPS_ENABLED
     if (_should_use_airspeed_sensor(idx)) {
-        airspeed_ret = AP::airspeed()->get_airspeed(idx);
+        airspeed_ret = AP::airspeed().get_airspeed(idx);
 
         if (_wind_max > 0 && AP::gps().status() >= AP_GPS_FixType::FIX_2D) {
             // constrain the airspeed by the ground speed
@@ -2035,23 +2035,20 @@ bool AP_AHRS::get_vel_innovations_and_variances_for_source(uint8_t source, Vecto
 uint8_t AP_AHRS::get_active_airspeed_index() const
 {
 #if AP_AIRSPEED_ENABLED
-    const auto *airspeed = AP::airspeed();
-    if (airspeed == nullptr) {
-        return 0;
-    }
+    const auto &airspeed = AP::airspeed();
 
 // we only have affinity for EKF3 as of now
 #if HAL_NAVEKF3_AVAILABLE
     if (active_EKF_type() == EKFType::THREE) {
         uint8_t ret = ekf3.EKF3.getActiveAirspeed();
-        if (ret != UINT8_MAX && airspeed->healthy(ret) && airspeed->use(ret)) {
+        if (ret != UINT8_MAX && airspeed.healthy(ret) && airspeed.use(ret)) {
             return ret;
         }
     }
 #endif
 
     // for the rest, let the primary airspeed sensor be used
-    return airspeed->get_primary();
+    return airspeed.get_primary();
 #else
 
     return 0;
@@ -2067,8 +2064,8 @@ bool AP_AHRS::airspeed_sensor_data_being_consumed(void) const
 {
     // This is obviously a lie, we should be looking in the
     // backend results to see if it truly is using the data.
-    const AP_Airspeed *_airspeed = AP::airspeed();
-    return _airspeed != nullptr && _airspeed->use() && _airspeed->healthy();
+    const AP_Airspeed &_airspeed = AP::airspeed();
+    return _airspeed.use() && _airspeed.healthy();
 }
 
 #endif  // AP_AIRSPEED_ENABLED
