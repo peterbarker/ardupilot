@@ -34,11 +34,7 @@ void AP_AHRS_External::get_results(AP_AHRS_Backend::Estimates &results)
     // results.control_height_limit_valid = false;
     // results.control_height_limit_m = 0;
 
-    if (!extahrs.get_quaternion(results.quaternion)) {
-        results.attitude_valid = false;
-        return;
-    }
-    results.attitude_valid = true;
+    results.attitude_valid = extahrs.get_quaternion(results.quaternion);
     results.quaternion.rotation_matrix(results.dcm_matrix);
     results.dcm_matrix.to_euler(&results.roll_rad, &results.pitch_rad, &results.yaw_rad);
 
@@ -134,6 +130,11 @@ void AP_AHRS_External::get_results(AP_AHRS_Backend::Estimates &results)
      * filter status and estimates quality values:
      */
     AP::externalAHRS().get_filter_status(results.filter_status);
+    if (!results.attitude_valid) {
+        // some backends derive the attitude flag from the unit's
+        // status rather than whether we have received a quaternion:
+        results.filter_status.flags.attitude = false;
+    }
     results.filter_status_valid = true;
 
     // provides the innovations normalised between 0 and 1:
