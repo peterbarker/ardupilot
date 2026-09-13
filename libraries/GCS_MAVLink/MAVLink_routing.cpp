@@ -212,6 +212,24 @@ static bool compid_is_ours(int16_t compid)
     return false;
 }
 
+/*
+  return true if this message is a command, filling in the command it
+  carries
+ */
+static bool command_from_message(const mavlink_message_t &msg, uint16_t &command)
+{
+    switch (msg.msgid) {
+    case MAVLINK_MSG_ID_COMMAND_LONG:
+        command = mavlink_msg_command_long_get_command(&msg);
+        return true;
+    case MAVLINK_MSG_ID_COMMAND_INT:
+        command = mavlink_msg_command_int_get_command(&msg);
+        return true;
+    }
+
+    return false;
+}
+
 #if AP_MAVLINK_COMMANDS_FOR_OTHER_COMPONENTS_ENABLED
 /*
   return true if this message must be acted upon when it is addressed
@@ -229,14 +247,7 @@ static bool compid_is_ours(int16_t compid)
 static bool message_is_component_agnostic(const mavlink_message_t &msg)
 {
     uint16_t command;
-    switch (msg.msgid) {
-    case MAVLINK_MSG_ID_COMMAND_LONG:
-        command = mavlink_msg_command_long_get_command(&msg);
-        break;
-    case MAVLINK_MSG_ID_COMMAND_INT:
-        command = mavlink_msg_command_int_get_command(&msg);
-        break;
-    default:
+    if (!command_from_message(msg, command)) {
         return false;
     }
 
@@ -290,7 +301,13 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
         // gimbal; the channel then forwards like any other, so a
         // command for a component we have a route to stops being
         // handled here.
-        return process_locally || component_agnostic;
+        if (component_agnostic) {
+            process_locally = true;
+        }
+        if (match_system && !match_component) {
+            warn_about_message_for_other_component(msg, process_locally, target_component);
+        }
+        return process_locally;
     }
 
     if (process_locally && !broadcast_system && !broadcast_component) {
@@ -304,6 +321,9 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
     // is addressed to; a message for all systems is forwarded to every
     // route, so "forwarded" alone does not tell us that
     bool forwarded_to_component = false;
+    // true if the link the message arrived on reaches the component of
+    // our system it is addressed to; that component has been sent it
+    bool target_component_on_in_link = false;
     bool sent_to_chan[MAVLINK_COMM_NUM_BUFFERS];
     memset(sent_to_chan, 0, sizeof(sent_to_chan));
     // true if the message was sent on the channel, i.e. it fitted in the
@@ -353,6 +373,9 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
             if (route_to_target_component && queued_on_chan[routes[i].channel]) {
                 forwarded_to_component = true;
             }
+            if (route_to_target_component && &in_link == out_link) {
+                target_component_on_in_link = true;
+            }
         }
     }
 
@@ -375,7 +398,63 @@ bool MAVLink_routing::forward(GCS_MAVLINK &in_link,
         process_locally = true;
     }
 
+    // When we discard a message addressed to another component we
+    // deliberately remain absolutely silent towards its sender: no
+    // COMMAND_ACK, NACK or any other reply is sent.  Anything we sent
+    // would claim to come from us about a message which was never ours,
+    // and the component it was addressed to may yet answer it.  The
+    // rate-limited STATUSTEXT below is for the user, not a reply.
+    //
+    // A message we sent on to the component it is addressed to was
+    // neither acted on nor discarded, so there is nothing to warn about.
+    // Nor is there when we discard a message for a component which the
+    // link it arrived on reaches (e.g. a GCS and a camera sharing a
+    // companion computer's link to us), as that component has been sent
+    // it too.  We do still warn about acting on one:
+    if (match_system && !match_component &&
+        (process_locally || !(forwarded_to_component || target_component_on_in_link))) {
+        warn_about_message_for_other_component(msg, process_locally, target_component);
+    }
+
     return process_locally;
+}
+
+/*
+  tell the user about a message addressed at a component other than our
+  own which we are either acting on or discarding; the sender is talking
+  to something which is not us, and that is worth knowing about.  If
+  MAV_OPTIONS says to act on such messages then acting on one is
+  expected, so is not warned about.  A GCS may well send such messages
+  continuously, so warn at most once every 10 seconds.  Acting on and
+  discarding are rate limited separately so that a stream of messages
+  being discarded cannot hide our acting on a parachute or flight
+  termination command.
+ */
+void MAVLink_routing::warn_about_message_for_other_component(const mavlink_message_t &msg,
+                                                             bool process_locally,
+                                                             int16_t target_component)
+{
+    if (process_locally &&
+        gcs().option_is_enabled(GCS::Option::ACCEPT_COMMANDS_FOR_OTHER_COMPONENTS)) {
+        return;
+    }
+    uint32_t &last_warning_ms = process_locally ? last_acting_on_warning_ms : last_ignoring_warning_ms;
+    const uint32_t now_ms = AP_HAL::millis();
+    if (last_warning_ms != 0 &&
+        now_ms - last_warning_ms < 10000) {
+        return;
+    }
+    last_warning_ms = now_ms;
+    const char *action = process_locally ? "acting on" : "ignoring";
+    // for a command the command ID is much more useful than the message ID:
+    uint16_t command;
+    if (command_from_message(msg, command)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "MAV: %s cmd %u for compid %d",
+                      action, command, target_component);
+        return;
+    }
+    GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "MAV: %s msg %u for compid %d",
+                  action, (unsigned)msg.msgid, target_component);
 }
 
 /*
