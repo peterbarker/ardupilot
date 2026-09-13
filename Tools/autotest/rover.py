@@ -6512,6 +6512,21 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             # both the vehicle and this tests's special heartbeat
             raise NotAchievedException("Got heartbeat on private channel from non-vehicle")
 
+    def expire_other_component_warning_rate_limit(self):
+        '''the warning about a command for another component is sent at
+        most once every 10 seconds; wait that out, so that whether the
+        next such command is warned about means something'''
+        # the extra second allows for our idea of the simulation time
+        # lagging the autopilot's
+        self.delay_sim_time(11, reason="other-component warning rate limit to expire")
+        self.context_clear_collection('STATUSTEXT')
+
+    def assert_no_other_component_warning(self, command, compid):
+        '''assert we have not been warned about command for compid (either acting on or ignoring it)'''
+        self.delay_sim_time(2, reason="any warning to arrive")
+        if self.statustext_in_collections("cmd %u for compid %u" % (command, compid)):
+            raise NotAchievedException("Warned about cmd %u for compid %u" % (command, compid))
+
     def CommandForNonAutopilotComponent(self):
         '''ensure a command sent to a component which isn't the autopilot is still handled'''
         # 142 is an arbitrary component ID which the autopilot does not
@@ -6523,9 +6538,15 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         # opt in to acting on messages addressed to other components:
         self.set_parameter("MAV_OPTIONS", 1 << 1)  # ACCEPT_COMMANDS_FOR_OTHER_COMPONENTS
 
+        self.context_collect('STATUSTEXT')
+        self.expire_other_component_warning_rate_limit()
         self.drain_mav()
         self.send_poll_message('AUTOPILOT_VERSION', target_compid=non_autopilot_compid)
         m = self.assert_receive_message('AUTOPILOT_VERSION', timeout=10)
+        # we have been told to expect such commands, so acting on one is
+        # not warned about:
+        self.assert_no_other_component_warning(mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE, non_autopilot_compid)
+        self.context_stop_collecting('STATUSTEXT')
         # assert current behaviour: the AUTOPILOT_VERSION reply is stamped
         # with the autopilot's own system and component IDs even though the
         # command was addressed to a different component.  Arguably it
@@ -6544,9 +6565,28 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         # autopilot does not act on a command addressed to a component
         # which is not its own, so no AUTOPILOT_VERSION is emitted:
         non_autopilot_compid = 142
+        warning = "ignoring cmd %u for compid %u" % (mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE, non_autopilot_compid)
+        self.context_collect('STATUSTEXT')
+        self.expire_other_component_warning_rate_limit()
         self.drain_mav()
         self.send_poll_message('AUTOPILOT_VERSION', target_compid=non_autopilot_compid)
+        # discarding a command for another component is warned about:
+        self.wait_statustext(warning, timeout=5, check_context=True)
+
+        # ... but not every time; a second one straight away is not.
+        # Send it before checking the first was not acted upon, as the
+        # rate limit is only 10 seconds long:
+        self.context_clear_collection('STATUSTEXT')
+        self.send_poll_message('AUTOPILOT_VERSION', target_compid=non_autopilot_compid)
+        # neither poll was acted upon:
         self.assert_not_receive_message('AUTOPILOT_VERSION', timeout=5)
+        self.assert_no_other_component_warning(mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE, non_autopilot_compid)
+
+        # ... until the rate limit has expired:
+        self.expire_other_component_warning_rate_limit()
+        self.send_poll_message('AUTOPILOT_VERSION', target_compid=non_autopilot_compid)
+        self.wait_statustext(warning, timeout=5, check_context=True)
+        self.context_stop_collecting('STATUSTEXT')
 
     def CommandForNonAutopilotComponentBroadcastSystem(self):
         '''commands for all systems addressed to another component are acted on only if MAV_OPTIONS says so'''
@@ -6597,20 +6637,35 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
                 break
         self.progress("Route to link 2 learned")
 
+        # polls sent before the route was learned were discarded, and
+        # warned about; don't let those warnings be collected below, nor
+        # the rate limit hide a warning we should not get:
+        self.context_collect('STATUSTEXT')
+        self.expire_other_component_warning_rate_limit()
+
         self.progress("Default: forwarded but not acted upon")
         self.drain_mav()
         self.drain_mav(mav2)
         send_poll()
         assert_forwarded()
         self.assert_not_receive_message('AUTOPILOT_VERSION', timeout=5)
+        # it was forwarded, but not to the component it is addressed to,
+        # so as far as we know nothing acted on it; that is warned about:
+        self.wait_statustext("ignoring cmd %u for compid %u" % (request_message, non_autopilot_compid),
+                             timeout=5,
+                             check_context=True)
 
         self.progress("ACCEPT_COMMANDS_FOR_OTHER_COMPONENTS: forwarded and acted upon")
         self.set_parameter("MAV_OPTIONS", 1 << 1)  # ACCEPT_COMMANDS_FOR_OTHER_COMPONENTS
+        self.expire_other_component_warning_rate_limit()
         self.drain_mav()
         self.drain_mav(mav2)
         send_poll()
         assert_forwarded()
         self.assert_receive_message('AUTOPILOT_VERSION', timeout=5)
+        # MAV_OPTIONS told us to act on it, so that is not warned about:
+        self.assert_no_other_component_warning(request_message, non_autopilot_compid)
+        self.context_stop_collecting('STATUSTEXT')
 
         mav2.close()
         # the learned route would change the behaviour of any test which
@@ -6629,6 +6684,8 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         # put the parameter back if it is acted upon:
         self.context_preserve_parameters([param])
         original = self.get_parameter(param)
+        self.context_collect('STATUSTEXT')
+        self.expire_other_component_warning_rate_limit()
         self.drain_mav()
         self.mav.mav.param_set_send(
             self.sysid_thismav(),
@@ -6636,6 +6693,13 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             param.encode('ascii'),
             original + 1,
             mavutil.mavlink.MAV_PARAM_TYPE_REAL32)
+        # discarding a message for another component is warned about,
+        # commands or not:
+        self.wait_statustext("ignoring msg %u for compid %u" %
+                             (mavutil.mavlink.MAVLINK_MSG_ID_PARAM_SET, non_autopilot_compid),
+                             timeout=5,
+                             check_context=True)
+        self.context_stop_collecting('STATUSTEXT')
         self.delay_sim_time(2, reason="any PARAM_SET to be acted upon")
         current = self.get_parameter(param)
         if abs(current - original) > 0.0001:
@@ -6683,13 +6747,38 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
                 timeout=5,
                 condition='COMMAND_LONG.command==%u' % command)
 
+        self.context_collect('STATUSTEXT')
+
+        def assert_acting_warning(command):
+            # acting on a command for another component is warned about:
+            self.wait_statustext("acting on cmd %u for compid %u" % (command, non_autopilot_compid),
+                                 timeout=5,
+                                 check_context=True)
+
+        # acting on and discarding a message are rate limited separately;
+        # a stream of messages being discarded must not hide our acting on
+        # one of these commands:
+        self.progress("Warning about ignoring a command does not hide acting on one")
+        self.expire_other_component_warning_rate_limit()
+        self.drain_mav()
+        self.send_poll_message('AUTOPILOT_VERSION', target_compid=non_autopilot_compid)
+        self.wait_statustext("ignoring cmd %u for compid %u" %
+                             (mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE, non_autopilot_compid),
+                             timeout=5,
+                             check_context=True)
+        self.send_cmd(commands[0], target_compid=non_autopilot_compid)
+        assert_acted_upon(commands[0])
+        assert_acting_warning(commands[0])
+
         for target_sysid in target_sysids:
             for command in commands:
                 self.progress("%s for %u/%u with no routes" %
                               (command_name(command), target_sysid, non_autopilot_compid))
+                self.expire_other_component_warning_rate_limit()
                 self.drain_mav()
                 self.send_cmd(command, target_sysid=target_sysid, target_compid=non_autopilot_compid)
                 assert_acted_upon(command)
+                assert_acting_warning(command)
 
         # bring up a link with a different component on it.  Messages
         # for all systems are forwarded there, but that is not the
@@ -6738,6 +6827,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             for command in commands:
                 self.progress("%s for %u/%u with a route only to component %u" %
                               (command_name(command), target_sysid, non_autopilot_compid, other_compid))
+                self.expire_other_component_warning_rate_limit()
                 self.drain_mav()
                 self.drain_mav(mav2)
                 self.send_cmd(command, target_sysid=target_sysid, target_compid=non_autopilot_compid)
@@ -6747,6 +6837,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
                 # ... but the addressed component has not been sent it,
                 # so we must act on it:
                 assert_acted_upon(command)
+                assert_acting_warning(command)
 
         # now have a component with the addressed ID appear on that link,
         # but on another system.  A command for all systems is forwarded
@@ -6758,12 +6849,14 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             for command in commands:
                 self.progress("%s for %u/%u with a route only to component %u of system %u" %
                               (command_name(command), target_sysid, non_autopilot_compid, non_autopilot_compid, other_sysid))
+                self.expire_other_component_warning_rate_limit()
                 self.drain_mav()
                 self.drain_mav(mav2)
                 self.send_cmd(command, target_sysid=target_sysid, target_compid=non_autopilot_compid)
                 if target_sysid == 0:
                     assert_forwarded(command)
                 assert_acted_upon(command)
+                assert_acting_warning(command)
 
         # now have the addressed component itself appear on that link:
         learn_route(non_autopilot_compid, self.sysid_thismav())
@@ -6772,6 +6865,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             for command in commands:
                 self.progress("%s for %u/%u with a route to component %u" %
                               (command_name(command), target_sysid, non_autopilot_compid, non_autopilot_compid))
+                self.expire_other_component_warning_rate_limit()
                 self.drain_mav()
                 self.drain_mav(mav2)
                 self.send_cmd(command, target_sysid=target_sysid, target_compid=non_autopilot_compid)
@@ -6780,6 +6874,11 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
                 assert_forwarded(command)
                 # ... and must not have been acted upon by the autopilot:
                 assert_not_acted_upon(command)
+                # ... so there is nothing to warn about, either; it was
+                # neither acted on nor discarded:
+                self.assert_no_other_component_warning(command, non_autopilot_compid)
+
+        self.context_stop_collecting('STATUSTEXT')
 
         mav2.close()
         # the learned routes would change the behaviour of any test
