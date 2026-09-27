@@ -8,6 +8,9 @@ void Copter::update_ground_effect_detector(void)
     // throw mode never wants the takeoff expected EKF code
     gndeff.enable_takeoff_comp(flightmode->mode_number() != Mode::Number::THROW);
     gndeff.set_high_vibrations(vibration_check.high_vibes);
+    const AP_Motors::SpoolState spool_state = motors->get_spool_state();
+    gndeff.set_motors_idle(spool_state == AP_Motors::SpoolState::SHUT_DOWN ||
+                           spool_state == AP_Motors::SpoolState::GROUND_IDLE);
 
     // ALT_HOLD has manual attitude and no NE controller, so a near-level
     // attitude target stands in for "pilot is asking for slow horizontal"
