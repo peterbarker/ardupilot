@@ -115,6 +115,11 @@ public:
     // vehicle's high-vibration flag, forwarded to AHRS get_velocity_D()
     void set_high_vibrations(bool b) { _high_vibrations = b; }
 
+    // true while the motors are stopped or held at ground idle.  Rotors at
+    // idle make no ground effect worth compensating for, so a vehicle
+    // sitting landed at idle is not about to take off
+    void set_motors_idle(bool b) { _motors_idle = b; }
+
     // Per-cycle entry point. Queries AHRS and the wired AC_PosControl,
     // runs the detector, and pushes set_takeoff_expected /
     // set_touchdown_expected to AP_AHRS. The three args are the basic
@@ -135,6 +140,7 @@ private:
     bool _takeoff_comp_enabled = true;
     bool _pilot_slow_horizontal;
     bool _high_vibrations;
+    bool _motors_idle;
 
     struct {
         bool     takeoff_expected;

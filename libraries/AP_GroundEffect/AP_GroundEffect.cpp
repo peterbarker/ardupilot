@@ -72,11 +72,15 @@ void AP_GroundEffect::update(bool armed, bool land_complete, bool throttle_up)
 
     const uint32_t tnow_ms = AP_HAL::millis();
 
-    // latch takeoff_expected while armed on the ground; the release check below clears it
+    // latch takeoff_expected while on the ground with the motors spooling
+    // up; the release check below clears it.  Sitting landed with the
+    // motors idle clears it, else the EKF would deweight the baro for as
+    // long as the vehicle sat there and let an accelerometer error walk the
+    // height away
     if (!_takeoff_comp_enabled) {
         _state.takeoff_expected = false;
     } else if (land_complete) {
-        _state.takeoff_expected = true;
+        _state.takeoff_expected = !_motors_idle;
     }
 
     // Anchor the takeoff timer, altitude, XY position and HAGL while still
