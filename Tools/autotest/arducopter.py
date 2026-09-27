@@ -17329,20 +17329,17 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.arm_vehicle()
         self.disarm_vehicle()
 
-        # arm the vehicle and let it disarm normally.  This should
-        # yield a log where the EKF considers a takeoff imminent until
-        # disarm
-        self.start_subtest("Check ground effect compensation remains set in EKF while we're at idle on the ground")
+        # arm the vehicle and let it disarm normally.  Rotors at ground
+        # idle make no ground effect, so the EKF should not be told a
+        # takeoff is imminent while the vehicle sits there
+        self.start_subtest("Check ground effect compensation is not set in EKF while we're at idle on the ground")
         self.arm_vehicle()
         self.wait_disarmed()
 
-        durations = self.get_takeoffexpected_durations_from_current_onboard_log()
-        duration = durations[0]
-        want = 9
-        self.progress("takeoff-expected duration: %fs" % (duration,))
-        if duration < want:  # assumes default 10-second DISARM_DELAY
-            raise NotAchievedException("Should have been expecting takeoff for longer than %fs (want>%f)" %
-                                       (duration, want))
+        durations = self.get_takeoffexpected_durations_from_current_onboard_log(ignore_multi=True)
+        self.progress("takeoff-expected durations: %s" % (durations,))
+        if len(durations):
+            raise NotAchievedException("Should not have been expecting takeoff at idle (got %s)" % (durations,))
 
         self.start_subtest("takeoffExpected should be false very soon after we launch into the air")
         self.takeoff(mode='ALT_HOLD', altitude_min=5)
@@ -17356,6 +17353,20 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         if duration >= want_lt:
             raise NotAchievedException("Was expecting takeoff for longer than expected; got=%f want<=%f" %
                                        (duration, want_lt))
+
+        # no pilot throttle in GUIDED, so only the motors spooling up
+        # says a takeoff is coming
+        self.start_subtest("takeoffExpected should be set for a GUIDED takeoff")
+        self.zero_throttle()
+        self.takeoff(mode='GUIDED', altitude_min=5)
+        self.change_mode('LAND')
+        self.wait_disarmed()
+        durations = self.get_takeoffexpected_durations_from_current_onboard_log(ignore_multi=True)
+        self.progress("takeoff-expected durations: %s" % str(durations))
+        if len(durations) == 0:
+            raise NotAchievedException("Was not expecting takeoff in a GUIDED takeoff")
+        if not 0.5 < durations[0] < 5:
+            raise NotAchievedException("Unexpected takeoff-expected duration %f in a GUIDED takeoff" % durations[0])
 
     def TakeoffGroundEffectAlt(self):
         '''Test GNDEFF_ALT and GNDEFF_TMO gate the ground-effect compensation window'''
@@ -23552,7 +23563,6 @@ return update, 1000
             "SMART_RTL_Repeat": "Currently fails due to issue with loop detection",
             "RTLStoppingDistanceSpeed": "Currently fails due to vehicle going off-course",
             "ScriptingOSD": "Requires SFML which is not available in CI",
-            "BaroGroundEffectLandedArmed": "EKF height runs away, see https://github.com/ArduPilot/ardupilot/issues/30489",
         }
 
 
