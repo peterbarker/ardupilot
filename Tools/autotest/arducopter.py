@@ -17587,6 +17587,113 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         if abs(mean_high) > 0.5:
             raise NotAchievedException("EKF height is %+.2f m off truth after climbing out of ground effect" % mean_high)
 
+    def BaroGroundEffectLandedArmed_fly(self):
+        '''fly, land and sit armed on the ground with an accelerometer shift;
+        returns the largest EKF height seen while landed'''
+        self.context_set_message_rate_hz('SIM_STATE', 10)
+        self.context_set_message_rate_hz('EXTENDED_SYS_STATE', 10)
+        ground_alt = self.get_altitude(altitude_source='SIM_STATE.alt')
+        self.takeoff(3, mode='ALT_HOLD')
+        self.delay_sim_time(5, reason="hover")
+        self.set_rc(3, 1300)
+        self.wait_altitude(-5, 0.3, relative=True, timeout=60)
+        self.change_mode('STABILIZE')
+        self.zero_throttle()
+        self.wait_extended_sys_state(
+            mavutil.mavlink.MAV_VTOL_STATE_MC,
+            mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND,
+            timeout=30,
+        )
+
+        # a small thrust-dependent shift in the accelerometers' Z reading,
+        # as seen on real vehicles when the motors are spinning
+        self.set_parameters({
+            "SIM_ACC1_BIAS_Z": -0.2,
+            "SIM_ACC2_BIAS_Z": -0.2,
+        })
+
+        worst = 0
+        tstart = self.get_sim_time()
+        while self.get_sim_time_cached() - tstart < 30:
+            m = self.assert_receive_message('GLOBAL_POSITION_INT')
+            ekf_alt = m.relative_alt * 0.001
+            true_alt = self.get_altitude(altitude_source='SIM_STATE.alt') - ground_alt
+            if true_alt > 0.2:
+                raise NotAchievedException("Vehicle left the ground (%.2fm)" % true_alt)
+            if abs(ekf_alt) > abs(worst) + 0.5:
+                self.progress("EKF height %.2fm on the ground (true %.2fm)" % (ekf_alt, true_alt))
+            if abs(ekf_alt) > abs(worst):
+                worst = ekf_alt
+
+        self.disarm_vehicle()
+        self.set_parameters({
+            "SIM_ACC1_BIAS_Z": 0,
+            "SIM_ACC2_BIAS_Z": 0,
+        })
+
+        # the second takeoff-expected window in the log is the one after
+        # landing; it must not last while the vehicle sits at ground idle
+        durations = self.get_takeoffexpected_durations_from_current_onboard_log(ignore_multi=True)
+        self.progress("takeoff-expected durations: %s" % str(durations))
+        if len(durations) > 1 and durations[1] > 5:
+            raise NotAchievedException("Takeoff expected for %.1fs while landed at idle" % durations[1])
+        return worst
+
+    def BaroGroundEffectLandedArmed(self):
+        '''EKF height stays on the ground while landed and armed on baro height'''
+        # While landed and armed the ground effect detector keeps takeoff
+        # expected, so the EKF deweights the baro and floors its innovation.
+        # A small thrust-dependent accelerometer shift then walks the height
+        # away with nothing to pull it back.  A range finder reading below
+        # RNGFND1_MIN on the ground drops range finder height back to the
+        # baro, so it does the same.  See
+        # https://github.com/ArduPilot/ardupilot/issues/30489
+        self.set_parameters({
+            "SIM_TERRAIN": 0,  # flat ground at home, whatever an earlier test left
+            "RNGFND1_TYPE": 100,
+            "RNGFND1_MAX": 10,
+            "DISARM_DELAY": 0,
+        })
+
+        # the EKF still takes a while to learn the accelerometer shift, so
+        # some height excursion is expected; how much depends on the height
+        # source's noise.  The limits sit well below the runaway (3.7m,
+        # 8.5m and 8.5m on the baro cases)
+        subtests = (
+            ("range finder height, in range on the ground", 1.0, {
+                "EK3_SRC1_POSZ": 2,  # RangeFinder
+                "EK3_SRC1_VELZ": 0,  # None
+                "RNGFND1_MIN": 0,
+            }),
+            ("baro height with GPS vertical velocity", 2.0, {
+                "EK3_SRC1_POSZ": 1,  # Baro
+                "EK3_SRC1_VELZ": 3,  # GPS
+                "RNGFND1_MIN": 0,
+            }),
+            ("baro height", 3.5, {
+                "EK3_SRC1_POSZ": 1,  # Baro
+                "EK3_SRC1_VELZ": 0,  # None
+                "RNGFND1_MIN": 0,
+            }),
+            ("range finder height, out of range low on the ground", 3.5, {
+                "EK3_SRC1_POSZ": 2,  # RangeFinder
+                "EK3_SRC1_VELZ": 0,  # None
+                "RNGFND1_MIN": 0.3,  # above the on-ground reading
+            }),
+        )
+        failed = []
+        for name, limit, params in subtests:
+            self.start_subtest(name)
+            self.set_parameters(params)
+            self.reboot_sitl()
+            worst = self.BaroGroundEffectLandedArmed_fly()
+            self.progress("Worst EKF height on the ground with %s: %.2fm (limit %.1fm)" % (name, worst, limit))
+            if abs(worst) > limit:
+                failed.append("%s %.2fm > %.1fm" % (name, worst, limit))
+
+        if len(failed):
+            raise NotAchievedException("EKF height left the ground: %s" % ", ".join(failed))
+
     def _MAV_CMD_CONDITION_YAW(self, command):
         self.start_subtest("absolute")
         self.takeoff(20, mode='GUIDED')
@@ -18919,6 +19026,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
              self.EK3_ZeroVelFusionNotUsedWithGPS,
              self.TakeoffGroundEffectAlt,
              self.BaroGroundEffectRangefinderSwitch,
+             self.BaroGroundEffectLandedArmed,
              self.TouchdownGroundEffectAlt,
              self.StabilityPatch,
              self.OBSTACLE_DISTANCE_3D,
@@ -23444,6 +23552,7 @@ return update, 1000
             "SMART_RTL_Repeat": "Currently fails due to issue with loop detection",
             "RTLStoppingDistanceSpeed": "Currently fails due to vehicle going off-course",
             "ScriptingOSD": "Requires SFML which is not available in CI",
+            "BaroGroundEffectLandedArmed": "EKF height runs away, see https://github.com/ArduPilot/ardupilot/issues/30489",
         }
 
 
