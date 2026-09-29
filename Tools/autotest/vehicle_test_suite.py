@@ -2141,7 +2141,7 @@ class TestSuite(abc.ABC):
         if build_opts is None:
             build_opts = {}
 
-        self.start_time = time.time()
+        self.start_time = time.monotonic()
 
         if binary is None:
             raise ValueError("Should always have a binary")
@@ -2258,7 +2258,7 @@ class TestSuite(abc.ABC):
 
     def progress(self, text, send_statustext=True):
         """Display autotest progress text."""
-        delta_time = time.time() - self.start_time
+        delta_time = time.monotonic() - self.start_time
         formatted_text = "AT-%06.1f: %s" % (delta_time, text)
         print(formatted_text)
         if (send_statustext and
@@ -2533,9 +2533,9 @@ class TestSuite(abc.ABC):
         # we must make sure that stats have been reset - otherwise
         # when we reboot we'll reset statistics again and lose our
         # STAT_BOOTCNT increment:
-        tstart = time.time()
+        tstart = time.monotonic()
         while True:
-            if time.time() - tstart > 30:
+            if time.monotonic() - tstart > 30:
                 raise NotAchievedException("STAT_RESET did not go non-zero")
             if self.get_parameter('STAT_RESET', timeout_in_wallclock=True) != 0:
                 break
@@ -2635,7 +2635,7 @@ class TestSuite(abc.ABC):
         self.detect_and_handle_reboot(old_bootcount, required_bootcount=required_bootcount)
 
     def detect_and_handle_reboot(self, old_bootcount, required_bootcount=None, timeout=10):
-        tstart = time.time()
+        tstart = time.monotonic()
         if required_bootcount is None:
             required_bootcount = old_bootcount + 1
 
@@ -2645,7 +2645,7 @@ class TestSuite(abc.ABC):
         # vehicle boots, says everything it has to say and discards all
         # of it before it has heard from us.
         while True:
-            if time.time() - tstart > timeout:
+            if time.monotonic() - tstart > timeout:
                 raise AutoTestTimeoutException("Did not detect reboot")
             try:
                 # any request we send while the autopilot is restarting
@@ -2691,9 +2691,9 @@ class TestSuite(abc.ABC):
     def set_streamrate(self, streamrate, timeout=20, stream=mavutil.mavlink.MAV_DATA_STREAM_ALL):
         '''set MAV_DATA_STREAM_ALL; timeout is wallclock time'''
         self.do_timesync_roundtrip(timeout_in_wallclock=True)
-        tstart = time.time()
+        tstart = time.monotonic()
         while True:
-            if time.time() - tstart > timeout:
+            if time.monotonic() - tstart > timeout:
                 raise NotAchievedException("Failed to set streamrate")
             self.mav.mav.request_data_stream_send(
                 1,
@@ -2708,9 +2708,9 @@ class TestSuite(abc.ABC):
                 break
 
     def set_streamrate_mavproxy(self, streamrate, timeout=10):
-        tstart = time.time()
+        tstart = time.monotonic()
         while True:
-            if time.time() - tstart > timeout:
+            if time.monotonic() - tstart > timeout:
                 raise AutoTestTimeoutException("stream rate change failed")
 
             self.mavproxy.send("set streamrate %u\n" % (streamrate))
@@ -2730,10 +2730,10 @@ class TestSuite(abc.ABC):
         self.progress("Waiting for SYSTEM_TIME for confirmation streams are working")
         self.drain_mav_unparsed()
         timeout = 60
-        tstart = time.time()
+        tstart = time.monotonic()
         while True:
             self.drain_all_pexpects()
-            if time.time() - tstart > timeout:
+            if time.monotonic() - tstart > timeout:
                 raise NotAchievedException("Did not get SYSTEM_TIME within %f seconds" % timeout)
             m = self.mav.recv_match(timeout=0.1)
             if m is None:
@@ -3360,9 +3360,9 @@ class TestSuite(abc.ABC):
                         customisations=customisations,
                         wipe=wipe)
         self.mav.do_connect()
-        tstart = time.time()
+        tstart = time.monotonic()
         while True:
-            if time.time() - tstart > 30:
+            if time.monotonic() - tstart > 30:
                 raise NotAchievedException("Failed to customise")
             try:
                 m = self.wait_heartbeat(drain_mav=True)
@@ -3611,7 +3611,7 @@ class TestSuite(abc.ABC):
         if self.heartbeat_interval_ms() is None and not force:
             return
         x = self.mav.messages.get("SYSTEM_TIME", None)
-        now_wc = time.time()
+        now_wc = time.monotonic()
         if (force or
             x is None or
             self.last_heartbeat_time_ms is None or
@@ -3708,10 +3708,10 @@ class TestSuite(abc.ABC):
                 return
 
             divergence = self.suite.get_distance_int(self.gpi, self.simstate)
-            if (time.time() - self.last_print > self.min_print_interval or
+            if (time.monotonic() - self.last_print > self.min_print_interval or
                     divergence > self.max_divergence):
                 self.progress(f"distance(SIMSTATE,{self.other_int_message_name})={divergence:.5f}m")
-                self.last_print = time.time()
+                self.last_print = time.monotonic()
             if divergence > self.max_divergence:
                 self.max_divergence = divergence
             if divergence > self.max_allowed_divergence:
@@ -3776,7 +3776,7 @@ class TestSuite(abc.ABC):
         if mav is None:
             mav = self.mav
         count = 0
-        tstart = time.time()
+        tstart = time.monotonic()
         self.pause_SITL()
         # sometimes we recv() when the process is likely to go away..
         old_autoreconnect = mav.autoreconnect
@@ -3795,7 +3795,7 @@ class TestSuite(abc.ABC):
         self.unpause_SITL()
         if quiet:
             return
-        tdelta = time.time() - tstart
+        tdelta = time.monotonic() - tstart
         if tdelta == 0:
             rate = "instantly"
         else:
@@ -3814,7 +3814,7 @@ class TestSuite(abc.ABC):
             mav = self.mav
         self.in_drain_mav = True
         count = 0
-        tstart = time.time()
+        tstart = time.monotonic()
         timeout = 120
         failed_to_drain = False
         self.pause_SITL()
@@ -3831,7 +3831,7 @@ class TestSuite(abc.ABC):
             if receive_result is None:
                 break
             count += 1
-            if time.time() - tstart > timeout:
+            if time.monotonic() - tstart > timeout:
                 # ArduPilot can produce messages faster than we can
                 # consume them.  Until a better solution is found,
                 # just die if that seems to be the case:
@@ -3842,7 +3842,7 @@ class TestSuite(abc.ABC):
         if quiet:
             self.in_drain_mav = False
             return
-        tdelta = time.time() - tstart
+        tdelta = time.monotonic() - tstart
         if tdelta == 0:
             rate = "instantly"
         else:
@@ -3860,13 +3860,13 @@ class TestSuite(abc.ABC):
         if not quiet:
             self.progress("Doing timesync roundtrip")
         if timeout_in_wallclock:
-            tstart = time.time()
+            tstart = time.monotonic()
         else:
             tstart = self.get_sim_time()
         self.mav.mav.timesync_send(0, self.timesync_number * 1000 + self.mav.source_system)
         while True:
             if timeout_in_wallclock:
-                now = time.time()
+                now = time.monotonic()
             else:
                 now = self.get_sim_time_cached()
             if now - tstart > 5:
@@ -4353,8 +4353,8 @@ class TestSuite(abc.ABC):
             data_downloaded.extend(m.data[0:m.count])
             bytes_read += m.count
             # self.progress("Read %u bytes at offset %u" % (m.count, m.ofs))
-            if time.time() - last_print > 10:
-                last_print = time.time()
+            if time.monotonic() - last_print > 10:
+                last_print = time.monotonic()
                 self.progress("Read %u/%u" % (bytes_read, bytes_to_read))
 
         self.progress("actual_bytes_len=%u data_downloaded_len=%u" %
@@ -4425,8 +4425,8 @@ class TestSuite(abc.ABC):
             backwards_data_downloaded = stuff
             bytes_read += m.count
             # self.progress("Read %u bytes at offset %u" % (m.count, m.ofs))
-            if time.time() - last_print > 10:
-                last_print = time.time()
+            if time.monotonic() - last_print > 10:
+                last_print = time.monotonic()
                 self.progress("xRead %u/%u" % (bytes_read, bytes_to_read))
 
         self.assert_bytes_equal(actual_bytes, backwards_data_downloaded, maxlen=bytes_to_read)
@@ -4459,8 +4459,8 @@ class TestSuite(abc.ABC):
             if m.count < 90:  # FIXME: constant
                 break
             # self.progress("Read %u bytes at offset %u" % (m.count, m.ofs))
-            if time.time() - last_print > 10:
-                last_print = time.time()
+            if time.monotonic() - last_print > 10:
+                last_print = time.monotonic()
                 self.progress(f"{bytes_read=}")
         return data_downloaded
 
@@ -4490,10 +4490,10 @@ class TestSuite(abc.ABC):
         """Get SITL time in seconds."""
         if drain_mav:
             self.drain_mav()
-        tstart = time.time()
+        tstart = time.monotonic()
         while True:
             self.drain_all_pexpects()
-            if time.time() - tstart > timeout:
+            if time.monotonic() - tstart > timeout:
                 raise AutoTestTimeoutException("Did not get SYSTEM_TIME message after %f seconds" % timeout)
 
             m = self.mav.recv_match(type='SYSTEM_TIME', blocking=True, timeout=0.1)
@@ -4512,12 +4512,12 @@ class TestSuite(abc.ABC):
         ret = x.time_boot_ms * 1.0e-3
         if ret != self.last_sim_time_cached:
             self.last_sim_time_cached = ret
-            self.last_sim_time_cached_wallclock = time.time()
+            self.last_sim_time_cached_wallclock = time.monotonic()
         else:
             timeout = 30
             if self.valgrind:
                 timeout *= 10
-            if time.time() - self.last_sim_time_cached_wallclock > timeout and not self.gdb:
+            if time.monotonic() - self.last_sim_time_cached_wallclock > timeout and not self.gdb:
                 raise AutoTestTimeoutException("sim_time_cached is not updating!")
         return ret
 
@@ -5587,13 +5587,13 @@ class TestSuite(abc.ABC):
                 return collection[-1]
 
         m = None
-        tstart = time.time()  # timeout in wallclock
+        tstart = time.monotonic()  # timeout in wallclock
         while True:
             m = mav.recv_match(type=type, blocking=True, timeout=0.05, condition=condition)
             if m is not None:
                 if instance is None or getattr(m, m._instance_field) == instance:
                     break
-            elapsed_time = time.time() - tstart
+            elapsed_time = time.monotonic() - tstart
             if elapsed_time > timeout:
                 raise NotAchievedException("Did not get %s after %s seconds" %
                                            (type, elapsed_time))
@@ -5832,14 +5832,14 @@ class TestSuite(abc.ABC):
             if t2 - tstart > 10:
                 raise AutoTestTimeoutException("Failed to do waypoint thing")
             # the following hack is to get around MAVProxy statustext deduping:
-            while time.time() - self.last_wp_load < 3:
+            while time.monotonic() - self.last_wp_load < 3:
                 self.progress("Waiting for MAVProxy de-dupe timer to expire")
                 self.drain_mav()
                 time.sleep(0.1)
             mavproxy.send('wp load %s\n' % path)
             mavproxy.expect('Loaded ([0-9]+) waypoints from')
             load_count = mavproxy.match.group(1)
-            self.last_wp_load = time.time()
+            self.last_wp_load = time.monotonic()
             mavproxy.expect("Flight plan received")
             mavproxy.send('wp list\n')
             mavproxy.expect('Requesting ([0-9]+) waypoints')
@@ -6499,9 +6499,9 @@ class TestSuite(abc.ABC):
 
     def cpufailsafe_wait_servo_channel_value(self, channel, value, timeout=30):
         '''we get restricted messages while doing cpufailsafe, this working then'''
-        start = time.time()
+        start = time.monotonic()
         while True:
-            if time.time() - start > timeout:
+            if time.monotonic() - start > timeout:
                 raise NotAchievedException("Did not achieve value")
             m = self.assert_receive_message('SERVO_OUTPUT_RAW')
             channel_field = "servo%u_raw" % channel
@@ -6549,12 +6549,12 @@ class TestSuite(abc.ABC):
         # when we're in CPU lockup we don't get SYSTEM_TIME messages,
         # so get_sim_time breaks:
         self.send_cmd_enter_cpu_lockup()
-        start_time = time.time() # not sim time!
+        start_time = time.monotonic() # not sim time!
         self.context_push()
         self.context_collect("STATUSTEXT")
         while True:
             want = "Initialising ArduPilot"
-            if time.time() - start_time > 30:
+            if time.monotonic() - start_time > 30:
                 raise NotAchievedException("Did not get %s" % want)
             # we still need to parse the incoming messages:
             try:
@@ -6951,13 +6951,13 @@ class TestSuite(abc.ABC):
             # them to work!
             self.drain_mav(quiet=True)
             if timeout_in_wallclock:
-                tstart = time.time()
+                tstart = time.monotonic()
             else:
                 tstart = self.get_sim_time()
             self.send_get_parameter_direct(name)
             while True:
                 if timeout_in_wallclock:
-                    now = time.time()
+                    now = time.monotonic()
                 else:
                     now = self.get_sim_time_cached()
                     if tstart > now:
@@ -9513,9 +9513,9 @@ Also, ignores heartbeats not from our target system'''
             self.drain_mav(quiet=quiet)
         orig_timeout = x.get("timeout", 20)
         x["timeout"] = 1
-        tstart = time.time()
+        tstart = time.monotonic()
         while True:
-            if time.time() - tstart > orig_timeout and not self.gdb:
+            if time.monotonic() - tstart > orig_timeout and not self.gdb:
                 if not self.sitl_is_running():
                     self.progress("SITL is not running")
                 raise AutoTestTimeoutException("Did not receive heartbeat")
@@ -9660,13 +9660,13 @@ Also, ignores heartbeats not from our target system'''
 
         self.install_message_hook(mh)
         if wallclock_timeout:
-            tstart = time.time()
+            tstart = time.monotonic()
         else:
             tstart = self.get_sim_time()
         try:
             while not statustext_found:
                 if wallclock_timeout:
-                    now = time.time()
+                    now = time.monotonic()
                 else:
                     now = self.get_sim_time_cached()
                 if now - tstart > timeout:
@@ -10055,7 +10055,7 @@ Also, ignores heartbeats not from our target system'''
                 self.pristine_parameters is None):
             self.pristine_parameters = self.snapshot_parameters_for_leak_check()
 
-        start_time = time.time()
+        start_time = time.monotonic()
 
         hooks_removed = False
 
@@ -10085,7 +10085,7 @@ Also, ignores heartbeats not from our target system'''
         # the test is done with any log it opened; release the
         # filehandles rather than holding them for the life of the run:
         self.close_dfreaders()
-        self.test_timings[desc] = time.time() - start_time
+        self.test_timings[desc] = time.monotonic() - start_time
         reset_needed = any(ctx.sitl_commandline_customised for ctx in self.contexts[old_contexts_length:])
 
         passed = True
@@ -12745,7 +12745,7 @@ Also, ignores heartbeats not from our target system'''
                 self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_MISSION)
             if not self.is_sub() and not self.is_tracker() and not self.is_blimp():
                 self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
-            self.last_wp_load = time.time()
+            self.last_wp_load = time.monotonic()
             return
 
         self.mav.mav.mission_count_send(target_system,
@@ -12759,7 +12759,7 @@ Also, ignores heartbeats not from our target system'''
         })
 
         if mission_type == mavutil.mavlink.MAV_MISSION_TYPE_MISSION:
-            self.last_wp_load = time.time()
+            self.last_wp_load = time.monotonic()
 
     def clear_fence_using_mavproxy(self, mavproxy, timeout=10):
         mavproxy.send("fence clear\n")
@@ -17071,8 +17071,8 @@ switch value'''
         '''wait for a path to appear or disappear.  the autopilot's filesystem
         root is our working directory under SITL, so an FTP command's effect
         can be seen directly'''
-        tstart = time.time()
-        while time.time() - tstart < timeout:
+        tstart = time.monotonic()
+        while time.monotonic() - tstart < timeout:
             if os.path.exists(path) == present:
                 return
             time.sleep(0.1)

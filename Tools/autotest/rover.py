@@ -483,8 +483,8 @@ class AutoTestRover(vehicle_test_suite.TestSuite):
         self.set_rc(3, 2000)
         self.wait_groundspeed(15, 100)
         initial = self.get_location()
-        initial_time = time.time()
-        while time.time() - initial_time < 2:
+        initial_time = time.monotonic()
+        while time.monotonic() - initial_time < 2:
             # wait for a position update from the autopilot
             start = self.get_location()
             if start != initial:
@@ -492,8 +492,8 @@ class AutoTestRover(vehicle_test_suite.TestSuite):
         self.set_rc(3, 1500)
         self.wait_groundspeed(0, 0.2)  # why do we not stop?!
         initial = self.get_location()
-        initial_time = time.time()
-        while time.time() - initial_time < 2:
+        initial_time = time.monotonic()
+        while time.monotonic() - initial_time < 2:
             # wait for a position update from the autopilot
             stop = self.get_location()
             if stop != initial:

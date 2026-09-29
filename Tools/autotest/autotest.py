@@ -746,7 +746,7 @@ def run_tests(steps):
     for step in steps:
         util.pexpect_close_all()
 
-        t1 = time.time()
+        t1 = time.monotonic()
         print(">>>> RUNNING STEP: %s at %s" % (step, time.asctime()))
         try:
             success = run_step(step)
@@ -755,7 +755,7 @@ def run_tests(steps):
                 (success, testinstance) = success
             if success:
                 results.add(step, '<span class="passed-text">PASSED</span>',
-                            time.time() - t1)
+                            time.monotonic() - t1)
                 print(">>>> PASSED STEP: %s at %s" % (step, time.asctime()))
             else:
                 print(">>>> FAILED STEP: %s at %s" % (step, time.asctime()))
@@ -766,7 +766,7 @@ def run_tests(steps):
                         failed_testinstances[step] = []
                     failed_testinstances[step].append(testinstance)
                 results.add(step, '<span class="failed-text">FAILED</span>',
-                            time.time() - t1)
+                            time.monotonic() - t1)
         except Exception as msg:  # noqa: BLE001
             passed = False
             failed.append(step)
@@ -775,7 +775,7 @@ def run_tests(steps):
             traceback.print_exc(file=sys.stdout)
             results.add(step,
                         '<span class="failed-text">FAILED</span>',
-                        time.time() - t1)
+                        time.monotonic() - t1)
 
         if tester is not None and tester.rc_thread is not None:
             if passed:

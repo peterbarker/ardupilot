@@ -9160,9 +9160,9 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             def collect(duration=1):
                 received = {name: [] for name in links}
                 tstart = self.get_sim_time_cached()
-                wall_start = time.time()
+                wall_start = time.monotonic()
                 while self.get_sim_time_cached() - tstart < duration:
-                    if time.time() - wall_start > 10:
+                    if time.monotonic() - wall_start > 10:
                         raise AutoTestTimeoutException("Simulation stopped during routing check")
                     for name, link in links.items():
                         while (msg := link.recv_match()) is not None:
@@ -9422,9 +9422,9 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             def collect(duration=1):
                 received = {name: [] for name in links}
                 start = self.get_sim_time_cached()
-                wall_start = time.time()
+                wall_start = time.monotonic()
                 while self.get_sim_time_cached() - start < duration:
-                    if time.time() - wall_start > 10:
+                    if time.monotonic() - wall_start > 10:
                         raise AutoTestTimeoutException("Simulation stopped during camera relay check")
                     for name, link in links.items():
                         while (msg := link.recv_match()) is not None:
