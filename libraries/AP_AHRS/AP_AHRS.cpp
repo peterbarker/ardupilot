@@ -1500,7 +1500,7 @@ bool AP_AHRS::_get_secondary_EKF_type(EKFType &secondary_ekf_type) const
 */
 bool AP_AHRS::healthy(void) const
 {
-    if (!configured_estimates->healthy) {
+    if (!active_estimates->healthy) {
         return false;
     }
 
