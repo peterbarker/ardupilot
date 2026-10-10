@@ -143,8 +143,10 @@ class BoardList(object):
                             x.rstrip().lstrip().lower() for x in mname.split(",")
                         ]
 
-                m = re.match(r"\s*env\s*TOOLCHAIN\s*([-\w]+)\s*", line)
-                if m is not None:
+                if re.match(r"\s*env\s+TOOLCHAIN\b", line):
+                    m = re.match(r"\s*env\s+TOOLCHAIN\s+([-\w]+)\s*$", line)
+                    if m is None:
+                        raise ValueError(f"{filepath}: bad TOOLCHAIN line: {line.strip()}")
                     board.toolchain = m.group(1)
                     board_toolchain_set = True
                     if board.toolchain == 'native':
