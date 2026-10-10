@@ -373,6 +373,8 @@ class HWDef:
         value = ' '.join(a[2:])
         if name == 'OPTIMIZE' and value == '-Os':
             self.error("'env OPTIMIZE -Os' should not appear in hwdef files, as -Os is the default")
+        if name == 'TOOLCHAIN' and re.fullmatch(r"[-\w]+", value) is None:
+            self.error("Bad TOOLCHAIN value (%s)" % value)
         self.env_vars[name] = value
 
     def get_stale_defines(self):
