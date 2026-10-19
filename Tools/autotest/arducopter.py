@@ -15089,6 +15089,94 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.wait_current_waypoint(0, timeout=10)
         self.set_rc(7, 1000)
 
+    def PowerOff(self):
+        '''Test the POWEROFF auxiliary function'''
+        # only switching HIGH powers off; RC9 starts mid-stick, so
+        # neither setting the option nor moving to LOW may power off:
+        self.context_collect('STATUSTEXT')
+        self.set_parameters({
+            "RC9_OPTION": 188,  # POWEROFF
+            "SERIAL2_PROTOCOL": 2,
+        })
+        self.delay_sim_time(2, reason="switch to debounce")
+        self.set_rc(9, 1000)
+        self.delay_sim_time(2, reason="switch to debounce")
+        for m in self.context_collection('STATUSTEXT'):
+            if "powering off" in m.text:
+                raise NotAchievedException("Powered off when switch not HIGH")
+        self.context_stop_collecting('STATUSTEXT')
+        self.reboot_sitl()
+
+        # a component sharing our system ID should be told the vehicle
+        # is powering off:
+        saved_mavfile_global = mavutil.mavfile_global
+        component = mavutil.mavlink_connection(
+            self.sitl_serial_endpoint(2),
+            source_system=self.sysid_thismav(),
+            source_component=mavutil.mavlink.MAV_COMP_ID_ONBOARD_COMPUTER,
+        )
+        mavutil.mavfile_global = saved_mavfile_global
+        poweroff_commands = []
+
+        def drain_component():
+            while (m := component.recv_match()) is not None:
+                if (m.get_type() == 'COMMAND_LONG' and
+                        m.command == mavutil.mavlink.MAV_CMD_POWER_OFF_INITIATED):
+                    poweroff_commands.append(m)
+
+        try:
+            # let the autopilot learn a route to the component:
+            for i in range(3):
+                component.mav.heartbeat_send(
+                    mavutil.mavlink.MAV_TYPE_ONBOARD_CONTROLLER,
+                    mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                    0, 0, 0)
+                self.delay_sim_time(1, reason="autopilot to learn route to component")
+                drain_component()
+
+            self.context_collect('STATUSTEXT')
+            self.set_rc(9, 2000)
+            self.wait_statustext("Vehicle powering off", check_context=True)
+            poweroff_start = self.get_sim_time_cached()
+
+            # SITL should stay up for HAL_POWEROFF_DELAY_MS, then exit:
+            last_sim_time = poweroff_start
+            tstart = time.time()
+            # don't let pymavlink try to reconnect once SITL has gone:
+            old_autoreconnect = self.mav.autoreconnect
+            self.mav.autoreconnect = False
+            try:
+                while self.sitl.isalive():
+                    if time.time() - tstart > 60:
+                        raise NotAchievedException("SITL did not power off")
+                    self.drain_all_pexpects()
+                    drain_component()
+                    if self.mav.recv_match(type='SYSTEM_TIME', blocking=True, timeout=0.1) is not None:
+                        last_sim_time = self.get_sim_time_cached()
+            finally:
+                self.mav.autoreconnect = old_autoreconnect
+            if self.sitl.exitstatus != 0:
+                raise NotAchievedException("SITL exited with status %s" % str(self.sitl.exitstatus))
+            delay = last_sim_time - poweroff_start
+            self.progress("Powered off %.1fs after power off initiated" % delay, send_statustext=False)
+            if delay < 4 or delay > 6:
+                raise NotAchievedException("Unexpected power off delay %.1fs" % delay)
+
+            drain_component()
+            if len(poweroff_commands) != 1:
+                raise NotAchievedException(
+                    "Expected one MAV_CMD_POWER_OFF_INITIATED, got %u" % len(poweroff_commands))
+            if poweroff_commands[0].param1 != 0:
+                raise NotAchievedException(
+                    "Unexpected MAV_CMD_POWER_OFF_INITIATED param1 %f" % poweroff_commands[0].param1)
+        finally:
+            component.close()
+
+        # wipe so the restarted vehicle doesn't see RC9 HIGH with
+        # RC9_OPTION still set, and start powering off again:
+        self.customise_SITL_commandline([], wipe=True)
+        self.set_rc(9, 1000)
+
     def AuxFunctionsInMission(self):
         '''Test use of auxiliary functions in missions'''
         self.load_mission("aux_functions.txt")
@@ -19562,6 +19650,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.MAV_CMD_CONDITION_YAW,
             self.SetModesViaAuxSwitch,
             self.AuxSwitchOptions,
+            self.PowerOff,
             self.BrakeMode,
             self.ThrottleFailsafePassthrough,
             self.ThrottleFailsafeValue,
