@@ -90,9 +90,19 @@ AP_GPS_UBLOX_CFGv2::AP_GPS_UBLOX_CFGv2(AP_GPS_UBLOX &_ubx_backend)
 void AP_GPS_UBLOX_CFGv2::update()
 {
     // If legacy config is supported and ForceUBXConfigV2 is not set, don't use CFGv2
-    if (skip_cfgv2() || curr_state == States::CONFIGURED) {
+    if (skip_cfgv2()) {
         // Legacy config should be used instead, exit CFGv2
         return;
+    }
+    if (curr_state == States::CONFIGURED) {
+        if (uint8_t(ubx_backend.params.gnss_mode) == _configured_gnss_mode) {
+            return;
+        }
+        // GNSS mode changed; apply it, then check the rest of the config again
+        curr_state = States::IDENTIFY_SIGNALS;
+        _last_request_time = 0;
+        _gnss_cfg_attempts = 0;
+        _gnss_cfg_rejected = false;
     }
 
     // Check if reset was requested via AUTO_CONFIG parameter (bit 3)
@@ -204,6 +214,7 @@ void AP_GPS_UBLOX_CFGv2::update()
                 _last_request_time = AP_HAL::millis();
             } else {
                 // nothing to change, move on
+                _configured_gnss_mode = uint8_t(ubx_backend.params.gnss_mode);
                 curr_state = States::IDENTIFY_UART_PORT;
                 _last_request_time = 0;
             }

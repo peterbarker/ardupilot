@@ -221,6 +221,8 @@ private:
     static constexpr uint8_t GNSS_CFG_MAX_ATTEMPTS = 3;
     uint8_t _gnss_cfg_attempts;
     bool _gnss_cfg_rejected;
+    // gnss_mode last acted on, to notice it changing
+    uint8_t _configured_gnss_mode;
 
     // Signal names aligned with UBLOX_SIGNALS indices
     static const char* const SIGNAL_NAMES[];
