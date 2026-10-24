@@ -216,6 +216,11 @@ private:
     void _publish_supported_constellations();
     // send GNSS constellation enables based on gnss_mode param, returns true if config was sent
     bool _send_gnss_cfg();
+    // give up on setting constellations after this many tries, or
+    // once the receiver NAKs them
+    static constexpr uint8_t GNSS_CFG_MAX_ATTEMPTS = 3;
+    uint8_t _gnss_cfg_attempts;
+    bool _gnss_cfg_rejected;
 
     // Signal names aligned with UBLOX_SIGNALS indices
     static const char* const SIGNAL_NAMES[];

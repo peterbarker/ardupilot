@@ -734,7 +734,8 @@ void AP_GPS_UBLOX_CFGv2::_publish_supported_constellations()
 }
 
 // send GNSS constellation enables based on gnss_mode param
-// returns true if a VALSET was sent, false if no changes needed
+// returns true if a VALSET was sent, false if no changes needed or
+// the receiver won't take them
 bool AP_GPS_UBLOX_CFGv2::_send_gnss_cfg()
 {
     const uint8_t desired_gnss = (uint8_t)ubx_backend.params.gnss_mode;
@@ -766,6 +767,17 @@ bool AP_GPS_UBLOX_CFGv2::_send_gnss_cfg()
     if (packed_cfg.get_size() == 0) {
         return false;
     }
+
+    if (_gnss_cfg_rejected || _gnss_cfg_attempts >= GNSS_CFG_MAX_ATTEMPTS) {
+        // carry on with the rest of the configuration
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING,
+                     "GPS %u: u-blox %s GNSS mode %u",
+                     unsigned(ubx_backend.state.instance) + 1,
+                     _gnss_cfg_rejected ? "rejected" : "did not apply",
+                     unsigned(desired_gnss));
+        return false;
+    }
+    _gnss_cfg_attempts++;
 
     GCS_SEND_TEXT(MAV_SEVERITY_INFO,
                  "GPS %u: updating GNSS mode",
@@ -1182,6 +1194,7 @@ void AP_GPS_UBLOX_CFGv2::handle_cfg_nack(uint8_t msg_id)
             if (curr_state == States::IDENTIFY_SIGNALS || curr_state == States::CONFIGURE_GNSS) {
                 // the receiver can't use the requested constellations;
                 // setting them one at a time would apply only some
+                _gnss_cfg_rejected = true;
                 break;
             }
             // VALSET failed, fall back to single-key mode
