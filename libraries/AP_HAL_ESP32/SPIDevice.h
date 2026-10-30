@@ -62,6 +62,9 @@ class SPIBus : public DeviceBus
 public:
     SPIBus(uint8_t _bus);
     uint8_t bus;
+    // ESP-IDF device holding the bus lock during a callback, if any
+    spi_device_handle_t held_handle = nullptr;
+    void callback_done() override;
 };
 
 class SPIDevice : public AP_HAL::SPIDevice
