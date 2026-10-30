@@ -402,7 +402,7 @@ void WiFiDriver::_wifi_thread(void *arg)
                 }
             }
         }
-        hal.scheduler->delay_microseconds(10); // don't flog the thread if nothing to accept.
+        hal.scheduler->delay_microseconds(1000); // don't flog the thread if nothing to accept.
 
     }
 }
