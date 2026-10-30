@@ -266,13 +266,11 @@ void AP_OpticalFlow_Pixart::motion_burst(void)
     _dev->transfer(&reg, 1, nullptr, 0);
     hal.scheduler->delay_microseconds(150);
 
-    for (uint8_t i=0; i<sizeof(burst); i++) {
-        _dev->transfer(nullptr, 0, &b[i], 1);
-        if (i == 0 && (burst.motion & 0x80) == 0) {
-            // no motion, save some bus bandwidth
-            _dev->set_chip_select(false);
-            return;
-        }
+    _dev->transfer(nullptr, 0, &b[0], 1);
+    // if there is no motion save some bus bandwidth, otherwise read
+    // the rest of the burst in one transfer
+    if ((burst.motion & 0x80) != 0) {
+        _dev->transfer(nullptr, 0, &b[1], sizeof(burst)-1);
     }
     _dev->set_chip_select(false);
 }
