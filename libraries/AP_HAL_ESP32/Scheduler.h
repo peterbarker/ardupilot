@@ -85,6 +85,13 @@ public:
     static const int IO_PRIO      = 5;
     static const int STORAGE_PRIO = 4;
 
+    // the SPI interrupt and the SPI bus threads must be on the same core:
+    // ESP-IDF's SPI bus lock can crash in the interrupt if a task on the
+    // other core releases the bus while the interrupt is finishing
+    // (espressif/esp-idf#18527).  Core 1, so the IMU reads aren't held
+    // off by the main thread.
+    static const int SPI_CPU      = 1;
+
     static const int TIMER_SS     = 1024*3;
     static const int MAIN_SS      = 1024*5;
     static const int RCIN_SS      = 1024*3;
