@@ -168,7 +168,10 @@ bool AP_OpticalFlow_Pixart::setup_sensor(void)
 
     integral.last_frame_us = AP_HAL::micros();
 
-    _dev->register_periodic_callback(2000, FUNCTOR_BIND_MEMBER(&AP_OpticalFlow_Pixart::timer, void));
+    // the sensor accumulates motion until it is read, and the PMW3901
+    // makes about 121 frames a second, so reading it more often only
+    // costs bus time
+    _dev->register_periodic_callback(10000, FUNCTOR_BIND_MEMBER(&AP_OpticalFlow_Pixart::timer, void));
     return true;
 }
 
