@@ -162,7 +162,11 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
     t.tx_buffer = send;
     t.rxlength = len*8;
     t.rx_buffer = recv;
-    spi_device_transmit(current_handle(), &t);
+    // the bus is already acquired, so poll for completion rather than
+    // queue the transaction and sleep until the SPI interrupt wakes us:
+    // that costs an interrupt and two context switches, several times the
+    // bus time of a typical register or FIFO read
+    spi_device_polling_transmit(current_handle(), &t);
     acquire_bus(false);
     return true;
 }
