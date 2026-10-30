@@ -84,6 +84,7 @@ public:
     AP_HAL::Device::PeriodicHandle register_periodic_callback(
         uint32_t period_usec, AP_HAL::Device::PeriodicCb) override;
     bool adjust_periodic_callback(AP_HAL::Device::PeriodicHandle h, uint32_t period_usec) override;
+    bool set_chip_select(bool set) override;
 
 private:
     SPIBus &bus;
@@ -94,6 +95,8 @@ private:
     spi_device_handle_t high_speed_dev_handle;
     spi_device_handle_t current_handle();
     void acquire_bus(bool accuire);
+    // chip select held by set_chip_select() across transfers
+    bool cs_forced = false;
 };
 
 #if defined(HAL_ESP32_SPI_BUSES)
