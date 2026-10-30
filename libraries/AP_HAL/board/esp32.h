@@ -107,7 +107,9 @@
 //turn off a bunch of advanced plane scheduler table things. see Plane.cpp
 #define AP_ADVANCEDFAILSAFE_ENABLED 0
 #define AP_ICENGINE_ENABLED 0
+#ifndef AP_OPTICALFLOW_ENABLED
 #define AP_OPTICALFLOW_ENABLED 0
+#endif
 #define AP_RPM_ENABLED 0
 #define AP_AIRSPEED_AUTOCAL_ENABLE 0
 #define HAL_MOUNT_ENABLED 0
