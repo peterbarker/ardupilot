@@ -166,7 +166,20 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
     // queue the transaction and sleep until the SPI interrupt wakes us:
     // that costs an interrupt and two context switches, several times the
     // bus time of a typical register or FIFO read
-    spi_device_polling_transmit(current_handle(), &t);
+    if (bus_desc[bus.bus].dma_ch == SPI_DMA_DISABLED && len > SOC_SPI_MAXIMUM_BUFFER_SIZE) {
+        // without DMA a transaction can't be longer than the SPI FIFO; we
+        // drive chip select ourselves, so split the transfer
+        for (uint32_t done = 0; done < len; done += SOC_SPI_MAXIMUM_BUFFER_SIZE) {
+            const uint32_t n = MIN(len - done, uint32_t(SOC_SPI_MAXIMUM_BUFFER_SIZE));
+            t.length = n*8;
+            t.rxlength = n*8;
+            t.tx_buffer = send != nullptr ? send + done : nullptr;
+            t.rx_buffer = recv != nullptr ? recv + done : nullptr;
+            spi_device_polling_transmit(current_handle(), &t);
+        }
+    } else {
+        spi_device_polling_transmit(current_handle(), &t);
+    }
     acquire_bus(false);
     return true;
 }
