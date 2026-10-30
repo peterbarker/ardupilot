@@ -164,7 +164,9 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
 #ifdef SPIDEBUG
     printf("%s:%d \n", __PRETTY_FUNCTION__, __LINE__);
 #endif
-    acquire_bus(true);
+    if (!cs_forced) {
+        acquire_bus(true);
+    }
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = len*8;
@@ -189,7 +191,9 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
     } else {
         spi_device_polling_transmit(current_handle(), &t);
     }
-    acquire_bus(false);
+    if (!cs_forced) {
+        acquire_bus(false);
+    }
     return true;
 }
 
@@ -217,6 +221,20 @@ void SPIDevice::acquire_bus(bool accuire)
             spi_device_release_bus(current_handle());
         }
     }
+}
+
+/*
+  allow for control of the chip select: while it is forced on, transfers
+  leave chip select and the bus lock alone, so a driver can make several
+  transfers, with delays between them, within one selection
+ */
+bool SPIDevice::set_chip_select(bool set)
+{
+    if (set != cs_forced) {
+        acquire_bus(set);
+        cs_forced = set;
+    }
+    return true;
 }
 
 AP_HAL::Semaphore *SPIDevice::get_semaphore()
