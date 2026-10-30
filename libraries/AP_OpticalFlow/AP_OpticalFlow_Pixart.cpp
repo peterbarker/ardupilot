@@ -264,7 +264,8 @@ void AP_OpticalFlow_Pixart::motion_burst(void)
     uint8_t reg = model==PIXART_3900?PIXART_REG_MOT_BURST:PIXART_REG_MOT_BURST2;
 
     _dev->transfer(&reg, 1, nullptr, 0);
-    hal.scheduler->delay_microseconds(150);
+    // the PMW3901 datasheet's read address-data delay (tSRAD) is 35us
+    hal.scheduler->delay_microseconds(model==PIXART_3900?150:35);
 
     _dev->transfer(nullptr, 0, &b[0], 1);
     // if there is no motion save some bus bandwidth, otherwise read
