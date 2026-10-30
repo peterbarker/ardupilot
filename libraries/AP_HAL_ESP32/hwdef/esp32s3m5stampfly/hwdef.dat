@@ -20,8 +20,10 @@
 # 4 (toward front): GND
 
 # SPI Buses; https://docs.espressif.com/projects/esp-idf/en/v5.3.4/esp32/api-reference/peripherals/spi_master.html
-#            Host      DMA Channel     MOSI        MISO        SCLK
-ESP32_SPIBUS SPI2_HOST SPI_DMA_CH_AUTO GPIO_NUM_14 GPIO_NUM_43 GPIO_NUM_44
+#            Host      DMA Channel      MOSI        MISO        SCLK
+# no DMA: the IMU's transfers are short, and setting up DMA for each one
+# costs more than the CPU spends filling the FIFO
+ESP32_SPIBUS SPI2_HOST SPI_DMA_DISABLED GPIO_NUM_14 GPIO_NUM_43 GPIO_NUM_44
 
 # the optical flow sensor (pixartflow) is on the same bus as the main IMU so
 # a) we have to list it here so its CS gets deasserted and the IMU can talk, but
