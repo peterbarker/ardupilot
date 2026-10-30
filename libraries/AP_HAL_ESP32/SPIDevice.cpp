@@ -60,6 +60,15 @@ SPIBus::SPIBus(uint8_t _bus):
 #endif  // HAL_ESP32_SPI_BUSES
 
 
+// release the ESP-IDF bus lock kept for the callback that just finished
+void SPIBus::callback_done()
+{
+    if (held_handle != nullptr) {
+        spi_device_release_bus(held_handle);
+        held_handle = nullptr;
+    }
+}
+
 #ifdef HAL_ESP32_SPI_DEVICES
 SPIDevice::SPIDevice(SPIBus &_bus, SPIDeviceDesc &_device_desc)
     : bus(_bus)
@@ -190,11 +199,23 @@ void SPIDevice::acquire_bus(bool accuire)
     printf("%s:%d \n", __PRETTY_FUNCTION__, __LINE__);
 #endif
     if (accuire) {
-        spi_device_acquire_bus(current_handle(), portMAX_DELAY);
+        if (!bus.in_callback) {
+            spi_device_acquire_bus(current_handle(), portMAX_DELAY);
+        } else if (bus.held_handle != current_handle()) {
+            // in a bus thread callback keep ESP-IDF's bus lock until the
+            // callback finishes; our semaphore already keeps others off
+            if (bus.held_handle != nullptr) {
+                spi_device_release_bus(bus.held_handle);
+            }
+            spi_device_acquire_bus(current_handle(), portMAX_DELAY);
+            bus.held_handle = current_handle();
+        }
         gpio_set_level(device_desc.cs, 0);
     } else {
         gpio_set_level(device_desc.cs, 1);
-        spi_device_release_bus(current_handle());
+        if (!bus.in_callback) {
+            spi_device_release_bus(current_handle());
+        }
     }
 }
 

@@ -61,7 +61,10 @@ void IRAM_ATTR DeviceBus::bus_thread(void *arg)
                 }
                 // call it with semaphore held
                 if (binfo->semaphore.take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+                    binfo->in_callback = true;
                     callback->cb();
+                    binfo->in_callback = false;
+                    binfo->callback_done();
                     binfo->semaphore.give();
                 }
             }
