@@ -24,6 +24,7 @@
 #include "freertos/task.h"
 
 #include "esp_task_wdt.h"
+#include "driver/gptimer.h"
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Scheduler/AP_Scheduler.h>
@@ -66,6 +67,8 @@ void Scheduler::wdt_init(uint32_t timeout, uint32_t core_mask)
     }
 }
 
+static void delay_timer_init();
+
 void Scheduler::init()
 {
 
@@ -74,6 +77,8 @@ void Scheduler::init()
 #endif
 
     hal.console->printf("%s:%d running with CONFIG_FREERTOS_HZ=%d\n", __PRETTY_FUNCTION__, __LINE__,CONFIG_FREERTOS_HZ);
+
+    delay_timer_init();
 
     // keep main tasks that need speed on CPU 0
     // pin potentially slow stuff to CPU 1, as we have disabled the WDT on that core.
@@ -214,14 +219,198 @@ void IRAM_ATTR Scheduler::delay(uint16_t ms)
     }
 }
 
+/*
+  vTaskDelay() can only sleep until a FreeRTOS tick, so a thread asking
+  for less than a tick could wake almost at once or up to a tick later.
+  Instead a sleeping thread records when it wants to wake in a slot and
+  waits for a task notification.  A general purpose hardware timer
+  counts microseconds and alarms at the earliest wake time; its interrupt
+  notifies every thread that is due and moves the alarm on to the next.
+
+  esp_timer is not used: its task dispatch runs callbacks at priority 22,
+  below the threads we want to wake, and on ESP-IDF 5.3 mixing its ISR
+  and task dispatch can stall both kinds of timer (espressif/esp-idf#18808).
+ */
+
+// slot 0 is used by pthreads
+#define DELAY_TLS_INDEX (CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS - 1)
+static_assert(DELAY_TLS_INDEX > 0, "no thread local storage slot for delay slots");
+
+// index 0 is used by FreeRTOS stream buffers and some ESP-IDF components
+#define DELAY_NOTIFY_INDEX 1
+static_assert(configTASK_NOTIFICATION_ARRAY_ENTRIES > DELAY_NOTIFY_INDEX, "no task notification index for delays");
+
+struct DelaySlot {
+    TaskHandle_t task;      // nullptr if the slot is free
+    uint64_t wake_us;       // timer count to wake at
+    bool waiting;
+};
+static DelaySlot delay_slots[32];
+static uint8_t delay_slots_used;        // slots below this have been claimed
+static portMUX_TYPE delay_mux = portMUX_INITIALIZER_UNLOCKED;
+static gptimer_handle_t delay_gptimer;
+static uint64_t delay_alarm_us = UINT64_MAX;    // UINT64_MAX when the alarm is off
+
+// An alarm set when the count has already passed it does not always fire,
+// so an alarm is only ever set at least this far ahead of a count read
+// with delay_mux held.  A thread due sooner than this is woken (or doesn't
+// sleep) and spins for the rest.
+#define DELAY_ALARM_MARGIN_US 10
+
+// set the alarm, or turn it off with UINT64_MAX.  Call with delay_mux held.
+static void IRAM_ATTR delay_set_alarm(uint64_t alarm_us)
+{
+    delay_alarm_us = alarm_us;
+    if (alarm_us == UINT64_MAX) {
+        gptimer_set_alarm_action(delay_gptimer, nullptr);
+        return;
+    }
+    // with GPTIMER_CTRL_FUNC_IN_IRAM the config must be in internal RAM
+    static gptimer_alarm_config_t alarm;
+    alarm.alarm_count = alarm_us;
+    gptimer_set_alarm_action(delay_gptimer, &alarm);
+}
+
+static bool IRAM_ATTR delay_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *)
+{
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    portENTER_CRITICAL_ISR(&delay_mux);
+    // the driver captured the count on entry to the interrupt
+    uint64_t now = edata->count_value;
+    uint64_t earliest;
+    while (true) {
+        bool woken = false;
+        earliest = UINT64_MAX;
+        for (uint8_t i = 0; i < delay_slots_used; i++) {
+            DelaySlot &slot = delay_slots[i];
+            if (!slot.waiting) {
+                continue;
+            }
+            if (slot.wake_us <= now + DELAY_ALARM_MARGIN_US) {
+                slot.waiting = false;
+                vTaskNotifyGiveIndexedFromISR(slot.task, DELAY_NOTIFY_INDEX, &higher_priority_task_woken);
+                woken = true;
+            } else if (slot.wake_us < earliest) {
+                earliest = slot.wake_us;
+            }
+        }
+        if (!woken) {
+            // just a scan of the slots since the count was read
+            break;
+        }
+        // waking threads takes time; go round again if the next one is now due
+        gptimer_get_raw_count(timer, &now);
+        if (earliest > now + DELAY_ALARM_MARGIN_US) {
+            break;
+        }
+    }
+    delay_set_alarm(earliest);
+    portEXIT_CRITICAL_ISR(&delay_mux);
+    return higher_priority_task_woken == pdTRUE;
+}
+
+static void delay_timer_init()
+{
+    const gptimer_config_t config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = 1000000,
+    };
+    const gptimer_event_callbacks_t callbacks = {
+        .on_alarm = delay_alarm,
+    };
+    gptimer_handle_t timer;
+    if (gptimer_new_timer(&config, &timer) != ESP_OK) {
+        hal.console->printf("delay_microseconds: no timer, sleeping in ticks\n");
+        return;
+    }
+    if (gptimer_register_event_callbacks(timer, &callbacks, nullptr) != ESP_OK ||
+        gptimer_enable(timer) != ESP_OK ||
+        gptimer_start(timer) != ESP_OK) {
+        hal.console->printf("delay_microseconds: timer setup failed, sleeping in ticks\n");
+        return;
+    }
+    delay_gptimer = timer;
+}
+
+static void free_delay_slot(int, void *slot)
+{
+    portENTER_CRITICAL(&delay_mux);
+    ((DelaySlot *)slot)->waiting = false;
+    ((DelaySlot *)slot)->task = nullptr;
+    portEXIT_CRITICAL(&delay_mux);
+}
+
+// return the calling thread's delay slot, claiming one if needed
+static DelaySlot *delay_slot()
+{
+    DelaySlot *slot = (DelaySlot *)pvTaskGetThreadLocalStoragePointer(nullptr, DELAY_TLS_INDEX);
+    if (slot != nullptr || delay_gptimer == nullptr) {
+        return slot;
+    }
+    portENTER_CRITICAL(&delay_mux);
+    for (uint8_t i = 0; i < ARRAY_SIZE(delay_slots); i++) {
+        if (delay_slots[i].task == nullptr) {
+            delay_slots[i].task = xTaskGetCurrentTaskHandle();
+            slot = &delay_slots[i];
+            delay_slots_used = MAX(delay_slots_used, i+1);
+            break;
+        }
+    }
+    portEXIT_CRITICAL(&delay_mux);
+    if (slot != nullptr) {
+        vTaskSetThreadLocalStoragePointerAndDelCallback(nullptr, DELAY_TLS_INDEX, slot, free_delay_slot);
+    }
+    return slot;
+}
+
 void IRAM_ATTR Scheduler::delay_microseconds(uint16_t us)
 {
     if (in_main_thread() && us < 100) {
         esp_rom_delay_us(us);
-    } else { // Minimum delay for FreeRTOS is 1ms
-        uint32_t tick = portTICK_PERIOD_MS * 1000;
-
-        vTaskDelay((us+tick-1)/tick);
+        return;
+    }
+    if (us == 0) {
+        taskYIELD();
+        return;
+    }
+    DelaySlot *slot = delay_slot();
+    if (slot == nullptr) {
+        // fall back to sleeping for whole ticks
+        const uint32_t tick_us = portTICK_PERIOD_MS * 1000;
+        vTaskDelay((us+tick_us-1)/tick_us);
+        return;
+    }
+    uint64_t now;
+    gptimer_get_raw_count(delay_gptimer, &now);
+    const uint64_t wake_us = now + us;
+    // discard a notification from an earlier sleep which gave up waiting
+    ulTaskNotifyValueClearIndexed(nullptr, DELAY_NOTIFY_INDEX, UINT32_MAX);
+    portENTER_CRITICAL(&delay_mux);
+    // we may have been preempted since reading the count
+    gptimer_get_raw_count(delay_gptimer, &now);
+    const bool sleep = wake_us > now + DELAY_ALARM_MARGIN_US;
+    if (sleep) {
+        slot->wake_us = wake_us;
+        slot->waiting = true;
+        if (wake_us < delay_alarm_us) {
+            delay_set_alarm(wake_us);
+        }
+    }
+    portEXIT_CRITICAL(&delay_mux);
+    // the timeout is a backstop for a late alarm, kept short so a late
+    // alarm costs no more than the old tick sleep did
+    if (sleep && ulTaskNotifyTakeIndexed(DELAY_NOTIFY_INDEX, pdTRUE, pdMS_TO_TICKS(us/1000) + 2) == 0) {
+        portENTER_CRITICAL(&delay_mux);
+        slot->waiting = false;
+        portEXIT_CRITICAL(&delay_mux);
+    }
+    // a timeout of N ticks can end just after N-1 ticks, so the backstop can
+    // beat the alarm by a little, and we may be woken up to
+    // DELAY_ALARM_MARGIN_US early; don't return early
+    gptimer_get_raw_count(delay_gptimer, &now);
+    if (now < wake_us) {
+        esp_rom_delay_us(wake_us - now);
     }
 }
 
