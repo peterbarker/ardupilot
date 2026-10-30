@@ -25,14 +25,13 @@
 # costs more than the CPU spends filling the FIFO
 ESP32_SPIBUS SPI2_HOST SPI_DMA_DISABLED GPIO_NUM_14 GPIO_NUM_43 GPIO_NUM_44
 
-# the optical flow sensor (pixartflow) is on the same bus as the main IMU so
-# a) we have to list it here so its CS gets deasserted and the IMU can talk, but
-# b) we name it something the driver won't find because it's too slow and ties up the bus
+# the optical flow sensor (pixartflow) is on the same bus as the main IMU, so
+# it has to be listed here for its CS to be deasserted even if it isn't used
 
 # SPI Devices
 #            Name                Bus   Device  ChipSel      Mode LoSpeed HiSpeed
 ESP32_SPIDEV bmi270              0     0       GPIO_NUM_46  3    10*MHZ  10*MHZ
-ESP32_SPIDEV pixartflow_disabled 0     1       GPIO_NUM_12  3     2*MHZ   2*MHZ
+ESP32_SPIDEV pixartflow          0     1       GPIO_NUM_12  3     2*MHZ   2*MHZ
 
 # i2c Buses
 #             Port       SDA         SCL         SPEED    INTERNAL SOFT
@@ -64,6 +63,10 @@ define AP_AIRSPEED_ENABLED 0
 define HAL_ESP32_BOARD_NAME "esp32s3m5stampfly"
 
 define AP_COMPASS_ENABLE_DEFAULT 0
+
+# Pixart optical flow sensor
+define AP_OPTICALFLOW_ENABLED 1
+define OPTICAL_FLOW_TYPE_DEFAULT Type::PIXART
 
 # no ADC
 
