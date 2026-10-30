@@ -31,7 +31,7 @@ namespace ESP32
 class DeviceBus
 {
 public:
-    DeviceBus(uint8_t _thread_priority);
+    DeviceBus(uint8_t _thread_priority, BaseType_t _thread_core = tskNO_AFFINITY);
 
     struct DeviceBus *next;
     Semaphore semaphore;
@@ -48,6 +48,7 @@ private:
         uint64_t next_usec;
     } *callbacks;
     uint8_t thread_priority;
+    BaseType_t thread_core;
     tskTaskControlBlock* bus_thread_handle;
     bool thread_started;
     AP_HAL::Device *hal_device;

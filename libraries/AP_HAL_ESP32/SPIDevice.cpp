@@ -41,7 +41,7 @@ SPIDeviceDesc device_desc[] = {HAL_ESP32_SPI_DEVICES};
 
 #ifdef HAL_ESP32_SPI_BUSES
 SPIBus::SPIBus(uint8_t _bus):
-    DeviceBus(Scheduler::SPI_PRIORITY), bus(_bus)
+    DeviceBus(Scheduler::SPI_PRIORITY, Scheduler::SPI_CPU), bus(_bus)
 {
 
 #ifdef SPIDEBUG
@@ -52,7 +52,8 @@ SPIBus::SPIBus(uint8_t _bus):
         .miso_io_num = bus_desc[_bus].miso,
         .sclk_io_num = bus_desc[_bus].sclk,
         .quadwp_io_num = -1,
-        .quadhd_io_num = -1
+        .quadhd_io_num = -1,
+        .isr_cpu_id = (esp_intr_cpu_affinity_t)(ESP_INTR_CPU_AFFINITY_0 + Scheduler::SPI_CPU),
     };
     spi_bus_initialize(bus_desc[_bus].host, &config, bus_desc[_bus].dma_ch);
 }
