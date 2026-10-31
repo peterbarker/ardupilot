@@ -68,6 +68,38 @@ AP_RangeFinder_Backend *AP_RangeFinder_VL53L1X::detect(RangeFinder::RangeFinder_
     return sensor;
 }
 
+/*
+  wait for a sensor just woken from shutdown, and so at the default
+  address, to boot, then move it to new_address if that is different.
+  It must be the only sensor at the default address on its bus.  The
+  address is kept until the sensor is shut down or loses power
+ */
+bool AP_RangeFinder_VL53L1X::finish_wake(AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev, uint8_t new_address)
+{
+    if (!dev) {
+        return false;
+    }
+    WITH_SEMAPHORE(dev->get_semaphore());
+
+    uint8_t model_reg[2] = { uint8_t(IDENTIFICATION__MODEL_ID >> 8), uint8_t(IDENTIFICATION__MODEL_ID & 0xFF) };
+    uint8_t status_reg[2] = { uint8_t(FIRMWARE__SYSTEM_STATUS >> 8), uint8_t(FIRMWARE__SYSTEM_STATUS & 0xFF) };
+    uint8_t model_id, status;
+
+    // the sensor takes up to 1.2ms to boot after leaving shutdown
+    for (uint8_t i=0; i<10; i++) {
+        if (dev->transfer(model_reg, 2, &model_id, 1) && model_id == 0xEA &&
+            dev->transfer(status_reg, 2, &status, 1) && (status & 0x01)) {
+            if (new_address == DEFAULT_ADDRESS) {
+                return true;
+            }
+            uint8_t b[3] = { uint8_t(I2C_SLAVE__DEVICE_ADDRESS >> 8), uint8_t(I2C_SLAVE__DEVICE_ADDRESS & 0xFF), uint8_t(new_address & 0x7F) };
+            return dev->transfer(b, 3, nullptr, 0);
+        }
+        hal.scheduler->delay(1);
+    }
+    return false;
+}
+
 // check sensor ID registers
 bool AP_RangeFinder_VL53L1X::check_id(void)
 {

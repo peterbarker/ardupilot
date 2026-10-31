@@ -117,7 +117,7 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
 
     // @Param: STOP_PIN
     // @DisplayName: Rangefinder stop pin
-    // @Description: Digital pin that enables/disables rangefinder measurement for the pwm rangefinder. A value of -1 means no pin. If this is set, then the pin is set to 1 to enable the rangefinder and set to 0 to disable it. This is used to enable powersaving when out of range. Some common values are given, but see the Wiki's "GPIOs" page for how to determine the pin number for a given autopilot.
+    // @Description: Digital pin that enables/disables rangefinder measurement. A value of -1 means no pin. If this is set, then the pin is set to 1 to enable the rangefinder and set to 0 to disable it. This is used to enable powersaving when out of range. For VL53L0X and VL53L1X rangefinders it is the pin wired to the sensor's shutdown (XSHUT) pin; several VL53L1X rangefinders can then share an I2C bus, each moved at startup to the address in its ADDR parameter. Some common values are given, but see the Wiki's "GPIOs" page for how to determine the pin number for a given autopilot.
     // @Values: -1:Not Used,50:AUX1,51:AUX2,52:AUX3,53:AUX4,54:AUX5,55:AUX6,111:PX4 FMU Relay1,112:PX4 FMU Relay2,113:PX4IO Relay1,114:PX4IO Relay2,115:PX4IO ACC1,116:PX4IO ACC2
     // @Range: -1 127
     // @User: Standard
