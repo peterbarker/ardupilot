@@ -61,9 +61,13 @@ void Copter::update_land_detector()
 #else
         // if throttle output is high then clear landing flag
         if (!flightmode->is_taking_off() && motors->get_throttle_out() > get_non_takeoff_throttle() && motors->get_spool_state() == AP_Motors::SpoolState::THROTTLE_UNLIMITED) {
-            // this should never happen because take-off should be detected at the flight mode level
-            // this here to highlight there is a bug or missing take-off detection
-            INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+            // take-off is normally detected by the flight mode first.
+            // One case where it isn't is a vehicle armed (nearly) upside
+            // down: angle boost cuts the throttle to zero when inverted,
+            // so limit.throttle_lower stays set and modes such as
+            // STABILIZE never clear land_complete, while the motors'
+            // throttle output still rises to give the attitude
+            // controller room to try to right the vehicle
 #endif
             set_land_complete(false);
         }
