@@ -358,6 +358,11 @@ private:
 
     void convert_params(void);
 
+#if AP_RANGEFINDER_VL53L1X_ENABLED
+    // give each VL53L1X with a shutdown pin its configured address
+    void vl53l1x_set_addresses(void);
+#endif
+
     void detect_instance(uint8_t instance, uint8_t& serial_instance);
 
     bool _add_backend(AP_RangeFinder_Backend *driver, uint8_t instance, uint8_t serial_instance=0);

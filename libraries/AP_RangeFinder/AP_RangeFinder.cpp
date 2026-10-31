@@ -202,6 +202,57 @@ void RangeFinder::convert_params(void)
     }
 }
 
+#if AP_RANGEFINDER_VL53L1X_ENABLED
+/*
+  VL53L1X sensors all start at the same I2C address.  To use several
+  on one bus, wire each one's shutdown (XSHUT) pin to a GPIO and set
+  that as its STOP_PIN.  Hold them all in shutdown, then wake them one
+  at a time, moving each one with a different ADDR to that address
+  before waking the next.  The ones staying at the default address
+  are woken last.
+ */
+void RangeFinder::vl53l1x_set_addresses(void)
+{
+    const uint8_t default_address = AP_RangeFinder_VL53L1X::DEFAULT_ADDRESS;
+    bool have_shutdown_pins = false;
+    for (uint8_t i=0; i<RANGEFINDER_MAX_INSTANCES; i++) {
+        const Type type = (Type)params[i].type.get();
+        if ((type != Type::VL53L0X && type != Type::VL53L1X_Short) ||
+            params[i].stop_pin == -1) {
+            continue;
+        }
+        hal.gpio->pinMode(params[i].stop_pin, HAL_GPIO_OUTPUT);
+        hal.gpio->write(params[i].stop_pin, 0);
+        have_shutdown_pins = true;
+    }
+    if (!have_shutdown_pins) {
+        return;
+    }
+    hal.scheduler->delay(2);
+
+    for (const bool moving : { true, false }) {
+        for (uint8_t i=0; i<RANGEFINDER_MAX_INSTANCES; i++) {
+            const Type type = (Type)params[i].type.get();
+            if ((type != Type::VL53L0X && type != Type::VL53L1X_Short) ||
+                params[i].stop_pin == -1) {
+                continue;
+            }
+            const uint8_t address = params[i].address;
+            if (moving != (address != 0 && address != default_address)) {
+                continue;
+            }
+            hal.gpio->write(params[i].stop_pin, 1);
+            FOREACH_I2C(bus) {
+                if (AP_RangeFinder_VL53L1X::finish_wake(hal.i2c_mgr->get_device(bus, default_address),
+                                                        moving ? address : default_address)) {
+                    break;
+                }
+            }
+        }
+    }
+}
+#endif  // AP_RANGEFINDER_VL53L1X_ENABLED
+
 /*
   initialise the RangeFinder class. We do detection of attached range
   finders here. For now we won't allow for hot-plugging of
@@ -220,6 +271,10 @@ __INITFUNC__ void RangeFinder::init(enum Rotation orientation_default)
     for (uint8_t i=0; i<RANGEFINDER_MAX_INSTANCES; i++) {
         params[i].orientation.set_default(orientation_default);
     }
+
+#if AP_RANGEFINDER_VL53L1X_ENABLED
+    vl53l1x_set_addresses();
+#endif
 
     for (uint8_t i=0, serial_instance = 0; i<RANGEFINDER_MAX_INSTANCES; i++) {
         // serial_instance will be increased inside detect_instance
