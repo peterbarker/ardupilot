@@ -18,6 +18,13 @@ public:
     // static detection function
     static AP_RangeFinder_Backend *detect(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, AP_HAL::OwnPtr<AP_HAL::I2CDevice> _dev, DistanceMode mode);
 
+    // the I2C address every sensor starts at
+    static const uint8_t DEFAULT_ADDRESS = 0x29;
+
+    // wait for a sensor just woken from shutdown to boot, and move it
+    // from the default address to new_address
+    static bool finish_wake(AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev, uint8_t new_address);
+
     // update state
     void update(void) override;
 
