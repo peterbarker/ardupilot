@@ -47,3 +47,18 @@ BATT_SERIAL_NUM -1
 
 # optical flow: the sensor is mounted turned 180 degrees from the board
 FLOW_ORIENT_YAW 18000
+
+# VL53L3CX rangefinders facing down and forward.  Both start at I2C
+# address 0x29; their shutdown (XSHUT) pins are on GPIO 7 (down) and
+# GPIO 9 (forward), so the forward one is moved to 0x2A at startup.
+# They work with the VL53L1X driver in short distance mode, which
+# reaches about 1.3m
+RNGFND1_TYPE 28
+RNGFND1_ADDR 41
+RNGFND1_STOP_PIN 7
+RNGFND1_MAX 1.3
+RNGFND2_TYPE 28
+RNGFND2_ADDR 42
+RNGFND2_STOP_PIN 9
+RNGFND2_MAX 1.3
+RNGFND2_ORIENT 0
