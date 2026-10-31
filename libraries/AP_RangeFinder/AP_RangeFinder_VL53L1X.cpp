@@ -77,11 +77,14 @@ bool AP_RangeFinder_VL53L1X::check_id(void)
         return false;
     }
 
+    // the VL53L3CX (module type 0xAA) also ranges in the VL53L1X's
+    // mode, but only short distance mode works well; in long mode it
+    // flags most readings beyond about 30cm as invalid
     if ((v1 != 0xEA) ||
-        (v2 != 0xCC)) {
+        ((v2 != 0xCC) && (v2 != 0xAA))) {
         return false;
     }
-    printf("Detected VL53L1X on bus 0x%x\n", unsigned(dev->get_bus_id()));
+    printf("Detected %s on bus 0x%x\n", v2 == 0xAA ? "VL53L3CX" : "VL53L1X", unsigned(dev->get_bus_id()));
     return true;
 }
 
