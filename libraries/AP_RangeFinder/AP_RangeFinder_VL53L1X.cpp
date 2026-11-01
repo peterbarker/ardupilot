@@ -31,6 +31,7 @@
 extern const AP_HAL::HAL& hal;
 
 static const uint8_t MEASUREMENT_TIME_MS = 50; // Start continuous readings at a rate of one measurement every 50 ms
+static const float VL53L1X_OUT_OF_RANGE_ADD_M = 1.0f; // distance past the maximum reported when nothing is in range
 
 AP_RangeFinder_VL53L1X::AP_RangeFinder_VL53L1X(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, AP_HAL::OwnPtr<AP_HAL::I2CDevice> _dev)
     : AP_RangeFinder_Backend(_state, _params)
@@ -499,8 +500,10 @@ bool AP_RangeFinder_VL53L1X::dataReady(void)
 }
 
 // read - return last value measured by sensor
-bool AP_RangeFinder_VL53L1X::get_reading(uint16_t &reading_mm)
+bool AP_RangeFinder_VL53L1X::get_reading(uint16_t &reading_mm, bool &out_of_range)
 {
+    out_of_range = false;
+
     uint8_t tries = 10;
     while (!dataReady()) {
         tries--;
@@ -530,6 +533,13 @@ bool AP_RangeFinder_VL53L1X::get_reading(uint16_t &reading_mm)
     switch ((DeviceError)range_status) {
       case RANGECOMPLETE:
         break;
+
+      case MSRCNOTARGET:
+      case RANGEPHASECHECK:
+        // ST's "signal fail" and "out of bounds": nothing found within
+        // the sensor's range, as when it is pointed at open space
+        out_of_range = true;
+        return false;
 
       default:
 #ifdef VL53L1X_DEBUG
@@ -591,10 +601,14 @@ bool AP_RangeFinder_VL53L1X::write_register32(uint16_t reg, uint32_t value)
 void AP_RangeFinder_VL53L1X::timer(void)
 {
     uint16_t range_mm;
-    if ((get_reading(range_mm)) && (range_mm <= 4000)) {
+    bool out_of_range;
+    if ((get_reading(range_mm, out_of_range)) && (range_mm <= 4000)) {
         WITH_SEMAPHORE(_sem);
         sum_mm += range_mm;
         counter++;
+    } else if (out_of_range) {
+        WITH_SEMAPHORE(_sem);
+        out_of_range_count++;
     }
 }
 
@@ -610,6 +624,13 @@ void AP_RangeFinder_VL53L1X::update(void)
         update_status();
         sum_mm = 0;
         counter = 0;
+        out_of_range_count = 0;
+    } else if (out_of_range_count > 0) {
+        // the sensor is working but sees nothing within its range
+        state.distance_m = max_distance() + VL53L1X_OUT_OF_RANGE_ADD_M;
+        state.last_reading_ms = AP_HAL::millis();
+        update_status();
+        out_of_range_count = 0;
     } else if (AP_HAL::millis() - state.last_reading_ms > 200) {
         // if no updates for 0.2s set no-data
         set_status(RangeFinder::Status::NoData);
