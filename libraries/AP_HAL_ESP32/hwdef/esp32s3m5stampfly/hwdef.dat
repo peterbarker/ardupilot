@@ -72,6 +72,10 @@ define AP_COMPASS_OFFSETS_MAX_DEFAULT 6000
 define AP_OPTICALFLOW_ENABLED 1
 define OPTICAL_FLOW_TYPE_DEFAULT Type::PIXART
 
+# avoidance, using the forward rangefinder as a proximity sensor
+define AP_FENCE_ENABLED 1
+define AP_AVOIDANCE_ENABLED 1
+
 # no ADC
 
 define AP_BATTERY_INA3221_ENABLED 1
