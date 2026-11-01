@@ -121,9 +121,15 @@
 #define AP_GRIPPER_ENABLED 0
 #define AP_LANDINGGEAR_ENABLED 0
 
-// disable avoid-fence-follow in copter, these all kinda need each other, so its all or none.
+// disable avoid-fence-follow in copter by default; follow needs
+// avoidance, and avoidance needs fence, so a board can enable fence and
+// avoidance in its hwdef
+#ifndef AP_AVOIDANCE_ENABLED
 #define AP_AVOIDANCE_ENABLED 0
+#endif
+#ifndef AP_FENCE_ENABLED
 #define AP_FENCE_ENABLED 0
+#endif
 #define MODE_FOLLOW_ENABLED 0
 #define AP_OAPATHPLANNER_ENABLED 0
 
