@@ -885,8 +885,11 @@ void CompassCalibrator::run_ellipsoid_fit()
 //////////// CompassSample public interface //////////////
 //////////////////////////////////////////////////////////
 
-#define COMPASS_CAL_SAMPLE_SCALE_TO_FIXED(__X) ((int16_t)constrain_float(roundf(__X*8.0f), INT16_MIN, INT16_MAX))
-#define COMPASS_CAL_SAMPLE_SCALE_TO_FLOAT(__X) (__X/8.0f)
+// samples are stored in units of 0.25 mGauss, so up to +/-8192 mGauss
+// per axis; offsets of several gauss are seen (e.g. from motor magnets
+// close to the compass on small vehicles)
+#define COMPASS_CAL_SAMPLE_SCALE_TO_FIXED(__X) ((int16_t)constrain_float(roundf(__X*4.0f), INT16_MIN, INT16_MAX))
+#define COMPASS_CAL_SAMPLE_SCALE_TO_FLOAT(__X) (__X/4.0f)
 
 Vector3f CompassCalibrator::CompassSample::get() const
 {
