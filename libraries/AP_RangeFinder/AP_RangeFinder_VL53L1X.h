@@ -1262,8 +1262,9 @@ private:
     // check sensor ID
     bool check_id(void);
 
-    // get a reading
-    bool get_reading(uint16_t &reading_cm);
+    // get a reading; out_of_range is set if the sensor found nothing
+    // within its range
+    bool get_reading(uint16_t &reading_mm, bool &out_of_range);
     AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev;
 
     // value used in measurement timing budget calculations
@@ -1285,6 +1286,7 @@ private:
     uint16_t osc_calibrate_val;
     uint32_t sum_mm;
     uint32_t counter;
+    uint32_t out_of_range_count;
     bool calibrated;
 
     bool read_register(uint16_t reg, uint8_t &value) WARN_IF_UNUSED;
