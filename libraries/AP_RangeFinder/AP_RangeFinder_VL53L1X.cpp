@@ -26,6 +26,7 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/utility/sparse-endian.h>
+#include <GCS_MAVLink/GCS.h>
 #include <stdio.h>
 
 extern const AP_HAL::HAL& hal;
@@ -75,9 +76,9 @@ AP_RangeFinder_Backend *AP_RangeFinder_VL53L1X::detect(RangeFinder::RangeFinder_
   It must be the only sensor at the default address on its bus.  The
   address is kept until the sensor is shut down or loses power
  */
-bool AP_RangeFinder_VL53L1X::finish_wake(AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev, uint8_t new_address)
+bool AP_RangeFinder_VL53L1X::finish_wake(AP_HAL::I2CDevice *dev, uint8_t new_address)
 {
-    if (!dev) {
+    if (dev == nullptr) {
         return false;
     }
     WITH_SEMAPHORE(dev->get_semaphore());
@@ -148,6 +149,31 @@ bool AP_RangeFinder_VL53L1X::init(DistanceMode mode)
         return false;
     }
 
+    ranging_mode = mode;
+    if (!configure()) {
+        return false;
+    }
+
+    // a sensor resets to the default address if its supply dips.  One
+    // with a shutdown pin that was moved off the default address can
+    // be woken again and moved back; this needs no other sensor on its
+    // bus to be using the default address
+    if (params.stop_pin != -1 && dev->get_bus_address() != DEFAULT_ADDRESS) {
+        wake_dev = hal.i2c_mgr->get_device(dev->bus_num(), DEFAULT_ADDRESS);
+    }
+    last_response_ms = AP_HAL::millis();
+
+    // call timer() every MEASUREMENT_TIME_MS. We expect new data to be available every MEASUREMENT_TIME_MS
+    dev->register_periodic_callback(MEASUREMENT_TIME_MS * 1000,
+                                    FUNCTOR_BIND_MEMBER(&AP_RangeFinder_VL53L1X::timer, void));
+
+    return true;
+}
+
+bool AP_RangeFinder_VL53L1X::configure(void)
+{
+    calibrated = false;
+
     uint8_t pad_i2c_hv_extsup_config = 0;
     uint16_t mm_config_outer_offset_mm = 0;
     if (!(reset() && // reset the chip, we make assumptions later on that we are on a clean power on of the sensor
@@ -196,7 +222,7 @@ bool AP_RangeFinder_VL53L1X::init(DistanceMode mode)
           write_register16(DSS_CONFIG__MANUAL_EFFECTIVE_SPADS_SELECT, 200 << 8) &&
           write_register(DSS_CONFIG__ROI_MODE_CONTROL, 2) && // REQUESTED_EFFFECTIVE_SPADS
           read_register16(MM_CONFIG__OUTER_OFFSET_MM, mm_config_outer_offset_mm) &&
-          setDistanceMode(mode) &&
+          setDistanceMode(ranging_mode) &&
           setMeasurementTimingBudget(40000) &&
           // the API triggers this change in VL53L1_init_and_start_range() once a
           // measurement is started; assumes MM1 and MM2 are disabled
@@ -207,11 +233,20 @@ bool AP_RangeFinder_VL53L1X::init(DistanceMode mode)
               return false;
           }
 
-    // call timer() every MEASUREMENT_TIME_MS. We expect new data to be available every MEASUREMENT_TIME_MS
-    dev->register_periodic_callback(MEASUREMENT_TIME_MS * 1000,
-                                    FUNCTOR_BIND_MEMBER(&AP_RangeFinder_VL53L1X::timer, void));
-
     return true;
+}
+
+bool AP_RangeFinder_VL53L1X::recover(void)
+{
+    // shut it down and wake it again, so it is at the default address
+    // and freshly booted whatever state it reset into
+    hal.gpio->write(params.stop_pin, 0);
+    hal.scheduler->delay(2);
+    hal.gpio->write(params.stop_pin, 1);
+    if (!finish_wake(wake_dev.get(), dev->get_bus_address())) {
+        return false;
+    }
+    return configure();
 }
 
 // set distance mode to Short, Medium, or Long
@@ -602,13 +637,37 @@ void AP_RangeFinder_VL53L1X::timer(void)
 {
     uint16_t range_mm;
     bool out_of_range;
-    if ((get_reading(range_mm, out_of_range)) && (range_mm <= 4000)) {
+    const bool have_reading = get_reading(range_mm, out_of_range);
+    const uint32_t now_ms = AP_HAL::millis();
+    if (have_reading || out_of_range) {
+        last_response_ms = now_ms;
+    }
+    if (have_reading && (range_mm <= 4000)) {
         WITH_SEMAPHORE(_sem);
         sum_mm += range_mm;
         counter++;
     } else if (out_of_range) {
         WITH_SEMAPHORE(_sem);
         out_of_range_count++;
+    }
+
+    // if it has stopped answering at its own address it may have reset
+    if (wake_dev && now_ms - last_response_ms > 500 && now_ms - last_recover_ms > 1000) {
+        last_recover_ms = now_ms;
+        uint8_t model_id;
+        if (read_register(IDENTIFICATION__MODEL_ID, model_id) && model_id == 0xEA) {
+            // still there, just not giving valid ranges
+            last_response_ms = now_ms;
+        } else if (recover()) {
+            last_response_ms = now_ms;
+            // a sensor on a poor supply can reset again as soon as it ranges
+            recover_count++;
+            if (last_recover_report_ms == 0 || now_ms - last_recover_report_ms > 10000) {
+                last_recover_report_ms = now_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "VL53L1X: recovered sensor at 0x%02x (%u times)",
+                              unsigned(dev->get_bus_address()), unsigned(recover_count));
+            }
+        }
     }
 }
 

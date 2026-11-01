@@ -243,8 +243,8 @@ void RangeFinder::vl53l1x_set_addresses(void)
             }
             hal.gpio->write(params[i].stop_pin, 1);
             FOREACH_I2C(bus) {
-                if (AP_RangeFinder_VL53L1X::finish_wake(hal.i2c_mgr->get_device(bus, default_address),
-                                                        moving ? address : default_address)) {
+                AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev = hal.i2c_mgr->get_device(bus, default_address);
+                if (AP_RangeFinder_VL53L1X::finish_wake(dev.get(), moving ? address : default_address)) {
                     break;
                 }
             }
