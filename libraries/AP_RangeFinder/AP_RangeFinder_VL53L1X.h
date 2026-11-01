@@ -23,7 +23,7 @@ public:
 
     // wait for a sensor just woken from shutdown to boot, and move it
     // from the default address to new_address
-    static bool finish_wake(AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev, uint8_t new_address);
+    static bool finish_wake(AP_HAL::I2CDevice *dev, uint8_t new_address);
 
     // update state
     void update(void) override;
@@ -1257,6 +1257,11 @@ private:
     AP_RangeFinder_VL53L1X(RangeFinder::RangeFinder_State &_state, AP_RangeFinder_Params &_params, AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev);
 
     __INITFUNC__ bool init(DistanceMode mode);
+    // configure the sensor and start it ranging
+    bool configure(void);
+    // wake a sensor that has reset back to the default address again,
+    // and move it back to its own address
+    bool recover(void);
     void timer();
 
     // check sensor ID
@@ -1288,6 +1293,15 @@ private:
     uint32_t counter;
     uint32_t out_of_range_count;
     bool calibrated;
+
+    DistanceMode ranging_mode;
+    // the sensor at the default address, so a sensor with a shutdown
+    // pin that resets can be moved back to its own address
+    AP_HAL::OwnPtr<AP_HAL::I2CDevice> wake_dev;
+    uint32_t last_response_ms;
+    uint32_t last_recover_ms;
+    uint32_t last_recover_report_ms;
+    uint32_t recover_count;
 
     bool read_register(uint16_t reg, uint8_t &value) WARN_IF_UNUSED;
     bool read_register16(uint16_t reg, uint16_t &value) WARN_IF_UNUSED;
