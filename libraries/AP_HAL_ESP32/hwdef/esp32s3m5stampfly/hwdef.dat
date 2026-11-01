@@ -62,7 +62,11 @@ define AP_AIRSPEED_ENABLED 0
 
 define HAL_ESP32_BOARD_NAME "esp32s3m5stampfly"
 
-define AP_COMPASS_ENABLE_DEFAULT 0
+# one compass, a BMM150 on the internal I2C bus
+COMPASS BMM150 I2C:0:0x10 false ROTATION_YAW_90
+# the compass reads about 5 gauss (4.8 on one axis) of fixed offset,
+# probably from the motor magnets a couple of centimetres away
+define AP_COMPASS_OFFSETS_MAX_DEFAULT 6000
 
 # Pixart optical flow sensor
 define AP_OPTICALFLOW_ENABLED 1
