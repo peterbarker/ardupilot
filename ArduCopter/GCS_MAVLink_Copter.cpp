@@ -982,6 +982,7 @@ void GCS_MAVLINK_Copter::handle_message_set_position_target_local_ned(const mavl
     case MAV_FRAME_LOCAL_OFFSET_NED:
     case MAV_FRAME_BODY_NED:
     case MAV_FRAME_BODY_OFFSET_NED:
+    case MAV_FRAME_BODY_FRD:
         break;
     default:
         // unsupported coordinate frame
@@ -1011,6 +1012,7 @@ void GCS_MAVLINK_Copter::handle_message_set_position_target_local_ned(const mavl
         switch (packet.coordinate_frame) {
         case MAV_FRAME_BODY_NED:
         case MAV_FRAME_BODY_OFFSET_NED:
+        case MAV_FRAME_BODY_FRD:
             // rotate to earth-frame
             pos_ned_m.xy() = copter.ahrs.body_to_earth2D_p(pos_ned_m.xy());
             FALLTHROUGH;
@@ -1043,6 +1045,7 @@ void GCS_MAVLINK_Copter::handle_message_set_position_target_local_ned(const mavl
         switch (packet.coordinate_frame) {
         case MAV_FRAME_BODY_NED:
         case MAV_FRAME_BODY_OFFSET_NED:
+        case MAV_FRAME_BODY_FRD:
             vel_ned_ms.xy() = copter.ahrs.body_to_earth2D(vel_ned_ms.xy());
             break;
         default:
@@ -1058,6 +1061,7 @@ void GCS_MAVLINK_Copter::handle_message_set_position_target_local_ned(const mavl
         switch (packet.coordinate_frame) {
         case MAV_FRAME_BODY_NED:
         case MAV_FRAME_BODY_OFFSET_NED:
+        case MAV_FRAME_BODY_FRD:
             accel_ned_mss.xy() = copter.ahrs.body_to_earth2D(accel_ned_mss.xy());
             break;
         default:
@@ -1074,6 +1078,7 @@ void GCS_MAVLINK_Copter::handle_message_set_position_target_local_ned(const mavl
         switch (packet.coordinate_frame) {
         case MAV_FRAME_BODY_NED:
         case MAV_FRAME_BODY_OFFSET_NED:
+        case MAV_FRAME_BODY_FRD:
             yaw_relative = true;
             break;
         default:
