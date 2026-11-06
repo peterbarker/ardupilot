@@ -38,6 +38,9 @@ pushd arm-gcc
 ln -sf /opt/gcc-arm-none-eabi-10-2020-q4-major g++-10.2.1
 popd
 
+mkdir -p /storage/autotest
+chown $VAGRANT_USER:$VAGRANT_USER /storage/autotest
+
 cat <<"EOF" | sudo -u $VAGRANT_USER -H bash
 
 # configure git so we can tag
@@ -45,7 +48,8 @@ git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 
 
-mkdir -p APM
+mkdir -p /storage/autotest/APM
+ln -sfn /storage/autotest/APM APM
 pushd APM
 
 # clone ArduPilot and related repos
