@@ -15036,6 +15036,80 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.do_RTL()
 
+    def TargetAbsoluteSendApplet(self):
+        '''test target-absolute-send.lua sends TARGET_ABSOLUTE'''
+        if not hasattr(mavutil.mavlink, 'MAVLink_target_absolute_message'):
+            raise OldpymavlinkException("pymavlink too old; upgrade pymavlink to get TARGET_ABSOLUTE")
+        self.set_parameter('SCR_ENABLE', 1)
+        self.install_mavlink_module_context("MAVLink")
+        self.install_applet_script_context("target-absolute-send.lua")
+        self.reboot_sitl()
+        self.wait_ready_to_arm()
+
+        self.assert_receive_message('TARGET_ABSOLUTE', timeout=5)
+        self.assert_not_receive_message('FOLLOW_TARGET', timeout=2)
+
+        self.start_subtest("TGTA_ENABLE=0 stops sending")
+        self.set_parameter('TGTA_ENABLE', 0)
+        self.drain_mav()
+        self.assert_not_receive_message('TARGET_ABSOLUTE', timeout=2)
+        self.set_parameter('TGTA_ENABLE', 1)
+        self.assert_receive_message('TARGET_ABSOLUTE', timeout=5)
+
+        self.takeoff(10, mode='LOITER')
+
+        self.start_subtest("Attitude and rates while yawing")
+        self.set_rc(4, 1600)
+        self.delay_sim_time(2, reason='let the yaw rate settle')
+        caps = (mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_POSITION |
+                mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_VELOCITY |
+                mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_ATTITUDE |
+                mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_RATES)
+        self.drain_mav()
+        ta = self.assert_receive_message('TARGET_ABSOLUTE', verbose=True)
+        gpi = self.assert_receive_message('GLOBAL_POSITION_INT')
+        att = self.assert_receive_message('ATTITUDE')
+        self.assert_message_field_values(ta, {
+            'id': 0,
+            'sensor_capabilities': caps,
+        })
+        for field in 'position_std', 'vel_std', 'acc_std':
+            if not all(math.isnan(x) for x in getattr(ta, field)):
+                raise NotAchievedException("Expected %s to be NaN, got %s" % (field, getattr(ta, field)))
+        if self.get_distance_int(ta, gpi) > 2:
+            raise NotAchievedException("TARGET_ABSOLUTE position too far from GLOBAL_POSITION_INT")
+        if abs(ta.alt - gpi.alt * 0.001) > 1:
+            raise NotAchievedException("TARGET_ABSOLUTE alt %f != GLOBAL_POSITION_INT alt %f" % (ta.alt, gpi.alt * 0.001))
+        # the vehicle is yawing, so bring the TARGET_ABSOLUTE yaw forward to the ATTITUDE sample time
+        dt = att.time_boot_ms * 0.001 - ta.time_usec * 1e-6
+        ta_yaw = quaternion.Quaternion(ta.q_target).euler[2] + ta.rates[2] * dt
+        yaw_error = abs(mavextra.wrap_180(math.degrees(ta_yaw - att.yaw)))
+        if yaw_error > 5:
+            raise NotAchievedException("TARGET_ABSOLUTE yaw differs from ATTITUDE by %f degrees" % yaw_error)
+        # TARGET_ABSOLUTE rates are body-frame; level and yawing, the yaw rate is about the same as ATTITUDE's
+        if abs(att.yawspeed) < math.radians(10):
+            raise NotAchievedException("Vehicle not yawing (%f deg/s)" % math.degrees(att.yawspeed))
+        if abs(ta.rates[2] - att.yawspeed) > math.radians(5):
+            raise NotAchievedException("TARGET_ABSOLUTE yaw rate %f != ATTITUDE yawspeed %f" %
+                                       (ta.rates[2], att.yawspeed))
+        self.set_rc(4, 1500)
+
+        self.start_subtest("Velocity while flying forward")
+        self.set_rc(2, 1300)
+        self.wait_groundspeed(3, 100, timeout=60)
+        self.delay_sim_time(5, reason='let the speed settle')
+        self.drain_mav()
+        ta = self.assert_receive_message('TARGET_ABSOLUTE', verbose=True)
+        gpi = self.assert_receive_message('GLOBAL_POSITION_INT')
+        gpi_vel = Vector3(gpi.vx * 0.01, gpi.vy * 0.01, gpi.vz * 0.01)
+        vel_error = (Vector3(*ta.vel) - gpi_vel).length()
+        if vel_error > 0.5:
+            raise NotAchievedException("TARGET_ABSOLUTE vel %s differs from GLOBAL_POSITION_INT %s by %f m/s" %
+                                       (str(ta.vel), str(gpi_vel), vel_error))
+        self.set_rc(2, 1500)
+
+        self.do_RTL()
+
     def get_global_position_int(self, timeout=30):
         tstart = self.get_sim_time()
         while True:
@@ -21200,6 +21274,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.ParameterChecks,
             self.ModeFollow_with_FOLLOW_TARGET,
             self.ModeFollow_with_TARGET_ABSOLUTE,
+            self.TargetAbsoluteSendApplet,
             self.MAVLinkRangeFinderIDs,
             self.MAV_CMD_NAV_LOITER_UNLIM,
             self.FenceRelativePreArms,
