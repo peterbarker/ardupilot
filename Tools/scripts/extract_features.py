@@ -163,6 +163,7 @@ class ExtractFeatures(BuildScriptBase):
             ('HAL_PARACHUTE_ENABLED', 'AP_Parachute::update',),
             ('AP_FENCE_ENABLED', r'AC_Fence::check\b',),
             ('HAL_RALLY_ENABLED', 'AP_Rally::find_nearest_rally_point',),
+            ('AP_CORRIDOR_ENABLED', 'AP_Corridor::set_graph',),
             ('AP_AVOIDANCE_ENABLED', 'AC_Avoid::AC_Avoid',),
             ('AP_AVOIDANCE_ALTHOLD_ENABLED', 'AC_Avoid::adjust_roll_pitch',),
             ('AP_OAPATHPLANNER_ENABLED', 'AP_OAPathPlanner::AP_OAPathPlanner',),
