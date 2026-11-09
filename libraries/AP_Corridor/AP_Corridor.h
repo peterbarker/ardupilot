@@ -100,6 +100,25 @@ public:
     // the 3D distance between its nodes
     float edge_weight(const Edge &edge) const;
 
+    // a route from a location to a landing site along the graph
+    struct Route {
+        Location *points;       // entry point (if not a node), then nodes
+        uint16_t num_points;
+        uint16_t site;          // index of the landing site node
+        NodeType site_type;
+        float entry_distance_m; // from the location to the first point
+        float cost;             // route weight from the first point
+    };
+
+    // plan a route from loc onto the graph and along it to a landing
+    // site.  The vehicle joins the graph at the closest point of the
+    // nearest edge (or node), then takes the cheapest path to a nest;
+    // failing that, to a divert site; failing that, to a ditch site.
+    // Ties go to the lowest node index.  route.points is allocated
+    // here and must be freed with delete[].  Returns false if no
+    // landing site can be reached.
+    bool plan_route(const Location &loc, Route &route) const WARN_IF_UNUSED;
+
 private:
     static AP_Corridor *_singleton;
 
@@ -107,6 +126,13 @@ private:
     Edge *_edges;
     uint16_t _num_nodes;
     uint16_t _num_edges;
+
+    // index of the first edge out of each node, with a final entry of
+    // _num_edges; possible as edges are sorted by source node
+    uint16_t *_first_edge;
+
+    // position of node relative to loc, metres north/east/up
+    Vector3f node_offset_NEU(const Location &loc, uint16_t node) const;
 };
 
 namespace AP {
