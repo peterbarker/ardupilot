@@ -15036,6 +15036,150 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.do_RTL()
 
+    def TargetExtNav(self):
+        '''locate the vehicle from TARGET_ABSOLUTE and TARGET_RELATIVE using target-extnav.lua'''
+        if not hasattr(mavutil.mavlink, 'MAVLink_target_relative_message'):
+            raise OldpymavlinkException("pymavlink too old; upgrade pymavlink to get TARGET_RELATIVE")
+        self.wait_ready_to_arm()
+        old_pos = self.assert_receive_message('GLOBAL_POSITION_INT')
+
+        self.set_parameters({
+            "SCR_ENABLE": 1,
+            "VISO_TYPE": 1,
+            "EK3_SRC1_POSXY": 6,  # ExternalNav
+            "EK3_SRC1_VELXY": 0,
+            "EK3_SRC1_VELZ": 0,
+            "GPS1_TYPE": 0,
+        })
+        self.install_mavlink_module_context("MAVLink")
+        self.install_applet_script_context("target-extnav.lua")
+        self.reboot_sitl()
+        self.set_message_rate_hz('SIMSTATE', 10)
+        # without a GPS, AP doesn't send SYSTEM_TIME unless prompted
+        self.mav.mav.system_time_send(int(time.time() * 1000000), 0)
+
+        # two pads on the ground, 25m apart.  Each TARGET_RELATIVE only gives
+        # the true position when paired with the TARGET_ABSOLUTE of the same id.
+        # BODY_FRD observations are rotated with the EKF's attitude, so its yaw
+        # error times the range to the pad is a position error; keep it short
+        pads = {}
+        for pad_id, ofs_n, ofs_e in (1, 10, 10), (2, -10, -5):
+            pad = mavutil.location(old_pos.lat * 1e-7, old_pos.lon * 1e-7, old_pos.alt * 0.001, 0)
+            self.location_offset_ne(pad, ofs_n, ofs_e)
+            pads[pad_id] = pad
+
+        # the harness is both the pads (TARGET_ABSOLUTE) and the vehicle's
+        # sensor (TARGET_RELATIVE, built from the simulator's true position)
+        state = {
+            "observation": "LOCAL_NED",
+            "visible": {1, 2},  # pads the vehicle's sensor can see
+            "alt_amsl": old_pos.alt * 0.001,
+        }
+        nan = float('nan')
+        LOCATION_SCALING_FACTOR = 0.011131884502145034  # metres per 1e-7 degree, as AP_Common's Location
+
+        def send_target_absolute(time_usec, pad_id, pad):
+            self.mav.mav.target_absolute_send(
+                time_usec,
+                pad_id,
+                mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_POSITION,
+                int(pad.lat * 1e7),
+                int(pad.lng * 1e7),
+                pad.alt,
+                [0, 0, 0],  # vel
+                [0, 0, 0],  # acc
+                [1, 0, 0, 0],  # q_target
+                [0, 0, 0],  # rates
+                [0.05, 0.05],  # position_std
+                [nan] * 3,  # vel_std
+                [nan] * 3,  # acc_std
+            )
+
+        def send_target_relative(time_usec, pad_id, pad, simstate):
+            # pad position relative to the vehicle
+            rel_n = (pad.lat * 1e7 - simstate.lat) * LOCATION_SCALING_FACTOR
+            rel_e = (pad.lng * 1e7 - simstate.lng) * LOCATION_SCALING_FACTOR * math.cos(math.radians(simstate.lat * 1e-7))
+            rel_ned = Vector3(rel_n, rel_e, state["alt_amsl"] - pad.alt)
+            attitude = Matrix3()
+            attitude.from_euler(simstate.roll, simstate.pitch, simstate.yaw)
+            rel_body = attitude.transposed() * rel_ned
+            q_sensor = [0, 0, 0, 0]
+            if state["observation"] == "LOCAL_NED":
+                frame = mavutil.mavlink.MAV_FRAME_LOCAL_NED
+                rel = rel_ned
+            elif state["observation"] == "BODY_FRD":
+                frame = mavutil.mavlink.MAV_FRAME_BODY_FRD
+                rel = rel_body
+            else:
+                # sensor aligned with the body; q_sensor rotates it to NED
+                frame = mavutil.mavlink.MAV_FRAME_BODY_FRD
+                rel = rel_body
+                q_sensor = [float(x) for x in quaternion.Quaternion([simstate.roll, simstate.pitch, simstate.yaw]).q]
+            self.mav.mav.target_relative_send(
+                time_usec,
+                pad_id,
+                frame,
+                rel.x,
+                rel.y,
+                rel.z,
+                [0.05, 0.05, 0.05],  # position_std
+                nan,  # yaw_std
+                [0, 0, 0, 0],  # q_target
+                q_sensor,
+                mavutil.mavlink.LANDING_TARGET_TYPE_VISION_FIDUCIAL,
+            )
+
+        def send_targets(mav, m):
+            if m.get_type() == 'GLOBAL_POSITION_INT':
+                # alt is zero until the EKF has a position
+                if m.lat != 0 or m.lon != 0:
+                    state["alt_amsl"] = m.alt * 0.001
+                return
+            if m.get_type() != 'SIMSTATE':
+                return
+            time_usec = int(self.get_sim_time_cached() * 1e6)
+            for pad_id, pad in pads.items():
+                send_target_absolute(time_usec, pad_id, pad)
+            for pad_id, pad in pads.items():
+                if pad_id in state["visible"]:
+                    send_target_relative(time_usec, pad_id, pad, m)
+
+        self.install_message_hook_context(send_targets)
+        self.set_origin(old_pos)
+        self.wait_ready_to_arm()
+
+        self.takeoff(10, mode='LOITER')
+        self.set_rc(2, 1300)  # fly forward
+        self.set_rc(4, 1600)  # and turn, flying a small circle in which the body and NED frames differ
+        # while only one pad is visible, pairing its TARGET_RELATIVE with the
+        # other pad's TARGET_ABSOLUTE would put every sample 25m out
+        for observation, visible in ("LOCAL_NED", {1}), ("BODY_FRD", {2}), ("q_sensor", {1, 2}):
+            self.start_subtest("EKF follows the true position with %s observations of pads %s" %
+                               (observation, sorted(visible)))
+            state["observation"] = observation
+            state["visible"] = visible
+            tstart = self.get_sim_time()
+            max_error = 0
+            path_length = 0
+            last_simstate = self.assert_receive_message('SIMSTATE')
+            while self.get_sim_time_cached() - tstart < 20:
+                gpi = self.assert_receive_message('GLOBAL_POSITION_INT')
+                simstate = self.assert_receive_message('SIMSTATE')
+                error = self.get_distance_int(gpi, simstate)
+                max_error = max(max_error, error)
+                if error > 2:
+                    raise NotAchievedException("EKF position %fm from true position" % error)
+                path_length += self.get_distance_int(last_simstate, simstate)
+                last_simstate = simstate
+            self.progress("%s: max error %.2fm over %.1fm flown" % (observation, max_error, path_length))
+            if path_length < 30:
+                raise NotAchievedException("Vehicle only flew %fm" % path_length)
+
+        self.set_rc(2, 1500)
+        self.set_rc(4, 1500)
+        self.change_mode('LAND')
+        self.wait_disarmed(timeout=120)
+
     def TargetAbsoluteSendApplet(self):
         '''test target-absolute-send.lua sends TARGET_ABSOLUTE'''
         if not hasattr(mavutil.mavlink, 'MAVLink_target_absolute_message'):
@@ -21274,6 +21418,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.ParameterChecks,
             self.ModeFollow_with_FOLLOW_TARGET,
             self.ModeFollow_with_TARGET_ABSOLUTE,
+            self.TargetExtNav,
             self.TargetAbsoluteSendApplet,
             self.MAVLinkRangeFinderIDs,
             self.MAV_CMD_NAV_LOITER_UNLIM,
