@@ -24846,6 +24846,158 @@ return update, 1000
         self.clear_fence()
         self.clear_mission(CORRIDOR)
 
+    def CorridorRTL(self):
+        '''test returning along a flight corridor graph'''
+        CORRIDOR_RTL = 31
+        CORRIDOR = mavutil.mavlink.MAV_MISSION_TYPE_CORRIDOR
+        WAYPOINT = mavutil.mavlink.MAV_CORRIDOR_NODE_TYPE_WAYPOINT
+        NEST = mavutil.mavlink.MAV_CORRIDOR_NODE_TYPE_NEST
+        DIVERT = mavutil.mavlink.MAV_CORRIDOR_NODE_TYPE_DIVERT_SITE
+
+        self.wait_ready_to_arm()
+        home = self.home_position_as_location()
+        home_alt = home.get_alt_m(AltFrame.ABSOLUTE)
+
+        def offset(north, east):
+            return self.offset_location_ne(home, north, east)
+
+        def node(node_type, north, east, alt, radius):
+            loc = offset(north, east)
+            return (node_type, radius, (loc.lat, loc.lng, home_alt + alt))
+
+        # two one-way lanes stacked 50m apart, 300m north of home: the
+        # lower one eastbound, the upper one westbound.  A vertical
+        # corridor climbs from the east end of the lower lane to the
+        # upper one.  The nest at home is left by climbing to the lower
+        # lane and reached by descending from the upper one; the divert
+        # site 300m east of home hangs off the east end of the lower lane.
+        # The nodes and corridors are of different sizes
+        LOWER = 40
+        UPPER = 90
+        nodes = [
+            node(NEST, 0, 0, 20, 25),             # 0
+            node(WAYPOINT, 300, 0, LOWER, 12),    # 1 lower lane, west end
+            node(WAYPOINT, 300, 300, LOWER, 18),  # 2 lower lane, east end
+            node(WAYPOINT, 300, 0, UPPER, 32),    # 3 upper lane, west end
+            node(WAYPOINT, 300, 300, UPPER, 26),  # 4 upper lane, east end
+            node(DIVERT, 0, 300, 20, 8),          # 5
+        ]
+        node_locs = [Location(lat, lng, alt, AltFrame.ABSOLUTE) for (_, _, (lat, lng, alt)) in nodes]
+        edges = [
+            (0, 1, 0, 8),   # climb out of the nest
+            (1, 2, 0, 12),  # lower lane, eastbound
+            (2, 4, 0, 6),   # climb to the upper lane
+            (2, 5, 0, 4),   # down to the divert site
+            (3, 0, 0, 10),  # descend to the nest
+            (4, 3, 0, 20),  # upper lane, westbound
+        ]
+        # without the descent nothing reaches the nest
+        no_way_home = [e for e in edges if e[:2] != (3, 0)]
+
+        # how close (in 3D) the vehicle came to each node:
+        closest = [math.inf] * len(nodes)
+
+        def hook(mav, m):
+            if m.get_type() != 'GLOBAL_POSITION_INT':
+                return
+            here = Location(m.lat * 1e-7, m.lon * 1e-7, m.alt * 1e-3, AltFrame.ABSOLUTE)
+            for (i, loc) in enumerate(node_locs):
+                vertical = here.get_alt_m(AltFrame.ABSOLUTE) - loc.get_alt_m(AltFrame.ABSOLUTE)
+                distance = math.hypot(self.get_distance(here, loc), vertical)
+                closest[i] = min(closest[i], distance)
+
+        def fly_to_corridor_and_return(edges, alt, trigger):
+            self.upload_using_mission_protocol(CORRIDOR, self.corridor_items(nodes, edges))
+            self.takeoff(40, mode='GUIDED')
+            # go round the west end of the lanes to 80m north of their
+            # middle, well clear of every corridor until the return starts
+            for (north, east) in (0, -150), (380, -150), (380, 150):
+                dest = offset(north, east)
+                dest.set_alt_m(home_alt + alt, AltFrame.ABSOLUTE)
+                self.fly_guided_move_to(dest, timeout=120)
+            for i in range(len(closest)):
+                closest[i] = math.inf
+            trigger()
+            self.wait_mode(CORRIDOR_RTL)
+            self.wait_disarmed(timeout=300)
+            self.progress("Closest approach to nodes: %s" % str(["%.1f" % c for c in closest]))
+
+        def assert_passed(node, within):
+            if closest[node] > within:
+                raise NotAchievedException("Did not pass node %u (closest %.1fm)" % (node, closest[node]))
+
+        def assert_avoided(node, distance):
+            if closest[node] < distance:
+                raise NotAchievedException("Went within %.1fm of node %u" % (closest[node], node))
+
+        self.install_message_hook_context(hook)
+        self.context_collect('STATUSTEXT')
+
+        self.start_subtest("Upper lane: radio failsafe, west then down to the nest")
+        self.set_parameters({
+            "FS_THR_ENABLE": 8,  # CorridorRTL or RTL
+        })
+
+        def radio_failsafe():
+            self.set_parameter("SIM_RC_FAIL", 1)
+
+        fly_to_corridor_and_return(edges, UPPER + 5, radio_failsafe)
+        self.wait_statustext("CorridorRTL: to nest 0", check_context=True)
+        self.set_parameter("SIM_RC_FAIL", 0)
+        # joined the upper lane, went west to node 3 and descended to
+        # the nest; never dropped to the lower lane 50m below
+        assert_passed(3, 5)
+        assert_passed(0, 3)
+        assert_avoided(1, 30)
+        assert_avoided(4, 100)
+
+        self.start_subtest("Lower lane: east, climb, west along the upper lane, down to the nest")
+        self.context_clear_collection('STATUSTEXT')
+
+        def mode_change():
+            self.change_mode(CORRIDOR_RTL)
+
+        # the same place on the ground, but at the height of the lower lane
+        fly_to_corridor_and_return(edges, LOWER + 5, mode_change)
+        self.wait_statustext("CorridorRTL: to nest 0", check_context=True)
+        # the lower lane only goes east, so it flew away from home to
+        # climb the vertical corridor, then back along the upper lane
+        assert_passed(2, 5)
+        assert_passed(4, 5)
+        assert_passed(3, 5)
+        assert_passed(0, 3)
+        assert_avoided(1, 30)
+        assert_avoided(5, 100)
+
+        self.start_subtest("No graph: the failsafe falls back to RTL")
+        self.clear_mission(CORRIDOR)
+        self.context_clear_collection('STATUSTEXT')
+        self.takeoff(20, mode='GUIDED')
+        self.set_parameter("SIM_RC_FAIL", 1)
+        self.wait_statustext("CorridorRTL Unavailable, Trying RTL Mode", check_context=True)
+        self.wait_mode('RTL')
+        self.wait_disarmed(timeout=120)
+        self.set_parameter("SIM_RC_FAIL", 0)
+
+        self.start_subtest("A nest that cannot be reached means the divert site")
+        self.context_clear_collection('STATUSTEXT')
+        fly_to_corridor_and_return(no_way_home, LOWER + 5, mode_change)
+        self.wait_statustext("CorridorRTL: to divert site 5", check_context=True)
+        # east along the lower lane and down to the divert site, without
+        # climbing to the upper lane
+        assert_passed(2, 5)
+        assert_passed(5, 3)
+        assert_avoided(4, 30)
+        assert_avoided(1, 100)
+
+        # fly back to where the test started
+        self.takeoff(20, mode='GUIDED')
+        dest = offset(0, 0)
+        dest.set_alt_m(home_alt + 20, AltFrame.ABSOLUTE)
+        self.fly_guided_move_to(dest, timeout=120)
+        self.change_mode('LAND')
+        self.wait_disarmed(timeout=120)
+
     def tests2d(self):
         '''return list of all tests'''
         ret = ([
@@ -24900,6 +25052,7 @@ return update, 1000
             self.AHRSTrim,
             self.PeriphMultiUARTTunnel,
             self.CorridorGraph,
+            self.CorridorRTL,
         ])
         return ret
 
