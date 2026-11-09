@@ -42,6 +42,7 @@ from vehicle_test_suite import AltFrame
 from vehicle_test_suite import AutoTestTimeoutException
 from vehicle_test_suite import Location
 from vehicle_test_suite import NotAchievedException
+from vehicle_test_suite import OldpymavlinkException
 from vehicle_test_suite import PreconditionFailedException
 from vehicle_test_suite import Test
 from vehicle_test_suite import WaitAndMaintainArmed
@@ -14942,6 +14943,99 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         self.context_pop()
         self.do_RTL()
 
+    def ModeFollow_with_TARGET_ABSOLUTE(self):
+        '''test ModeFollow passing in TARGET_ABSOLUTE messages'''
+        if not hasattr(mavutil.mavlink, 'MAVLink_target_absolute_message'):
+            raise OldpymavlinkException("pymavlink too old; upgrade pymavlink to get TARGET_ABSOLUTE")
+        foll_ofs_x = 30 # metres
+        self.set_parameters({
+            "FOLL_ENABLE": 1,
+            "FOLL_SYSID": self.mav.source_system,
+            "FOLL_OFS_X": -foll_ofs_x,
+            "FOLL_OFS_TYPE": 1, # relative to other vehicle heading
+        })
+        self.takeoff(10, mode="LOITER")
+        self.context_push()
+        self.context_set_speedup(1)
+        self.change_mode("FOLLOW")
+
+        target_loc = self.get_location()
+        self.location_offset_ne(target_loc, 40, 60)
+        # a second target reported by the same system; it must be ignored
+        decoy_loc = copy.copy(target_loc)
+        self.location_offset_ne(decoy_loc, 200, 0)
+
+        caps_pos_att = (mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_POSITION |
+                        mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_ATTITUDE)
+        nan3 = [float('nan')] * 3
+
+        def send_target_absolute(target_id, loc, heading_deg, caps, vel=(0, 0, 0)):
+            q = quaternion.Quaternion([0, 0, math.radians(heading_deg)])
+            self.mav.mav.target_absolute_send(
+                int(self.get_sim_time_cached() * 1e6), # time_usec
+                target_id,
+                caps,
+                int(loc.lat * 1e7),
+                int(loc.lng * 1e7),
+                loc.get_alt_m(AltFrame.ABSOLUTE), # alt AMSL in m
+                vel,        # velocity m/s, NED
+                [0, 0, 0],  # acceleration m/s/s, NED
+                [float(x) for x in q.q], # body FRD to NED
+                [0, 0, 0],  # rates
+                [float('nan')] * 2, # position_std
+                nan3,  # vel_std
+                nan3,  # acc_std
+            )
+
+        for heading_deg, ofs_n, ofs_e in (0, -foll_ofs_x, 0), (90, 0, -foll_ofs_x):
+            self.start_subtest("Following target with heading %u" % heading_deg)
+            expected_loc = copy.copy(target_loc)
+            self.location_offset_ne(expected_loc, ofs_n, ofs_e)
+            self.progress("expected_loc: %s" % str(expected_loc))
+
+            def send_targets():
+                send_target_absolute(1, target_loc, heading_deg, caps_pos_att)
+                send_target_absolute(2, decoy_loc, heading_deg, caps_pos_att)
+
+            self.wait_location(
+                expected_loc,
+                fn=send_targets,
+                fn_interval=0.5,
+                accuracy=3,
+                timeout=60,
+                minimum_duration=5,
+            )
+
+        self.start_subtest("Following target velocity")
+        vel_n = 3  # m/s
+        vel_e = 2
+        heading_deg = math.degrees(math.atan2(vel_e, vel_n))
+        last_loop_s = self.get_sim_time_cached()
+
+        def send_target_vel():
+            nonlocal last_loop_s
+            now = self.get_sim_time_cached()
+            dt = now - last_loop_s
+            last_loop_s = now
+            self.location_offset_ne(target_loc, vel_n * dt, vel_e * dt)
+            send_target_absolute(
+                1,
+                target_loc,
+                heading_deg,
+                caps_pos_att | mavutil.mavlink.TARGET_ABSOLUTE_SENSOR_CAPABILITY_VELOCITY,
+                vel=[vel_n, vel_e, 0],
+            )
+
+        self.wait_speed_vector(
+            Vector3(vel_n, vel_e, 0),
+            timeout=100,
+            called_function=lambda plop, empty: send_target_vel(),
+            minimum_duration=2,
+        )
+
+        self.context_pop()
+        self.do_RTL()
+
     def get_global_position_int(self, timeout=30):
         tstart = self.get_sim_time()
         while True:
@@ -21105,6 +21199,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.AutoYawDO_MOUNT_CONTROL,
             self.ParameterChecks,
             self.ModeFollow_with_FOLLOW_TARGET,
+            self.ModeFollow_with_TARGET_ABSOLUTE,
             self.MAVLinkRangeFinderIDs,
             self.MAV_CMD_NAV_LOITER_UNLIM,
             self.FenceRelativePreArms,
