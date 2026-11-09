@@ -4320,6 +4320,18 @@ function visual_odom:healthy() end
 ---@return integer
 function visual_odom:quality() end
 
+-- supply a position and attitude estimate, as VISION_POSITION_ESTIMATE does. Used by the MAVLink backend (VISO_TYPE=1)
+---@param time_ms uint32_t_ud|integer|number -- system time in milliseconds when the estimate was measured
+---@param x number -- position north of the EKF origin in meters
+---@param y number -- position east of the EKF origin in meters
+---@param z number -- position down from the EKF origin in meters
+---@param attitude Quaternion_ud -- attitude, body to earth
+---@param posErr number -- position error in meters
+---@param angErr number -- attitude error in radians
+---@param reset_counter integer -- incremented when the position jumps
+---@param quality integer -- -1 failed, 0 unknown, 1 is worst, 100 is best
+function visual_odom:handle_pose_estimate(time_ms, x, y, z, attitude, posErr, angErr, reset_counter, quality) end
+
 -- servo telemetry class
 servo_telem = {}
 

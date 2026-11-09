@@ -1143,6 +1143,8 @@ singleton AP_VisualOdom depends HAL_VISUALODOM_ENABLED
 singleton AP_VisualOdom rename visual_odom
 singleton AP_VisualOdom method healthy boolean
 singleton AP_VisualOdom method quality int8_t
+singleton AP_VisualOdom scheduler-semaphore
+singleton AP_VisualOdom method handle_pose_estimate void 0'literal uint32_t'skip_check float'skip_check float'skip_check float'skip_check Quaternion float'skip_check float'skip_check uint8_t'skip_check int8_t -1 100
 
 -- ----AP_TemperatureSensor Library----
 include AP_TemperatureSensor/AP_TemperatureSensor.h
