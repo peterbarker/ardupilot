@@ -66,6 +66,7 @@
 #include <AP_AIS/AP_AIS.h>
 #include <AP_NMEA_Output/AP_NMEA_Output.h>
 #include <AC_Fence/AC_Fence.h>
+#include <AP_Corridor/AP_Corridor.h>
 #include <AP_CheckFirmware/AP_CheckFirmware.h>
 #include <Filter/LowPassFilter.h>
 #include <AP_KDECAN/AP_KDECAN.h>
@@ -508,6 +509,10 @@ protected:
 
     void fence_init();
     virtual void fence_checks_async() {};
+#endif
+
+#if AP_CORRIDOR_ENABLED
+    AP_Corridor corridor;
 #endif
 
 #if AP_TEMPERATURE_SENSOR_ENABLED
