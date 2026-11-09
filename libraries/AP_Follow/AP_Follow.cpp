@@ -537,6 +537,7 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
         (AP_HAL::millis() - _last_location_update_ms > AP_FOLLOW_ESTIMATE_TIMEOUT_MS)) {
         _estimate_valid = false;   // mark estimate as invalid
         _using_follow_target = false; // reset follow-target usage flag
+        _have_target_absolute_id = false; // allow a different TARGET_ABSOLUTE id to be picked up
     }
 
     if (!should_handle_message(msg)) {
@@ -560,6 +561,10 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_FOLLOW_TARGET: {
         // handle follow-target specific messages
         updated = handle_follow_target_message(msg);
+        break;
+    }
+    case MAVLINK_MSG_ID_TARGET_ABSOLUTE: {
+        updated = handle_target_absolute_message(msg);
         break;
     }
     }
@@ -766,6 +771,43 @@ bool AP_Follow::handle_follow_target_message(const mavlink_message_t &msg)
     return true;
 }
 
+// Decodes a TARGET_ABSOLUTE MAVLink message to update the target’s position, velocity, acceleration, and orientation.
+bool AP_Follow::handle_target_absolute_message(const mavlink_message_t &msg)
+{
+    mavlink_target_absolute_t packet;
+    mavlink_msg_target_absolute_decode(&msg, &packet);
+
+    const uint8_t caps = packet.sensor_capabilities;
+    if ((caps & TARGET_ABSOLUTE_SENSOR_CAPABILITY_POSITION) == 0) {
+        return false;
+    }
+
+    // a system reporting several targets tells them apart by id.
+    // Follow the first id heard until its data times out
+    if (_have_target_absolute_id && (packet.id != _target_absolute_id)) {
+        return false;
+    }
+
+    // body rates can only be rotated into the earth frame if the attitude is known
+    const bool have_attitude = (caps & TARGET_ABSOLUTE_SENSOR_CAPABILITY_ATTITUDE) != 0;
+    const bool have_rates = have_attitude && ((caps & TARGET_ABSOLUTE_SENSOR_CAPABILITY_RATES) != 0);
+    if (!update_target_absolute(packet.lat, packet.lon, packet.alt,
+                                (caps & TARGET_ABSOLUTE_SENSOR_CAPABILITY_VELOCITY) ? packet.vel : nullptr,
+                                (caps & TARGET_ABSOLUTE_SENSOR_CAPABILITY_ACCELERATION) ? packet.acc : nullptr,
+                                have_attitude ? packet.q_target : nullptr,
+                                have_rates ? packet.rates : nullptr)) {
+        return false;
+    }
+
+    _target_absolute_id = packet.id;
+    _have_target_absolute_id = true;
+
+    // apply jitter-corrected timestamp to this update
+    _last_location_update_ms = _jitter.correct_offboard_timestamp_usec(packet.time_usec, AP_HAL::micros64()) / 1000U;
+
+    return true;
+}
+
 // Updates the target’s position, velocity, acceleration, and orientation from a global position.
 // A nullptr marks a field the sender did not supply.
 bool AP_Follow::update_target_absolute(int32_t lat, int32_t lon, float alt_amsl_m,
@@ -848,7 +890,7 @@ bool AP_Follow::update_target_absolute(int32_t lat, int32_t lon, float alt_amsl_
         _target_accel_ned_mss.zero();
     }
 
-    // prefer FOLLOW_TARGET over GLOBAL_POSITION_INT from now on
+    // prefer FOLLOW_TARGET and TARGET_ABSOLUTE over GLOBAL_POSITION_INT from now on
     _using_follow_target = true;
 
     return true;

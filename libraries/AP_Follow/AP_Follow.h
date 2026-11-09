@@ -196,6 +196,7 @@ private:
     // handle various mavlink messages supplying position:
     bool handle_global_position_int_message(const mavlink_message_t &msg);
     bool handle_follow_target_message(const mavlink_message_t &msg);
+    bool handle_target_absolute_message(const mavlink_message_t &msg);
 
     // update the target from a global position; a nullptr marks a field the sender did not supply
     bool update_target_absolute(int32_t lat, int32_t lon, float alt_amsl_m,
@@ -256,7 +257,9 @@ private:
     float       _dist_to_target_m;              // Horizontal distance to target, for reporting (meters)
     float       _bearing_to_target_deg;         // Bearing to target from vehicle (degrees, 0 = North)
     bool        _offsets_were_zero;             // True if initial offset was zero before being initialized
-    bool        _using_follow_target;           // True if FOLLOW_TARGET messages are being used instead of GLOBAL_POSITION_INT
+    bool        _using_follow_target;           // True if FOLLOW_TARGET or TARGET_ABSOLUTE messages are being used instead of GLOBAL_POSITION_INT
+    bool        _have_target_absolute_id;       // True if _target_absolute_id holds the TARGET_ABSOLUTE id being followed
+    uint8_t     _target_absolute_id;            // TARGET_ABSOLUTE id being followed
 
     HAL_Semaphore   _follow_sem;                // semaphore for multi-thread use of update_estimates and LUA calls
 
