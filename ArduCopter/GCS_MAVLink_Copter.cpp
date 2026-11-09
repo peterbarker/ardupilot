@@ -1408,6 +1408,9 @@ uint8_t GCS_MAVLINK_Copter::send_available_mode(uint8_t index) const
 #if MODE_SMARTRTL_ENABLED
         &copter.mode_smartrtl,
 #endif
+#if MODE_CORRIDOR_RTL_ENABLED
+        &copter.mode_corridor_rtl,
+#endif
 #if MODE_FLOWHOLD_ENABLED
         (Mode*)copter.g2.mode_flowhold_ptr,
 #endif

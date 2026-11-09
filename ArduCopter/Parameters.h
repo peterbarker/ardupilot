@@ -414,6 +414,8 @@ public:
         ALWAYS_LAND              = 5,
         AUTO_RTL_OR_RTL          = 6,
         BRAKE_OR_LAND            = 7,
+        CORRIDOR_RTL_OR_RTL      = 8,
+        CORRIDOR_RTL_OR_LAND     = 9,
     };
 
     AP_Enum<FS_GCS_Action> failsafe_gcs;        // ground station failsafe behavior
@@ -445,6 +447,8 @@ public:
         ALWAYS_SMARTRTL_OR_LAND  = 5,
         AUTO_RTL_OR_RTL          = 6,
         BRAKE_OR_LAND            = 7,
+        CORRIDOR_RTL_OR_RTL      = 8,
+        CORRIDOR_RTL_OR_LAND     = 9,
     };
 
     // Throttle

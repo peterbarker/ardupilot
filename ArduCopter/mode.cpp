@@ -124,6 +124,11 @@ Mode *Copter::mode_from_mode_num(const Mode::Number mode)
             return &mode_smartrtl;
 #endif
 
+#if MODE_CORRIDOR_RTL_ENABLED
+        case Mode::Number::CORRIDOR_RTL:
+            return &mode_corridor_rtl;
+#endif
+
 #if MODE_FLOWHOLD_ENABLED
         case Mode::Number::FLOWHOLD:
             return (Mode *)g2.mode_flowhold_ptr;
@@ -210,7 +215,8 @@ bool Copter::gcs_mode_enabled(const Mode::Number mode_num)
         (uint8_t)Mode::Number::SYSTEMID,
         (uint8_t)Mode::Number::AUTOROTATE,
         (uint8_t)Mode::Number::AUTO_RTL,
-        (uint8_t)Mode::Number::TURTLE
+        (uint8_t)Mode::Number::TURTLE,
+        (uint8_t)Mode::Number::CORRIDOR_RTL,
     };
 
     return !block_GCS_mode_change((uint8_t)mode_num, mode_list, ARRAY_SIZE(mode_list));
@@ -272,6 +278,9 @@ uint32_t Copter::get_available_mode_enabled_mask() const
 #endif
 #if MODE_SMARTRTL_ENABLED
         &copter.mode_smartrtl,
+#endif
+#if MODE_CORRIDOR_RTL_ENABLED
+        &copter.mode_corridor_rtl,
 #endif
 #if MODE_FLOWHOLD_ENABLED
         (Mode*)copter.g2.mode_flowhold_ptr,

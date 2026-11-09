@@ -27,6 +27,7 @@
 /// change in your local copy of APM_Config.h.
 ///
 #include "APM_Config.h"
+#include <AP_Corridor/AP_Corridor_config.h>
 #include <AP_ADSB/AP_ADSB_config.h>
 #include <AP_Follow/AP_Follow_config.h>
 #include <AC_Avoidance/AC_Avoidance_config.h>
@@ -214,6 +215,12 @@
 // RTL - Return To Launch
 #ifndef MODE_RTL_ENABLED
 # define MODE_RTL_ENABLED 1
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+// Corridor RTL - return along the flight corridor graph to a landing site
+#ifndef MODE_CORRIDOR_RTL_ENABLED
+# define MODE_CORRIDOR_RTL_ENABLED AP_CORRIDOR_ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -609,6 +616,14 @@
 
 #if FRAME_CONFIG == HELI_FRAME && !MODE_ACRO_ENABLED
   #error Helicopter frame requires acro mode support which is disabled
+#endif
+
+#if MODE_CORRIDOR_RTL_ENABLED && !MODE_RTL_ENABLED
+  #error CorridorRTL requires ModeRTL which is disabled
+#endif
+
+#if MODE_CORRIDOR_RTL_ENABLED && !AP_CORRIDOR_ENABLED
+  #error CorridorRTL requires AP_Corridor which is disabled
 #endif
 
 #if MODE_SMARTRTL_ENABLED && !MODE_RTL_ENABLED

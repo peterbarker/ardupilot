@@ -104,6 +104,8 @@ public:
 
         // Mode number 30 reserved for "offboard" for external/lua control.
 
+        CORRIDOR_RTL = 31,  // return along the flight corridor graph to a landing site
+
         // Mode number 127 reserved for the "drone show mode" in the Skybrush
         // fork at https://github.com/skybrush-io/ardupilot
     };
@@ -1714,6 +1716,60 @@ private:
     // if vehicle exits SmartRTL mode before reaching home. invalid if zero
     Vector3p dest_NED_backup;
 };
+
+
+#if MODE_CORRIDOR_RTL_ENABLED
+class ModeCorridorRTL : public ModeRTL {
+
+public:
+    // inherit constructor
+    using ModeRTL::Mode;
+    Number mode_number() const override { return Number::CORRIDOR_RTL; }
+
+    bool init(bool ignore_checks) override;
+    void run() override;
+    void exit() override;
+
+    bool requires_position() const override { return true; }
+    bool has_manual_throttle() const override { return false; }
+    bool allows_arming(AP_Arming::Method method) const override { return false; }
+    bool is_autopilot() const override { return true; }
+
+    bool is_landing() const override;
+
+    // Return true if this mode is enabled, used by MAVLink available modes
+    bool enabled() const override;
+
+    enum class SubMode : uint8_t {
+        PATH_FOLLOW,
+        LAND
+    };
+
+protected:
+
+    const char *name() const override { return "Corridor RTL"; }
+    const char *name4() const override { return "CRTL"; }
+
+    // for reporting to GCS
+    bool get_wp(Location &loc) const override;
+    float wp_distance_m() const override;
+    float wp_bearing_deg() const override;
+    float crosstrack_error_m() const override { return wp_nav->crosstrack_error_m();}
+
+private:
+
+    void set_submode(SubMode submode);
+    void set_next_destination();
+    void path_follow_run();
+
+    SubMode _submode = SubMode::PATH_FOLLOW;
+
+    // the route, planned on entry
+    AP_Corridor::Route route;
+    // index into route.points of the next point to send to WPNav
+    uint16_t next_point;
+};
+#endif  // MODE_CORRIDOR_RTL_ENABLED
 
 
 class ModeSport : public Mode {
