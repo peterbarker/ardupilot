@@ -197,6 +197,11 @@ private:
     bool handle_global_position_int_message(const mavlink_message_t &msg);
     bool handle_follow_target_message(const mavlink_message_t &msg);
 
+    // update the target from a global position; a nullptr marks a field the sender did not supply
+    bool update_target_absolute(int32_t lat, int32_t lon, float alt_amsl_m,
+                                const float *vel_ned_ms, const float *accel_ned_mss,
+                                const float *attitude_q, const float *rates_body_rads);
+
     // write out an onboard-log message to help diagnose follow problems:
     void Log_Write_FOLL();
 

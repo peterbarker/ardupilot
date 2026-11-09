@@ -745,21 +745,43 @@ bool AP_Follow::handle_follow_target_message(const mavlink_message_t &msg)
     mavlink_follow_target_t packet;
     mavlink_msg_follow_target_decode(&msg, &packet);
 
-    // ignore message if latitude and longitude are exactly zero (invalid GPS fix)
-    if ((packet.lat == 0 && packet.lon == 0)) {
-        return false;
-    }
-
     // require that at least position is estimated (bit 0 of est_capabilities)
     if ((packet.est_capabilities & (1<<0)) == 0) {
         return false;
     }
 
+    // bit 3 of est_capabilities covers both attitude and rates
+    const bool have_attitude = (packet.est_capabilities & (1 << 3)) != 0;
+    if (!update_target_absolute(packet.lat, packet.lon, packet.alt,
+                                (packet.est_capabilities & (1<<1)) ? packet.vel : nullptr,
+                                (packet.est_capabilities & (1<<2)) ? packet.acc : nullptr,
+                                have_attitude ? packet.attitude_q : nullptr,
+                                have_attitude ? packet.rates : nullptr)) {
+        return false;
+    }
+
+    // apply jitter-corrected timestamp to this update
+    _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.timestamp, AP_HAL::millis());
+
+    return true;
+}
+
+// Updates the target’s position, velocity, acceleration, and orientation from a global position.
+// A nullptr marks a field the sender did not supply.
+bool AP_Follow::update_target_absolute(int32_t lat, int32_t lon, float alt_amsl_m,
+                                       const float *vel_ned_ms, const float *accel_ned_mss,
+                                       const float *attitude_q, const float *rates_body_rads)
+{
+    // ignore message if latitude and longitude are exactly zero (invalid GPS fix)
+    if ((lat == 0 && lon == 0)) {
+        return false;
+    }
+
     // build Location object from latitude, longitude, and altitude (alt in meters)
     const Location target_location {
-        packet.lat,
-        packet.lon,
-        int32_t(packet.alt * 100),  // convert meters to centimeters
+        lat,
+        lon,
+        int32_t(alt_amsl_m * 100),  // convert meters to centimeters
         Location::AltFrame::ABSOLUTE
     };
 
@@ -775,24 +797,28 @@ bool AP_Follow::handle_follow_target_message(const mavlink_message_t &msg)
         return false;
     }
 
-    // decode attitude if available (bit 3 of est_capabilities)
-    if (packet.est_capabilities & (1 << 3)) {
+    // decode attitude if available
+    if (attitude_q != nullptr) {
         // reconstruct quaternion from packet
-        Quaternion q{packet.attitude_q[0], packet.attitude_q[1], packet.attitude_q[2], packet.attitude_q[3]};
+        Quaternion q{attitude_q[0], attitude_q[1], attitude_q[2], attitude_q[3]};
         float roll, pitch, yaw;
         q.to_euler(roll, pitch, yaw);
 
         // store heading in degrees, wrapped 0–360
         _target_heading_deg = wrap_360(degrees(yaw));
 
-        // transform body rates (roll, pitch, yaw) to earth frame rates
-        Matrix3f R;
-        q.rotation_matrix(R);
-        Vector3f omega_body = Vector3f{packet.rates[0], packet.rates[1], packet.rates[2]};
-        Vector3f omega_world = R * omega_body; // rotate rates into earth frame
+        if (rates_body_rads != nullptr) {
+            // transform body rates (roll, pitch, yaw) to earth frame rates
+            Matrix3f R;
+            q.rotation_matrix(R);
+            Vector3f omega_body = Vector3f{rates_body_rads[0], rates_body_rads[1], rates_body_rads[2]};
+            Vector3f omega_world = R * omega_body; // rotate rates into earth frame
 
-        // store heading rate (yaw rate in world frame) in degrees/sec
-        _target_heading_rate_degs = degrees(omega_world.z);
+            // store heading rate (yaw rate in world frame) in degrees/sec
+            _target_heading_rate_degs = degrees(omega_world.z);
+        } else {
+            _target_heading_rate_degs = 0.0f;
+        }
     } else if (_offset_type == AP_FOLLOW_OFFSET_TYPE_RELATIVE) {
         // if attitude unavailable and using relative frame, cannot compute — abort
         return false;
@@ -802,28 +828,25 @@ bool AP_Follow::handle_follow_target_message(const mavlink_message_t &msg)
     }
 
     _target_pos_ned_m.xy() = target_pos_neu_m.xy();
-    _target_pos_ned_m.z = -packet.alt + origin.alt * 0.01;
+    _target_pos_ned_m.z = -alt_amsl_m + origin.alt * 0.01;
 
-    // decode velocity if available (bit 1 of est_capabilities)
-    if (packet.est_capabilities & (1<<1)) {
-        _target_vel_ned_ms.x = packet.vel[0]; // velocity north
-        _target_vel_ned_ms.y = packet.vel[1]; // velocity east
-        _target_vel_ned_ms.z = packet.vel[2]; // velocity down
+    // decode velocity if available
+    if (vel_ned_ms != nullptr) {
+        _target_vel_ned_ms.x = vel_ned_ms[0]; // velocity north
+        _target_vel_ned_ms.y = vel_ned_ms[1]; // velocity east
+        _target_vel_ned_ms.z = vel_ned_ms[2]; // velocity down
     } else {
         _target_vel_ned_ms.zero();
     }
 
-    // decode acceleration if available (bit 2 of est_capabilities)
-    if (packet.est_capabilities & (1 << 2)) {
-        _target_accel_ned_mss.x = packet.acc[0]; // acceleration north
-        _target_accel_ned_mss.y = packet.acc[1]; // acceleration east
-        _target_accel_ned_mss.z = packet.acc[2]; // acceleration down
+    // decode acceleration if available
+    if (accel_ned_mss != nullptr) {
+        _target_accel_ned_mss.x = accel_ned_mss[0]; // acceleration north
+        _target_accel_ned_mss.y = accel_ned_mss[1]; // acceleration east
+        _target_accel_ned_mss.z = accel_ned_mss[2]; // acceleration down
     } else {
         _target_accel_ned_mss.zero();
     }
-
-    // apply jitter-corrected timestamp to this update
-    _last_location_update_ms = _jitter.correct_offboard_timestamp_msec(packet.timestamp, AP_HAL::millis());
 
     // prefer FOLLOW_TARGET over GLOBAL_POSITION_INT from now on
     _using_follow_target = true;
