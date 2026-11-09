@@ -24579,6 +24579,273 @@ return update, 1000
         ])
         return ret
 
+    def corridor_item(self, seq, command, p1=0, p2=0, p3=0, p4=0, x=0, y=0, z=0, frame=None):
+        '''return a MISSION_ITEM_INT for a corridor graph'''
+        if frame is None:
+            if command == mavutil.mavlink.MAV_CMD_NAV_CORRIDOR_NODE:
+                frame = mavutil.mavlink.MAV_FRAME_GLOBAL
+            else:
+                frame = mavutil.mavlink.MAV_FRAME_MISSION
+        return self.create_MISSION_ITEM_INT(
+            command,
+            p1=p1, p2=p2, p3=p3, p4=p4,
+            x=x, y=y, z=z,
+            frame=frame,
+            seq=seq,
+            mission_type=mavutil.mavlink.MAV_MISSION_TYPE_CORRIDOR,
+        )
+
+    def corridor_items(self, nodes, edges):
+        '''nodes is a list of (type, radius, (lat, lng, alt_amsl)), edges a
+        list of (from, to, cost, radius); returns MISSION_ITEM_INTs'''
+        items = []
+        for (node_type, radius, (lat, lng, alt)) in nodes:
+            items.append(self.corridor_item(
+                len(items),
+                mavutil.mavlink.MAV_CMD_NAV_CORRIDOR_NODE,
+                p1=node_type,
+                p2=radius,
+                x=int(lat * 1e7),
+                y=int(lng * 1e7),
+                z=alt,
+            ))
+        for (node_from, node_to, cost, radius) in edges:
+            items.append(self.corridor_item(
+                len(items),
+                mavutil.mavlink.MAV_CMD_NAV_CORRIDOR_EDGE,
+                p1=node_from,
+                p2=node_to,
+                p3=cost,
+                p4=radius,
+            ))
+        return items
+
+    def corridor_upload_expect(self, items, want_result, message="MISSION_ITEM_INT"):
+        '''upload items as a corridor graph and check the MISSION_ACK'''
+        mission_type = mavutil.mavlink.MAV_MISSION_TYPE_CORRIDOR
+        self.mav.mav.mission_count_send(1, 1, len(items), mission_type)
+        tstart = self.get_sim_time()
+        while True:
+            if self.get_sim_time_cached() - tstart > 20:
+                raise NotAchievedException("Timeout uploading corridor graph")
+            m = self.mav.recv_match(type=['MISSION_REQUEST', 'MISSION_ACK'], blocking=True, timeout=1)
+            if m is None:
+                continue
+            if m.mission_type != mission_type:
+                continue
+            if m.get_type() == 'MISSION_ACK':
+                if m.target_system != self.mav.mav.srcSystem:
+                    continue
+                break
+            item = items[m.seq]
+            if message == "MISSION_ITEM":
+                self.mav.mav.mission_item_send(
+                    1, 1, item.seq, item.frame, item.command, item.current, item.autocontinue,
+                    item.param1, item.param2, item.param3, item.param4,
+                    item.x * 1e-7, item.y * 1e-7, item.z, mission_type)
+            else:
+                self.mav.mav.send(item)
+        want_name = mavutil.mavlink.enums["MAV_MISSION_RESULT"][want_result].name
+        got_name = mavutil.mavlink.enums["MAV_MISSION_RESULT"][m.type].name
+        if m.type != want_result:
+            raise NotAchievedException(f"Expected {want_name} got {got_name}")
+        self.progress(f"Got expected {got_name}")
+
+    def assert_corridor_matches(self, items):
+        '''download the corridor graph and compare it to items'''
+        downloaded = self.download_using_mission_protocol(mavutil.mavlink.MAV_MISSION_TYPE_CORRIDOR)
+        if len(downloaded) != len(items):
+            raise NotAchievedException(f"Expected {len(items)} items got {len(downloaded)}")
+        for (want, got) in zip(items, downloaded):
+            for field in "command", "frame", "x", "y":
+                if getattr(want, field) != getattr(got, field):
+                    raise NotAchievedException(f"seq={want.seq} {field} want={getattr(want, field)} got={getattr(got, field)}")  # noqa:E501
+            for field in "param1", "param2", "param3", "param4", "z":
+                if abs(getattr(want, field) - getattr(got, field)) > 0.01:
+                    raise NotAchievedException(f"seq={want.seq} {field} want={getattr(want, field)} got={getattr(got, field)}")  # noqa:E501
+
+    def CorridorGraph(self):
+        '''test uploading and downloading a flight corridor graph'''
+        self.wait_ready_to_arm()
+
+        CORRIDOR = mavutil.mavlink.MAV_MISSION_TYPE_CORRIDOR
+        WAYPOINT = mavutil.mavlink.MAV_CORRIDOR_NODE_TYPE_WAYPOINT
+        NEST = mavutil.mavlink.MAV_CORRIDOR_NODE_TYPE_NEST
+        DIVERT = mavutil.mavlink.MAV_CORRIDOR_NODE_TYPE_DIVERT_SITE
+        DITCH = mavutil.mavlink.MAV_CORRIDOR_NODE_TYPE_DITCH_SITE
+
+        home = self.home_position_as_location()
+        home_alt = home.get_alt_m(AltFrame.ABSOLUTE)
+
+        def node_loc(north, east, alt):
+            loc = self.offset_location_ne(home, north, east)
+            return (loc.lat, loc.lng, home_alt + alt)
+
+        # the example from the RFC, with radii added:
+        nodes = [
+            (NEST, 10, node_loc(0, 0, 0)),
+            (WAYPOINT, 20, node_loc(400, 0, 20)),
+            (WAYPOINT, 20, node_loc(400, 500, 20)),
+            (DIVERT, 10, node_loc(0, 500, 0)),
+        ]
+        edges = [
+            (0, 1, 0, 15),
+            (1, 0, 0, 15),
+            (1, 2, 0, 25),
+            (2, 1, 0, 25),
+            (2, 3, 0, 15),
+        ]
+        good_items = self.corridor_items(nodes, edges)
+
+        self.start_subtest("Empty to start with")
+        self.assert_corridor_matches([])
+
+        self.start_subtest("Upload and download")
+        self.upload_using_mission_protocol(CORRIDOR, good_items)
+        self.assert_corridor_matches(good_items)
+
+        def expect_rejected(items, result):
+            self.corridor_upload_expect(items, result)
+            # a rejected upload must leave the stored graph alone:
+            self.assert_corridor_matches(good_items)
+
+        self.start_subtest("Node after an edge")
+        items = self.corridor_items(nodes[:3], edges[:2]) + self.corridor_items(nodes[3:], [])
+        for (seq, item) in enumerate(items):
+            item.seq = seq
+        expect_rejected(items, mavutil.mavlink.MAV_MISSION_INVALID_SEQUENCE)
+
+        self.start_subtest("Edges not sorted by Node From")
+        expect_rejected(
+            self.corridor_items(nodes, [(1, 2, 0, 0), (0, 1, 0, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_SEQUENCE)
+
+        self.start_subtest("Bad node indexes")
+        expect_rejected(
+            self.corridor_items(nodes, [(4, 0, 0, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM1)
+        expect_rejected(
+            self.corridor_items(nodes, [(0, 4, 0, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM2)
+        expect_rejected(
+            self.corridor_items(nodes, [(0, 1.5, 0, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM2)
+
+        self.start_subtest("Self-loop")
+        expect_rejected(
+            self.corridor_items(nodes, [(1, 1, 0, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM2)
+
+        self.start_subtest("Bad costs")
+        expect_rejected(
+            self.corridor_items(nodes, [(0, 1, -1, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM3)
+        expect_rejected(
+            self.corridor_items(nodes, [(0, 1, 5, 0), (1, 2, 0, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM3)
+        expect_rejected(
+            self.corridor_items(nodes, [(0, 1, 0, 0), (1, 2, 5, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM3)
+
+        self.start_subtest("Bad radii")
+        expect_rejected(
+            self.corridor_items([(NEST, -1, nodes[0][2])], []),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM2)
+        expect_rejected(
+            self.corridor_items(nodes, [(0, 1, 0, -1)]),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM4)
+
+        self.start_subtest("Bad node type")
+        expect_rejected(
+            self.corridor_items([(4, 0, nodes[0][2])], []),
+            mavutil.mavlink.MAV_MISSION_INVALID_PARAM1)
+
+        self.start_subtest("No nest or divert site")
+        expect_rejected(
+            self.corridor_items([(WAYPOINT, 0, nodes[1][2]), (DITCH, 0, nodes[2][2])], [(0, 1, 0, 0)]),
+            mavutil.mavlink.MAV_MISSION_INVALID)
+
+        self.start_subtest("Only AMSL node frames")
+        for frame in (mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_TERRAIN_ALT,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_INT):
+            item = self.corridor_items(nodes[:1], [])[0]
+            item.frame = frame
+            expect_rejected([item], mavutil.mavlink.MAV_MISSION_UNSUPPORTED_FRAME)
+
+        self.start_subtest("Non-corridor command")
+        item = self.corridor_items(nodes[:1], [])[0]
+        item.command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
+        expect_rejected([item], mavutil.mavlink.MAV_MISSION_UNSUPPORTED)
+
+        self.start_subtest("Reserved params must be zero")
+        item = self.corridor_items(nodes[:1], [])[0]
+        item.param3 = 1
+        expect_rejected([item], mavutil.mavlink.MAV_MISSION_INVALID_PARAM3)
+        items = self.corridor_items(nodes, edges[:1])
+        items[-1].x = 1
+        expect_rejected(items, mavutil.mavlink.MAV_MISSION_INVALID_PARAM5_X)
+
+        self.start_subtest("MISSION_ITEM is not supported")
+        self.corridor_upload_expect(good_items, mavutil.mavlink.MAV_MISSION_UNSUPPORTED, message="MISSION_ITEM")
+        self.assert_corridor_matches(good_items)
+
+        self.start_subtest("Costed graph")
+        costed_items = self.corridor_items(nodes, [(e[0], e[1], 7.5, e[3]) for e in edges])
+        self.upload_using_mission_protocol(CORRIDOR, costed_items)
+        self.assert_corridor_matches(costed_items)
+
+        self.start_subtest("Partial update")
+        self.upload_using_mission_protocol(CORRIDOR, good_items)
+        new_item = self.corridor_items(nodes[:2], [])[1]
+        new_item.param2 = 42
+        self.upload_using_mission_protocol(CORRIDOR, [new_item], start_index=1)
+        updated_items = copy.copy(good_items)
+        updated_items[1] = new_item
+        self.assert_corridor_matches(updated_items)
+        bad_item = copy.copy(new_item)
+        bad_item.seq = 5
+        self.mav.mav.mission_write_partial_list_send(1, 1, 5, 5, CORRIDOR)
+        self.assert_receive_message('MISSION_REQUEST', condition=f'MISSION_REQUEST.mission_type=={CORRIDOR}')
+        self.mav.mav.send(bad_item)
+        self.assert_received_message_field_values('MISSION_ACK', {
+            "mission_type": CORRIDOR,
+            "type": mavutil.mavlink.MAV_MISSION_INVALID_SEQUENCE,
+        })
+        self.assert_corridor_matches(updated_items)
+
+        self.start_subtest("Clear with a zero count")
+        self.clear_mission(CORRIDOR)
+        self.assert_corridor_matches([])
+
+        self.start_subtest("Clear with MISSION_CLEAR_ALL")
+        self.upload_using_mission_protocol(CORRIDOR, good_items)
+        self.mav.mav.mission_clear_all_send(1, 1, CORRIDOR)
+        self.assert_received_message_field_values('MISSION_ACK', {
+            "mission_type": CORRIDOR,
+            "type": mavutil.mavlink.MAV_MISSION_ACCEPTED,
+        })
+        self.assert_corridor_matches([])
+
+        self.start_subtest("Nodes must be inside the fence")
+        self.upload_using_mission_protocol(mavutil.mavlink.MAV_MISSION_TYPE_FENCE, [
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_NAV_FENCE_CIRCLE_INCLUSION,
+                p1=300,
+                x=int(home.lat * 1e7),
+                y=int(home.lng * 1e7),
+                mission_type=mavutil.mavlink.MAV_MISSION_TYPE_FENCE,
+            ),
+        ])
+        self.delay_sim_time(1, reason="let the fence load")
+        self.corridor_upload_expect(good_items, mavutil.mavlink.MAV_MISSION_INVALID)
+        self.assert_corridor_matches([])
+        inside_items = self.corridor_items([nodes[0], (DIVERT, 10, node_loc(0, 200, 0))], [(0, 1, 0, 10)])
+        self.upload_using_mission_protocol(CORRIDOR, inside_items)
+        self.assert_corridor_matches(inside_items)
+        self.clear_fence()
+        self.clear_mission(CORRIDOR)
+
     def tests2d(self):
         '''return list of all tests'''
         ret = ([
@@ -24632,6 +24899,7 @@ return update, 1000
             self.AHRSAutoTrim,
             self.AHRSTrim,
             self.PeriphMultiUARTTunnel,
+            self.CorridorGraph,
         ])
         return ret
 
