@@ -5019,11 +5019,12 @@ class TestSuite(abc.ABC):
                     value_copy = value
                     shift_value = 1
                     while value_copy != 0:
+                        bit_name = enum[shift_value].name if shift_value in enum else str(shift_value)
                         if value_copy & 0x1:
-                            value_strings.append(enum[shift_value].name)
+                            value_strings.append(bit_name)
                         else:
-                            value_strings.append("!" + enum[shift_value].name)
-                        shift_value += 1
+                            value_strings.append("!" + bit_name)
+                        shift_value <<= 1
                         value_copy = value_copy >> 1
                     value_string = f"{value_string} {'|'.join(value_strings)}"
                 elif enum_name != 'AIRSPEED_SENSOR_FLAGS':
