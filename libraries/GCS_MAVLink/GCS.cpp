@@ -258,7 +258,7 @@ ASSERT_STORAGE_SIZE(GCS::statustext_t, 60);
     health = control_sensors_health;
 }
 
-MissionItemProtocol *GCS::missionitemprotocols[3];
+MissionItemProtocol *GCS::missionitemprotocols[4];
 
 void GCS::convert_parameters()
 {

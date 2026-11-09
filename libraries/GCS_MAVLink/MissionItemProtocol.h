@@ -52,6 +52,12 @@ public:
     void handle_mission_clear_all(const GCS_MAVLINK &link,
                                   const mavlink_message_t &msg);
 
+    // reject an item which cannot be handled, ending any upload in
+    // progress from its sender
+    void reject_item(const GCS_MAVLINK &_link,
+                     const mavlink_message_t &msg,
+                     MAV_MISSION_RESULT result);
+
     void queued_request_send();
     void update();
 

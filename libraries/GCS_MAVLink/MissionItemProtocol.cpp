@@ -320,6 +320,18 @@ void MissionItemProtocol::handle_mission_item(const mavlink_message_t &msg, cons
     }
 }
 
+void MissionItemProtocol::reject_item(const GCS_MAVLINK &_link,
+                                      const mavlink_message_t &msg,
+                                      MAV_MISSION_RESULT result)
+{
+    send_mission_ack(_link, msg, result);
+    if (receiving && msg.sysid == dest_sysid && msg.compid == dest_compid) {
+        receiving = false;
+        link = nullptr;
+        free_upload_resources();
+    }
+}
+
 void MissionItemProtocol::transfer_is_complete(const GCS_MAVLINK &_link, const mavlink_message_t &msg)
 {
     const MAV_MISSION_RESULT result = complete(_link);

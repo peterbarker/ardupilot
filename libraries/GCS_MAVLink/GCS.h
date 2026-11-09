@@ -1230,9 +1230,9 @@ public:
     // an array of objects used to handle each of the different
     // protocol types we support.  This is indexed by the enumeration
     // MAV_MISSION_TYPE, taking advantage of the fact that fence,
-    // mission and rally have values 0, 1 and 2.  Indexing should be via
-    // get_prot_for_mission_type to do bounds checking.
-    static class MissionItemProtocol *missionitemprotocols[3];
+    // mission, rally and corridor have values 0, 1, 2 and 3.  Indexing
+    // should be via get_prot_for_mission_type to do bounds checking.
+    static class MissionItemProtocol *missionitemprotocols[4];
     class MissionItemProtocol *get_prot_for_mission_type(const MAV_MISSION_TYPE mission_type) const;
     void try_send_queued_message_for_type(MAV_MISSION_TYPE type) const;
 

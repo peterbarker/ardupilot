@@ -10,6 +10,7 @@
 
 #include <AP_AHRS/AP_AHRS_config.h>
 #include <AP_Terrain/AP_Terrain_config.h>
+#include <AP_Corridor/AP_Corridor_config.h>
 
 enum ap_message : uint8_t {
     MSG_HEARTBEAT                      =   0,
@@ -116,5 +117,8 @@ enum ap_message : uint8_t {
 #if AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
     MSG_UTM_GLOBAL_POSITION            = 101,
 #endif  // AP_MAVLINK_UTM_GLOBAL_POSITION_SENDING_ENABLED
+#if AP_CORRIDOR_ENABLED
+    MSG_NEXT_MISSION_REQUEST_CORRIDOR  = 102,
+#endif  // AP_CORRIDOR_ENABLED
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };

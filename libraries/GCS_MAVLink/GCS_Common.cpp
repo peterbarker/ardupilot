@@ -72,6 +72,7 @@
 #include "MissionItemProtocol_Waypoints.h"
 #include "MissionItemProtocol_Rally.h"
 #include "MissionItemProtocol_Fence.h"
+#include "MissionItemProtocol_Corridor.h"
 
 #include <AP_CANManager/AP_MAVLinkCAN.h>
 
@@ -688,6 +689,14 @@ void GCS_MAVLINK::handle_mission_request(const mavlink_message_t &msg)
         mavlink_mission_request_t packet;
         mavlink_msg_mission_request_decode(&msg, &packet);
 
+#if AP_CORRIDOR_ENABLED
+        if (packet.mission_type == MAV_MISSION_TYPE_CORRIDOR) {
+            // corridor graphs are only transferred with MISSION_ITEM_INT
+            send_mission_ack(msg, MAV_MISSION_TYPE_CORRIDOR, MAV_MISSION_UNSUPPORTED);
+            return;
+        }
+#endif
+
         MissionItemProtocol *prot = gcs().get_prot_for_mission_type((MAV_MISSION_TYPE)packet.mission_type);
         if (prot == nullptr) {
             return;
@@ -961,6 +970,18 @@ void GCS_MAVLINK::handle_mission_item(const mavlink_message_t &msg)
     if (msg.msgid == MAVLINK_MSG_ID_MISSION_ITEM) {
         mavlink_mission_item_t mission_item;
         mavlink_msg_mission_item_decode(&msg, &mission_item);
+#if AP_CORRIDOR_ENABLED
+        if (mission_item.mission_type == MAV_MISSION_TYPE_CORRIDOR) {
+            // corridor graphs are only transferred with MISSION_ITEM_INT
+            MissionItemProtocol *prot = gcs().get_prot_for_mission_type(MAV_MISSION_TYPE_CORRIDOR);
+            if (prot != nullptr) {
+                prot->reject_item(*this, msg, MAV_MISSION_UNSUPPORTED);
+            } else {
+                send_mission_ack(msg, MAV_MISSION_TYPE_CORRIDOR, MAV_MISSION_UNSUPPORTED);
+            }
+            return;
+        }
+#endif
 #if AP_MISSION_ENABLED
         MAV_MISSION_RESULT ret = AP_Mission::convert_MISSION_ITEM_to_MISSION_ITEM_INT(mission_item, mission_item_int);
         if (ret != MAV_MISSION_ACCEPTED) {
@@ -2767,6 +2788,12 @@ void GCS::update_send()
         AC_Fence *fence = AP::fence();
         if (fence != nullptr) {
             missionitemprotocols[MAV_MISSION_TYPE_FENCE] = NEW_NOTHROW MissionItemProtocol_Fence(*fence);
+        }
+#endif
+#if AP_CORRIDOR_ENABLED
+        AP_Corridor *corridor = AP::corridor();
+        if (corridor != nullptr) {
+            missionitemprotocols[MAV_MISSION_TYPE_CORRIDOR] = NEW_NOTHROW MissionItemProtocol_Corridor(*corridor);
         }
 #endif
     }
@@ -5976,6 +6003,12 @@ bool GCS_MAVLINK::try_send_mission_message(const enum ap_message id)
         gcs().try_send_queued_message_for_type(MAV_MISSION_TYPE_FENCE);
         break;
 #endif
+#if AP_CORRIDOR_ENABLED
+    case MSG_NEXT_MISSION_REQUEST_CORRIDOR:
+        CHECK_PAYLOAD_SIZE(MISSION_REQUEST);
+        gcs().try_send_queued_message_for_type(MAV_MISSION_TYPE_CORRIDOR);
+        break;
+#endif
     default:
         break;
     }
@@ -6683,6 +6716,9 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
     case MSG_NEXT_MISSION_REQUEST_WAYPOINTS:
     case MSG_NEXT_MISSION_REQUEST_RALLY:
     case MSG_NEXT_MISSION_REQUEST_FENCE:
+#if AP_CORRIDOR_ENABLED
+    case MSG_NEXT_MISSION_REQUEST_CORRIDOR:
+#endif
         ret = try_send_mission_message(id);
         break;
 
