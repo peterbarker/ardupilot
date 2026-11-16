@@ -18060,6 +18060,21 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
         if m.fix_type >= 3:
             raise NotAchievedException("Blended GNSS regained a fix with one GPS")
 
+    def GPSType0BelowConfiguredGPS(self):
+        '''check a GPS with TYPE 0 below a configured GPS does not block arming'''
+        # GPS1 and GPS3 are serial GPSs, GPS2 is unused.  GPS3 is the
+        # second serial GPS, so uses the second simulated GPS:
+        self.set_parameters({
+            "GPS2_TYPE": 0,
+            "GPS3_TYPE": 1,
+            "SIM_GPS2_TYPE": 1,
+            "SIM_GPS2_ENABLE": 1,
+        })
+        self.reboot_sitl()
+        # the GPS pre-arm checks only run in a mode needing a position:
+        self.change_mode('LOITER')
+        self.wait_ready_to_arm()
+
     def Callisto(self):
         '''Test Callisto'''
         self.customise_SITL_commandline(
@@ -20446,6 +20461,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.GPSBlendingLog,
             self.GPSBlendingAffinity,
             self.GPSBlendedStaleData,
+            self.GPSType0BelowConfiguredGPS,
             self.ProximitySensors,
             self.MISSION_START,
             self.AUTO_LAND_TO_BRAKE,
