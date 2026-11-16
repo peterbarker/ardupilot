@@ -935,7 +935,15 @@ void AP_GPS::update_instance(uint8_t instance)
             // set the timestamp for this messages based on
             // set_uart_timestamp() or per specific transport in backend
             // , if available
-            tnow = state[instance].last_corrected_gps_time_us/1000U;
+            const uint32_t corrected_ms = state[instance].last_corrected_gps_time_us/1000U;
+            // a timestamp in the future, or so old that the data has
+            // already timed out, comes from a bad clock (e.g. a
+            // receiver repeating a stale GNSS time). Using it would
+            // time this GPS out between messages, so use the arrival
+            // time instead
+            if (tnow - corrected_ms <= GPS_TIMEOUT_MS) {
+                tnow = corrected_ms;
+            }
             state[instance].corrected_timestamp_updated = false;
         }
 
