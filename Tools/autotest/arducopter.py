@@ -15,6 +15,7 @@ import socket
 import struct
 import subprocess
 import tempfile
+import threading
 import time
 import tty
 import xml.etree.ElementTree as ET
@@ -6795,6 +6796,116 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             raise NotAchievedException("Yaw unaffected by the peripheral's orientation (error=%f)" % error)
 
         self.context_pop()
+
+    def DroneCANGPSFrozenTime(self):
+        '''check a DroneCAN GPS reporting a frozen GNSS time keeps its fix'''
+        # some receivers send a gnss_timestamp which stops advancing.
+        # The fix must not be dated by it: this one is 1000s old.
+        import dronecan
+
+        self.set_parameters({
+            "CAN_P1_DRIVER": 1,
+            "GPS2_TYPE": 9,  # DroneCAN
+            "GPS2_CAN_NODEID": 100,  # the fake node below
+            "GPS2_CAN_OVRIDE": 100,
+            "GPS_AUTO_SWITCH": 0,
+            # the fake node below publishes in wall-clock time:
+            "SIM_SPEEDUP": 1,
+        })
+        self.reboot_sitl()
+        self.wait_ready_to_arm()
+        here = self.assert_receive_message('GPS_RAW_INT')
+
+        # send frames as SITL's multicast CAN transport expects them:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        if_addr = os.environ.get('SITL_MULTICAST_IF_ADDR')
+        if if_addr:
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(if_addr))
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+        dest = ('239.65.82.0', int(os.environ.get('SITL_CAN_MCAST_PORT', 57732)))
+        transfer_ids = {}
+
+        def broadcast(payload):
+            dtid = dronecan.get_dronecan_data_type(payload).default_dtid
+            transfer_id = transfer_ids.get(dtid, 0)
+            transfer_ids[dtid] = (transfer_id + 1) % 32
+            transfer = dronecan.transport.Transfer(
+                payload=payload,
+                source_node_id=100,
+                transfer_id=transfer_id,
+                service_not_message=False,
+            )
+            for frame in transfer.to_frames():
+                body = struct.pack("<HI", 0, frame.message_id | (1 << 31)) + bytes(frame.bytes)
+                crc = dronecan.dsdl.common.crc16_from_bytes(body)
+                sock.sendto(struct.pack("<HH", 0x2934, crc) + body, dest)
+
+        frozen_usec = int(time.time() * 1e6) - 1000 * 1000000
+        start = time.time()
+        stop = threading.Event()
+
+        def fix2(now_usec, gnss_usec):
+            m = dronecan.uavcan.equipment.gnss.Fix2()
+            m.timestamp.usec = now_usec
+            m.gnss_timestamp.usec = gnss_usec
+            m.gnss_time_standard = m.GNSS_TIME_STANDARD_UTC
+            m.latitude_deg_1e8 = here.lat * 10
+            m.longitude_deg_1e8 = here.lon * 10
+            m.height_ellipsoid_mm = here.alt
+            m.height_msl_mm = here.alt
+            m.sats_used = 10
+            m.status = m.STATUS_3D_FIX
+            m.pdop = 1.0
+            return m
+
+        publish_errors = []
+
+        def publish():
+            last_fix = 0
+            last_status = 0
+            try:
+                while not stop.is_set():
+                    now = time.time()
+                    if now - last_status >= 1:
+                        last_status = now
+                        broadcast(dronecan.uavcan.protocol.NodeStatus(uptime_sec=int(now - start)))
+                    if now - last_fix >= 0.2:
+                        last_fix = now
+                        broadcast(fix2(int(now * 1e6), frozen_usec))
+                    time.sleep(0.01)
+            except Exception as e:
+                publish_errors.append(e)
+                raise
+
+        thread = threading.Thread(target=publish, daemon=True)
+        thread.start()
+        try:
+            self.set_message_rate_hz('GPS2_RAW', 10)
+            self.wait_gps_fix_type_gte(3, message_type="GPS2_RAW", verbose=True)
+
+            no_fix = 0
+            total = 0
+            tstart = self.get_sim_time()
+            while self.get_sim_time_cached() - tstart < 10:
+                m = self.assert_receive_message('GPS2_RAW', timeout=2)
+                total += 1
+                if m.fix_type < 3:
+                    no_fix += 1
+            if publish_errors:
+                raise publish_errors[0]
+            if no_fix:
+                raise NotAchievedException(f"GPS2 lost its fix in {no_fix} of {total} samples")
+
+            # GPS2_RAW.time_usec is the time of the fix since boot:
+            m = self.assert_receive_message('GPS2_RAW', verbose=True)
+            now = self.assert_receive_message('SYSTEM_TIME', verbose=True)
+            age_ms = now.time_boot_ms - m.time_usec // 1000
+            if not 0 <= age_ms < 2000:
+                raise NotAchievedException(f"GPS2 fix time is {age_ms}ms old")
+        finally:
+            stop.set()
+            thread.join(5)
+            sock.close()
 
     def CANGPSCopterMission(self):
         '''fly mission which tests normal operation alongside CAN GPS'''
@@ -27190,6 +27301,7 @@ return update, 1000
             self.WP_SPEED_DN,
             self.GPSTypes,
             self.MultipleGPS,
+            self.DroneCANGPSFrozenTime,
             self.GuidedEKFLaneChange,
             self.TerrainDBPreArm,
             self.MountTopotekNetwork,
