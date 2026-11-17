@@ -334,6 +334,11 @@ void AP_GPS_Blended::calc_state(void)
         if (gps.params[i].type == AP_GPS::GPS_TYPE_BLENDED) {
             continue;
         }
+        // the status, accuracies and timing come only from the GPSs
+        // this backend blends:
+        if ((params.blend_mask & (1U<<i)) == 0) {
+            continue;
+        }
 
         if (gps.state[i].have_undulation) {
             state.undulation = gps.state[i].undulation;
