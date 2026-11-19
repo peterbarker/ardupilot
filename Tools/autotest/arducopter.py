@@ -20985,6 +20985,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.CommonOriginExternalAHRS,
             self.CommonOriginExternalAHRSReceives,
             self.AHRSExternalNoAttitudeAirspeedIndex,
+            self.WitMotion,
             self.TestTetherStuck,
             self.EK3_EXT_NAV_vel_without_vert,
             self.test_EKF3_option_disable_lane_switch,
@@ -23366,6 +23367,98 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
                 saw_prearm = True
         if not saw_prearm:
             raise NotAchievedException("pre-arm checks did not run")
+
+    def WitMotion(self):
+        '''test the WitMotion ExternalAHRS backend against its simulator'''
+        self.customise_SITL_commandline(["--serial5=sim:WitMotion_HWT901B"])
+        self.set_parameters({
+            "EAHRS_TYPE": 12,          # WitMotion
+            "EAHRS_RATE": 200,
+            "SERIAL5_PROTOCOL": 36,    # AHRS
+            # the simulated device starts at its factory 9600 baud, so
+            # the backend must find it:
+            "SERIAL5_BAUD": 115200,
+            "SIM_IMU_COUNT": 1,        # so the WitMotion is the second IMU
+            # the device outputs at no more than 200Hz, and the main
+            # loop cannot run faster than its slowest IMU:
+            "SCHED_LOOP_RATE": 200,
+        })
+        self.context_collect('STATUSTEXT')
+        self.reboot_sitl()
+        self.wait_statustext("WitMotion: found at 9600 baud", check_context=True, timeout=30)
+        # the device starts in its factory configuration; the backend
+        # selects acceleration, angular velocity and angle frames...
+        self.wait_statustext("WitMotion: set reg 0x02=0x000E", check_context=True, timeout=30)
+        # ...at 200Hz...
+        self.wait_statustext("WitMotion: set reg 0x03=0x000B", check_context=True, timeout=30)
+        # ...and 230400 baud:
+        self.wait_statustext("WitMotion: set reg 0x04=0x0007", check_context=True, timeout=30)
+        self.wait_ready_to_arm()
+
+        # the WitMotion's IMU data must match the simulated IMU's on
+        # every axis while the vehicle rotates about each of them in turn
+        self.takeoff(30, mode='LOITER')
+        self.change_mode('ACRO')
+        self.set_rc(3, 1500)
+        max_gyro = [0, 0, 0]
+        tstart = self.get_sim_time()
+        # short opposing pulses on each axis, so the vehicle returns
+        # roughly to level between them:
+        inputs = [(1, 1650), (1, 1350), (1, 1500),
+                  (2, 1650), (2, 1350), (2, 1500),
+                  (4, 1800), (4, 1200), (4, 1500)]
+        while self.get_sim_time_cached() - tstart < 27:
+            chan, pwm = inputs[int((self.get_sim_time_cached() - tstart)) % len(inputs)]
+            self.set_rc_from_map({1: 1500, 2: 1500, 4: 1500, chan: pwm}, quiet=True)
+            msgs = self.get_messages_frame(['SCALED_IMU', 'SCALED_IMU2'], timeout=5)
+            sim_imu = msgs['SCALED_IMU']
+            wit_imu = msgs['SCALED_IMU2']
+            for axis_index, axis in enumerate("xyz"):
+                want = getattr(sim_imu, axis + "gyro") * 0.001
+                got = getattr(wit_imu, axis + "gyro") * 0.001
+                max_gyro[axis_index] = max(max_gyro[axis_index], abs(want))
+                if abs(want - got) > 0.1 + 0.15 * abs(want):
+                    raise NotAchievedException(f"gyro {axis} mismatch: sim={want:.3f} WitMotion={got:.3f} rad/s")
+                want = getattr(sim_imu, axis + "acc") * 0.001
+                got = getattr(wit_imu, axis + "acc") * 0.001
+                if abs(want - got) > 0.15:
+                    raise NotAchievedException(f"accel {axis} mismatch: sim={want:.3f} WitMotion={got:.3f} g")
+        self.set_rc_from_map({1: 1500, 2: 1500, 4: 1500})
+        self.progress(f"max rates seen: {max_gyro}")
+        if min(max_gyro) < 0.5:
+            raise NotAchievedException(f"vehicle did not rotate enough on every axis: {max_gyro}")
+
+        # with the ExternalAHRS as the attitude source, the reported
+        # attitude must track the simulator's
+        self.change_mode('LOITER')
+        self.delay_sim_time(5, reason="vehicle to settle")
+        self.change_mode('STABILIZE')
+        self.set_rc(3, 1500)
+        self.set_parameter("AHRS_EKF_TYPE", 11)
+        self.wait_statustext("AHRS: External active", check_context=True, timeout=10)
+        # roll and pitch the vehicle but hold its heading, as the two
+        # messages compared may be sampled a little apart.  The yaw
+        # stick pulses above leave the vehicle pointing well away from
+        # north and south, which makes the heading check sensitive to
+        # the sign of yaw:
+        tstart = self.get_sim_time()
+        inputs = [(1, 1700), (1, 1300), (2, 1700), (2, 1300)]
+        while self.get_sim_time_cached() - tstart < 10:
+            chan, pwm = inputs[int((self.get_sim_time_cached() - tstart) / 2) % len(inputs)]
+            self.set_rc_from_map({1: 1500, 2: 1500, chan: pwm}, quiet=True)
+            msgs = self.get_messages_frame(['ATTITUDE', 'SIMSTATE'], timeout=5)
+            sim_yaw = math.degrees(msgs['SIMSTATE'].yaw)
+            if abs(mavextra.angle_diff(sim_yaw, 0)) < 20 or abs(mavextra.angle_diff(sim_yaw, 180)) < 20:
+                raise NotAchievedException(f"heading {sim_yaw:.1f} too close to north or south to check yaw")
+            for field in "roll", "pitch", "yaw":
+                want = math.degrees(getattr(msgs['SIMSTATE'], field))
+                got = math.degrees(getattr(msgs['ATTITUDE'], field))
+                if abs(mavextra.angle_diff(want, got)) > 3:
+                    raise NotAchievedException(f"ATTITUDE.{field} {got:.1f} does not match SIMSTATE {want:.1f}")
+        self.set_rc_from_map({1: 1500, 2: 1500})
+        self.set_parameter("AHRS_EKF_TYPE", 3)
+        self.change_mode('LOITER')
+        self.do_RTL()
 
     def AHRSExternalNoAttitudeAirspeedIndex(self):
         '''the External AHRS backend reports which airspeed sensor is in
