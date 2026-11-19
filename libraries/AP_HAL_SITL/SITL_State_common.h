@@ -18,6 +18,7 @@
 #include <SITL/SIM_MicroStrain.h>
 #include <SITL/SIM_InertialLabs.h>
 #include <SITL/SIM_SensAItion.h>
+#include <SITL/SIM_WitMotion_HWT901B.h>
 #include <SITL/SIM_Aeron.h>
 #include <SITL/SIM_AIS.h>
 #include <SITL/SIM_GPS.h>
@@ -200,6 +201,9 @@ public:
 
     // simulated SensAItion system:
     SITL::SensAItion *sensaition;
+
+    // simulated WitMotion serially-attached AHRS
+    SITL::WitMotion_HWT901B *witmotion_hwt901b;
 
 #if AP_SIM_AERON_ENABLED
     // simulated Aeron INS PLX3

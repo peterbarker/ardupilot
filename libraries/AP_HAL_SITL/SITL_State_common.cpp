@@ -326,6 +326,12 @@ SITL::SerialDevice *SITL_State_Common::create_serial_sim(const char *name, const
         }
         sensaition = NEW_NOTHROW SITL::SensAItion(true);
         return sensaition;
+    } else if (streq(name, "WitMotion_HWT901B")) {
+        if (witmotion_hwt901b != nullptr) {
+            AP_HAL::panic("Only one WitMotion_HWT901B at a time");
+        }
+        witmotion_hwt901b = NEW_NOTHROW SITL::WitMotion_HWT901B();
+        return witmotion_hwt901b;
 
 #if AP_SIM_AERON_ENABLED
     } else if (streq(name, "Aeron-PLX3")) {
@@ -515,6 +521,10 @@ void SITL_State_Common::sim_update(void)
 
     if (sensaition != nullptr) {
         sensaition->update();
+    }
+
+    if (witmotion_hwt901b != nullptr) {
+        witmotion_hwt901b->update();
     }
 
     if (microstrain5 != nullptr) {
