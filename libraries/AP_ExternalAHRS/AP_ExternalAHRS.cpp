@@ -30,6 +30,7 @@
 #include "AP_ExternalAHRS_SBG.h"
 #include "AP_ExternalAHRS_GSOF.h"
 #include "AP_ExternalAHRS_SensAItion.h"
+#include "AP_ExternalAHRS_WitMotion.h"
 
 #include <GCS_MAVLink/GCS.h>
 #include <AP_AHRS/AP_AHRS.h>
@@ -62,7 +63,7 @@ const AP_Param::GroupInfo AP_ExternalAHRS::var_info[] = {
     // @Param: _TYPE
     // @DisplayName: AHRS type
     // @Description: Type of AHRS device
-    // @Values: 0:None,1:VectorNav,2:MicroStrain5,5:InertialLabs,6:Trimble GSOF,7:MicroStrain7,8:SBG,10:Aeron,11:SensAItion
+    // @Values: 0:None,1:VectorNav,2:MicroStrain5,5:InertialLabs,6:Trimble GSOF,7:MicroStrain7,8:SBG,10:Aeron,11:SensAItion,12:WitMotion
     // @User: Standard
     AP_GROUPINFO_FLAGS("_TYPE", 1, AP_ExternalAHRS, devtype, HAL_EXTERNAL_AHRS_DEFAULT, AP_PARAM_FLAG_ENABLE),
 
@@ -144,6 +145,11 @@ void AP_ExternalAHRS::init(void)
         backend = NEW_NOTHROW AP_ExternalAHRS_SensAItion(this, state);
         return;
 #endif
+#if AP_EXTERNAL_AHRS_WITMOTION_ENABLED
+    case DevType::WitMotion:
+        backend = NEW_NOTHROW AP_ExternalAHRS_WitMotion(this, state);
+        return;
+#endif  // AP_EXTERNAL_AHRS_WITMOTION_ENABLED
 
 #if AP_EXTERNAL_AHRS_SBG_ENABLED
     case DevType::SBG:
