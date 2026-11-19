@@ -2148,7 +2148,7 @@ float AP_AHRS::get_air_density_ratio(void) const
 // AUX switch support for disabling GPS only in EKF3
 void AP_AHRS::gps_disable_ek3(bool gps_disable)
 {
-    EKF3.force_gps_disable(gps_disable);
+    ekf3.EKF3.force_gps_disable(gps_disable);
 }
 #endif  // AP_NAVEKF3_DISABLE_GPS_ENABLED
 
