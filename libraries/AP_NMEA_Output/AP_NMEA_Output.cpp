@@ -126,7 +126,10 @@ void AP_NMEA_Output::update()
     const bool pos_valid = ahrs.get_location(loc);
 #else
     const bool pos_valid = (gps_status >= AP_GPS_FixType::FIX_3D);
-    loc = gps.location();
+    const AbsAltLocation &gps_loc = gps.location();
+    loc.lat = gps_loc.lat;
+    loc.lng = gps_loc.lng;
+    loc.alt = gps_loc.get_alt_cm();
 #endif
 
     // format latitude
