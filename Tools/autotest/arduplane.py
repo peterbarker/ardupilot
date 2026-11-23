@@ -5102,6 +5102,30 @@ return update()
 
         self.fly_home_land_and_disarm(timeout=150)
 
+    def FenceActionAutoRTLOnPlane(self):
+        '''FENCE_ACTION 9 (Copter-only Auto RTL) on Plane: a breach should still get a recovery action'''
+        self.set_parameters({
+            "FENCE_TYPE": 1,     # max alt
+            "FENCE_ACTION": 9,   # Copter-only Auto RTL
+            "FENCE_ALT_MAX": 200,
+        })
+        self.wait_ready_to_arm()
+        home_alt_amsl = self.get_location().get_alt_m(AltFrame.ABSOLUTE)
+        self.takeoff(150)
+        self.progress("Climbing above the ceiling with the fence disabled")
+        self.change_altitude(home_alt_amsl + 250)
+        self.context_collect('STATUSTEXT')
+        self.do_fence_enable()
+        self.wait_statustext("breached", timeout=30, check_context=True)
+        try:
+            self.wait_mode("RTL", timeout=15)
+        except AutoTestTimeoutException:
+            mode = self.get_mode_string_for_mode(self.get_mode())
+            raise NotAchievedException("FENCE_ACTION 9 breach left Plane in %s with no recovery action" % mode)
+        finally:
+            self.do_fence_disable()
+        self.fly_home_land_and_disarm(timeout=150)
+
     def FenceMinAltAutoEnable(self):
         '''Tests autoenablement of the alt min fence and fences on arming'''
         self.set_parameters({
@@ -10872,6 +10896,7 @@ return update()
             self.FenceRTL,
             self.FenceRetRally,
             self.FenceAltCeilFloor,
+            self.FenceActionAutoRTLOnPlane,
             self.FenceMinAltAutoEnable,
             self.FenceMinAltAutoEnableAbort,
             self.GuidedRejectOutsideFence,
