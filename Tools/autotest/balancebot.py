@@ -18,6 +18,8 @@ testdir = os.path.dirname(os.path.realpath(__file__))
 
 class AutoTestBalanceBot(AutoTestRover):
 
+    test_root = "BalanceBot_Tests"
+
     def log_name(self):
         return "BalanceBot"
 
@@ -113,6 +115,7 @@ inherit Rover's tests!'''
             self.DO_SET_MODE,
             self.ServoRelayEvents,
         ])
+        ret.extend(self.discovered_tests("BalanceBot"))
         return ret
 
     def default_mode(self):

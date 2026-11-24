@@ -88,8 +88,7 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
     def test_filepath(self):
         return os.path.realpath(__file__)
 
-    def set_current_test_name(self, name):
-        self.current_test_name_directory = f"ArduSub_Tests/{name}/"
+    test_root = "ArduSub_Tests"
 
     def default_mode(self):
         return 'MANUAL'
@@ -1926,4 +1925,5 @@ class AutoTestSub(vehicle_test_suite.TestSuite):
             self.GuidedAboveTerrain,
         ])
 
+        ret.extend(self.discovered_tests("Sub"))
         return ret

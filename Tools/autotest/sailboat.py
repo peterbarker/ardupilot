@@ -21,6 +21,8 @@ def log_name(self):
 
 class AutoTestSailboat(AutoTestRover):
 
+    test_root = "Sailboat_Tests"
+
     def vehicleinfo_key(self):
         return "Rover"
 
@@ -81,6 +83,7 @@ class AutoTestSailboat(AutoTestRover):
             self.DriveRTL,
             self.DriveMission,
         ])
+        ret.extend(self.discovered_tests("Sailboat"))
         return ret
 
     def default_mode(self):

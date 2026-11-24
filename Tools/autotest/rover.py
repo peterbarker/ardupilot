@@ -69,8 +69,7 @@ class AutoTestRover(vehicle_test_suite.TestSuite):
     def test_filepath(self):
         return os.path.realpath(__file__)
 
-    def set_current_test_name(self, name):
-        self.current_test_name_directory = "ArduRover_Tests/" + name + "/"
+    test_root = "ArduRover_Tests"
 
     def sitl_start_location(self):
         return SITL_START_LOCATION
@@ -8683,6 +8682,7 @@ return update()
             self.JSONClock,
             self.JSONSensors,
         ])
+        ret.extend(self.discovered_tests("Rover"))
         return ret
 
     def disabled_tests(self):

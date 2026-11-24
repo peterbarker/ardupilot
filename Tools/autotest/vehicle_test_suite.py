@@ -66,6 +66,8 @@ from pysim import json_physics
 from pysim import util
 from pysim import vehicleinfo
 
+import test_discovery
+
 
 # Enumeration convenience class for mavlink POSITION_TARGET_TYPEMASK
 class MAV_POS_TARGET_TYPE_MASK(enum.IntEnum):
@@ -2157,6 +2159,14 @@ class TestSuite(abc.ABC):
     """Base abstract class.
     It implements the common function for all vehicle types.
     """
+
+    # directory (relative to Tools/autotest) holding this suite's test
+    # groups and their resources; see test_discovery.py
+    test_root = None
+    # further directories searched for the resources of tests which
+    # are not in a test group
+    test_resource_fallback_roots = ()
+
     def __init__(self,
                  binary,
                  valgrind=False,
@@ -2198,6 +2208,8 @@ class TestSuite(abc.ABC):
             sup_binaries = []
         if build_opts is None:
             build_opts = {}
+
+        test_discovery.install(type(self))
 
         self.start_time = time.time()
 
@@ -14700,6 +14712,37 @@ switch value'''
     def disabled_tests(self):
         return {}
 
+    def discovered_tests(self, bucket):
+        '''return Test objects for the tests in our test roots marked
+        as running in bucket'''
+        ret = []
+        for t in test_discovery.tests_for_bucket(type(self), bucket):
+            ret.append(Test(
+                getattr(self, t.name),
+                kwargs=t.info.kwargs,
+                attempts=t.info.attempts,
+                speedup=t.info.speedup,
+            ))
+        return ret
+
+    def set_current_test_name(self, name):
+        '''point current_test_name_directory at the resources for test name'''
+        t = test_discovery.find_test(type(self), name)
+        if t is not None:
+            self.current_test_name_directory = t.group_dir
+            return
+        roots = test_discovery.roots_for_class(type(self))
+        roots.extend(self.test_resource_fallback_roots)
+        for root in roots:
+            if os.path.isdir(os.path.join(testdir, root, name)):
+                self.current_test_name_directory = root + "/" + name + "/"
+                return
+        if len(roots) == 0:
+            raise ValueError("%s has no test_root" % type(self).__name__)
+        # no resources anywhere; use the most general root (that of
+        # the base vehicle class)
+        self.current_test_name_directory = roots[-1] + "/" + name + "/"
+
     def test_parameter_checks_poscontrol(self, param_prefix):
         self.wait_ready_to_arm()
         self.context_push()
@@ -20188,7 +20231,8 @@ SERIAL5_BAUD 128
                 test = Test(test)
             all_tests.append(test)
 
-        disabled = self.disabled_tests()
+        disabled = test_discovery.disabled_tests(type(self))
+        disabled.update(self.disabled_tests())
         if not allow_skips:
             disabled = {}
         skip_list = []

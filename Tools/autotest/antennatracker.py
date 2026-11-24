@@ -47,8 +47,7 @@ class AutoTestTracker(vehicle_test_suite.TestSuite):
     def default_frame(self):
         return "tracker"
 
-    def set_current_test_name(self, name):
-        self.current_test_name_directory = "AntennaTracker_Tests/" + name + "/"
+    test_root = "AntennaTracker_Tests"
 
     def apply_defaultfile_parameters(self):
         # tracker doesn't have a default parameters file
@@ -448,4 +447,5 @@ class AutoTestTracker(vehicle_test_suite.TestSuite):
             self.ServoRangeLimits,
             self.Tracking,
         ])
+        ret.extend(self.discovered_tests("Tracker"))
         return ret

@@ -34,6 +34,7 @@ import helicopter
 import quadplane
 import rover
 import sailboat
+import test_discovery
 
 from pysim import util
 from vehicle_test_suite import Test
@@ -408,6 +409,27 @@ tester_class_map = {
     "test.CAN": arducopter.AutoTestCAN,
     "test.BattCAN": arducopter.AutoTestBattCAN,
 }
+
+# tester_class_map entries running the tests of other entries rather than
+# a bucket of their own; a @testcase may not name these as its bucket
+aggregate_test_steps = frozenset([
+    "test.Copter",
+    "test.Plane",
+    "test.QuadPlane",
+])
+
+
+def check_discovered_tests():
+    """Check every test found by test_discovery names a bucket which runs it."""
+    bucket_classes = {}
+    for (step, tester_class) in tester_class_map.items():
+        if step in aggregate_test_steps:
+            continue
+        bucket_classes[step[len("test."):]] = tester_class
+    problems = test_discovery.check_buckets(bucket_classes)
+    if len(problems):
+        raise ValueError("Bad test buckets:\n  " + "\n  ".join(problems))
+
 
 supplementary_test_binary_map = {
     "test.CAN": ["sitl_periph_universal:AP_Periph:0:Tools/autotest/default_params/periph.parm,Tools/autotest/default_params/quad-periph.parm", # noqa: E501
@@ -1276,6 +1298,8 @@ if __name__ == "__main__":
     signal.signal(signal.SIGALRM, alarm_handler)
     if opts.timeout is not None:
         signal.alarm(opts.timeout)
+
+    check_discovered_tests()
 
     if opts.list:
         for step in steps:

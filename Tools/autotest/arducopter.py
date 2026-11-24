@@ -100,8 +100,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
     def test_filepath(self):
         return os.path.realpath(__file__)
 
-    def set_current_test_name(self, name):
-        self.current_test_name_directory = "ArduCopter_Tests/" + name + "/"
+    test_root = "ArduCopter_Tests"
 
     def sitl_start_location(self):
         return SITL_START_LOCATION
@@ -21315,6 +21314,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.test_EKF3_option_disable_lane_switch,
             self.UTMGlobalPositionWaypoint,
         ])
+        ret.extend(self.discovered_tests("CopterTests1a"))
         return ret
 
     def tests1b(self):
@@ -21323,6 +21323,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             # anomalous: ~12 minutes on CI against ~30s on a desktop; to be investigated
             self.DroneCANCompass,
         ])
+        ret.extend(self.discovered_tests("CopterTests1b"))
         return ret
 
     def tests1c(self):
@@ -21388,6 +21389,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.HomeCircleInclusionFence_Avoidance,
             self.HomeAltResetTest,
         ])
+        ret.extend(self.discovered_tests("CopterTests1c"))
         return ret
 
     def tests1d(self):
@@ -21438,6 +21440,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.ScriptingFlipMode,
             self.UTMGlobalPosition,
         ])
+        ret.extend(self.discovered_tests("CopterTests1d"))
         return ret
 
     def tests1e(self):
@@ -21494,6 +21497,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.PLDNoParameters,
             self.ArmedInvertedTakeoff,
         ])
+        ret.extend(self.discovered_tests("CopterTests1e"))
         return ret
 
     def tests2a(self):
@@ -21561,6 +21565,7 @@ class AutoTestCopter(vehicle_test_suite.TestSuite):
             self.CompassLearnCopyFromSIM,
             self.IgnorePilotYaw,
         ])
+        ret.extend(self.discovered_tests("CopterTests2a"))
         return ret
 
     def ScriptMountPOI(self):
@@ -25992,6 +25997,7 @@ return update, 1000
             self.EKF3SRCPerCore,
             self.ToyModeDescentLimit,
         ])
+        ret.extend(self.discovered_tests("CopterTests2b"))
         return ret
 
     def tests2c(self):
@@ -26057,6 +26063,7 @@ return update, 1000
             self.CompassLearnCopyFromEKF,
             self.Ch6TuningLoitMaxXYSpeed,
         ])
+        ret.extend(self.discovered_tests("CopterTests2c"))
         return ret
 
     def tests2d(self):
@@ -26117,6 +26124,7 @@ return update, 1000
             self.PeriphMultiUARTTunnel,
             self.NavControllerOutputAltError,
         ])
+        ret.extend(self.discovered_tests("CopterTests2d"))
         return ret
 
     def UTMGlobalPositionWaypoint(self):
@@ -26289,6 +26297,7 @@ return update, 1000
             self.CANGPSCopterMission,
             self.TestLogDownloadMAVProxyCAN,
         ])
+        ret.extend(self.discovered_tests("CAN"))
         return ret
 
     def BattCANSplitAuxInfo(self):
@@ -26340,6 +26349,7 @@ return update, 1000
             self.BattCANReplaceRuntime,
             self.BattCANSplitAuxInfo,
         ])
+        ret.extend(self.discovered_tests("BattCAN"))
         return ret
 
     def tests(self):

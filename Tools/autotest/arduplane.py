@@ -70,8 +70,7 @@ class AutoTestPlane(vehicle_test_suite.TestSuite):
     def sitl_start_heading(self):
         return SITL_START_HEADING
 
-    def set_current_test_name(self, name):
-        self.current_test_name_directory = "ArduPlane_Tests/" + name + "/"
+    test_root = "ArduPlane_Tests"
 
     def default_frame(self):
         return "plane-elevrev"
@@ -16160,6 +16159,7 @@ return update, 200
             self.EK3HeightDatumResetFlushesBuffers,
             self.DeadreckoningNoAirSpeed,
         ])
+        ret.extend(self.discovered_tests("PlaneTests1a"))
         return ret
 
     def tests1b(self):
@@ -16336,6 +16336,7 @@ return update, 200
             self.PID_TUNING_axes,
             self.CustomController,
         ])
+        ret.extend(self.discovered_tests("PlaneTests1b"))
         return ret
 
     def UTMGlobalPositionWaypoint(self):
@@ -16633,6 +16634,7 @@ return update, 200
             self.DO_REPOSITION_mode_change_refused,
             self.JSONAirData,
         ])
+        ret.extend(self.discovered_tests("PlaneTests1c"))
         return ret
 
     ##########################################################################
@@ -16663,9 +16665,11 @@ return update, 200
         so they are reached through AutoTestLastLetterPlane below and run as
         test.LastLetterPlane rather than as part of test.Plane.
         '''
-        return [
+        ret = [
             self.LastLetterLoiter,
         ]
+        ret.extend(self.discovered_tests("LastLetterPlane"))
+        return ret
 
     ##########################################################################
 

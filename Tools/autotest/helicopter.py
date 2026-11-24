@@ -22,6 +22,7 @@ from vehicle_test_suite import NotAchievedException
 
 class AutoTestHelicopter(AutoTestCopter):
 
+    test_root = "Helicopter_Tests"
     sitl_start_loc = Location(40.072842, -105.230575, 1586, AltFrame.ABSOLUTE)  # Sparkfun AVC Location
     sitl_start_heading_deg = 0
 
@@ -1453,6 +1454,7 @@ class AutoTestHelicopter(AutoTestCopter):
             self.MountFailsafeAction,
             self.StickArmingRequiresZeroThrottle,
         ])
+        ret.extend(self.discovered_tests("Helicopter"))
         return ret
 
     def disabled_tests(self):

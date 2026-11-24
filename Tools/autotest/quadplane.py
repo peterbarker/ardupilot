@@ -74,8 +74,8 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
     def log_name(self):
         return "QuadPlane"
 
-    def set_current_test_name(self, name):
-        self.current_test_name_directory = "ArduPlane_Tests/" + name + "/"
+    test_root = "QuadPlane_Tests"
+    test_resource_fallback_roots = ("ArduPlane_Tests",)
 
     def is_plane(self):
         return True
@@ -4699,6 +4699,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.FenceRelativeToOriginMinAltHomeAbove,
             self.CompassLearnCopyFromEKFAffinity,
         ])
+        ret.extend(self.discovered_tests("QuadPlaneTests1a"))
         return ret
 
     def tests1b(self):
@@ -4713,6 +4714,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             # anomalous: ~9 minutes on CI against ~20s on a desktop; to be investigated
             self.CircuitStatusScript,
         ])
+        ret.extend(self.discovered_tests("QuadPlaneTests1b"))
         return ret
 
     def tests1c(self):
@@ -4768,6 +4770,7 @@ class AutoTestQuadPlane(vehicle_test_suite.TestSuite):
             self.BatteryFailsafeLandAUTORefused,
             self.TiltrotorVectoringRoll,
         ])
+        ret.extend(self.discovered_tests("QuadPlaneTests1c"))
         return ret
 
 

@@ -59,8 +59,7 @@ class AutoTestBlimp(TestSuite):
     def test_filepath(self):
         return os.path.realpath(__file__)
 
-    def set_current_test_name(self, name):
-        self.current_test_name_directory = "Blimp_Tests/" + name + "/"
+    test_root = "Blimp_Tests"
 
     def sitl_start_location(self):
         return SITL_START_LOCATION
@@ -395,6 +394,7 @@ class AutoTestBlimp(TestSuite):
             self.PREFLIGHT_Pressure,
             self.UTMGlobalPosition,
         ])
+        ret.extend(self.discovered_tests("Blimp"))
         return ret
 
     def disabled_tests(self):
