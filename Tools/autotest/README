@@ -1,1 +1,82 @@
 This is an automated test suite for ArduPilot
+
+Where tests live
+================
+
+Each vehicle test suite has a test root directory: ArduCopter_Tests,
+Helicopter_Tests, ArduPlane_Tests, QuadPlane_Tests, ArduRover_Tests,
+BalanceBot_Tests, Sailboat_Tests, ArduSub_Tests, Blimp_Tests and
+AntennaTracker_Tests.  Each test has a directory of its own in its root,
+holding the test and any missions, fences, scripts or other files it
+uses:
+
+  ArduCopter_Tests/AuxFunctionsInMission/AuxFunctionsInMission.py
+  ArduCopter_Tests/AuxFunctionsInMission/aux_functions.txt
+
+The tests are found by test_discovery.py; there is no list to add them
+to.  Tests defined in vehicle_test_suite.py, which run on every vehicle,
+are still listed in TestSuite.tests().
+
+Adding a test
+=============
+
+Create <root>/<Name>/<Name>.py:
+
+  '''
+  Copter autotest: MyNewTest
+
+  AP_FLAKE8_CLEAN
+  '''
+
+  from test_discovery import TestGroup
+  from test_discovery import testcase
+
+
+  class MyNewTest(TestGroup):
+      @testcase(bucket="CopterTests1c")
+      def MyNewTest(self):
+          '''one-line description of what is tested'''
+          self.takeoff(10, mode="LOITER")
+          ...
+
+The methods run as methods of the vehicle's test suite, so "self" gives
+access to every helper in vehicle_test_suite.py and the vehicle's test
+file.  Files loaded with load_mission(), load_fence() and friends are
+looked for in the test's directory.
+
+bucket names the CI job running the test: an entry in tester_class_map
+in autotest.py without its "test." prefix (CopterTests1a, PlaneTests1b,
+QuadPlaneTests1c, Rover, Sub, Helicopter...).  Pick the bucket with the
+shortest run time; a list of buckets runs the test in each.  @testcase
+also takes attempts, speedup, kwargs and disabled (a reason; the test
+is then skipped).
+
+Tests sharing code form a family in one directory: the helper is a
+method of the TestGroup class without @testcase, and every test's name
+starts with the directory name (ArduPlane_Tests/Deadreckoning holds
+Deadreckoning and DeadreckoningNoAirSpeed).  Helpers used by tests in
+several directories belong on the vehicle's test suite class.
+
+Do not use zero-argument super() in a TestGroup: the methods are
+installed onto the suite class, so name it, e.g.
+super(AutoTestBalanceBot, self).DriveRTL().
+
+Run a test with, e.g.:
+
+  Tools/autotest/autotest.py build.Copter test.Copter.MyNewTest
+
+History of moved tests
+======================
+
+The tests used to be methods in arducopter.py, arduplane.py and the
+other vehicle files, and were moved into their directories unchanged.
+To follow a test's lines back past that move use
+
+  git blame --minimal -C Tools/autotest/ArduPlane_Tests/Deadreckoning/Deadreckoning.py
+
+(both options are needed), or read the old file's history from a
+commit before the move:
+
+  git log -L '/def Deadreckoning(self)/,+3:Tools/autotest/arduplane.py' <commit>
+
+GitHub's blame view and "git log --follow" do not cross the move.
