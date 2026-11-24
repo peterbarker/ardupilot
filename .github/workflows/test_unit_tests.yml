@@ -182,6 +182,13 @@ jobs:
         run: |
           python3 Tools/autotest/unittest/test_new_boards_unittest.py
 
+      - name: Unittest test_discovery
+        env:
+          PYTHONPATH: "${{ github.workspace }}/Tools/autotest"
+        if: matrix.config == 'unit-tests'
+        run: |
+          python3 Tools/autotest/unittest/test_discovery_unittest.py
+
       - name: Archive buildlog artifacts
         uses: actions/upload-artifact@v7
         if: failure()
