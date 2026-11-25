@@ -6609,7 +6609,9 @@ void GCS_MAVLINK::send_received_message_deprecation_warning(const char * message
     }
 
     const uint32_t now_ms = AP_HAL::millis();
-    if (last_deprecation_warning_send_time_ms - now_ms < 30000) {
+    // last_deprecation_message is only set once a warning has been sent
+    if (last_deprecation_message != nullptr &&
+        now_ms - last_deprecation_warning_send_time_ms < 30000) {
         return;
     }
     last_deprecation_warning_send_time_ms = now_ms;
