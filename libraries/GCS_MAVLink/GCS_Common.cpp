@@ -1259,6 +1259,10 @@ bool GCS_MAVLINK::should_send_message_in_delay_callback(const ap_message id) con
     case MSG_HIGH_LATENCY2:
 #endif
     case MSG_AUTOPILOT_VERSION:
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    // the startup tune is played while the vehicle is initialising
+    case MSG_PLAY_TUNE_V2:
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
         return true;
     default:
         return false;
@@ -6556,6 +6560,35 @@ void GCS_MAVLINK::send_autopilot_state_for_gimbal_device() const
 #endif  // AP_AHRS_ENABLED
 }
 
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+/*
+  send the tune the vehicle has just started playing to our GCS
+  (NTF_OPTIONS "Send tunes to GCS")
+ */
+void GCS_MAVLINK::send_play_tune_v2()
+{
+    // only ever address this to our GCS.  Broadcasting it would ask
+    // other vehicles to play the tune - and possibly send it on again
+    const uint32_t gcs_sysid = gcs().gcs_sysid();
+    if (gcs_sysid == 0 || gcs_sysid > UINT8_MAX) {
+        return;
+    }
+
+    char tune[MAVLINK_MSG_PLAY_TUNE_V2_FIELD_TUNE_LEN] {};
+    if (!AP::notify().get_tune_for_gcs(tune, sizeof(tune))) {
+        return;
+    }
+
+    mavlink_msg_play_tune_v2_send(
+        chan,
+        gcs_sysid,
+        0,  // target_component
+        TUNE_FORMAT_MML_MODERN,
+        tune
+        );
+}
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+
 #if AP_MAVLINK_MSG_FLIGHT_INFORMATION_ENABLED
 void GCS_MAVLINK::send_flight_information()
 {
@@ -7118,6 +7151,13 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         send_flight_information();
         break;
 #endif
+
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    case MSG_PLAY_TUNE_V2:
+        CHECK_PAYLOAD_SIZE(PLAY_TUNE_V2);
+        send_play_tune_v2();
+        break;
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
 
 #if AP_TERRAIN_AVAILABLE
     case MSG_TERRAIN_REQUEST: {

@@ -23,6 +23,7 @@
 #include <AP_Frsky_Telem/AP_Frsky_config.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Mount/AP_Mount_config.h>
+#include <AP_Notify/AP_Notify_config.h>
 #include <AP_SerialManager/AP_SerialManager.h>
 #include <AP_RangeFinder/AP_RangeFinder_config.h>
 #include <AP_Winch/AP_Winch_config.h>
@@ -448,6 +449,10 @@ public:
 
     void send_flight_information();
 #endif
+
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    void send_play_tune_v2();
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
 
     // lock a channel, preventing use by MAVLink
     void lock(bool _lock) {
@@ -1223,6 +1228,10 @@ public:
       return true if a MAVLink system ID is a GCS
      */
     bool sysid_is_gcs(uint32_t sysid) const;
+
+    // the system ID of our GCS (MAV_GCS_SYSID); the lowest if
+    // MAV_GCS_SYSID_HI gives a range
+    uint32_t gcs_sysid() const { return mav_gcs_sysid; }
 
     // last time traffic was seen from my designated GCS.  traffic
     // includes heartbeats and some manual control messages.
