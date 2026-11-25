@@ -4505,6 +4505,7 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 
 #if AP_NOTIFY_MAVLINK_PLAY_TUNE_SUPPORT_ENABLED
     case MAVLINK_MSG_ID_PLAY_TUNE:
+        send_received_message_deprecation_warning("PLAY_TUNE");
         // send message to Notify
         AP_Notify::handle_play_tune(msg);
         break;
