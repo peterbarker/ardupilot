@@ -199,6 +199,11 @@ public:
     static void handle_play_tune(const mavlink_message_t &msg);
 #endif
 
+#if AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED
+    // handle a PLAY_TUNE_V2 message
+    static void handle_play_tune_v2(const mavlink_message_t &msg);
+#endif  // AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED
+
     // play a tune string
     static void play_tune(const char *tune);
 

@@ -27,6 +27,7 @@
 #include <stdio.h>
 
 #include <AP_Filesystem/AP_Filesystem.h>
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -469,3 +470,34 @@ void AP_Notify::handle_play_tune(const mavlink_message_t &msg)
     play_tune(_tone_buf);
 }
 #endif
+
+#if AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED
+/*
+ *  handle a PLAY_TUNE_V2 message.  MMLPlayer accepts QBasic 1.1 PLAY
+ *  strings as well as the modern MML additions (V for volume, R for
+ *  rests)
+ */
+void AP_Notify::handle_play_tune_v2(const mavlink_message_t &msg)
+{
+    mavlink_play_tune_v2_t packet;
+    mavlink_msg_play_tune_v2_decode(&msg, &packet);
+
+    switch (packet.format) {
+    case TUNE_FORMAT_QBASIC1_1:
+    case TUNE_FORMAT_MML_MODERN:
+        break;
+    default:
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "PLAY_TUNE_V2: unsupported format %u", (unsigned)packet.format);
+        return;
+    }
+
+    char tune[AP_NOTIFY_TONEALARM_TONE_BUF_SIZE] {};  // ~100 bytes
+    const size_t len = strnlen(packet.tune, sizeof(packet.tune));
+    if (len >= sizeof(tune)) {
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING, "PLAY_TUNE_V2: tune truncated to %u chars", unsigned(sizeof(tune)-1));
+    }
+    memcpy(tune, packet.tune, MIN(len, sizeof(tune)-1));
+
+    play_tune(tune);
+}
+#endif  // AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED
