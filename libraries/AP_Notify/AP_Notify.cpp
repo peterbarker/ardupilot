@@ -15,6 +15,8 @@
 
 #include "AP_Notify.h"
 
+#include <GCS_MAVLink/GCS.h>
+
 #include "AP_BoardLED.h"
 #include "PixRacerLED.h"
 #include "Buzzer.h"
@@ -434,6 +436,21 @@ void AP_Notify::update(void)
 
     //reset the events
     memset(&AP_Notify::events, 0, sizeof(AP_Notify::events));
+
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    // queue any newly-played tune for sending to the GCS.  This is
+    // done here rather than in tune_played() as tunes may be played
+    // from threads other than the main thread
+    bool send_tune;
+    {
+        WITH_SEMAPHORE(_gcs_tune.sem);
+        send_tune = _gcs_tune.send_pending;
+        _gcs_tune.send_pending = false;
+    }
+    if (send_tune) {
+        gcs().send_message(MSG_PLAY_TUNE_V2);
+    }
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
 }
 
 #if AP_NOTIFY_MAVLINK_LED_CONTROL_SUPPORT_ENABLED
