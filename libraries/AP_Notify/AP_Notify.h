@@ -207,6 +207,25 @@ public:
     // play a tune string
     static void play_tune(const char *tune);
 
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    // options for NTF_OPTIONS
+    enum class Option : uint32_t {
+        SEND_TUNES_TO_GCS = (1U<<0),
+    };
+    bool option_is_set(Option option) const {
+        return (uint32_t(_options.get()) & uint32_t(option)) != 0;
+    }
+
+    // called by the tone alarm with each tune it starts playing
+    // (including "" when it stops); records the tune for sending to
+    // the GCS if that option is set
+    void tune_played(const char *tune);
+
+    // copy the tune most recently recorded by tune_played into buf;
+    // returns false if there is none
+    bool get_tune_for_gcs(char *buf, uint16_t buflen);
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+
     bool buzzer_enabled() const { return _buzzer_type != 0; }
 
     uint8_t get_buzzer_types() const { return _buzzer_type; }
@@ -258,6 +277,16 @@ private:
     AP_Int8 _buzzer_level;
     AP_Int8 _buzzer_volume;
     AP_Int8 _led_len;
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    AP_Int32 _options;
+
+    // the most recent tune played, for sending to the GCS
+    struct {
+        HAL_Semaphore sem;
+        char *tune;  // allocated when first needed
+        bool send_pending;
+    } _gcs_tune;
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
 
     char _send_text[NOTIFY_TEXT_BUFFER_SIZE];
     uint32_t _send_text_updated_millis; // last time text changed

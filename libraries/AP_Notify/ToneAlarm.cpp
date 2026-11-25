@@ -108,7 +108,14 @@ bool AP_ToneAlarm::init()
     }
 #if AP_NOTIFY_TONEALARM_ENABLED
     if (!hal.util->toneAlarm_init(pNotify->get_buzzer_types())) {
-        return false;
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+        // with no buzzer hardware we still play tunes so they can be
+        // sent to the GCS
+        if (!pNotify->option_is_set(AP_Notify::Option::SEND_TUNES_TO_GCS))
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+        {
+            return false;
+        }
     }
 #endif
 
@@ -169,6 +176,10 @@ void AP_ToneAlarm::play_tune(const char *str)
     strncpy(_tone_buf, str, AP_NOTIFY_TONEALARM_TONE_BUF_SIZE);
     _tone_buf[AP_NOTIFY_TONEALARM_TONE_BUF_SIZE-1] = 0;
     _mml_player.play(_tone_buf);
+
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    AP::notify().tune_played(_tone_buf);
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
 }
 
 void AP_ToneAlarm::stop_cont_tone()

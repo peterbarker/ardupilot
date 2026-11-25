@@ -208,6 +208,15 @@ const AP_Param::GroupInfo AP_Notify::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("LED_LEN", 9, AP_Notify, _led_len, NOTIFY_LED_LEN_DEFAULT),
 
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+    // @Param: OPTIONS
+    // @DisplayName: Notify options
+    // @Description: Notify options. Send tunes to GCS: every tune the buzzer plays, including alert tones and tunes requested via MAVLink or scripting, is also sent in a PLAY_TUNE_V2 message addressed to the ground station (MAV_GCS_SYSID) so it can play the tune too. This works on vehicles with no buzzer fitted, but they must be rebooted after setting this option. NTF_BUZZ_TYPES must not be zero.
+    // @Bitmask: 0:Send tunes to GCS
+    // @User: Advanced
+    AP_GROUPINFO("OPTIONS", 10, AP_Notify, _options, 0),
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+
     AP_GROUPEND
 };
 
@@ -467,6 +476,42 @@ void AP_Notify::play_tune(const char *tune)
         }
     }
 }
+
+#if AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
+// tunes are limited to this length by the tone alarm's buffer
+#define AP_NOTIFY_GCS_TUNE_LEN 100
+
+void AP_Notify::tune_played(const char *tune)
+{
+    if (!option_is_set(Option::SEND_TUNES_TO_GCS)) {
+        return;
+    }
+    WITH_SEMAPHORE(_gcs_tune.sem);
+    if (_gcs_tune.tune == nullptr) {
+        _gcs_tune.tune = NEW_NOTHROW char[AP_NOTIFY_GCS_TUNE_LEN];
+        if (_gcs_tune.tune == nullptr) {
+            return;
+        }
+    }
+    strncpy_noterm(_gcs_tune.tune, tune, AP_NOTIFY_GCS_TUNE_LEN-1);
+    _gcs_tune.tune[AP_NOTIFY_GCS_TUNE_LEN-1] = '\0';
+    _gcs_tune.send_pending = true;
+}
+
+bool AP_Notify::get_tune_for_gcs(char *buf, uint16_t buflen)
+{
+    if (buflen == 0) {
+        return false;
+    }
+    WITH_SEMAPHORE(_gcs_tune.sem);
+    if (_gcs_tune.tune == nullptr) {
+        return false;
+    }
+    strncpy_noterm(buf, _gcs_tune.tune, buflen-1);
+    buf[buflen-1] = '\0';
+    return true;
+}
+#endif  // AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED
 
 // set flight mode string
 void AP_Notify::set_flight_mode_str(const char *str)
