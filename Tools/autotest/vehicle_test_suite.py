@@ -8073,6 +8073,98 @@ class TestSuite(abc.ABC):
         self.githash = util.get_git_hash(short=True)
         self.progress(f"Git hash {self.githash}")
 
+    def PlayTune(self):
+        '''test PLAY_TUNE, PLAY_TUNE_V2 and sending tunes to the GCS'''
+        gcs_sysid = int(self.get_parameter('MAV_GCS_SYSID'))
+
+        def send_v2(tune, tune_format=mavutil.mavlink.TUNE_FORMAT_QBASIC1_1):
+            self.mav.mav.play_tune_v2_send(
+                self.sysid_thismav(),
+                1,
+                tune_format,
+                tune.encode('ascii'),
+            )
+
+        def tunes_sent_to_gcs():
+            return [x.tune for x in self.context_collection('PLAY_TUNE_V2')]
+
+        def wait_tune_sent_to_gcs(want, timeout=5):
+            def is_wanted(m):
+                if m.tune != want:
+                    return False
+                if m.target_system != gcs_sysid or m.target_component != 0:
+                    raise NotAchievedException(f"Tune sent to {m.target_system}/{m.target_component}")
+                if m.format != mavutil.mavlink.TUNE_FORMAT_MML_MODERN:
+                    raise NotAchievedException(f"Unexpected format {m.format}")
+                return True
+            tstart = self.get_sim_time()
+            while self.get_sim_time_cached() - tstart < timeout:
+                for x in self.context_collection('PLAY_TUNE_V2'):
+                    if is_wanted(x):
+                        return
+                self.delay_sim_time(0.2, reason="waiting for tune to be sent to GCS")
+            raise NotAchievedException(f"Tune ({want}) not sent to GCS; got {tunes_sent_to_gcs()}")
+
+        # SITL has no buzzer hardware, so the tone alarm is only
+        # started at boot if tunes are to be sent to the GCS:
+        self.set_parameter('NTF_OPTIONS', 1)
+        self.context_collect('PLAY_TUNE_V2')
+        self.context_collect('STATUSTEXT')
+        self.reboot_sitl()
+
+        self.progress("The startup tune is sent to the GCS")
+        wait_tune_sent_to_gcs("MFT240L8O4aO5dcO4aO5dcO4aO5dcL16dcdcdcdc")
+        self.context_clear_collection('PLAY_TUNE_V2')
+
+        self.progress("Tunes are not sent to the GCS when the option is clear")
+        self.set_parameter('NTF_OPTIONS', 0)
+        send_v2("MFT200L16O3CDE")
+        self.delay_sim_time(2, reason="check no tune is sent to GCS")
+        if len(self.context_collection('PLAY_TUNE_V2')):
+            raise NotAchievedException(f"Tunes sent to GCS without option: {tunes_sent_to_gcs()}")
+
+        self.set_parameter('NTF_OPTIONS', 1)
+
+        self.progress("PLAY_TUNE_V2 in each supported format is played")
+        send_v2("MFT200L16O3CDEF", mavutil.mavlink.TUNE_FORMAT_QBASIC1_1)
+        wait_tune_sent_to_gcs("MFT200L16O3CDEF")
+        send_v2("MFT200V60L16O3R16EFG", mavutil.mavlink.TUNE_FORMAT_MML_MODERN)
+        wait_tune_sent_to_gcs("MFT200V60L16O3R16EFG")
+
+        self.progress("PLAY_TUNE_V2 in an unsupported format is rejected")
+        self.context_clear_collection('PLAY_TUNE_V2')
+        send_v2("MFT200L16O3GAB", 4)
+        self.wait_statustext("PLAY_TUNE_V2: unsupported format 4", check_context=True)
+        self.delay_sim_time(2, reason="check rejected tune is not played")
+        if "MFT200L16O3GAB" in tunes_sent_to_gcs():
+            raise NotAchievedException("Tune in unsupported format was played")
+
+        self.progress("Over-long PLAY_TUNE_V2 tunes are truncated")
+        long_tune = "MFT200L16O3" + "CDEFGAB" * 30
+        send_v2(long_tune)
+        self.wait_statustext("PLAY_TUNE_V2: tune truncated to 99 chars", check_context=True)
+        wait_tune_sent_to_gcs(long_tune[:99])
+
+        self.progress("PLAY_TUNE (tune and tune2) is played, with a deprecation warning")
+        tune = "MFT200L16O3CDEFGABO4CDEFGABO5CDEFGAB"
+        self.mav.mav.play_tune_send(
+            self.sysid_thismav(),
+            1,
+            tune[:30].encode('ascii'),
+            tune[30:].encode('ascii'),
+        )
+        wait_tune_sent_to_gcs(tune)
+        self.wait_statustext("Received message (PLAY_TUNE) is deprecated", check_context=True)
+
+        self.progress("Alert tones are sent to the GCS")
+        self.context_clear_collection('PLAY_TUNE_V2')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.disarm_vehicle()
+        self.delay_sim_time(2, reason="allow alert tones to be sent")
+        if len([x for x in tunes_sent_to_gcs() if x != ""]) == 0:
+            raise NotAchievedException("No alert tones sent to GCS on arming")
+
     def GetCapabilities(self):
         '''Get Capabilities'''
         self.assert_capability(mavutil.mavlink.MAV_PROTOCOL_CAPABILITY_PARAM_FLOAT)

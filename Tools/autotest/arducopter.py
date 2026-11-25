@@ -25911,6 +25911,7 @@ return update, 1000
     def tests2b(self):
         '''return list of all tests'''
         ret = ([
+            self.PlayTune,
             self.ThrottleFailsafe,
             self.CustomController,
             self.WPArcs,
