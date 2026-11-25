@@ -4511,6 +4511,12 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
         break;
 #endif
 
+#if AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED
+    case MAVLINK_MSG_ID_PLAY_TUNE_V2:
+        AP_Notify::handle_play_tune_v2(msg);
+        break;
+#endif  // AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED
+
     case MAVLINK_MSG_ID_REQUEST_DATA_STREAM:
         if (option_enabled(Option::NOSTREAMOVERRIDE)) {
             // options indicate we are to ignore this stream rate
