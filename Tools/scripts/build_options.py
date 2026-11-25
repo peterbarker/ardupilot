@@ -108,7 +108,9 @@ BUILD_OPTIONS = [
     Feature('Telemetry', 'i-BUS', 'AP_IBUS_TELEM_ENABLED', 'Enable i-BUS telemetry', 0, None),
 
     Feature('Notify', 'PLAY_TUNE', 'AP_NOTIFY_MAVLINK_PLAY_TUNE_SUPPORT_ENABLED', 'Enable MAVLink Play Tune command', 0, None),  # noqa
+    Feature('Notify', 'PLAY_TUNE_V2', 'AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED', 'Enable MAVLink PLAY_TUNE_V2 message', 0, None),  # noqa
     Feature('Notify', 'TONEALARM', 'AP_NOTIFY_TONEALARM_ENABLED', 'Enable PWM tone alarm', 0, None),  # noqa
+    Feature('Notify', 'SEND_TUNES_TO_GCS', 'AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED', 'Enable option to send tunes played on the buzzer to the GCS', 0, 'TONEALARM'),  # noqa
     Feature('Notify', 'LED_CONTROL', 'AP_NOTIFY_MAVLINK_LED_CONTROL_SUPPORT_ENABLED', 'Enable MAVLink LED control', 0, None),  # noqa
     Feature('Notify', 'NOTIFY_NCP5623', 'AP_NOTIFY_NCP5623_ENABLED', 'Enable NCP5623 LED', 0, None),  # noqa
     # Feature('Notify', 'NOTIFY_PCA9685', 'AP_NOTIFY_PCA9685_ENABLED', 'Enable PCA9685 LED', 0, None),  # noqa  linux-only

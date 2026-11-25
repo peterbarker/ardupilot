@@ -253,7 +253,9 @@ class ExtractFeatures(BuildScriptBase):
             ('AP_SCRIPTING_SERIALDEVICE_ENABLED', r'AP_Scripting_SerialDevice::init',),
 
             ('AP_NOTIFY_TONEALARM_ENABLED', r'AP_ToneAlarm::init'),
-            ('AP_NOTIFY_MAVLINK_PLAY_TUNE_SUPPORT_ENABLED', r'AP_Notify::handle_play_tune'),
+            ('AP_NOTIFY_MAVLINK_PLAY_TUNE_SUPPORT_ENABLED', r'AP_Notify::handle_play_tune\b'),
+            ('AP_NOTIFY_MAVLINK_PLAY_TUNE_V2_SUPPORT_ENABLED', r'AP_Notify::handle_play_tune_v2\b'),
+            ('AP_NOTIFY_SEND_TUNES_TO_GCS_ENABLED', r'AP_Notify::tune_played\b'),
             ('AP_NOTIFY_MAVLINK_LED_CONTROL_SUPPORT_ENABLED', r'AP_Notify::handle_led_control'),
             ('AP_NOTIFY_NCP5623_ENABLED', r'NCP5623::write'),
             ('AP_NOTIFY_PROFILED_ENABLED', r'ProfiLED::init_ports'),
