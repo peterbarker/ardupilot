@@ -83,6 +83,12 @@
 #define AP_NOTIFY_IS31FL3195_ENABLED 1
 #endif
 
+// handling of the PLAY_TUNE message is slated to be removed; it was
+// superseded by PLAY_TUNE_V2 upstream in October 2019, and ArduPilot
+// handles PLAY_TUNE_V2 from 4.8.
+// ArduPilot 4.8 warns when PLAY_TUNE is received
+// ArduPilot 4.9 stops compiling in by default
+// ArduPilot 5.0 removes the code entirely
 #ifndef AP_NOTIFY_MAVLINK_PLAY_TUNE_SUPPORT_ENABLED
 #define AP_NOTIFY_MAVLINK_PLAY_TUNE_SUPPORT_ENABLED HAL_GCS_ENABLED
 #endif
